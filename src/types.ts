@@ -212,23 +212,19 @@ export interface MapaoDisciplina {
   horario: string;
   turma: string;
   tipoDisciplina: 'PRESENCIAL' | 'TEAMS' | 'ONLINE' | string;
+  professor: string;
+  matricula: string;
+  observacao: string;
+  linkAula?: string;
 }
 
 export interface MapaoAcademicoEntry {
   id: string;
   modalidade: string;
   curso: string;
+  periodo: string;
   tipoCurso: 'GRADUACAO' | 'TECNICO';
   disciplinas: MapaoDisciplina[];
-  
-  // Legacy fields
-  codDisc?: string;
-  disciplina?: string;
-  dia?: string;
-  horario?: string;
-  turma?: string;
-  tipoDisciplina?: 'PRESENCIAL' | 'ONLINE' | string;
-  docente?: string;
   createdAt: any;
 }
 

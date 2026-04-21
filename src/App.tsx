@@ -380,11 +380,12 @@ function MapaoAcademicoView({
   const [showModal, setShowModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState<MapaoAcademicoEntry | null>(null);
   
-  const defaultDisciplina = { codDisc: '', disciplina: '', dia: 'Segunda-feira', horario: '', turma: '', tipoDisciplina: 'PRESENCIAL' };
+  const defaultDisciplina = { codDisc: '', disciplina: '', dia: 'Segunda-feira', horario: '', turma: '', tipoDisciplina: 'PRESENCIAL', professor: '', matricula: '', observacao: '', linkAula: '' };
   
   const [formData, setFormData] = useState<Partial<MapaoAcademicoEntry>>({
     modalidade: 'Presencial',
     tipoCurso: 'GRADUACAO',
+    periodo: '',
     disciplinas: [{ ...defaultDisciplina }]
   });
 
@@ -538,32 +539,33 @@ function MapaoAcademicoView({
                 </div>
               </div>
 
-              <h3 className="text-xl font-bold text-slate-900 mb-4 leading-tight border-b border-slate-100 pb-3">{entry.curso}</h3>
-
-              <div className="flex-1 space-y-3">
+              <div className="flex-1 flex flex-row gap-6">
+                <div className="w-1/3 flex flex-col justify-center border-r border-slate-100 pr-6">
+                  <h3 className="text-xl font-bold text-slate-900 leading-tight mb-1">{entry.curso}</h3>
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{entry.periodo}</p>
+                </div>
+                <div className="w-2/3 grid grid-cols-2 gap-3">
                 {disciplinasList.map((disc, idx) => (
-                  <div key={idx} className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{disc.codDisc}</p>
-                    <p className="text-sm font-bold text-slate-800 mb-2 leading-tight">{disc.disciplina}</p>
+                  <div key={idx} className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">{disc.codDisc}</p>
+                      <p className="text-sm font-bold text-slate-800 leading-tight mb-2">{disc.disciplina}</p>
+                      <p className="text-[10px] text-slate-600 font-medium">Prof: {disc.professor}</p>
+                    </div>
                     
                     <div className="grid grid-cols-2 gap-2 mt-2">
-                      <div className="flex items-center space-x-1.5 text-slate-600 bg-white px-2 py-1.5 rounded-lg border border-slate-100">
-                        <Clock size={12} className="text-blue-500 min-w-3" />
-                        <span className="text-[10px] font-bold truncate leading-tight" title={disc.dia === 'Virtual' ? 'Virtual' : `${disc.horario} - ${disc.dia}`}>
-                          {disc.dia === 'Virtual' ? 'Virtual' : <>{disc.horario}<br/><span className="text-[8px] font-medium block text-slate-400">{disc.dia}</span></>}
-                        </span>
+                      <div className="flex items-center space-x-1.5 text-slate-600 bg-white px-2 py-1 rounded-lg border border-slate-100">
+                        <Clock size={10} className="text-blue-500" />
+                        <span className="text-[9px] font-bold truncate">{disc.horario}</span>
                       </div>
-                      <div className="flex items-center space-x-1.5 text-slate-600 bg-white px-2 py-1.5 rounded-lg border border-slate-100">
-                        <Users size={12} className="text-emerald-500 min-w-3" />
-                        <span className="text-[10px] font-bold truncate">T: {disc.turma}</span>
-                      </div>
-                      <div className="col-span-2 flex items-center space-x-1.5 text-slate-600 bg-white px-2 py-1.5 rounded-lg border border-slate-100">
-                        <Globe size={12} className="text-violet-500 min-w-3" />
-                        <span className="text-[10px] font-bold">{disc.tipoDisciplina}</span>
+                      <div className="flex items-center space-x-1.5 text-slate-600 bg-white px-2 py-1 rounded-lg border border-slate-100">
+                        <Users size={10} className="text-emerald-500" />
+                        <span className="text-[9px] font-bold truncate">{disc.turma}</span>
                       </div>
                     </div>
                   </div>
                 ))}
+                </div>
                 {disciplinasList.length === 0 && (
                    <p className="text-xs text-slate-500 italic text-center py-4">Nenhuma disciplina cadastrada.</p>
                 )}
@@ -589,6 +591,16 @@ function MapaoAcademicoView({
 
             <form onSubmit={handleSave} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-slate-100">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Período</label>
+                  <input 
+                    type="text" 
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700"
+                    value={formData.periodo || ''}
+                    onChange={e => setFormData({...formData, periodo: e.target.value})}
+                    required
+                  />
+                </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Tipo de Curso</label>
                   <select 
@@ -659,7 +671,7 @@ function MapaoAcademicoView({
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 mb-1">Nome Disciplina</label>
+                          <label className="block text-xs font-bold text-slate-500 mb-1">Disciplina</label>
                           <input 
                             type="text" 
                             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500"
@@ -1389,47 +1401,48 @@ function FiesProuniView({ data, onToast, profile, whatsappMessages, periodos }: 
     exportToExcel(exportData, 'Fies_Prouni');
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    importFromExcel(file, async (importData) => {
-      try {
-        const batch = importData.map(item => ({
-          nome: item.Nome || item.nome || '',
-          cpf: String(item.CPF || item.cpf || '').replace(/\D/g, ''),
-          telefone: String(item.Telefone || item.telefone || ''),
-          email: item.Email || item.email || '',
-          endereco: item.Endereco || item.endereco || '',
-          tipo: item.Tipo || item.tipo || 'PROUNI',
-          bolsa: item.Bolsa || item.bolsa || 'Total',
-          curso: item.Curso || item.curso || '',
-          metodologia: item.Metodologia || item.metodologia || '',
-          status: item.Status || item.status || 'Pendente',
-          periodo: item.Periodo || item.periodo || '',
-          lista: item.Lista || item.lista || '',
-          posicaoRanking: String(item.Ranking || item.posicaoRanking || ''),
-          inscricaoSales: String(item['Inscrição Sales'] || item.inscricaoSales || ''),
-          numeroMatricula: String(item['Número Matrícula'] || item.numeroMatricula || ''),
-          digitalizaStatus: item['Status Digitaliza'] || item.digitalizaStatus || 'Não Postado',
-          docsEntreguesStatus: item['Status Docs'] || item.docsEntreguesStatus || 'Pendente',
-          sisprouniStatus: item['SISPROUNI'] || item.sisprouniStatus || 'Pendente',
-          responsavelEntrevista: item['Responsável Entrevista'] || item.responsavelEntrevista || '',
-          dataEntrevista: item['Data Entrevista'] || item.dataEntrevista || '',
-          observacao: item.Observação || item.observacao || '',
-          tcbAssinado: false,
-          documentosEntregues: [],
-          createdAt: serverTimestamp()
-        }));
-
-        for (const entry of batch) {
-          await addDoc(collection(db, COLLECTIONS.FIES_PROUNI), entry);
+  const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
+  
+  const handleBulkDelete = async () => {
+    if (selectedEntries.length === 0) return;
+    if (window.confirm(`Deseja excluir ${selectedEntries.length} registros Fies/Prouni selecionados?`)) {
+        try {
+            for (const id of selectedEntries) {
+                await deleteDoc(doc(db, COLLECTIONS.FIES_PROUNI, id));
+            }
+            onToast(`${selectedEntries.length} registros removidos.`);
+            setSelectedEntries([]);
+        } catch (err: any) {
+            onToast("Erro ao excluir registros.", 'error');
         }
-        onToast(`${batch.length} registros importados!`);
-      } catch (err: any) {
-        onToast("Erro ao importar dados.", 'error');
+    }
+  };
+
+  const handleDeleteIndividual = async (id: string) => {
+    if (window.confirm('Deseja excluir este registro?')) {
+        try {
+            await deleteDoc(doc(db, COLLECTIONS.FIES_PROUNI, id));
+            onToast("Registro removido.");
+        } catch (err: any) {
+            onToast("Erro ao excluir registro.", 'error');
+        }
+    }
+  };
+
+  const toggleSelect = (id: string, checked: boolean) => {
+    if (checked) {
+        setSelectedEntries([...selectedEntries, id]);
+    } else {
+        setSelectedEntries(selectedEntries.filter(s => s !== id));
+    }
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+      if (checked) {
+          setSelectedEntries(filteredData.map(b => b.id));
+      } else {
+          setSelectedEntries([]);
       }
-    });
   };
 
   return (
@@ -1533,6 +1546,9 @@ function FiesProuniView({ data, onToast, profile, whatsappMessages, periodos }: 
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="px-6 py-4">
+                  <input type="checkbox" checked={selectedEntries.length === filteredData.length && filteredData.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
+                </th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Candidato</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Lista/Status</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Tipo/Bolsa</th>
@@ -1540,12 +1556,19 @@ function FiesProuniView({ data, onToast, profile, whatsappMessages, periodos }: 
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Documentação</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Digitaliza</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">TCB</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Ações</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                  {selectedEntries.length > 0 && (
+                      <button onClick={handleBulkDelete} className="text-rose-600 font-bold hover:underline">excluir selecionados</button>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filteredData.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4">
+                      <input type="checkbox" checked={selectedEntries.includes(item.id)} onChange={e => toggleSelect(item.id, e.target.checked)} />
+                  </td>
                   <td className="px-6 py-4">
                     <div className="font-medium text-gray-900">{item.nome}</div>
                     <div className="text-[10px] font-bold text-indigo-500">Ranking: {item.posicaoRanking || '-'}</div>
@@ -1620,6 +1643,13 @@ function FiesProuniView({ data, onToast, profile, whatsappMessages, periodos }: 
                           <MessageSquare size={18} />
                         </a>
                       )}
+                      <button 
+                        onClick={() => handleDeleteIndividual(item.id)}
+                        className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
+                        title="Excluir"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -3180,7 +3210,8 @@ function BasesView({ bases, onToast, whatsappMessages }: { bases: BaseEntry[], o
     numeroOportunidade: '',
     semestre: '',
     metodologia: '',
-    formaIngresso: ''
+    formaIngresso: '',
+    numeroMatricula: ''
   });
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -3233,12 +3264,82 @@ function BasesView({ bases, onToast, whatsappMessages }: { bases: BaseEntry[], o
     }
   };
 
-  const handleStatusChange = async (id: string, status: string) => {
+  const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
+  
+  const handleBulkDelete = async () => {
+    if (selectedEntries.length === 0) return;
+    if (window.confirm(`Deseja excluir ${selectedEntries.length} registros selecionados?`)) {
+        try {
+            for (const id of selectedEntries) {
+                await deleteDoc(doc(db, COLLECTIONS.BASES, id));
+            }
+            onToast(`${selectedEntries.length} registros removidos.`);
+            setSelectedEntries([]);
+        } catch (err: any) {
+            onToast("Erro ao excluir registros.", 'error');
+        }
+    }
+  };
+
+  const toggleSelect = (id: string, checked: boolean) => {
+    if (checked) {
+        setSelectedEntries([...selectedEntries, id]);
+    } else {
+        setSelectedEntries(selectedEntries.filter(s => s !== id));
+    }
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+      if (checked) {
+          setSelectedEntries(filteredBases.map(b => b.id));
+      } else {
+          setSelectedEntries([]);
+      }
+  };
+
+  const handleStatusChange = async (entry: BaseEntry, status: string) => {
     try {
-      await updateDoc(doc(db, COLLECTIONS.BASES, id), { status });
-      onToast("Status da base atualizado!");
+      await updateDoc(doc(db, COLLECTIONS.BASES, entry.id), { status });
+      
+      if (status === 'Convertido') {
+         // Logic for transferring to GAP
+         const q = query(collection(db, COLLECTIONS.GAP), where("cpf", "==", entry.cpf || ''));
+         const snap = await getDocs(q);
+         if (snap.empty && entry.cpf) {
+             await addDoc(collection(db, COLLECTIONS.GAP), {
+                nome: entry.nome,
+                telefone: entry.telefone,
+                cpf: entry.cpf,
+                produto: entry.produto,
+                numeroOportunidade: entry.numeroOportunidade,
+                curso: entry.curso,
+                metodologia: entry.metodologia,
+                formaIngresso: entry.formaIngresso,
+                semestre: entry.semestre,
+                matAcad: false,
+                documentos: {},
+                createdAt: serverTimestamp()
+             });
+             onToast("Candidato convertido e enviado para GAP!");
+         } else {
+             onToast("Status atualizado!");
+         }
+      } else {
+        onToast("Status da base atualizado!");
+      }
     } catch (err: any) {
       onToast(err.message, 'error');
+    }
+  };
+
+  const handleDeleteBase = async (id: string) => {
+    if (window.confirm('Deseja excluir este registro da base?')) {
+      try {
+        await deleteDoc(doc(db, COLLECTIONS.BASES, id));
+        onToast("Registro removido.");
+      } catch (err: any) {
+        onToast("Erro ao excluir registro.", 'error');
+      }
     }
   };
 
@@ -3445,15 +3546,25 @@ function BasesView({ bases, onToast, whatsappMessages }: { bases: BaseEntry[], o
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <th className="px-6 py-4">
+                  <input type="checkbox" checked={selectedEntries.length === filteredBases.length && filteredBases.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
+                </th>
                 <th className="px-6 py-4">Nome</th>
                 <th className="px-6 py-4">Base</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Ações</th>
+                <th className="px-6 py-4">
+                  {selectedEntries.length > 0 && (
+                      <button onClick={handleBulkDelete} className="text-rose-600 font-bold hover:underline">excluir selecionados</button>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredBases.map(entry => (
                 <tr key={entry.id} className="hover:bg-slate-50/50 transition-all">
+                  <td className="px-6 py-4">
+                    <input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={e => toggleSelect(entry.id, e.target.checked)} />
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="font-bold text-slate-900">{entry.nome}</span>
@@ -3464,7 +3575,7 @@ function BasesView({ bases, onToast, whatsappMessages }: { bases: BaseEntry[], o
                   <td className="px-6 py-4">
                     <select 
                       value={entry.status}
-                      onChange={e => handleStatusChange(entry.id, e.target.value)}
+                      onChange={e => handleStatusChange(entry, e.target.value)}
                       className={cn(
                         "px-2 py-1 rounded-lg text-xs font-bold outline-none border-none",
                         entry.status === 'Pendente' && "bg-slate-100 text-slate-600",
@@ -3477,7 +3588,7 @@ function BasesView({ bases, onToast, whatsappMessages }: { bases: BaseEntry[], o
                       <option value="Convertido">Convertido</option>
                     </select>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 flex items-center space-x-2">
                     <a 
                       href={getWhatsAppUrl(entry.telefone, whatsappMessages.find(m => m.tipo === 'bases')?.texto.replace('[nome]', entry.nome) || `Olá ${entry.nome}, tudo bem?`)} 
                       target="_blank" 
@@ -3487,6 +3598,12 @@ function BasesView({ bases, onToast, whatsappMessages }: { bases: BaseEntry[], o
                       <MessageSquare size={14} />
                       <span>WhatsApp</span>
                     </a>
+                    <button 
+                      onClick={() => handleDeleteBase(entry.id)}
+                      className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -3525,6 +3642,38 @@ function GapView({ gap, onToast, whatsappMessages }: { gap: GapEntry[], onToast:
   const [gapFilter, setGapFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
+  
+  const handleBulkDelete = async () => {
+    if (selectedEntries.length === 0) return;
+    if (window.confirm(`Deseja excluir ${selectedEntries.length} registros selecionados do GAP?`)) {
+        try {
+            for (const id of selectedEntries) {
+                await deleteDoc(doc(db, COLLECTIONS.GAP, id));
+            }
+            onToast(`${selectedEntries.length} registros no GAP removidos.`);
+            setSelectedEntries([]);
+        } catch (err: any) {
+            onToast("Erro ao excluir registros do GAP.", 'error');
+        }
+    }
+  };
+
+  const toggleSelect = (id: string, checked: boolean) => {
+    if (checked) {
+        setSelectedEntries([...selectedEntries, id]);
+    } else {
+        setSelectedEntries(selectedEntries.filter(s => s !== id));
+    }
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+      if (checked) {
+          setSelectedEntries(filteredGap.map(g => g.id));
+      } else {
+          setSelectedEntries([]);
+      }
+  };
   const [formData, setFormData] = useState({
     nome: '',
     telefone: '',
@@ -3598,6 +3747,17 @@ function GapView({ gap, onToast, whatsappMessages }: { gap: GapEntry[], onToast:
     }
   };
 
+  const handleDeleteGap = async (id: string) => {
+    if (window.confirm('Deseja excluir este registro do GAP?')) {
+      try {
+        await deleteDoc(doc(db, COLLECTIONS.GAP, id));
+        onToast("Registro removido.");
+      } catch (err: any) {
+        onToast("Erro ao excluir registro.", 'error');
+      }
+    }
+  };
+
   const getGapWhatsAppMessage = (entry: GapEntry) => {
     const docs = entry.documentos || {};
     const missingDocs = Object.entries(docLabels)
@@ -3610,25 +3770,22 @@ function GapView({ gap, onToast, whatsappMessages }: { gap: GapEntry[], onToast:
       if (msgOk) return msgOk.texto.replace('[nome]', entry.nome);
       return `Olá ${entry.nome}, vimos que sua matrícula acadêmica está ok! Parabéns!`;
     }
-
+    
+    // Add logic to include registration number automatically if it exists
+    let message = '';
     const customMsg = whatsappMessages.find(m => m.tipo === 'gap' || m.tipo === 'gap_0');
     if (customMsg) {
-      const text = customMsg.texto.replace('[nome]', entry.nome);
+      message = customMsg.texto.replace('[nome]', entry.nome);
       if (missingDocs.length > 0) {
-        return text.replace('[pendencias]', missingDocs.join(', '));
+        message = message.replace('[pendencias]', missingDocs.join(', '));
       }
-      return text;
+    } else if (missingDocs.length > 0) {
+       message = `Olá ${entry.nome}, tudo bem? Sou da equipe de captação e meu contato é referente à sua matrícula no curso de ${entry.curso}. Identificamos que sua matrícula ainda não foi finalizada devido à pendência dos seguintes documentos: ${missingDocs.join(', ')}. É fundamental regularizar essa situação o quanto antes para garantir sua vaga e evitar o cancelamento do processo.`;
     }
 
-    if (missingDocs.length === 0) return '';
-
-    let message = `Olá ${entry.nome}, tudo bem? Sou da equipe de captação e meu contato é referente à sua matrícula no curso de ${entry.curso}. Identificamos que sua matrícula ainda não foi finalizada devido à pendência dos seguintes documentos: ${missingDocs.join(', ')}. É fundamental regularizar essa situação o quanto antes para garantir sua vaga e evitar o cancelamento do processo.`;
-    
-    if (!docs.contrato || !docs.carta) {
-      message += ` Para realizar o aceite do contrato e a redação, acesse imediatamente o portal: https://candidatos.portal.estacio.br/acompanhe-sua-matricula - este é o canal oficial para essas ações.`;
+    if (entry.numeroMatricula) {
+        message += `\n\nNº Matrícula: ${entry.numeroMatricula}`;
     }
-
-    message += ` Favor enviar fotos legíveis por aqui ou realizar a entrega física em nossa unidade com urgência. Seguimos à disposição para qualquer dúvida.`;
     
     return message;
   };
@@ -3797,16 +3954,26 @@ function GapView({ gap, onToast, whatsappMessages }: { gap: GapEntry[], onToast:
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                <th className="px-6 py-4">
+                  <input type="checkbox" checked={selectedEntries.length === filteredGap.length && filteredGap.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
+                </th>
                 <th className="px-6 py-4">Candidato</th>
                 <th className="px-6 py-4">Curso / Produto</th>
                 <th className="px-6 py-4">Documentação</th>
                 <th className="px-6 py-4">Mat. Acad.</th>
-                <th className="px-6 py-4">Ações</th>
+                <th className="px-6 py-4">
+                  {selectedEntries.length > 0 && (
+                      <button onClick={handleBulkDelete} className="text-rose-600 font-bold hover:underline">excluir selecionados</button>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredGap.map(entry => (
                 <tr key={entry.id} className="hover:bg-slate-50/50 transition-all">
+                  <td className="px-6 py-4">
+                      <input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={e => toggleSelect(entry.id, e.target.checked)} />
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="font-bold text-slate-900">{entry.nome}</span>
@@ -3853,7 +4020,7 @@ function GapView({ gap, onToast, whatsappMessages }: { gap: GapEntry[], onToast:
                       {entry.matAcad ? 'OK' : 'Pendente'}
                     </button>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 flex items-center space-x-2">
                     <a 
                       href={getWhatsAppUrl(entry.telefone, getGapWhatsAppMessage(entry))} 
                       target="_blank" 
@@ -3862,6 +4029,12 @@ function GapView({ gap, onToast, whatsappMessages }: { gap: GapEntry[], onToast:
                     >
                       <MessageSquare size={16} />
                     </a>
+                    <button 
+                      onClick={() => handleDeleteGap(entry.id)}
+                      className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -3934,6 +4107,10 @@ function GapView({ gap, onToast, whatsappMessages }: { gap: GapEntry[], onToast:
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Forma de Ingresso</label>
                   <input value={formData.formaIngresso} onChange={e => setFormData({...formData, formaIngresso: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Nº Matrícula</label>
+                  <input value={formData.numeroMatricula} onChange={e => setFormData({...formData, numeroMatricula: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
                 </div>
                 <div className="md:col-span-2">
                   <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50">
