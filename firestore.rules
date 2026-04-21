@@ -1,0 +1,196 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      let path = /databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid);
+      return get(path).data;
+    }
+    
+    function hasAnyRole(roles) {
+      return isAuthenticated() && (
+        request.auth.token.email == "canaldonutri@gmail.com" || 
+        request.auth.token.email == "marcos.teixeira@estacio.br" ||
+        (
+          exists(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)).data.role in roles
+        )
+      );
+    }
+    
+    function isAdminMaster() { return hasAnyRole(['Admin Master']); }
+    function isLider() { return hasAnyRole(['Líder/FDV']); }
+    function isSalaMatricula() { return hasAnyRole(['Sala de Matrícula']); }
+    function isQG() { return hasAnyRole(['QG']); }
+    function isFDV() { return hasAnyRole(['FDV']); }
+    function isPromotor() { return hasAnyRole(['Promotor']); }
+    function isSSA() { return hasAnyRole(['SSA']); }
+    function isGestorUnidade() { return hasAnyRole(['Gestor Unidade']); }
+    function isGestorComercial() { return hasAnyRole(['Gestor Comercial']); }
+    function isAcademico() { return hasAnyRole(['Acadêmico']); }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Validation Helpers
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'name', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.name is string &&
+             data.role in ['Admin Master', 'Promotor', 'FDV', 'Sala de Matrícula', 'QG', 'Líder/FDV', 'SSA', 'Gestor Unidade', 'Gestor Comercial', 'Acadêmico'] &&
+             (!('chavePix' in data) || data.chavePix is string) &&
+             (!('blocked' in data) || data.blocked is bool) &&
+             (!('mustChangePassword' in data) || data.mustChangePassword is bool);
+    }
+
+    function isValidEmpresa(data) {
+      return data.keys().hasAll(['nome', 'responsavel', 'telefone']) &&
+             data.nome is string && data.nome.size() > 0 &&
+             data.responsavel is string &&
+             data.telefone is string;
+    }
+
+    function isValidWhatsAppMessage(data) {
+      return data.keys().hasAll(['tipo', 'texto']) &&
+             data.tipo in ['historico', 'bases', 'gap', 'fiesProuni', 'gap_0', 'gap_1', 'fiesProuni_0', 'fiesProuni_1', 'gap_ok', 'fiesProuni_ok'] &&
+             data.texto is string;
+    }
+
+    function isValidMapaoAcademico(data) {
+      return data.keys().hasAll(['modalidade', 'curso', 'tipoCurso', 'createdAt']) &&
+             data.modalidade is string &&
+             data.curso is string &&
+             data.tipoCurso in ['GRADUACAO', 'TECNICO'] &&
+             (!('disciplinas' in data) || data.disciplinas is list) &&
+             // Maintain backwards compatibility
+             (!('disciplina' in data) || data.disciplina is string);
+    }
+
+    function isValidBaseDisparo(data) {
+      return data.keys().hasAll(['data', 'nomeBase', 'totalDisparos', 'positivos', 'negativos', 'createdAt']) &&
+             data.data is string &&
+             data.nomeBase is string &&
+             data.totalDisparos is number &&
+             data.positivos is number &&
+             data.negativos is number;
+    }
+
+    function isValidFiesProuni(data) {
+      return data.keys().hasAll(['nome', 'cpf', 'tipo', 'bolsa', 'curso']) &&
+             data.nome is string &&
+             data.cpf is string &&
+             data.tipo in ['FIES', 'PROUNI'] &&
+             data.bolsa in ['Parcial', 'Total'] &&
+             data.curso is string &&
+             (!('status' in data) || data.status in ['Pendente', 'Aprovado', 'Reprovado', 'Em Análise', 'Desistente', 'Não compareceu']) &&
+             (!('digitalizaStatus' in data) || data.digitalizaStatus in ['Não Postado', 'Em Análise', 'Concluído', 'Documento reprovado']) &&
+             (!('docsEntreguesStatus' in data) || data.docsEntreguesStatus in ['Sim', 'Parcial', 'Pendente', 'Não compareceu']) &&
+             (!('sisprouniStatus' in data) || data.sisprouniStatus in ['Pendente', 'Aprovado', 'Reprovado']);
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /artifacts/gestaopro-761e1/public/data/users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdminMaster());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isAdminMaster() || (isOwner(userId) && request.resource.data.role == resource.data.role));
+      allow delete: if isAdminMaster();
+    }
+
+    match /artifacts/gestaopro-761e1/public/data/leads/{leadId} {
+      allow read: if isLider() || isSalaMatricula() || isQG() || isGestorUnidade() ||
+                     (isFDV() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole == 'Promotor')) ||
+                     (isGestorComercial() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole in ['Promotor', 'FDV'])) ||
+                     (isPromotor() && resource.data.promotorId == request.auth.uid);
+      allow create: if isLider() || isSalaMatricula() || isQG() || isFDV() || isPromotor() || isGestorUnidade() || isGestorComercial();
+      allow update: if isLider() || isSalaMatricula() || isQG() || isGestorUnidade() ||
+                      (isFDV() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole == 'Promotor')) ||
+                      (isGestorComercial() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole in ['Promotor', 'FDV'])) ||
+                      (isPromotor() && resource.data.promotorId == request.auth.uid);
+      allow delete: if isLider();
+    }
+
+    match /artifacts/gestaopro-761e1/public/data/bases/{baseId} {
+      allow read: if isLider() || isSalaMatricula() || isQG();
+      allow create, update: if isLider() || isSalaMatricula();
+      allow delete: if isLider();
+    }
+
+    match /artifacts/gestaopro-761e1/public/data/gap_academico/{gapId} {
+      allow read, create, update: if isLider() || isSalaMatricula();
+      allow delete: if isLider();
+    }
+
+    match /artifacts/gestaopro-761e1/public/data/fies_prouni/{entryId} {
+      allow read: if isLider() || isSalaMatricula() || isSSA();
+      allow create, update: if (isLider() || isSalaMatricula() || isSSA()) && isValidFiesProuni(request.resource.data);
+      allow delete: if isLider();
+    }
+
+    match /artifacts/gestaopro-761e1/public/data/calendario_acoes/{acaoId} {
+      allow read: if isLider() || isSalaMatricula() || isGestorUnidade() || isGestorComercial() ||
+                     (isFDV() && (resource.data.creatorId == request.auth.uid || resource.data.creatorRole == 'Promotor'));
+      allow create, update: if isLider() || isSalaMatricula() || isFDV() || isGestorUnidade() || isGestorComercial();
+      allow delete: if isLider();
+    }
+
+    // Dashboard & Config Collections
+    match /artifacts/gestaopro-761e1/public/data/campanhas/{id} {
+      allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
+      allow write: if isAdminMaster();
+    }
+    match /artifacts/gestaopro-761e1/public/data/bom_dia/{id} {
+      allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
+      allow write: if isAdminMaster();
+    }
+    match /artifacts/gestaopro-761e1/public/data/forecast/{id} {
+      allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
+      allow write: if isAdminMaster();
+    }
+    match /artifacts/gestaopro-761e1/public/data/planner/{id} {
+      allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
+      allow write: if isAdminMaster();
+    }
+    match /artifacts/gestaopro-761e1/public/data/periodo_captacao/{id} {
+      allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
+      allow write: if isAdminMaster();
+    }
+    match /artifacts/gestaopro-761e1/public/data/linksUteis/{id} {
+      allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
+      allow write: if isAdminMaster();
+    }
+    match /artifacts/gestaopro-761e1/public/data/empresas_parceiras/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdminMaster() && isValidEmpresa(request.resource.data);
+      allow delete: if isAdminMaster();
+    }
+    match /artifacts/gestaopro-761e1/public/data/whatsapp_messages/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdminMaster() && isValidWhatsAppMessage(request.resource.data);
+      allow delete: if isAdminMaster();
+    }
+
+    match /artifacts/gestaopro-761e1/public/data/mapao_academico/{id} {
+      allow read: if isLider() || isAcademico() || isSalaMatricula() || isFDV() || isSSA() || isGestorUnidade() || isGestorComercial();
+      allow create, update: if (isLider() || isAcademico()) && isValidMapaoAcademico(request.resource.data);
+      allow delete: if isLider() || isAcademico();
+    }
+
+    match /artifacts/gestaopro-761e1/public/data/bases_disparo/{id} {
+      allow read, create, update: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
+      allow delete: if isLider();
+    }
+  }
+}

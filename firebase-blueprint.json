@@ -1,0 +1,244 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information and role",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "chavePix": { "type": "string" },
+        "role": { "type": "string", "enum": ["Promotor", "FDV", "Sala de Matrícula", "QG", "Líder/FDV", "SSA", "Gestor Unidade", "Gestor Comercial"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "dashboardWidgets": {
+          "type": "object",
+          "properties": {
+            "stats": { "type": "boolean" },
+            "links": { "type": "boolean" },
+            "planner": { "type": "boolean" },
+            "campanhas": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["uid", "email", "name", "role"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Lead information",
+      "type": "object",
+      "properties": {
+        "acao": { "type": "string" },
+        "nome": { "type": "string" },
+        "telefone": { "type": "string" },
+        "cpf": { "type": "string" },
+        "cursoInteresse": { "type": "string" },
+        "converted": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "promotorId": { "type": "string" },
+        "promotorName": { "type": "string" }
+      },
+      "required": ["acao", "nome", "telefone", "converted", "promotorId"]
+    },
+    "BaseEntry": {
+      "title": "BaseEntry",
+      "description": "Entry in a sales base",
+      "type": "object",
+      "properties": {
+        "nomeBase": { "type": "string" },
+        "nome": { "type": "string" },
+        "telefone": { "type": "string" },
+        "cpf": { "type": "string" },
+        "curso": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pendente", "Interessado", "Convertido"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nomeBase", "nome", "telefone", "status"]
+    },
+    "GapEntry": {
+      "title": "GapEntry",
+      "description": "Academic gap tracking",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "telefone": { "type": "string" },
+        "matAcad": { "type": "boolean" },
+        "documentos": {
+          "type": "object",
+          "properties": {
+            "rg": { "type": "boolean" },
+            "cpf": { "type": "boolean" },
+            "diploma": { "type": "boolean" },
+            "enem": { "type": "boolean" },
+            "historico": { "type": "boolean" },
+            "planoEnsino": { "type": "boolean" },
+            "contrato": { "type": "boolean" },
+            "carta": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["nome", "telefone", "matAcad"]
+    },
+    "PlannerTask": {
+      "title": "PlannerTask",
+      "description": "Weekly planning task",
+      "type": "object",
+      "properties": {
+        "dayOfWeek": { "type": "string" },
+        "atendenteName": { "type": "string" },
+        "baseName": { "type": "string" }
+      },
+      "required": ["dayOfWeek", "atendenteName", "baseName"]
+    },
+    "LinkUtil": {
+      "title": "LinkUtil",
+      "description": "Useful link",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "url": { "type": "string", "format": "uri" }
+      },
+      "required": ["nome", "url"]
+    },
+    "FiesProuniEntry": {
+      "title": "FiesProuniEntry",
+      "description": "Fies/Prouni tracking entry",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "cpf": { "type": "string" },
+        "telefone": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["FIES", "PROUNI"] },
+        "bolsa": { "type": "string", "enum": ["Parcial", "Total"] },
+        "metodologia": { "type": "string" },
+        "curso": { "type": "string" },
+        "inscricaoSales": { "type": "string" },
+        "numeroMatricula": { "type": "string" },
+        "tcbAssinado": { "type": "boolean" },
+        "digitalizaStatus": { "type": "string", "enum": ["Não Postado", "Em Análise", "Concluído", "Documento reprovado"] },
+        "documentosEntregues": { "type": "array", "items": { "type": "string" } },
+        "docsEntreguesStatus": { "type": "string", "enum": ["Sim", "Parcial", "Pendente", "Não compareceu"] },
+        "sisprouniStatus": { "type": "string", "enum": ["Pendente", "Aprovado", "Reprovado"] },
+        "observacao": { "type": "string" },
+        "periodo": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pendente", "Aprovado", "Reprovado", "Em Análise", "Desistente", "Não compareceu"] }
+      },
+      "required": ["nome", "cpf", "tipo", "bolsa", "curso"]
+    },
+    "Campanha": {
+      "title": "Campanha",
+      "description": "Marketing campaign",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "dataInicio": { "type": "string", "format": "date" },
+        "dataFim": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Ativa", "Pausada", "Finalizada"] },
+        "objetivo": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nome", "dataInicio", "dataFim", "status"]
+    },
+    "BomDiaCaptacao": {
+      "title": "BomDiaCaptacao",
+      "description": "Morning capture greeting",
+      "type": "object",
+      "properties": {
+        "mensagem": { "type": "string" },
+        "data": { "type": "string", "format": "date" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["mensagem", "data"]
+    },
+    "ForecastCaptacao": {
+      "title": "ForecastCaptacao",
+      "description": "Capture forecast",
+      "type": "object",
+      "properties": {
+        "meta": { "type": "number" },
+        "realizado": { "type": "number" },
+        "projetado": { "type": "number" },
+        "mes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["meta", "realizado", "projetado", "mes"]
+    },
+    "EmpresaParceira": {
+      "title": "EmpresaParceira",
+      "description": "Partner company information",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "responsavel": { "type": "string" },
+        "telefone": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "endereco": { "type": "string" },
+        "linkMaps": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nome", "responsavel", "telefone"]
+    },
+    "WhatsAppMessage": {
+      "title": "WhatsAppMessage",
+      "description": "Default WhatsApp messages",
+      "type": "object",
+      "properties": {
+        "tipo": { "type": "string", "enum": ["historico", "bases", "gap", "fiesProuni"] },
+        "mensagem": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tipo", "mensagem"]
+    }
+  },
+  "firestore": {
+    "artifacts/gestaopro-761e1/public/data/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles"
+    },
+    "artifacts/gestaopro-761e1/public/data/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Leads data"
+    },
+    "artifacts/gestaopro-761e1/public/data/bases/{baseId}": {
+      "schema": "BaseEntry",
+      "description": "Sales bases data"
+    },
+    "artifacts/gestaopro-761e1/public/data/gap_academico/{gapId}": {
+      "schema": "GapEntry",
+      "description": "Academic gap data"
+    },
+    "artifacts/gestaopro-761e1/public/data/planner/{taskId}": {
+      "schema": "PlannerTask",
+      "description": "Weekly planner data"
+    },
+    "artifacts/gestaopro-761e1/public/data/linksUteis/{linkId}": {
+      "schema": "LinkUtil",
+      "description": "Useful links data"
+    },
+    "artifacts/gestaopro-761e1/public/data/fies_prouni/{entryId}": {
+      "schema": "FiesProuniEntry",
+      "description": "Fies and Prouni tracking data"
+    },
+    "artifacts/gestaopro-761e1/public/data/campanhas/{campanhaId}": {
+      "schema": "Campanha",
+      "description": "Marketing campaigns data"
+    },
+    "artifacts/gestaopro-761e1/public/data/bom_dia/{bomDiaId}": {
+      "schema": "BomDiaCaptacao",
+      "description": "Bom Dia Captacao data"
+    },
+    "artifacts/gestaopro-761e1/public/data/forecast/{forecastId}": {
+      "schema": "ForecastCaptacao",
+      "description": "Forecast Captacao data"
+    },
+    "artifacts/gestaopro-761e1/public/data/empresas_parceiras/{empresaId}": {
+      "schema": "EmpresaParceira",
+      "description": "Partner companies data"
+    },
+    "artifacts/gestaopro-761e1/public/data/whatsapp_messages/{messageId}": {
+      "schema": "WhatsAppMessage",
+      "description": "WhatsApp default messages data"
+    }
+  }
+}
