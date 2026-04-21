@@ -472,14 +472,8 @@ function MapaoAcademicoView({
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {mapao.map(entry => {
-          const disciplinasList = entry.disciplinas || (entry.disciplina ? [{
-            codDisc: entry.codDisc || '',
-            disciplina: entry.disciplina,
-            dia: entry.dia || '',
-            horario: entry.horario || '',
-            turma: entry.turma || '',
-            tipoDisciplina: entry.tipoDisciplina || 'PRESENCIAL'
-          }] : []);
+          const disciplinasList = entry.disciplinas || [];
+
 
           return (
             <motion.div 
@@ -1459,8 +1453,7 @@ function FiesProuniView({ data, onToast, profile, whatsappMessages, periodos }: 
           </button>
           <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
             <Upload size={18} />
-            <span>Importar</span>
-            <input type="file" accept=".xlsx, .xls" onChange={handleImport} className="hidden" />
+            <span>Importação indisponível</span>
           </label>
           <button 
             onClick={handleExport}
