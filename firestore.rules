@@ -192,5 +192,10 @@ service cloud.firestore {
       allow read, create, update: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
       allow delete: if isLider();
     }
+
+    match /artifacts/gestaopro-761e1/public/data/bot_config/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdminMaster();
+    }
   }
 }
