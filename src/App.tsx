@@ -6157,16 +6157,16 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         try {
                           const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
                           const res = await fetch(`${cleanUrl}/api/status`, {
-                            method: 'GET',
-                            headers: { 'Content-Type': 'application/json' }
+                            method: 'GET'
                           });
                           if (res.ok) {
-                            onToast('Conexão bem sucedida (CORS OK)!', 'success');
+                            const data = await res.json();
+                            onToast(`Servidor online! Status: ${data.name || 'OK'}`, 'success');
                           } else {
-                            onToast(`Servidor respondeu com erro ${res.status}. CORS provavelmene OK.`, 'error');
+                            onToast(`Servidor respondeu com erro ${res.status}.`, 'error');
                           }
                         } catch (e: any) {
-                          onToast(`Falha: ${e.message} (Verifique CORS / Servidor)`, 'error');
+                          onToast(`Falha de rede: A URL está certa? Está rodando? Erro: ${e.message}`, 'error');
                         }
                       }}
                       className="bg-blue-100 text-blue-700 px-4 py-3 rounded-xl hover:bg-blue-200 transition-colors whitespace-nowrap text-sm font-bold"

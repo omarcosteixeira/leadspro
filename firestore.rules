@@ -195,7 +195,7 @@ service cloud.firestore {
 
     match /artifacts/gestaopro-761e1/public/data/bot_config/{id} {
       allow read: if isAuthenticated();
-      allow write: if isAdminMaster();
+      allow write: if isAuthenticated();
     }
   }
 }
