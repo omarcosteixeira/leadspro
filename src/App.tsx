@@ -1930,7 +1930,7 @@ export default function App() {
 
     try {
       const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
-      const response = await fetch(`${cleanUrl}/api/send-message`, {
+      const response = await fetch(`${cleanUrl}/api/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ number: rawPhone, message })
@@ -6195,10 +6195,10 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         
                         // Make POST request to bot endpoint
                         const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
-                        const response = await fetch(`${cleanUrl}/api/toggle-bot`, {
+                        const response = await fetch(`${cleanUrl}/api/toggle`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ status: newStatus })
+                          body: JSON.stringify({ active: newStatus })
                         });
                         
                         if (response.ok) {
