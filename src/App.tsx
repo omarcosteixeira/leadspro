@@ -3787,6 +3787,7 @@ function GapView({
   const [matAcadFilter, setMatAcadFilter] = useState('');
   const [gapFilter, setGapFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<GapEntry | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
   
@@ -3940,21 +3941,30 @@ function GapView({
     e.preventDefault();
     setLoading(true);
     try {
-      await addDoc(collection(db, COLLECTIONS.GAP), {
-        ...formData,
-        matAcad: false,
-        documentos: {},
-        createdAt: serverTimestamp()
-      });
-      onToast("Candidato cadastrado no GAP!");
+      if (editingEntry) {
+        await updateDoc(doc(db, COLLECTIONS.GAP, editingEntry.id), {
+          ...formData,
+          updatedAt: serverTimestamp()
+        });
+        onToast("Candidato atualizado com sucesso!");
+      } else {
+        await addDoc(collection(db, COLLECTIONS.GAP), {
+          ...formData,
+          matAcad: false,
+          documentos: {},
+          createdAt: serverTimestamp()
+        });
+        onToast("Candidato cadastrado no GAP!");
+      }
       setIsModalOpen(false);
+      setEditingEntry(null);
       setFormData({
         nome: '', telefone: '', cpf: '', produto: 'Graduação',
         numeroOportunidade: '', curso: '', metodologia: '',
         formaIngresso: '', numeroMatricula: '', periodo: ''
       } as any);
     } catch (err: any) {
-      onToast("Erro ao cadastrar.", 'error');
+      onToast("Erro ao salvar.", 'error');
     } finally {
       setLoading(false);
     }
@@ -4019,7 +4029,15 @@ function GapView({
         <h2 className="text-2xl font-bold text-slate-800">GAP Acadêmico</h2>
         <div className="flex space-x-2">
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setEditingEntry(null);
+              setFormData({
+                nome: '', telefone: '', cpf: '', produto: 'Graduação',
+                numeroOportunidade: '', curso: '', metodologia: '',
+                formaIngresso: '', numeroMatricula: '', periodo: ''
+              } as any);
+              setIsModalOpen(true);
+            }}
             className="bg-blue-600 text-white px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
           >
             <Plus size={20} />
@@ -4186,6 +4204,29 @@ function GapView({
                       <MessageSquare size={16} />
                     </a>
                     <button 
+                      onClick={() => {
+                        setEditingEntry(entry);
+                        setFormData({
+                          nome: entry.nome || '',
+                          telefone: entry.telefone || '',
+                          cpf: entry.cpf || '',
+                          produto: entry.produto || 'Graduação',
+                          numeroOportunidade: entry.numeroOportunidade || '',
+                          curso: entry.curso || '',
+                          semestre: entry.semestre || '',
+                          metodologia: entry.metodologia || '',
+                          formaIngresso: entry.formaIngresso || '',
+                          numeroMatricula: entry.numeroMatricula || '',
+                          periodo: entry.periodo || ''
+                        });
+                        setIsModalOpen(true);
+                      }}
+                      className="text-blue-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition-all"
+                      title="Editar"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button 
                       onClick={() => handleDeleteGap(entry.id)}
                       className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
                       title="Excluir"
@@ -4215,7 +4256,7 @@ function GapView({
               className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden"
             >
               <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                <h3 className="text-xl font-bold text-slate-900">Cadastrar no GAP</h3>
+                <h3 className="text-xl font-bold text-slate-900">{editingEntry ? 'Editar Candidato' : 'Cadastrar no GAP'}</h3>
                 <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                   <X size={24} />
                 </button>
@@ -4271,7 +4312,7 @@ function GapView({
                 </div>
                 <div className="md:col-span-2">
                   <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50">
-                    {loading ? 'Salvando...' : 'Cadastrar Candidato'}
+                    {loading ? 'Salvando...' : (editingEntry ? 'Salvar Alterações' : 'Cadastrar Candidato')}
                   </button>
                 </div>
               </form>
