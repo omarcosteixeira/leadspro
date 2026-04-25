@@ -1943,7 +1943,11 @@ export default function App() {
         showToast(errData.error || 'Falha ao enviar mensagem pelo Bot.', 'error');
       }
     } catch (err: any) {
-      showToast(`Erro de conexão com o Bot: ${err.message}`, 'error');
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+         showToast(`Erro de conexão com o Bot (A API no Railway pode estar offline ou bloqueando a requisição por CORS).`, 'error');
+      } else {
+         showToast(`Erro de conexão com o Bot: ${err.message}`, 'error');
+      }
     }
   };
 
@@ -6173,10 +6177,14 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         if (response.ok) {
                           onToast(`Bot ${newStatus ? 'ativado' : 'desativado'} com sucesso!`);
                         } else {
-                          onToast('O Bot não confirmou a alteração. Verifique a URL e a conexão.', 'error');
+                          onToast('Status salvo no banco, mas a API do Bot retornou erro.', 'error');
                         }
                       } catch (err: any) {
-                        onToast(`Erro ao contactar o bot: ${err.message}`, 'error');
+                        if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+                           onToast(`Status salvo! A API do Bot não respondeu (possível erro de CORS ou servidor offline), mas a configuração foi atualizada no sistema.`, 'success');
+                        } else {
+                           onToast(`Erro ao contactar o bot: ${err.message}`, 'error');
+                        }
                       }
                     }}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${botConfig.active ? 'bg-blue-600' : 'bg-slate-200'}`}
