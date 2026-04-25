@@ -6120,21 +6120,25 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">URL do App Railway (API do Bot)</label>
                   <input 
-                    type="url"
+                    type="text"
                     placeholder="https://seu-app-no-railway.app"
                     defaultValue={botConfig.url}
                     onBlur={async (e) => {
-                      const newUrl = e.target.value.trim();
+                      let newUrl = e.target.value.trim();
+                      if (newUrl && !newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
+                        newUrl = `https://${newUrl}`;
+                        e.target.value = newUrl;
+                      }
                       if (newUrl === botConfig.url) return;
                       try {
                         await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
                           url: newUrl,
-                          active: botConfig.active,
+                          active: botConfig.active || false,
                           updatedAt: serverTimestamp() 
                         }, { merge: true });
                         onToast("URL do Bot atualizada!");
                       } catch (err: any) {
-                        onToast("Erro ao salvar URL.", 'error');
+                        onToast(`Erro ao salvar URL: ${err.message}`, 'error');
                       }
                     }}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
