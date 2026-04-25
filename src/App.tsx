@@ -6123,30 +6123,57 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
               <div className="flex flex-col gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">URL do App Railway (API do Bot)</label>
-                  <input 
-                    type="text"
-                    placeholder="https://seu-app-no-railway.app"
-                    defaultValue={botConfig.url}
-                    onBlur={async (e) => {
-                      let newUrl = e.target.value.trim();
-                      if (newUrl && !newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
-                        newUrl = `https://${newUrl}`;
-                        e.target.value = newUrl;
-                      }
-                      if (newUrl === botConfig.url) return;
-                      try {
-                        await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
-                          url: newUrl,
-                          active: botConfig.active || false,
-                          updatedAt: serverTimestamp() 
-                        }, { merge: true });
-                        onToast("URL do Bot atualizada!");
-                      } catch (err: any) {
-                        onToast(`Erro ao salvar URL: ${err.message}`, 'error');
-                      }
-                    }}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                  />
+                  <div className="flex gap-2">
+                    <input 
+                      type="text"
+                      placeholder="https://seu-app-no-railway.app"
+                      defaultValue={botConfig.url}
+                      onBlur={async (e) => {
+                        let newUrl = e.target.value.trim();
+                        if (newUrl && !newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
+                          newUrl = `https://${newUrl}`;
+                          e.target.value = newUrl;
+                        }
+                        if (newUrl === botConfig.url) return;
+                        try {
+                          await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
+                            url: newUrl,
+                            active: botConfig.active || false,
+                            updatedAt: serverTimestamp() 
+                          }, { merge: true });
+                          onToast("URL do Bot atualizada!");
+                        } catch (err: any) {
+                          onToast(`Erro ao salvar URL: ${err.message}`, 'error');
+                        }
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    />
+                    <button 
+                      onClick={async () => {
+                        if (!botConfig.url) {
+                          onToast('Insira uma URL primeiro.', 'error');
+                          return;
+                        }
+                        try {
+                          const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                          const res = await fetch(`${cleanUrl}/api/status`, {
+                            method: 'GET',
+                            headers: { 'Content-Type': 'application/json' }
+                          });
+                          if (res.ok) {
+                            onToast('Conexão bem sucedida (CORS OK)!', 'success');
+                          } else {
+                            onToast(`Servidor respondeu com erro ${res.status}. CORS provavelmene OK.`, 'error');
+                          }
+                        } catch (e: any) {
+                          onToast(`Falha: ${e.message} (Verifique CORS / Servidor)`, 'error');
+                        }
+                      }}
+                      className="bg-blue-100 text-blue-700 px-4 py-3 rounded-xl hover:bg-blue-200 transition-colors whitespace-nowrap text-sm font-bold"
+                    >
+                      Testar Conexão
+                    </button>
+                  </div>
                   <p className="text-[10px] text-slate-400 mt-1">Insira a URL base do servidor onde seu bot está rodando (ex: https://meubot.up.railway.app).</p>
                 </div>
                 <div className="flex items-center space-x-3">
