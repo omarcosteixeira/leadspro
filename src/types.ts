@@ -237,3 +237,10 @@ export interface BaseDisparoEntry {
   negativos: number;
   createdAt: any;
 }
+
+export interface BotConfig {
+  id?: string;
+  url: string;
+  active: boolean;
+  updatedAt?: any;
+}

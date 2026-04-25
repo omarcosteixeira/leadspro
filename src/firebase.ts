@@ -32,6 +32,7 @@ export const COLLECTIONS = {
   WHATSAPP_MESSAGES: `artifacts/${appId}/public/data/whatsapp_messages`,
   MAPAO_ACADEMICO: `artifacts/${appId}/public/data/mapao_academico`,
   BASES_DISPARO: `artifacts/${appId}/public/data/bases_disparo`,
+  BOT_CONFIG: `artifacts/${appId}/public/data/bot_config`,
 };
 
 export enum OperationType {

@@ -65,7 +65,9 @@ import {
   MessageSquare,
   Mail,
   Globe,
-  Copy
+  Copy,
+  Bot,
+  Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth } from './firebase';
@@ -89,7 +91,8 @@ import {
   EmpresaParceira,
   WhatsAppMessage,
   MapaoAcademicoEntry,
-  BaseDisparoEntry
+  BaseDisparoEntry,
+  BotConfig
 } from './types';
 
 // --- Helpers ---
@@ -118,13 +121,17 @@ function WhatsAppMessageSelector({
   onClose, 
   messages, 
   onSelect, 
-  leadName 
+  leadName,
+  botConfig,
+  onSendBot
 }: { 
   isOpen: boolean;
   onClose: () => void;
   messages: WhatsAppMessage[];
   onSelect: (msg: string) => void;
   leadName: string;
+  botConfig?: BotConfig;
+  onSendBot?: (msg: string) => void;
 }) {
   if (!isOpen) return null;
 
@@ -139,7 +146,7 @@ function WhatsAppMessageSelector({
         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <div>
             <h3 className="text-xl font-bold text-slate-900">Selecionar Mensagem</h3>
-            <p className="text-xs text-slate-500 font-medium mt-1">Escolha um modelo para enviar para {leadName}</p>
+            <p className="text-xs text-slate-500 font-medium mt-1">Escolha como enviar para {leadName}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-full transition-all">
             <X size={20} />
@@ -148,23 +155,46 @@ function WhatsAppMessageSelector({
         <div className="p-4 overflow-y-auto space-y-3 flex-1">
           {messages.length > 0 ? messages.map((msg, idx) => {
             const preview = msg.texto.replace('[nome]', leadName);
+            const canUseBot = botConfig?.active && botConfig?.url && onSendBot;
+            
             return (
-              <button
+              <div
                 key={msg.id}
-                onClick={() => {
-                  onSelect(preview);
-                  onClose();
-                }}
-                className="w-full text-left p-4 rounded-2xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all group"
+                className="w-full text-left p-4 rounded-2xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all flex flex-col space-y-3"
               >
-                <div className="flex justify-between items-start mb-2">
+                <div className="flex justify-between items-start">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Modelo {idx + 1}</span>
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 opacity-0 group-hover:opacity-100 transition-all">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
                     <MessageSquare size={16} />
                   </div>
                 </div>
                 <p className="text-sm text-slate-600 line-clamp-3 leading-relaxed">{preview || <span className="italic opacity-50">Mensagem vazia</span>}</p>
-              </button>
+                
+                <div className="flex space-x-2 pt-2 border-t border-slate-100">
+                  {canUseBot && (
+                    <button 
+                      onClick={() => {
+                        onSendBot(preview);
+                        onClose();
+                      }}
+                      className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-xs font-bold hover:bg-blue-700 transition flex items-center justify-center space-x-1"
+                    >
+                      <Bot size={14} />
+                      <span>Bot ARGO'S</span>
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => {
+                      onSelect(preview);
+                      onClose();
+                    }}
+                    className={`flex-1 ${canUseBot ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100' : 'bg-emerald-500 text-white hover:bg-emerald-600'} py-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1`}
+                  >
+                    <Send size={14} />
+                    <span>{canUseBot ? 'WhatsApp Web' : 'Enviar WhatsApp'}</span>
+                  </button>
+                </div>
+              </div>
             );
           }) : (
             <div className="text-center py-12">
@@ -1257,12 +1287,22 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
   );
 }
 
-function FiesProuniView({ data, onToast, profile, whatsappMessages, periodos }: { 
+function FiesProuniView({ 
+  data, 
+  onToast, 
+  profile, 
+  whatsappMessages, 
+  periodos,
+  botConfig,
+  onSendBot
+}: { 
   data: FiesProuniEntry[], 
   onToast: (m: string, t?: 'success' | 'error') => void,
   profile: UserProfile,
   whatsappMessages: WhatsAppMessage[],
-  periodos: PeriodoCaptacao[]
+  periodos: PeriodoCaptacao[],
+  botConfig: BotConfig,
+  onSendBot: (tel: string, msg: string) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [periodoFilter, setPeriodoFilter] = useState('');
@@ -1620,21 +1660,38 @@ function FiesProuniView({ data, onToast, profile, whatsappMessages, periodos }: 
                         <Edit2 size={18} />
                       </button>
                       {item.telefone && (
-                        <a 
-                          href={getWhatsAppUrl(item.telefone, (() => {
-                            const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
-                            const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
-                            const msg = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                            if (msg) return msg.texto.replace('[nome]', item.nome);
-                            return `Olá ${item.nome}, tudo bem?`;
-                          })())}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-emerald-600 hover:text-emerald-800 p-2 hover:bg-emerald-50 rounded-lg transition-all"
-                          title="Enviar WhatsApp"
-                        >
-                          <MessageSquare size={18} />
-                        </a>
+                        <>
+                          {botConfig.active && botConfig.url && (
+                            <button 
+                              onClick={() => {
+                                const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
+                                const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
+                                const msgObj = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
+                                const msg = (msgObj ? msgObj.texto : `Olá [nome], tudo bem?`).replace('[nome]', item.nome);
+                                onSendBot(item.telefone, msg);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-all"
+                              title="Enviar pelo Bot ARGO'S"
+                            >
+                              <Bot size={18} />
+                            </button>
+                          )}
+                          <a 
+                            href={getWhatsAppUrl(item.telefone, (() => {
+                              const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
+                              const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
+                              const msg = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
+                              if (msg) return msg.texto.replace('[nome]', item.nome);
+                              return `Olá ${item.nome}, tudo bem?`;
+                            })())}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-emerald-600 hover:text-emerald-800 p-2 hover:bg-emerald-50 rounded-lg transition-all"
+                            title="Enviar WhatsApp"
+                          >
+                            <MessageSquare size={18} />
+                          </a>
+                        </>
                       )}
                       <button 
                         onClick={() => handleDeleteIndividual(item.id)}
@@ -1849,11 +1906,45 @@ export default function App() {
   const [links, setLinks] = useState<LinkUtil[]>([]);
   const [mapao, setMapao] = useState<MapaoAcademicoEntry[]>([]);
   const [basesDisparo, setBasesDisparo] = useState<BaseDisparoEntry[]>([]);
+  const [botConfig, setBotConfig] = useState<BotConfig>({ url: '', active: false });
   const [initialActionData, setInitialActionData] = useState<Partial<CalendarioAcao> | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleSendBotMessage = async (telefone: string, message: string) => {
+    if (!botConfig.url || !botConfig.active) {
+      showToast('O Bot ARGO\'S não está configurado ou está inativo.', 'error');
+      return;
+    }
+    
+    // Format phone: remove non-numeric, strip leading zero if present
+    let rawPhone = telefone.replace(/\D/g, '');
+    if (rawPhone.startsWith('0')) rawPhone = rawPhone.substring(1);
+    // Add country code if not present and has standard length
+    if (rawPhone.length === 10 || rawPhone.length === 11) {
+      rawPhone = `55${rawPhone}`;
+    }
+
+    try {
+      const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+      const response = await fetch(`${cleanUrl}/api/send-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number: rawPhone, message })
+      });
+      
+      if (response.ok) {
+        showToast('Mensagem enviada com sucesso pelo Bot ARGO\'S!');
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        showToast(errData.error || 'Falha ao enviar mensagem pelo Bot.', 'error');
+      }
+    } catch (err: any) {
+      showToast(`Erro de conexão com o Bot: ${err.message}`, 'error');
+    }
   };
 
   useEffect(() => {
@@ -2058,6 +2149,14 @@ export default function App() {
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BASES_DISPARO));
     }
 
+    const unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), snap => {
+      if (snap.exists()) {
+        setBotConfig({ id: snap.id, ...snap.data() } as BotConfig);
+      } else {
+        setBotConfig({ url: '', active: false });
+      }
+    });
+
     return () => {
       unsubUsers();
       unsubPlanner();
@@ -2075,6 +2174,7 @@ export default function App() {
       unsubWhatsApp();
       unsubMapao();
       unsubBasesDisparo();
+      unsubBotConfig();
     };
   }, [user, profile]);
 
@@ -2275,10 +2375,10 @@ export default function App() {
             >
               {currentView === 'dashboard' && <DashboardView leads={leads} planner={planner} links={links} profile={profile!} onToast={showToast} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} />}
               {currentView === 'cadastro' && <CadastroView onToast={showToast} profile={profile!} />}
-              {currentView === 'historico' && <HistoricoView leads={leads} profile={profile!} onToast={showToast} users={users} whatsappMessages={whatsappMessages} />}
-              {currentView === 'bases' && <BasesView bases={bases} onToast={showToast} whatsappMessages={whatsappMessages} />}
-              {currentView === 'gap' && <GapView gap={gap} onToast={showToast} whatsappMessages={whatsappMessages} />}
-              {currentView === 'fiesProuni' && <FiesProuniView data={fiesProuni} onToast={showToast} profile={profile!} whatsappMessages={whatsappMessages} periodos={periodos} />}
+              {currentView === 'historico' && <HistoricoView leads={leads} profile={profile!} onToast={showToast} users={users} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} />}
+              {currentView === 'bases' && <BasesView bases={bases} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} />}
+              {currentView === 'gap' && <GapView gap={gap} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} />}
+              {currentView === 'fiesProuni' && <FiesProuniView data={fiesProuni} onToast={showToast} profile={profile!} whatsappMessages={whatsappMessages} periodos={periodos} botConfig={botConfig} onSendBot={handleSendBotMessage} />}
               {currentView === 'mapao' && <MapaoAcademicoView mapao={mapao} onToast={showToast} profile={profile!} />}
               {currentView === 'basesDisparo' && <BasesDisparoView bases={basesDisparo} onToast={showToast} />}
               {currentView === 'campanhas' && <CampanhasView campanhas={campanhas} onToast={showToast} />}
@@ -2298,7 +2398,7 @@ export default function App() {
                   }} 
                 />
               )}
-              {currentView === 'admin' && <AdminView users={users} links={links} onToast={showToast} leads={leads} bases={bases} gap={gap} planner={planner} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} whatsappMessages={whatsappMessages} empresasParceiras={empresasParceiras} />}
+              {currentView === 'admin' && <AdminView users={users} links={links} onToast={showToast} leads={leads} bases={bases} gap={gap} planner={planner} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} whatsappMessages={whatsappMessages} empresasParceiras={empresasParceiras} botConfig={botConfig} />}
             </motion.div>
           </AnimatePresence>
 
@@ -2967,7 +3067,23 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
   );
 }
 
-function HistoricoView({ leads, profile, onToast, users, whatsappMessages }: { leads: Lead[], profile: UserProfile, onToast: (m: string, t?: 'success' | 'error') => void, users: UserProfile[], whatsappMessages: WhatsAppMessage[] }) {
+function HistoricoView({ 
+  leads, 
+  profile, 
+  onToast, 
+  users, 
+  whatsappMessages,
+  botConfig,
+  onSendBot
+}: { 
+  leads: Lead[]; 
+  profile: UserProfile; 
+  onToast: (m: string, t?: 'success' | 'error') => void; 
+  users: UserProfile[]; 
+  whatsappMessages: WhatsAppMessage[];
+  botConfig: BotConfig;
+  onSendBot: (tel: string, msg: string) => void;
+}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -3187,12 +3303,30 @@ function HistoricoView({ leads, profile, onToast, users, whatsappMessages }: { l
             window.open(getWhatsAppUrl(selectedLead.telefone, msg), '_blank');
           }
         }}
+        botConfig={botConfig}
+        onSendBot={(msg) => {
+          if (selectedLead) {
+            onSendBot(selectedLead.telefone, msg);
+          }
+        }}
       />
     </div>
   );
 }
 
-function BasesView({ bases, onToast, whatsappMessages }: { bases: BaseEntry[], onToast: (m: string, t?: 'success' | 'error') => void, whatsappMessages: WhatsAppMessage[] }) {
+function BasesView({ 
+  bases, 
+  onToast, 
+  whatsappMessages,
+  botConfig,
+  onSendBot
+}: { 
+  bases: BaseEntry[]; 
+  onToast: (m: string, t?: 'success' | 'error') => void; 
+  whatsappMessages: WhatsAppMessage[];
+  botConfig: BotConfig;
+  onSendBot: (tel: string, msg: string) => void;
+}) {
   const [formData, setFormData] = useState({
     nomeBase: '',
     nome: '',
@@ -3582,15 +3716,16 @@ function BasesView({ bases, onToast, whatsappMessages }: { bases: BaseEntry[], o
                     </select>
                   </td>
                   <td className="px-6 py-4 flex items-center space-x-2">
-                    <a 
-                      href={getWhatsAppUrl(entry.telefone, whatsappMessages.find(m => m.tipo === 'bases')?.texto.replace('[nome]', entry.nome) || `Olá ${entry.nome}, tudo bem?`)} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
+                    <button 
+                      onClick={() => {
+                        setSelectedEntry(entry);
+                        setSelectorOpen(true);
+                      }}
                       className="text-emerald-600 hover:text-emerald-700 font-bold text-sm flex items-center space-x-1"
                     >
                       <MessageSquare size={14} />
                       <span>WhatsApp</span>
-                    </a>
+                    </button>
                     <button 
                       onClick={() => handleDeleteBase(entry.id)}
                       className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
@@ -3620,12 +3755,30 @@ function BasesView({ bases, onToast, whatsappMessages }: { bases: BaseEntry[], o
             window.open(getWhatsAppUrl(selectedEntry.telefone, msg), '_blank');
           }
         }}
+        botConfig={botConfig}
+        onSendBot={(msg) => {
+          if (selectedEntry) {
+            onSendBot(selectedEntry.telefone, msg);
+          }
+        }}
       />
     </div>
   );
 }
 
-function GapView({ gap, onToast, whatsappMessages }: { gap: GapEntry[], onToast: (m: string, t?: 'success' | 'error') => void, whatsappMessages: WhatsAppMessage[] }) {
+function GapView({ 
+  gap, 
+  onToast, 
+  whatsappMessages,
+  botConfig,
+  onSendBot
+}: { 
+  gap: GapEntry[]; 
+  onToast: (m: string, t?: 'success' | 'error') => void; 
+  whatsappMessages: WhatsAppMessage[];
+  botConfig: BotConfig;
+  onSendBot: (tel: string, msg: string) => void;
+}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [cpfFilter, setCpfFilter] = useState('');
   const [produtoFilter, setProdutoFilter] = useState('');
@@ -4014,17 +4167,28 @@ function GapView({ gap, onToast, whatsappMessages }: { gap: GapEntry[], onToast:
                     </button>
                   </td>
                   <td className="px-6 py-4 flex items-center space-x-2">
+                    {botConfig.active && botConfig.url && (
+                      <button 
+                        onClick={() => onSendBot(entry.telefone, getGapWhatsAppMessage(entry))}
+                        className="text-blue-600 hover:text-blue-700 font-bold text-sm bg-blue-50 p-2 rounded-lg"
+                        title="Enviar pelo Bot ARGO'S"
+                      >
+                        <Bot size={16} />
+                      </button>
+                    )}
                     <a 
                       href={getWhatsAppUrl(entry.telefone, getGapWhatsAppMessage(entry))} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-emerald-600 hover:text-emerald-700 font-bold text-sm"
+                      className="text-emerald-600 hover:text-emerald-700 font-bold text-sm bg-emerald-50 p-2 rounded-lg"
+                      title="Abrir WhatsApp"
                     >
                       <MessageSquare size={16} />
                     </a>
                     <button 
                       onClick={() => handleDeleteGap(entry.id)}
                       className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
+                      title="Excluir"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -4892,7 +5056,7 @@ function CalculoRemuneracaoView() {
   );
 }
 
-function AdminView({ users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras }: { 
+function AdminView({ users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras, botConfig }: { 
   users: UserProfile[], 
   links: LinkUtil[], 
   onToast: (m: string, t?: 'success' | 'error') => void,
@@ -4905,7 +5069,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   forecast: ForecastCaptacao[],
   periodos: PeriodoCaptacao[],
   whatsappMessages: WhatsAppMessage[],
-  empresasParceiras: EmpresaParceira[]
+  empresasParceiras: EmpresaParceira[],
+  botConfig: BotConfig
 }) {
   const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup'>('usuarios');
   const [newLink, setNewLink] = useState({ nome: '', url: '' });
@@ -5903,11 +6068,89 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
       )}
 
       {activeTab === 'whatsapp' && (
-        <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-6 border-b border-slate-100">
-            <h3 className="text-xl font-bold text-slate-900">Mensagens Padrão do WhatsApp</h3>
-            <p className="text-slate-500 text-sm">Gerencie múltiplos modelos de mensagens para cada categoria</p>
-          </div>
+        <div className="space-y-6">
+          <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100">
+              <h3 className="text-xl font-bold text-slate-900">Integração Bot ARGO'S</h3>
+              <p className="text-slate-500 text-sm">Configure a conexão com a inteligência artificial</p>
+            </div>
+            <div className="p-6">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">URL do App Railway (API do Bot)</label>
+                  <input 
+                    type="url"
+                    placeholder="https://seu-app-no-railway.app"
+                    defaultValue={botConfig.url}
+                    onBlur={async (e) => {
+                      const newUrl = e.target.value.trim();
+                      if (newUrl === botConfig.url) return;
+                      try {
+                        await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
+                          url: newUrl,
+                          active: botConfig.active,
+                          updatedAt: serverTimestamp() 
+                        }, { merge: true });
+                        onToast("URL do Bot atualizada!");
+                      } catch (err: any) {
+                        onToast("Erro ao salvar URL.", 'error');
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Insira a URL base do servidor onde seu bot está rodando (ex: https://meubot.up.railway.app).</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="font-bold text-sm text-slate-700">Status do Bot (Ativar/Desativar IA)</div>
+                  <button
+                    onClick={async () => {
+                      if (!botConfig.url) {
+                        onToast('Configure a URL do bot primeiro.', 'error');
+                        return;
+                      }
+                      const newStatus = !botConfig.active;
+                      try {
+                        // Optimistic update for database
+                        await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
+                          url: botConfig.url,
+                          active: newStatus,
+                          updatedAt: serverTimestamp() 
+                        }, { merge: true });
+                        
+                        // Make POST request to bot endpoint
+                        const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                        const response = await fetch(`${cleanUrl}/api/toggle-bot`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ status: newStatus })
+                        });
+                        
+                        if (response.ok) {
+                          onToast(`Bot ${newStatus ? 'ativado' : 'desativado'} com sucesso!`);
+                        } else {
+                          onToast('O Bot não confirmou a alteração. Verifique a URL e a conexão.', 'error');
+                        }
+                      } catch (err: any) {
+                        onToast(`Erro ao contactar o bot: ${err.message}`, 'error');
+                      }
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${botConfig.active ? 'bg-blue-600' : 'bg-slate-200'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${botConfig.active ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                  <span className="text-xs font-semibold" style={{color: botConfig.active ? '#2563eb' : '#94a3b8'}}>
+                    {botConfig.active ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100">
+              <h3 className="text-xl font-bold text-slate-900">Mensagens Padrão do WhatsApp</h3>
+              <p className="text-slate-500 text-sm">Gerencie múltiplos modelos de mensagens para cada categoria</p>
+            </div>
           <div className="p-6 space-y-12">
             {[
               { id: 'historico', label: 'Histórico', multi: true },
@@ -6016,6 +6259,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
             <p className="text-[10px] text-slate-400 mt-2 italic text-center">Dica: Use [nome] para inserir o nome do lead automaticamente.</p>
           </div>
         </section>
+        </div>
       )}
 
       {activeTab === 'links' && (
