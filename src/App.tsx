@@ -1907,7 +1907,7 @@ export default function App() {
   const [mapao, setMapao] = useState<MapaoAcademicoEntry[]>([]);
   const [basesDisparo, setBasesDisparo] = useState<BaseDisparoEntry[]>([]);
   const [botConfig, setBotConfig] = useState<BotConfig>({ url: '', active: false });
-  const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string }>>({});
+  const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string }>>({});
   const [initialActionData, setInitialActionData] = useState<Partial<CalendarioAcao> | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -5155,7 +5155,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   whatsappMessages: WhatsAppMessage[],
   empresasParceiras: EmpresaParceira[],
   botConfig: BotConfig,
-  botStatuses: Record<string, { status: string, pairingCode?: string }>
+  botStatuses: Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string }>
 }) {
   const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup'>('usuarios');
   const [newLink, setNewLink] = useState({ nome: '', url: '' });
@@ -6262,10 +6262,21 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                               </span>
                             </div>
                             
-                            {info?.status === 'pairing' && info?.pairingCode && (
-                              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2 text-center">
-                                 <p className="text-xs text-slate-500 mb-1">Pairing Code (Emparelhar no WhatsApp):</p>
-                                 <p className="text-2xl tracking-widest font-mono font-bold text-slate-800">{info.pairingCode}</p>
+                            {info?.status === 'pairing' && (info?.pairingCode || info?.qrUrl) && (
+                              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2 text-center flex flex-col gap-4 items-center">
+                                 {info?.qrUrl && (
+                                    <div>
+                                       <p className="text-xs text-slate-500 mb-2">Escaneie o QR Code:</p>
+                                       <img src={info.qrUrl} alt="QR Code WhatsApp" className="mx-auto rounded" />
+                                    </div>
+                                 )}
+                                 
+                                 {info?.pairingCode && (
+                                    <div>
+                                       <p className="text-xs text-slate-500 mb-1">{info?.qrUrl ? 'Ou use' : 'Use'} o Pairing Code:</p>
+                                       <p className="text-2xl tracking-widest font-mono font-bold text-slate-800">{info.pairingCode}</p>
+                                    </div>
+                                 )}
                               </div>
                             )}
 
