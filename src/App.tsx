@@ -1661,7 +1661,7 @@ function FiesProuniView({
                       </button>
                       {item.telefone && (
                         <>
-                          {botConfig.active && botConfig.url && (
+                          {botConfig.url && (
                             <button 
                               onClick={() => {
                                 const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
@@ -1907,6 +1907,7 @@ export default function App() {
   const [mapao, setMapao] = useState<MapaoAcademicoEntry[]>([]);
   const [basesDisparo, setBasesDisparo] = useState<BaseDisparoEntry[]>([]);
   const [botConfig, setBotConfig] = useState<BotConfig>({ url: '', active: false });
+  const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string }>>({});
   const [initialActionData, setInitialActionData] = useState<Partial<CalendarioAcao> | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -1915,9 +1916,15 @@ export default function App() {
   };
 
   const handleSendBotMessage = async (telefone: string, message: string) => {
-    if (!botConfig.url || !botConfig.active) {
-      showToast('O Bot ARGO\'S não está configurado ou está inativo.', 'error');
+    if (!botConfig.url) {
+      showToast('O Bot ARGO\'S não está configurado na URL principal.', 'error');
       return;
+    }
+
+    const currentBotNumber = profile?.botNumber;
+    if (!currentBotNumber) {
+       showToast('Você ainda não tem um número de WhatsApp configurado (Administração -> GestãoPro).', 'error');
+       return;
     }
     
     // Format phone: remove non-numeric, strip leading zero if present
@@ -1933,7 +1940,7 @@ export default function App() {
       const response = await fetch(`${cleanUrl}/api/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number: rawPhone, message })
+        body: JSON.stringify({ botNumber: currentBotNumber, number: rawPhone, message })
       });
       
       if (response.ok) {
@@ -2188,6 +2195,31 @@ export default function App() {
       unsubBotConfig();
     };
   }, [user, profile]);
+
+  useEffect(() => {
+    if (!botConfig.url) return;
+    
+    let intervalId: NodeJS.Timeout;
+    
+    const checkBotStatus = async () => {
+      try {
+        const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+        const res = await fetch(`${cleanUrl}/api/status`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.bots) {
+             setBotStatuses(data.bots);
+          }
+        }
+      } catch (e) {
+        // optionally ignore
+      }
+    };
+    
+    checkBotStatus();
+    intervalId = setInterval(checkBotStatus, 3000);
+    return () => clearInterval(intervalId);
+  }, [botConfig.url]);
 
   const canView = (view: string) => {
     if (!profile) return false;
@@ -4196,7 +4228,7 @@ function GapView({
                     </button>
                   </td>
                   <td className="px-6 py-4 flex items-center space-x-2">
-                    {botConfig.active && botConfig.url && (
+                    {botConfig.url && (
                       <button 
                         onClick={() => onSendBot(entry.telefone, getGapWhatsAppMessage(entry))}
                         className="text-blue-600 hover:text-blue-700 font-bold text-sm bg-blue-50 p-2 rounded-lg"
@@ -5437,6 +5469,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       phone: formData.get('phone') as string,
                       email: formData.get('email') as string,
                       chavePix: formData.get('chavePix') as string,
+                      botNumber: formData.get('botNumber') as string,
                     });
                   }} 
                   className="p-6 space-y-4"
@@ -5461,13 +5494,23 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Telefone</label>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Telefone (Contato)</label>
                     <input 
                       name="phone"
                       defaultValue={editingUser.phone}
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                       placeholder="(00) 00000-0000"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Telefone da IA (Multi-Device)</label>
+                    <input 
+                      name="botNumber"
+                      defaultValue={editingUser.botNumber || ''}
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      placeholder="Ex: 5511999999999 (Somente números)"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Este será o número de WhatsApp usado pelo sistema para enviar mensagens desta conta.</p>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">Chave PIX (Opcional)</label>
@@ -6183,51 +6226,85 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   </div>
                   <p className="text-[10px] text-slate-400 mt-1">Insira a URL base do servidor onde seu bot está rodando (ex: https://meubot.up.railway.app).</p>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <div className="font-bold text-sm text-slate-700">Status do Bot (Ativar/Desativar IA)</div>
-                  <button
-                    onClick={async () => {
-                      if (!botConfig.url) {
-                        onToast('Configure a URL do bot primeiro.', 'error');
-                        return;
-                      }
-                      const newStatus = !botConfig.active;
-                      try {
-                        // Optimistic update for database
-                        await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
-                          url: botConfig.url,
-                          active: newStatus,
-                          updatedAt: serverTimestamp() 
-                        }, { merge: true });
-                        
-                        // Make POST request to bot endpoint
-                        const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
-                        const response = await fetch(`${cleanUrl}/api/toggle`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ active: newStatus })
-                        });
-                        
-                        if (response.ok) {
-                          onToast(`Bot ${newStatus ? 'ativado' : 'desativado'} com sucesso!`);
-                        } else {
-                          onToast('Status salvo no banco, mas a API do Bot retornou erro.', 'error');
-                        }
-                      } catch (err: any) {
-                        if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-                           onToast(`A API do Railway retornou erro de rede (Servidor Offline, inicializando, ou erro CORS). Configuração salva no banco.`, 'success');
-                        } else {
-                           onToast(`Erro ao contactar o bot: ${err.message}`, 'error');
-                        }
-                      }
-                    }}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${botConfig.active ? 'bg-blue-600' : 'bg-slate-200'}`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${botConfig.active ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-                  <span className="text-xs font-semibold" style={{color: botConfig.active ? '#2563eb' : '#94a3b8'}}>
-                    {botConfig.active ? 'Ativo' : 'Inativo'}
-                  </span>
+                <div className="pt-4 border-t border-slate-100">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-slate-800">Gestão de Sessões WhatsApp (Multi-Device)</h3>
+                    <button
+                      onClick={() => {
+                         const num = prompt("Digite o número no formato 5511999999999:");
+                         if (num) {
+                            const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                            fetch(`${cleanUrl}/api/connect`, {
+                               method: 'POST',
+                               headers: { 'Content-Type': 'application/json' },
+                               body: JSON.stringify({ botNumber: num.replace(/\D/g, '') })
+                            }).then(() => onToast('Solicitação enviada. Aguarde o QRCode/Pairing Code.'))
+                              .catch(() => onToast('Erro ao enviar solicitação para API no Railway', 'error'));
+                         }
+                      }}
+                      className="bg-green-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-green-700 transition"
+                    >
+                      + Novo Número
+                    </button>
+                  </div>
+                  
+                  {Object.keys(botStatuses).length === 0 ? (
+                    <p className="text-sm text-slate-500 italic">Nenhum número conectado ou conectando. Adicione um clicando no botão acima.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       {Object.entries(botStatuses).map(([botNumber, info]) => (
+                         <div key={botNumber} className="border border-slate-200 rounded-xl p-4 flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                              <div className="font-bold text-slate-700 text-lg">{botNumber}</div>
+                              <span className={`px-2 py-1 rounded-full text-xs font-bold ${info.status === 'online' ? 'bg-green-100 text-green-700' : info.status === 'pairing' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
+                                 {info.status.toUpperCase()}
+                              </span>
+                            </div>
+                            
+                            {info.status === 'pairing' && info.pairingCode && (
+                              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2 text-center">
+                                 <p className="text-xs text-slate-500 mb-1">Pairing Code (Emparelhar no WhatsApp):</p>
+                                 <p className="text-2xl tracking-widest font-mono font-bold text-slate-800">{info.pairingCode}</p>
+                              </div>
+                            )}
+
+                            {info.status === 'online' && (
+                              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                                <span className="text-xs font-bold text-slate-600">Auto-Reply (IA)</span>
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={async () => {
+                                      const newActive = !(info as any).active;
+                                      try {
+                                        const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                                        const res = await fetch(`${cleanUrl}/api/toggle`, {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ botNumber, active: newActive })
+                                        });
+                                        if (res.ok) {
+                                          onToast(`Comando de toggle enviado para ${botNumber}.`);
+                                        } else {
+                                          onToast(`A API retornou erro.`, 'error');
+                                        }
+                                      } catch (e) {
+                                        onToast(`Erro de rede ao alterar IA para ${botNumber}.`, 'error');
+                                      }
+                                    }}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${(info as any).active ? 'bg-blue-600' : 'bg-slate-200'}`}
+                                  >
+                                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${(info as any).active ? 'translate-x-5' : 'translate-x-1'}`} />
+                                  </button>
+                                  <span className="text-[10px] text-slate-500">
+                                     {(info as any).active ? 'ON' : 'OFF'}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                         </div>
+                       ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

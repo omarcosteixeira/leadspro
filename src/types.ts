@@ -14,6 +14,7 @@ export interface UserProfile {
   chavePix?: string;
   blocked?: boolean;
   mustChangePassword?: boolean;
+  botNumber?: string;
   createdAt: any;
   updatedAt?: any;
   dashboardWidgets?: {
