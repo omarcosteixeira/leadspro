@@ -2441,7 +2441,7 @@ export default function App() {
                   }} 
                 />
               )}
-              {currentView === 'admin' && <AdminView users={users} links={links} onToast={showToast} leads={leads} bases={bases} gap={gap} planner={planner} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} whatsappMessages={whatsappMessages} empresasParceiras={empresasParceiras} botConfig={botConfig} />}
+              {currentView === 'admin' && <AdminView users={users} links={links} onToast={showToast} leads={leads} bases={bases} gap={gap} planner={planner} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} whatsappMessages={whatsappMessages} empresasParceiras={empresasParceiras} botConfig={botConfig} botStatuses={botStatuses} />}
             </motion.div>
           </AnimatePresence>
 
@@ -5140,7 +5140,7 @@ function CalculoRemuneracaoView() {
   );
 }
 
-function AdminView({ users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras, botConfig }: { 
+function AdminView({ users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras, botConfig, botStatuses }: { 
   users: UserProfile[], 
   links: LinkUtil[], 
   onToast: (m: string, t?: 'success' | 'error') => void,
@@ -5154,7 +5154,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   periodos: PeriodoCaptacao[],
   whatsappMessages: WhatsAppMessage[],
   empresasParceiras: EmpresaParceira[],
-  botConfig: BotConfig
+  botConfig: BotConfig,
+  botStatuses: Record<string, { status: string, pairingCode?: string }>
 }) {
   const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup'>('usuarios');
   const [newLink, setNewLink] = useState({ nome: '', url: '' });
@@ -6248,33 +6249,33 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     </button>
                   </div>
                   
-                  {Object.keys(botStatuses).length === 0 ? (
+                  {Object.keys(botStatuses || {}).length === 0 ? (
                     <p className="text-sm text-slate-500 italic">Nenhum número conectado ou conectando. Adicione um clicando no botão acima.</p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       {Object.entries(botStatuses).map(([botNumber, info]) => (
+                       {Object.entries(botStatuses || {}).map(([botNumber, info]) => (
                          <div key={botNumber} className="border border-slate-200 rounded-xl p-4 flex flex-col gap-2">
                             <div className="flex items-center justify-between">
                               <div className="font-bold text-slate-700 text-lg">{botNumber}</div>
-                              <span className={`px-2 py-1 rounded-full text-xs font-bold ${info.status === 'online' ? 'bg-green-100 text-green-700' : info.status === 'pairing' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
-                                 {info.status.toUpperCase()}
+                              <span className={`px-2 py-1 rounded-full text-xs font-bold ${info?.status === 'online' ? 'bg-green-100 text-green-700' : info?.status === 'pairing' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
+                                 {info?.status?.toUpperCase() || 'DESCONHECIDO'}
                               </span>
                             </div>
                             
-                            {info.status === 'pairing' && info.pairingCode && (
+                            {info?.status === 'pairing' && info?.pairingCode && (
                               <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2 text-center">
                                  <p className="text-xs text-slate-500 mb-1">Pairing Code (Emparelhar no WhatsApp):</p>
                                  <p className="text-2xl tracking-widest font-mono font-bold text-slate-800">{info.pairingCode}</p>
                               </div>
                             )}
 
-                            {info.status === 'online' && (
+                            {info?.status === 'online' && (
                               <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
                                 <span className="text-xs font-bold text-slate-600">Auto-Reply (IA)</span>
                                 <div className="flex items-center space-x-2">
                                   <button
                                     onClick={async () => {
-                                      const newActive = !(info as any).active;
+                                      const newActive = !(info as any)?.active;
                                       try {
                                         const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
                                         const res = await fetch(`${cleanUrl}/api/toggle`, {
@@ -6291,12 +6292,12 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                         onToast(`Erro de rede ao alterar IA para ${botNumber}.`, 'error');
                                       }
                                     }}
-                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${(info as any).active ? 'bg-blue-600' : 'bg-slate-200'}`}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${(info as any)?.active ? 'bg-blue-600' : 'bg-slate-200'}`}
                                   >
-                                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${(info as any).active ? 'translate-x-5' : 'translate-x-1'}`} />
+                                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${(info as any)?.active ? 'translate-x-5' : 'translate-x-1'}`} />
                                   </button>
                                   <span className="text-[10px] text-slate-500">
-                                     {(info as any).active ? 'ON' : 'OFF'}
+                                     {(info as any)?.active ? 'ON' : 'OFF'}
                                   </span>
                                 </div>
                               </div>
