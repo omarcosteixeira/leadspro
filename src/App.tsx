@@ -1944,7 +1944,7 @@ export default function App() {
       }
     } catch (err: any) {
       if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-         showToast(`Erro de conexão com o Bot (A API no Railway pode estar offline ou bloqueando a requisição por CORS).`, 'error');
+         showToast(`Erro de rede: O servidor no Railway está offline, dormindo, ou com erro de CORS.`, 'error');
       } else {
          showToast(`Erro de conexão com o Bot: ${err.message}`, 'error');
       }
@@ -1980,7 +1980,11 @@ export default function App() {
               
               // Delete the old document if it had a different ID
               if (existingDoc.id !== user.uid) {
-                await deleteDoc(doc(db, COLLECTIONS.USERS, existingDoc.id));
+                try {
+                  await deleteDoc(doc(db, COLLECTIONS.USERS, existingDoc.id));
+                } catch (e) {
+                  console.warn("Could not delete old user document, likely due to rules. Skipping.", e);
+                }
               }
               
               userDoc = await getDoc(doc(db, COLLECTIONS.USERS, user.uid));
@@ -2035,9 +2039,12 @@ export default function App() {
       setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.USERS));
 
-    const unsubPlanner = onSnapshot(collection(db, COLLECTIONS.PLANNER), snap => {
-      setPlanner(snap.docs.map(d => ({ id: d.id, ...d.data() } as PlannerTask)));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.PLANNER));
+    let unsubPlanner = () => {};
+    if (VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
+      unsubPlanner = onSnapshot(collection(db, COLLECTIONS.PLANNER), snap => {
+        setPlanner(snap.docs.map(d => ({ id: d.id, ...d.data() } as PlannerTask)));
+      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.PLANNER));
+    }
 
     let unsubLinks = () => {};
     if (VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
@@ -2047,7 +2054,7 @@ export default function App() {
     }
 
     let leadsQuery;
-    if ([ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.GESTOR_UNIDADE].includes(profile.role)) {
+    if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.GESTOR_UNIDADE].includes(profile.role)) {
       leadsQuery = query(collection(db, COLLECTIONS.LEADS));
     } else if (profile.role === ROLES.FDV) {
       leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user.uid), where("promotorRole", "==", ROLES.PROMOTOR)));
@@ -2113,7 +2120,7 @@ export default function App() {
     }
 
     let calendarioQuery;
-    if ([ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL].includes(profile.role)) {
+    if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL].includes(profile.role)) {
       calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES));
     } else if (profile.role === ROLES.FDV) {
       calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), or(where("creatorId", "==", user.uid), where("creatorRole", "==", ROLES.PROMOTOR)));
@@ -6166,7 +6173,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                             onToast(`Servidor respondeu com erro ${res.status}.`, 'error');
                           }
                         } catch (e: any) {
-                          onToast(`Falha de rede: A URL está certa? Está rodando? Erro: ${e.message}`, 'error');
+                          onToast(`Falha de rede (CORS/Offline): O Railway pode estar reiniciando o bot ou o bot está quebrado. Erro: ${e.message}`, 'error');
                         }
                       }}
                       className="bg-blue-100 text-blue-700 px-4 py-3 rounded-xl hover:bg-blue-200 transition-colors whitespace-nowrap text-sm font-bold"
@@ -6208,7 +6215,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         }
                       } catch (err: any) {
                         if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-                           onToast(`Status salvo! A API do Bot não respondeu (possível erro de CORS ou servidor offline), mas a configuração foi atualizada no sistema.`, 'success');
+                           onToast(`A API do Railway retornou erro de rede (Servidor Offline, inicializando, ou erro CORS). Configuração salva no banco.`, 'success');
                         } else {
                            onToast(`Erro ao contactar o bot: ${err.message}`, 'error');
                         }
