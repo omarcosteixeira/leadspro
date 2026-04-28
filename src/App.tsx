@@ -6622,14 +6622,16 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                 <div className="flex items-center space-x-2">
                                   <button
                                     onClick={async () => {
-                                      const newActive = !(info as any)?.active;
+                                      const currentActive = (info as any)?.isAutoReplyActive ?? (info as any)?.active ?? false;
+                                      const newActive = !currentActive;
                                       
                                       // Optimistic update
                                       setBotStatuses(prev => ({
                                         ...prev,
                                         [botNumber]: {
                                           ...prev[botNumber],
-                                          active: newActive
+                                          active: newActive,
+                                          isAutoReplyActive: newActive
                                         }
                                       }));
                                       
@@ -6638,7 +6640,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                         const res = await fetch(`${cleanUrl}/api/toggle`, {
                                           method: 'POST',
                                           headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ botNumber, active: newActive })
+                                          body: JSON.stringify({ botNumber, active: newActive, isAutoReplyActive: newActive })
                                         });
                                         if (res.ok) {
                                           onToast(`IA para ${botNumber} alterada para ${newActive ? 'ON' : 'OFF'}`);
@@ -6649,7 +6651,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                             ...prev,
                                             [botNumber]: {
                                               ...prev[botNumber],
-                                              active: !newActive
+                                              active: !newActive,
+                                              isAutoReplyActive: !newActive
                                             }
                                           }));
                                         }
@@ -6660,17 +6663,18 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                           ...prev,
                                           [botNumber]: {
                                             ...prev[botNumber],
-                                            active: !newActive
+                                            active: !newActive,
+                                            isAutoReplyActive: !newActive
                                           }
                                         }));
                                       }
                                     }}
-                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${(info as any)?.active ? 'bg-blue-600' : 'bg-slate-200'}`}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${((info as any)?.isAutoReplyActive ?? (info as any)?.active ?? false) ? 'bg-blue-600' : 'bg-slate-200'}`}
                                   >
-                                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${(info as any)?.active ? 'translate-x-5' : 'translate-x-1'}`} />
+                                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${((info as any)?.isAutoReplyActive ?? (info as any)?.active ?? false) ? 'translate-x-5' : 'translate-x-1'}`} />
                                   </button>
                                   <span className="text-[10px] text-slate-500">
-                                     {(info as any)?.active ? 'ON' : 'OFF'}
+                                     {((info as any)?.isAutoReplyActive ?? (info as any)?.active ?? false) ? 'ON' : 'OFF'}
                                   </span>
                                 </div>
                               </div>
