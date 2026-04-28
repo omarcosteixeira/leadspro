@@ -67,7 +67,8 @@ import {
   Globe,
   Copy,
   Bot,
-  Send
+  Send,
+  Bell
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth } from './firebase';
@@ -289,7 +290,7 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   calculo: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.SSA],
   mapao: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.ACADEMICO],
   basesDisparo: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
-  admin: [ROLES.ADMIN_MASTER]
+  admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV]
 };
 
 // --- Components ---
@@ -1909,10 +1910,15 @@ export default function App() {
   const [botConfig, setBotConfig] = useState<BotConfig>({ url: '', active: false });
   const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>({});
   const [initialActionData, setInitialActionData] = useState<Partial<CalendarioAcao> | null>(null);
+  const [activePopup, setActivePopup] = useState<{ title: string; message: string } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const showPopup = (title: string, message: string) => {
+    setActivePopup({ title, message });
   };
 
   const handleSendBotMessage = async (telefone: string, message: string) => {
@@ -2221,6 +2227,29 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, [botConfig.url]);
 
+  const prevLeadsLenRef = React.useRef(-1);
+  const prevCampanhasLenRef = React.useRef(-1);
+
+  useEffect(() => {
+    if (!profile) return;
+    if (profile.role !== ROLES.LIDER_FDV && profile.role !== ROLES.SALA_MATRICULA) return;
+
+    if (prevLeadsLenRef.current !== -1 && leads.length > prevLeadsLenRef.current) {
+      showPopup("Novo Lead!", "Um novo lead foi adicionado no Histórico.");
+    }
+    prevLeadsLenRef.current = leads.length;
+  }, [leads.length, profile]);
+
+  useEffect(() => {
+    if (!profile) return;
+    if (profile.role !== ROLES.LIDER_FDV && profile.role !== ROLES.SALA_MATRICULA) return;
+
+    if (prevCampanhasLenRef.current !== -1 && campanhas.length > prevCampanhasLenRef.current) {
+      showPopup("Nova Campanha!", "Uma nova campanha foi adicionada.");
+    }
+    prevCampanhasLenRef.current = campanhas.length;
+  }, [campanhas.length, profile]);
+
   const canView = (view: string) => {
     if (!profile) return false;
     if (profile.email === "canaldonutri@gmail.com" || profile.email === "marcos.teixeira@estacio.br" || profile.role === 'Admin Master') {
@@ -2277,6 +2306,34 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 flex">
       <AnimatePresence>
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {activePopup && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-slate-100 max-w-sm w-full text-center relative"
+            >
+              <button onClick={() => setActivePopup(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={20} />
+              </button>
+              <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 border-4 border-blue-50">
+                <Bell size={32} className="text-blue-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">{activePopup.title}</h3>
+              <p className="text-sm text-slate-600 mb-6">{activePopup.message}</p>
+              <button 
+                onClick={() => setActivePopup(null)}
+                className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200"
+              >
+                Ciente
+              </button>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       {profile?.mustChangePassword && (
