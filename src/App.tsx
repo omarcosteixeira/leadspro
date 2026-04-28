@@ -2295,28 +2295,52 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, [botConfig.url]);
 
-  const prevLeadsLenRef = React.useRef(-1);
-  const prevCampanhasLenRef = React.useRef(-1);
+  const knownLeadsRef = React.useRef<Set<string> | null>(null);
+  const knownCampanhasRef = React.useRef<Set<string> | null>(null);
 
   useEffect(() => {
     if (!profile) return;
     if (profile.role !== ROLES.LIDER_FDV && profile.role !== ROLES.SALA_MATRICULA) return;
 
-    if (prevLeadsLenRef.current !== -1 && leads.length > prevLeadsLenRef.current) {
+    if (knownLeadsRef.current === null) {
+      knownLeadsRef.current = new Set(leads.map(l => l.id!));
+      return;
+    }
+
+    let hasNew = false;
+    leads.forEach(l => {
+      if (!knownLeadsRef.current!.has(l.id!)) {
+        knownLeadsRef.current!.add(l.id!);
+        hasNew = true;
+      }
+    });
+
+    if (hasNew) {
       showPopup("Novo Lead!", "Um novo lead foi adicionado no Histórico.");
     }
-    prevLeadsLenRef.current = leads.length;
-  }, [leads.length, profile]);
+  }, [leads, profile]);
 
   useEffect(() => {
     if (!profile) return;
     if (profile.role !== ROLES.LIDER_FDV && profile.role !== ROLES.SALA_MATRICULA) return;
 
-    if (prevCampanhasLenRef.current !== -1 && campanhas.length > prevCampanhasLenRef.current) {
+    if (knownCampanhasRef.current === null) {
+      knownCampanhasRef.current = new Set(campanhas.map(c => c.id!));
+      return;
+    }
+
+    let hasNew = false;
+    campanhas.forEach(c => {
+      if (!knownCampanhasRef.current!.has(c.id!)) {
+        knownCampanhasRef.current!.add(c.id!);
+        hasNew = true;
+      }
+    });
+
+    if (hasNew) {
       showPopup("Nova Campanha!", "Uma nova campanha foi adicionada.");
     }
-    prevCampanhasLenRef.current = campanhas.length;
-  }, [campanhas.length, profile]);
+  }, [campanhas, profile]);
 
   const canView = (view: string) => {
     if (!profile) return false;
@@ -5409,7 +5433,52 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   botStatuses: Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>,
   setBotStatuses: React.Dispatch<React.SetStateAction<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>>
 }) {
-  const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup'>('usuarios');
+  const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento'>('usuarios');
+  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      onToast("Por favor, selecione um arquivo PDF.", "error");
+      return;
+    }
+
+    setIsProcessingPdf(true);
+    try {
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let text = '';
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map((item: any) => item.str).join(' ');
+        text += `\n--- Página ${i} ---\n` + pageText + '\n';
+      }
+
+      const currentContext = botConfig.trainingContext || '';
+      const newContext = currentContext + (currentContext ? '\n\n' : '') + `=== Conteúdo do Arquivo: ${file.name} ===\n` + text;
+      
+      await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
+        trainingContext: newContext,
+        updatedAt: serverTimestamp() 
+      }, { merge: true });
+      
+      onToast("PDF processado e adicionado ao contexto com sucesso!");
+      
+    } catch (err: any) {
+      console.error(err);
+      onToast(`Erro ao processar PDF: ${err.message}`, 'error');
+    } finally {
+      setIsProcessingPdf(false);
+      e.target.value = '';
+    }
+  };
+
   const [newLink, setNewLink] = useState({ nome: '', url: '' });
   const [newPlanner, setNewPlanner] = useState({ atendenteName: '', baseName: '', dayOfWeek: 'Segunda-feira' });
   const [newPeriodo, setNewPeriodo] = useState({
@@ -6749,10 +6818,18 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
             
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center">
                <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
-                  <span className="font-bold text-xl">PDF</span>
+                  {isProcessingPdf ? (
+                    <span className="animate-spin text-xl font-bold">...</span>
+                  ) : (
+                    <span className="font-bold text-xl">PDF</span>
+                  )}
                </div>
-               <h4 className="font-bold text-slate-800 mb-2">Treinamento via PDF em breve</h4>
-               <p className="text-xs text-slate-500 max-w-sm">No momento, você pode treinar a IA adicionando o texto no campo acima. A funcionalidade de envio de PDF estará disponível em futuras atualizações.</p>
+               <h4 className="font-bold text-slate-800 mb-2">Treinamento via PDF</h4>
+               <p className="text-xs text-slate-500 max-w-sm mb-4">Faça o upload de um arquivo PDF para extrair o texto automaticamente e anexá-lo ao contexto da empresa.</p>
+               <label className="cursor-pointer bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                 {isProcessingPdf ? "Processando..." : "Selecionar PDF"}
+                 <input type="file" accept=".pdf" className="hidden" onChange={handlePdfUpload} disabled={isProcessingPdf} />
+               </label>
             </div>
           </div>
         </section>
