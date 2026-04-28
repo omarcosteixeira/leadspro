@@ -2840,18 +2840,18 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                   <h3 className="text-slate-500 font-bold uppercase tracking-wider text-xs">Bom Dia Captação</h3>
                   <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-emerald-100 transition-colors"><Sun size={20} /></div>
                </div>
-               <p className="text-2xl font-bold text-slate-900">{latestBomDia ? latestBomDia.inscritos.trim() : '0'}</p>
-               <p className="text-xs font-semibold text-slate-400">Total Inscritos</p>
+               <p className="text-2xl font-bold text-slate-900">{latestBomDia ? latestBomDia.real.insc : '0'}</p>
+               <p className="text-xs font-semibold text-slate-400">Total Inscritos Real</p>
             </div>
             {latestBomDia && (
                <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-50 pt-4">
                   <div>
                     <p className="text-[10px] text-slate-400 uppercase font-bold">Mat. Fin</p>
-                    <p className="text-lg font-bold text-slate-800">{latestBomDia.matFin.trim()}</p>
+                    <p className="text-lg font-bold text-slate-800">{latestBomDia.real.matFin}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-400 uppercase font-bold">Mat. Acad</p>
-                    <p className="text-lg font-bold text-slate-800">{latestBomDia.matAcad.trim()}</p>
+                    <p className="text-lg font-bold text-slate-800">{latestBomDia.real.matAcad}</p>
                   </div>
                </div>
             )}
@@ -2864,18 +2864,18 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                   <h3 className="text-slate-500 font-bold uppercase tracking-wider text-xs">Forecasts</h3>
                   <div className="p-2 bg-amber-50 text-amber-600 rounded-lg group-hover:bg-amber-100 transition-colors"><TrendingUp size={20} /></div>
                </div>
-               <p className="text-2xl font-bold text-slate-900">{latestForecast ? latestForecast.p1 : '-'}</p>
-               <p className="text-xs font-semibold text-slate-400">P1</p>
+               <p className="text-2xl font-bold text-slate-900">{latestForecast ? latestForecast.nome : '-'}</p>
+               <p className="text-xs font-semibold text-slate-400">Previsão Ativa</p>
             </div>
             {latestForecast && (
                <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-50 pt-4">
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Apurado</p>
-                    <p className="text-lg font-bold text-slate-800">{latestForecast.apurado}</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">Realizado</p>
+                    <p className="text-lg font-bold text-slate-800">{latestForecast.realizado}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Meta</p>
-                    <p className="text-lg font-bold text-slate-800">{latestForecast.orcado}</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">Meta Fechto.</p>
+                    <p className="text-lg font-bold text-slate-800">{latestForecast.metaFechamento}</p>
                   </div>
                </div>
             )}
