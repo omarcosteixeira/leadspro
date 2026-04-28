@@ -155,7 +155,7 @@ function WhatsAppMessageSelector({
         <div className="p-4 overflow-y-auto space-y-3 flex-1">
           {messages.length > 0 ? messages.map((msg, idx) => {
             const preview = msg.texto.replace('[nome]', leadName);
-            const canUseBot = botConfig?.active && botConfig?.url && onSendBot;
+            const canUseBot = botConfig?.url && onSendBot;
             
             return (
               <div
@@ -1907,7 +1907,7 @@ export default function App() {
   const [mapao, setMapao] = useState<MapaoAcademicoEntry[]>([]);
   const [basesDisparo, setBasesDisparo] = useState<BaseDisparoEntry[]>([]);
   const [botConfig, setBotConfig] = useState<BotConfig>({ url: '', active: false });
-  const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string }>>({});
+  const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>({});
   const [initialActionData, setInitialActionData] = useState<Partial<CalendarioAcao> | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -2441,7 +2441,7 @@ export default function App() {
                   }} 
                 />
               )}
-              {currentView === 'admin' && <AdminView users={users} links={links} onToast={showToast} leads={leads} bases={bases} gap={gap} planner={planner} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} whatsappMessages={whatsappMessages} empresasParceiras={empresasParceiras} botConfig={botConfig} botStatuses={botStatuses} />}
+              {currentView === 'admin' && <AdminView users={users} links={links} onToast={showToast} leads={leads} bases={bases} gap={gap} planner={planner} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} whatsappMessages={whatsappMessages} empresasParceiras={empresasParceiras} botConfig={botConfig} botStatuses={botStatuses} setBotStatuses={setBotStatuses} />}
             </motion.div>
           </AnimatePresence>
 
@@ -5140,7 +5140,7 @@ function CalculoRemuneracaoView() {
   );
 }
 
-function AdminView({ users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras, botConfig, botStatuses }: { 
+function AdminView({ users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras, botConfig, botStatuses, setBotStatuses }: { 
   users: UserProfile[], 
   links: LinkUtil[], 
   onToast: (m: string, t?: 'success' | 'error') => void,
@@ -5155,7 +5155,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   whatsappMessages: WhatsAppMessage[],
   empresasParceiras: EmpresaParceira[],
   botConfig: BotConfig,
-  botStatuses: Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string }>
+  botStatuses: Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>,
+  setBotStatuses: React.Dispatch<React.SetStateAction<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>>
 }) {
   const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup'>('usuarios');
   const [newLink, setNewLink] = useState({ nome: '', url: '' });
@@ -6287,6 +6288,16 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                   <button
                                     onClick={async () => {
                                       const newActive = !(info as any)?.active;
+                                      
+                                      // Optimistic update
+                                      setBotStatuses(prev => ({
+                                        ...prev,
+                                        [botNumber]: {
+                                          ...prev[botNumber],
+                                          active: newActive
+                                        }
+                                      }));
+                                      
                                       try {
                                         const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
                                         const res = await fetch(`${cleanUrl}/api/toggle`, {
@@ -6295,12 +6306,28 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                           body: JSON.stringify({ botNumber, active: newActive })
                                         });
                                         if (res.ok) {
-                                          onToast(`Comando de toggle enviado para ${botNumber}.`);
+                                          onToast(`IA para ${botNumber} alterada para ${newActive ? 'ON' : 'OFF'}`);
                                         } else {
-                                          onToast(`A API retornou erro.`, 'error');
+                                          onToast(`Erro ao alterar IA. API pode estar indisponível.`, 'error');
+                                          // Revert back
+                                          setBotStatuses(prev => ({
+                                            ...prev,
+                                            [botNumber]: {
+                                              ...prev[botNumber],
+                                              active: !newActive
+                                            }
+                                          }));
                                         }
                                       } catch (e) {
                                         onToast(`Erro de rede ao alterar IA para ${botNumber}.`, 'error');
+                                        // Revert back
+                                        setBotStatuses(prev => ({
+                                          ...prev,
+                                          [botNumber]: {
+                                            ...prev[botNumber],
+                                            active: !newActive
+                                          }
+                                        }));
                                       }
                                     }}
                                     className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${(info as any)?.active ? 'bg-blue-600' : 'bg-slate-200'}`}
