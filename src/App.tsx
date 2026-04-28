@@ -2808,29 +2808,6 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
         </div>
       </div>
 
-      {/* Rápido Resumo da Captação (Apenas Período agora, os outros foram movidos para renderizar todos completos abaixo) */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-         {/* Card Contador Período */}
-         <div className="bg-gradient-to-br from-indigo-500 to-blue-600 p-6 rounded-3xl shadow-lg border border-indigo-400 text-white flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-6 opacity-10"><Calendar size={80} /></div>
-            <div className="relative z-10">
-               <h3 className="text-indigo-100 font-bold uppercase tracking-wider text-xs mb-1">Período Ativo</h3>
-               <p className="text-2xl font-bold">{activePeriod ? activePeriod.nome : 'Nenhum'}</p>
-            </div>
-            {activePeriod && (
-               <div className="mt-6 relative z-10">
-                  <p className="text-4xl font-black">{getWorkingDaysRemaining(activePeriod.fimMatFin)} <span className="text-sm font-medium text-indigo-100 uppercase">dias restantes</span></p>
-                  <p className="text-xs text-indigo-100 opacity-80 mt-1">até o fim das matrículas ({new Date(activePeriod.fimMatFin).toLocaleDateString('pt-BR')})</p>
-               </div>
-            )}
-            {!activePeriod && (
-               <div className="mt-6 relative z-10">
-                  <p className="text-sm text-indigo-100">Não há período de captação ativo no momento.</p>
-               </div>
-            )}
-         </div>
-      </section>
-
       {/* Bom Dia Captação (Complete - All cards) */}
       {widgets.bomDia && bomDia.length > 0 && (
          <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
@@ -3125,7 +3102,7 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                 <p className="text-sm text-slate-500 mb-4">Escolha quais blocos você deseja visualizar na sua tela principal.</p>
                 
                 {[
-                  { id: 'periodo', label: 'Período Ativo', icon: Calendar },
+                  { id: 'periodo', label: 'Períodos da Captação', icon: Calendar },
                   { id: 'bomDia', label: 'Bom Dia Captação', icon: Sun },
                   { id: 'forecast', label: 'Forecasts', icon: TrendingUp },
                   { id: 'links', label: 'Links Úteis', icon: ExternalLink },
