@@ -77,7 +77,7 @@ export interface BaseEntry {
   semestre: string;
   metodologia: string;
   formaIngresso: string;
-  status: 'Pendente' | 'Interessado' | 'Convertido';
+  status: 'Pendente' | 'Interessado' | 'Convertido' | 'Não tem interesse' | 'Sem retorno';
   createdAt: any;
 }
 

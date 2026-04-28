@@ -3940,6 +3940,8 @@ function BasesView({
               <option value="Pendente">Pendente</option>
               <option value="Interessado">Interessado</option>
               <option value="Convertido">Convertido</option>
+              <option value="Não tem interesse">Não tem interesse</option>
+              <option value="Sem retorno">Sem retorno</option>
             </select>
           </div>
         </div>
@@ -3947,6 +3949,9 @@ function BasesView({
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <th className="px-6 py-4 w-12 text-center">
+                  #
+                </th>
                 <th className="px-6 py-4 w-12">
                   <input type="checkbox" checked={selectedEntries.length === filteredBases.length && filteredBases.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
                 </th>
@@ -3969,8 +3974,11 @@ function BasesView({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredBases.map(entry => (
+              {filteredBases.map((entry, index) => (
                 <tr key={entry.id} className="hover:bg-slate-50/50 transition-all">
+                  <td className="px-6 py-4 text-center font-bold text-slate-400 text-xs">
+                    {index + 1}
+                  </td>
                   <td className="px-6 py-4">
                     <input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={e => toggleSelect(entry.id, e.target.checked)} />
                   </td>
@@ -3989,12 +3997,16 @@ function BasesView({
                         "px-2 py-1 rounded-lg text-xs font-bold outline-none border-none",
                         entry.status === 'Pendente' && "bg-slate-100 text-slate-600",
                         entry.status === 'Interessado' && "bg-blue-100 text-blue-600",
-                        entry.status === 'Convertido' && "bg-emerald-100 text-emerald-600"
+                        entry.status === 'Convertido' && "bg-emerald-100 text-emerald-600",
+                        entry.status === 'Não tem interesse' && "bg-rose-100 text-rose-600",
+                        entry.status === 'Sem retorno' && "bg-orange-100 text-orange-600"
                       )}
                     >
                       <option value="Pendente">Pendente</option>
                       <option value="Interessado">Interessado</option>
                       <option value="Convertido">Convertido</option>
+                      <option value="Não tem interesse">Não tem interesse</option>
+                      <option value="Sem retorno">Sem retorno</option>
                     </select>
                   </td>
                   <td className="px-6 py-4 flex items-center space-x-2">
