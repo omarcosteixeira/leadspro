@@ -124,7 +124,8 @@ function WhatsAppMessageSelector({
   onSelect, 
   leadName,
   botConfig,
-  onSendBot
+  onSendBot,
+  forceBotOnly
 }: { 
   isOpen: boolean;
   onClose: () => void;
@@ -133,6 +134,7 @@ function WhatsAppMessageSelector({
   leadName: string;
   botConfig?: BotConfig;
   onSendBot?: (msg: string) => void;
+  forceBotOnly?: boolean;
 }) {
   if (!isOpen) return null;
 
@@ -146,8 +148,10 @@ function WhatsAppMessageSelector({
       >
         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <div>
-            <h3 className="text-xl font-bold text-slate-900">Selecionar Mensagem</h3>
-            <p className="text-xs text-slate-500 font-medium mt-1">Escolha como enviar para {leadName}</p>
+            <h3 className="text-xl font-bold text-slate-900">{forceBotOnly ? 'Disparo em Massa' : 'Selecionar Mensagem'}</h3>
+            <p className="text-xs text-slate-500 font-medium mt-1">
+              {forceBotOnly ? 'Escolha o modelo para enviar a todos.' : `Escolha como enviar para ${leadName}`}
+            </p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-full transition-all">
             <X size={20} />
@@ -155,7 +159,7 @@ function WhatsAppMessageSelector({
         </div>
         <div className="p-4 overflow-y-auto space-y-3 flex-1">
           {messages.length > 0 ? messages.map((msg, idx) => {
-            const preview = msg.texto.replace('[nome]', leadName);
+            const preview = forceBotOnly ? msg.texto : msg.texto.replace('[nome]', leadName);
             const canUseBot = botConfig?.url && onSendBot;
             
             return (
@@ -169,31 +173,34 @@ function WhatsAppMessageSelector({
                     <MessageSquare size={16} />
                   </div>
                 </div>
-                <p className="text-sm text-slate-600 line-clamp-3 leading-relaxed">{preview || <span className="italic opacity-50">Mensagem vazia</span>}</p>
+                <p className="text-sm text-slate-600 line-clamp-3 leading-relaxed whitespace-pre-wrap">{preview || <span className="italic opacity-50">Mensagem vazia</span>}</p>
                 
                 <div className="flex space-x-2 pt-2 border-t border-slate-100">
                   {canUseBot && (
                     <button 
                       onClick={() => {
-                        onSendBot(preview);
+                        // Pass the raw template if mass sending, else the formatted preview
+                        onSendBot(forceBotOnly ? msg.texto : preview);
                         onClose();
                       }}
                       className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-xs font-bold hover:bg-blue-700 transition flex items-center justify-center space-x-1"
                     >
                       <Bot size={14} />
-                      <span>Bot ARGO'S</span>
+                      <span>{forceBotOnly ? 'Iniciar Disparo em Massa' : 'Bot ARGO\'S'}</span>
                     </button>
                   )}
-                  <button 
-                    onClick={() => {
-                      onSelect(preview);
-                      onClose();
-                    }}
-                    className={`flex-1 ${canUseBot ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100' : 'bg-emerald-500 text-white hover:bg-emerald-600'} py-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1`}
-                  >
-                    <Send size={14} />
-                    <span>{canUseBot ? 'WhatsApp Web' : 'Enviar WhatsApp'}</span>
-                  </button>
+                  {!forceBotOnly && (
+                    <button 
+                      onClick={() => {
+                        onSelect(preview);
+                        onClose();
+                      }}
+                      className={`flex-1 ${canUseBot ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100' : 'bg-emerald-500 text-white hover:bg-emerald-600'} py-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1`}
+                    >
+                      <Send size={14} />
+                      <span>{canUseBot ? 'WhatsApp Web' : 'Enviar WhatsApp'}</span>
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -1295,7 +1302,8 @@ function FiesProuniView({
   whatsappMessages, 
   periodos,
   botConfig,
-  onSendBot
+  onSendBot,
+  onMassSendBot
 }: { 
   data: FiesProuniEntry[], 
   onToast: (m: string, t?: 'success' | 'error') => void,
@@ -1304,6 +1312,7 @@ function FiesProuniView({
   periodos: PeriodoCaptacao[],
   botConfig: BotConfig,
   onSendBot: (tel: string, msg: string) => void;
+  onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [periodoFilter, setPeriodoFilter] = useState('');
@@ -1590,9 +1599,31 @@ function FiesProuniView({
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Documentação</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Digitaliza</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">TCB</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600 flex items-center gap-4">
                   {selectedEntries.length > 0 && (
                       <button onClick={handleBulkDelete} className="text-rose-600 font-bold hover:underline">excluir selecionados</button>
+                  )}
+                  {selectedEntries.length > 0 && botConfig.url && (
+                      <button 
+                         onClick={() => {
+                            const selectedObjs = data.filter(g => selectedEntries.includes(g.id));
+                            const payloads = selectedObjs.map(item => {
+                               const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
+                               const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
+                               const msgTemplate = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
+                               const text = msgTemplate ? msgTemplate.texto.replace('[nome]', item.nome) : `Olá ${item.nome}, tudo bem?`;
+                               return {
+                                   telefone: item.telefone,
+                                   message: text
+                               };
+                            });
+                            onMassSendBot(payloads);
+                            setSelectedEntries([]);
+                         }} 
+                         className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                      >
+                         <Bot size={14} /> Em Massa
+                      </button>
                   )}
                 </th>
               </tr>
@@ -1911,6 +1942,7 @@ export default function App() {
   const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>({});
   const [initialActionData, setInitialActionData] = useState<Partial<CalendarioAcao> | null>(null);
   const [activePopup, setActivePopup] = useState<{ title: string; message: string } | null>(null);
+  const [massSendProgress, setMassSendProgress] = useState<{ total: number, sent: number, active: boolean, info: string }>({ total: 0, sent: 0, active: false, info: '' });
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -1962,6 +1994,42 @@ export default function App() {
          showToast(`Erro de conexão com o Bot: ${err.message}`, 'error');
       }
     }
+  };
+
+  const handleMassSendBotMessages = async (messages: {telefone: string, message: string}[]) => {
+     if(massSendProgress.active) {
+       showToast("Já existe um envio em massa em andamento.", "error");
+       return;
+     }
+     
+     if (messages.length === 0) return;
+     if (!window.confirm(`Deseja iniciar o envio em massa via bot para ${messages.length} contatos?`)) return;
+     
+     setMassSendProgress({ total: messages.length, sent: 0, active: true, info: 'Iniciando...' });
+     
+     let sentCount = 0;
+     for (let i = 0; i < messages.length; i++) {
+        if (i > 0) {
+           if (sentCount % 5 === 0) {
+              setMassSendProgress(prev => ({ ...prev, info: `Pausa de 2 min... (${sentCount}/${messages.length})` }));
+              await new Promise(resolve => setTimeout(resolve, 120000));
+           } else {
+              setMassSendProgress(prev => ({ ...prev, info: `Aguardando 30s... (${sentCount}/${messages.length})` }));
+              await new Promise(resolve => setTimeout(resolve, 30000));
+           }
+        }
+
+        setMassSendProgress(prev => ({ ...prev, info: `Enviando... (${sentCount + 1}/${messages.length})` }));
+        try {
+           await handleSendBotMessage(messages[i].telefone, messages[i].message);
+        } catch(e) {
+           console.error("Error sending bot message in mass: ", e);
+        }
+        sentCount++;
+     }
+     
+     setMassSendProgress({ total: 0, sent: 0, active: false, info: '' });
+     showToast("Envio em massa concluído!", "success");
   };
 
   useEffect(() => {
@@ -2336,6 +2404,36 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {massSendProgress.active && (
+           <motion.div 
+             initial={{ y: 100, opacity: 0 }}
+             animate={{ y: 0, opacity: 1 }}
+             exit={{ y: 100, opacity: 0 }}
+             className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white px-6 py-4 rounded-2xl shadow-2xl border border-slate-200 z-[300] flex flex-col items-center gap-2 max-w-sm w-[90%]"
+           >
+             <div className="flex items-center gap-3 w-full">
+               <div className="p-2 bg-blue-100 text-blue-600 rounded-full animate-pulse">
+                 <Bot size={20} />
+               </div>
+               <div className="flex-1">
+                 <h4 className="font-bold text-slate-800 text-sm">Disparo em Massa (Bot)</h4>
+                 <p className="text-xs text-slate-500">{massSendProgress.info}</p>
+               </div>
+               <div className="font-bold text-blue-600">
+                 {(massSendProgress.sent / (massSendProgress.total || 1) * 100).toFixed(0)}%
+               </div>
+             </div>
+             <div className="w-full bg-slate-100 rounded-full h-2 mt-2 overflow-hidden">
+               <div 
+                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                 style={{ width: `${(massSendProgress.sent / (massSendProgress.total || 1)) * 100}%` }}
+               />
+             </div>
+           </motion.div>
+        )}
+      </AnimatePresence>
+
       {profile?.mustChangePassword && (
         <PasswordChangeModal 
           onComplete={async () => {
@@ -2475,7 +2573,7 @@ export default function App() {
             >
               {currentView === 'dashboard' && <DashboardView leads={leads} planner={planner} links={links} profile={profile!} onToast={showToast} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} />}
               {currentView === 'cadastro' && <CadastroView onToast={showToast} profile={profile!} />}
-              {currentView === 'historico' && <HistoricoView leads={leads} profile={profile!} onToast={showToast} users={users} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} />}
+              {currentView === 'historico' && <HistoricoView leads={leads} profile={profile!} onToast={showToast} users={users} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
               {currentView === 'bases' && <BasesView bases={bases} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} />}
               {currentView === 'gap' && <GapView gap={gap} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} />}
               {currentView === 'fiesProuni' && <FiesProuniView data={fiesProuni} onToast={showToast} profile={profile!} whatsappMessages={whatsappMessages} periodos={periodos} botConfig={botConfig} onSendBot={handleSendBotMessage} />}
@@ -2695,17 +2793,14 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
     }
   };
 
+  const latestBomDia = bomDia.length > 0 ? bomDia[bomDia.length - 1] : null;
+  const latestForecast = forecast.length > 0 ? forecast[forecast.length - 1] : null;
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-800">Dashboard</h2>
         <div className="flex items-center space-x-4">
-          {activePeriod && (
-            <div className="hidden md:flex items-center space-x-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-xl">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Período Ativo: {activePeriod.nome}</span>
-            </div>
-          )}
           <button 
             onClick={() => setIsCustomizing(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
@@ -2715,6 +2810,77 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
           </button>
         </div>
       </div>
+
+      {/* Rápido Resumo da Captação */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+         {/* Card Contador Período */}
+         <div className="bg-gradient-to-br from-indigo-500 to-blue-600 p-6 rounded-3xl shadow-lg border border-indigo-400 text-white flex flex-col justify-between relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 opacity-10"><Calendar size={80} /></div>
+            <div className="relative z-10">
+               <h3 className="text-indigo-100 font-bold uppercase tracking-wider text-xs mb-1">Período Ativo</h3>
+               <p className="text-2xl font-bold">{activePeriod ? activePeriod.nome : 'Nenhum'}</p>
+            </div>
+            {activePeriod && (
+               <div className="mt-6 relative z-10">
+                  <p className="text-4xl font-black">{getWorkingDaysRemaining(activePeriod.fimMatFin)} <span className="text-sm font-medium text-indigo-100 uppercase">dias restantes</span></p>
+                  <p className="text-xs text-indigo-100 opacity-80 mt-1">até o fim das matrículas ({new Date(activePeriod.fimMatFin).toLocaleDateString('pt-BR')})</p>
+               </div>
+            )}
+            {!activePeriod && (
+               <div className="mt-6 relative z-10">
+                  <p className="text-sm text-indigo-100">Não há período de captação ativo no momento.</p>
+               </div>
+            )}
+         </div>
+
+         {/* Card Bom Dia Captação */}
+         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:border-emerald-200 transition-all">
+            <div>
+               <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-slate-500 font-bold uppercase tracking-wider text-xs">Bom Dia Captação</h3>
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-emerald-100 transition-colors"><Sun size={20} /></div>
+               </div>
+               <p className="text-2xl font-bold text-slate-900">{latestBomDia ? latestBomDia.inscritos.trim() : '0'}</p>
+               <p className="text-xs font-semibold text-slate-400">Total Inscritos</p>
+            </div>
+            {latestBomDia && (
+               <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-50 pt-4">
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">Mat. Fin</p>
+                    <p className="text-lg font-bold text-slate-800">{latestBomDia.matFin.trim()}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">Mat. Acad</p>
+                    <p className="text-lg font-bold text-slate-800">{latestBomDia.matAcad.trim()}</p>
+                  </div>
+               </div>
+            )}
+         </div>
+
+         {/* Card Forecasts */}
+         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:border-amber-200 transition-all">
+            <div>
+               <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-slate-500 font-bold uppercase tracking-wider text-xs">Forecasts</h3>
+                  <div className="p-2 bg-amber-50 text-amber-600 rounded-lg group-hover:bg-amber-100 transition-colors"><TrendingUp size={20} /></div>
+               </div>
+               <p className="text-2xl font-bold text-slate-900">{latestForecast ? latestForecast.p1 : '-'}</p>
+               <p className="text-xs font-semibold text-slate-400">P1</p>
+            </div>
+            {latestForecast && (
+               <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-50 pt-4">
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">Apurado</p>
+                    <p className="text-lg font-bold text-slate-800">{latestForecast.apurado}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">Meta</p>
+                    <p className="text-lg font-bold text-slate-800">{latestForecast.orcado}</p>
+                  </div>
+               </div>
+            )}
+         </div>
+      </section>
 
       {widgets.periodo && periodos.length > 0 && (
         <section>
@@ -3174,7 +3340,8 @@ function HistoricoView({
   users, 
   whatsappMessages,
   botConfig,
-  onSendBot
+  onSendBot,
+  onMassSendBot
 }: { 
   leads: Lead[]; 
   profile: UserProfile; 
@@ -3183,10 +3350,13 @@ function HistoricoView({
   whatsappMessages: WhatsAppMessage[];
   botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
+  onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
+  const [massSelectorOpen, setMassSelectorOpen] = useState(false);
   
   const filteredLeads = useMemo(() => {
     return leads
@@ -3204,6 +3374,22 @@ function HistoricoView({
     const userLeads = filteredLeads.filter(l => l.promotorId === profile.uid).length;
     return { total, conv, userLeads, rate: total > 0 ? ((conv/total)*100).toFixed(1) : '0' };
   }, [filteredLeads, profile]);
+
+  const toggleSelect = (id: string, checked: boolean) => {
+    if (checked) {
+        setSelectedEntries(prev => [...prev, id]);
+    } else {
+        setSelectedEntries(prev => prev.filter(s => s !== id));
+    }
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+      if (checked) {
+          setSelectedEntries(filteredLeads.map(l => l.id));
+      } else {
+          setSelectedEntries([]);
+      }
+  };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
@@ -3319,16 +3505,31 @@ function HistoricoView({
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <th className="px-6 py-4 w-12">
+                  <input type="checkbox" checked={selectedEntries.length === filteredLeads.length && filteredLeads.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
+                </th>
                 <th className="px-6 py-4">Candidato</th>
                 <th className="px-6 py-4">Ação / Origem</th>
                 <th className="px-6 py-4">Promotor</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Ações</th>
+                <th className="px-6 py-4">
+                  {selectedEntries.length > 0 && botConfig.url && (
+                      <button 
+                         onClick={() => setMassSelectorOpen(true)} 
+                         className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                      >
+                         <Bot size={14} /> Em Massa
+                      </button>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredLeads.map(lead => (
                 <tr key={lead.id} className="hover:bg-slate-50/50 transition-all">
+                  <td className="px-6 py-4">
+                      <input type="checkbox" checked={selectedEntries.includes(lead.id)} onChange={e => toggleSelect(lead.id, e.target.checked)} />
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="font-bold text-slate-900">{lead.nome}</span>
@@ -3385,7 +3586,7 @@ function HistoricoView({
               ))}
               {filteredLeads.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Nenhum lead encontrado.</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">Nenhum lead encontrado.</td>
                 </tr>
               )}
             </tbody>
@@ -3410,6 +3611,28 @@ function HistoricoView({
           }
         }}
       />
+      
+      <WhatsAppMessageSelector 
+        isOpen={massSelectorOpen}
+        onClose={() => setMassSelectorOpen(false)}
+        leadName="Candidatos"
+        messages={whatsappMessages.filter(m => m.tipo === 'historico')}
+        onSelect={(msg) => {
+          // not used for mass send
+        }}
+        botConfig={botConfig}
+        onSendBot={(msgTemplate) => {
+          const selectedLeadObjs = leads.filter(l => selectedEntries.includes(l.id));
+          const messagesPayload = selectedLeadObjs.map(l => ({
+            telefone: l.telefone,
+            message: msgTemplate.replace('[nome]', l.nome)
+          }));
+          onMassSendBot(messagesPayload);
+          setMassSelectorOpen(false);
+          setSelectedEntries([]);
+        }}
+        forceBotOnly={true}
+      />
     </div>
   );
 }
@@ -3419,13 +3642,15 @@ function BasesView({
   onToast, 
   whatsappMessages,
   botConfig,
-  onSendBot
+  onSendBot,
+  onMassSendBot
 }: { 
   bases: BaseEntry[]; 
   onToast: (m: string, t?: 'success' | 'error') => void; 
   whatsappMessages: WhatsAppMessage[];
   botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
+  onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
 }) {
   const [formData, setFormData] = useState({
     nomeBase: '',
@@ -3448,6 +3673,7 @@ function BasesView({
   const [cursoFilter, setCursoFilter] = useState('');
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<BaseEntry | null>(null);
+  const [massSelectorOpen, setMassSelectorOpen] = useState(false);
 
   const filteredBases = bases.filter(b => {
     const matchesSearch = b.nome.toLowerCase().includes(searchTerm.toLowerCase());
@@ -3773,15 +3999,23 @@ function BasesView({
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
-                <th className="px-6 py-4">
+                <th className="px-6 py-4 w-12">
                   <input type="checkbox" checked={selectedEntries.length === filteredBases.length && filteredBases.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
                 </th>
                 <th className="px-6 py-4">Nome</th>
                 <th className="px-6 py-4">Base</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">
+                <th className="px-6 py-4 flex items-center gap-4">
                   {selectedEntries.length > 0 && (
                       <button onClick={handleBulkDelete} className="text-rose-600 font-bold hover:underline">excluir selecionados</button>
+                  )}
+                  {selectedEntries.length > 0 && botConfig.url && (
+                      <button 
+                         onClick={() => setMassSelectorOpen(true)} 
+                         className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                      >
+                         <Bot size={14} /> Em Massa
+                      </button>
                   )}
                 </th>
               </tr>
@@ -3837,7 +4071,7 @@ function BasesView({
               ))}
               {filteredBases.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">Nenhum registro encontrado com os filtros aplicados.</td>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Nenhum registro encontrado com os filtros aplicados.</td>
                 </tr>
               )}
             </tbody>
@@ -3861,6 +4095,26 @@ function BasesView({
             onSendBot(selectedEntry.telefone, msg);
           }
         }}
+      />
+      
+      <WhatsAppMessageSelector 
+        isOpen={massSelectorOpen}
+        onClose={() => setMassSelectorOpen(false)}
+        leadName="Candidatos"
+        messages={whatsappMessages.filter(m => m.tipo === 'bases')}
+        onSelect={(msg) => {}}
+        botConfig={botConfig}
+        onSendBot={(msgTemplate) => {
+          const selectedLeadObjs = bases.filter(b => selectedEntries.includes(b.id));
+          const messagesPayload = selectedLeadObjs.map(l => ({
+            telefone: l.telefone,
+            message: msgTemplate.replace('[nome]', l.nome)
+          }));
+          onMassSendBot(messagesPayload);
+          setMassSelectorOpen(false);
+          setSelectedEntries([]);
+        }}
+        forceBotOnly={true}
       />
     </div>
   );
@@ -4218,16 +4472,32 @@ function GapView({
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-6 py-4">
+                <th className="px-6 py-4 w-12">
                   <input type="checkbox" checked={selectedEntries.length === filteredGap.length && filteredGap.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
                 </th>
                 <th className="px-6 py-4">Candidato</th>
                 <th className="px-6 py-4">Curso / Produto</th>
                 <th className="px-6 py-4">Documentação</th>
                 <th className="px-6 py-4">Mat. Acad.</th>
-                <th className="px-6 py-4">
+                <th className="px-6 py-4 flex items-center gap-4">
                   {selectedEntries.length > 0 && (
                       <button onClick={handleBulkDelete} className="text-rose-600 font-bold hover:underline">excluir selecionados</button>
+                  )}
+                  {selectedEntries.length > 0 && botConfig.url && (
+                      <button 
+                         onClick={() => {
+                            const selectedObjs = gap.filter(g => selectedEntries.includes(g.id));
+                            const payloads = selectedObjs.map(g => ({
+                                telefone: g.telefone,
+                                message: getGapWhatsAppMessage(g)
+                            }));
+                            onMassSendBot(payloads);
+                            setSelectedEntries([]);
+                         }} 
+                         className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                      >
+                         <Bot size={14} /> Em Massa
+                      </button>
                   )}
                 </th>
               </tr>
