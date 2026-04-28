@@ -104,9 +104,9 @@ service cloud.firestore {
 
     match /artifacts/gestaopro-761e1/public/data/users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdminMaster());
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isAdminMaster() || (isOwner(userId) && request.resource.data.role == resource.data.role));
-      allow delete: if isAdminMaster();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdminMaster() || isLider());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isAdminMaster() || isLider() || (isOwner(userId) && request.resource.data.role == resource.data.role));
+      allow delete: if isAdminMaster() || isLider();
     }
 
     match /artifacts/gestaopro-761e1/public/data/leads/{leadId} {
@@ -149,37 +149,37 @@ service cloud.firestore {
     // Dashboard & Config Collections
     match /artifacts/gestaopro-761e1/public/data/campanhas/{id} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
-      allow write: if isAdminMaster();
+      allow write: if isAdminMaster() || isLider();
     }
     match /artifacts/gestaopro-761e1/public/data/bom_dia/{id} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
-      allow write: if isAdminMaster();
+      allow write: if isAdminMaster() || isLider();
     }
     match /artifacts/gestaopro-761e1/public/data/forecast/{id} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
-      allow write: if isAdminMaster();
+      allow write: if isAdminMaster() || isLider();
     }
     match /artifacts/gestaopro-761e1/public/data/planner/{id} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
-      allow write: if isAdminMaster();
+      allow write: if isAdminMaster() || isLider();
     }
     match /artifacts/gestaopro-761e1/public/data/periodo_captacao/{id} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
-      allow write: if isAdminMaster();
+      allow write: if isAdminMaster() || isLider();
     }
     match /artifacts/gestaopro-761e1/public/data/linksUteis/{id} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
-      allow write: if isAdminMaster();
+      allow write: if isAdminMaster() || isLider();
     }
     match /artifacts/gestaopro-761e1/public/data/empresas_parceiras/{id} {
       allow read: if isAuthenticated();
-      allow create, update: if isAdminMaster() && isValidEmpresa(request.resource.data);
-      allow delete: if isAdminMaster();
+      allow create, update: if (isAdminMaster() || isLider()) && isValidEmpresa(request.resource.data);
+      allow delete: if isAdminMaster() || isLider();
     }
     match /artifacts/gestaopro-761e1/public/data/whatsapp_messages/{id} {
       allow read: if isAuthenticated();
-      allow create, update: if isAdminMaster() && isValidWhatsAppMessage(request.resource.data);
-      allow delete: if isAdminMaster();
+      allow create, update: if (isAdminMaster() || isLider()) && isValidWhatsAppMessage(request.resource.data);
+      allow delete: if isAdminMaster() || isLider();
     }
 
     match /artifacts/gestaopro-761e1/public/data/mapao_academico/{id} {

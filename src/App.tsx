@@ -1965,6 +1965,8 @@ export default function App() {
        return;
     }
     
+    const safeBotNumber = currentBotNumber.replace(/\D/g, '');
+    
     // Format phone: remove non-numeric, strip leading zero if present
     let rawPhone = telefone.replace(/\D/g, '');
     if (rawPhone.startsWith('0')) rawPhone = rawPhone.substring(1);
@@ -1978,7 +1980,7 @@ export default function App() {
       const response = await fetch(`${cleanUrl}/api/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ botNumber: currentBotNumber, number: rawPhone, message, force: true, manual: true })
+        body: JSON.stringify({ botNumber: safeBotNumber, number: rawPhone, message, force: true, manual: true })
       });
       
       if (response.ok) {
