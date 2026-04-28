@@ -123,6 +123,7 @@ function WhatsAppMessageSelector({
   messages, 
   onSelect, 
   leadName,
+  leadCurso,
   botConfig,
   onSendBot,
   forceBotOnly
@@ -132,6 +133,7 @@ function WhatsAppMessageSelector({
   messages: WhatsAppMessage[];
   onSelect: (msg: string) => void;
   leadName: string;
+  leadCurso?: string;
   botConfig?: BotConfig;
   onSendBot?: (msg: string) => void;
   forceBotOnly?: boolean;
@@ -159,7 +161,12 @@ function WhatsAppMessageSelector({
         </div>
         <div className="p-4 overflow-y-auto space-y-3 flex-1">
           {messages.length > 0 ? messages.map((msg, idx) => {
-            const preview = forceBotOnly ? msg.texto : msg.texto.replace('[nome]', leadName);
+            let preview = msg.texto;
+            if (!forceBotOnly) {
+               preview = preview.replace(/\[nome\]/gi, leadName || '');
+               if (leadCurso) preview = preview.replace(/\[curso\]/gi, leadCurso);
+            }
+            
             const canUseBot = botConfig?.url && onSendBot;
             
             return (
@@ -1611,7 +1618,7 @@ function FiesProuniView({
                                const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
                                const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
                                const msgTemplate = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                               const text = msgTemplate ? msgTemplate.texto.replace('[nome]', item.nome) : `Olá ${item.nome}, tudo bem?`;
+                               const text = msgTemplate ? msgTemplate.texto.replace(/\[nome\]/gi, item.nome).replace(/\[curso\]/gi, item.curso || '') : `Olá ${item.nome}, tudo bem?`;
                                return {
                                    telefone: item.telefone,
                                    message: text
@@ -1699,7 +1706,7 @@ function FiesProuniView({
                                 const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
                                 const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
                                 const msgObj = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                                const msg = (msgObj ? msgObj.texto : `Olá [nome], tudo bem?`).replace('[nome]', item.nome);
+                                const msg = (msgObj ? msgObj.texto : `Olá [nome], tudo bem?`).replace(/\[nome\]/gi, item.nome).replace(/\[curso\]/gi, item.curso || '');
                                 onSendBot(item.telefone, msg);
                               }}
                               className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-all"
@@ -1713,7 +1720,7 @@ function FiesProuniView({
                               const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
                               const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
                               const msg = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                              if (msg) return msg.texto.replace('[nome]', item.nome);
+                              if (msg) return msg.texto.replace(/\[nome\]/gi, item.nome).replace(/\[curso\]/gi, item.curso || '');
                               return `Olá ${item.nome}, tudo bem?`;
                             })())}
                             target="_blank"
@@ -3546,6 +3553,7 @@ function HistoricoView({
         isOpen={selectorOpen}
         onClose={() => setSelectorOpen(false)}
         leadName={selectedLead?.nome || ''}
+        leadCurso={selectedLead?.cursoInteresse || ''}
         messages={whatsappMessages.filter(m => m.tipo === 'historico')}
         onSelect={(msg) => {
           if (selectedLead) {
@@ -3573,7 +3581,7 @@ function HistoricoView({
           const selectedLeadObjs = leads.filter(l => selectedEntries.includes(l.id));
           const messagesPayload = selectedLeadObjs.map(l => ({
             telefone: l.telefone,
-            message: msgTemplate.replace('[nome]', l.nome)
+            message: msgTemplate.replace(/\[nome\]/gi, l.nome).replace(/\[curso\]/gi, l.cursoInteresse || '')
           }));
           onMassSendBot(messagesPayload);
           setMassSelectorOpen(false);
@@ -4043,6 +4051,7 @@ function BasesView({
         isOpen={selectorOpen}
         onClose={() => setSelectorOpen(false)}
         leadName={selectedEntry?.nome || ''}
+        leadCurso={selectedEntry?.curso || ''}
         messages={whatsappMessages.filter(m => m.tipo === 'bases')}
         onSelect={(msg) => {
           if (selectedEntry) {
@@ -4068,7 +4077,7 @@ function BasesView({
           const selectedLeadObjs = bases.filter(b => selectedEntries.includes(b.id));
           const messagesPayload = selectedLeadObjs.map(l => ({
             telefone: l.telefone,
-            message: msgTemplate.replace('[nome]', l.nome)
+            message: msgTemplate.replace(/\[nome\]/gi, l.nome).replace(/\[curso\]/gi, l.curso || '')
           }));
           onMassSendBot(messagesPayload);
           setMassSelectorOpen(false);
@@ -4230,7 +4239,7 @@ function GapView({
     // If matAcad is OK, use gap_1
     if (entry.matAcad) {
       const msgOk = whatsappMessages.find(m => m.tipo === 'gap_1');
-      if (msgOk) return msgOk.texto.replace('[nome]', entry.nome);
+      if (msgOk) return msgOk.texto.replace(/\[nome\]/gi, entry.nome).replace(/\[curso\]/gi, entry.curso || '');
       return `Olá ${entry.nome}, vimos que sua matrícula acadêmica está ok! Parabéns!`;
     }
     
@@ -4238,9 +4247,9 @@ function GapView({
     let message = '';
     const customMsg = whatsappMessages.find(m => m.tipo === 'gap' || m.tipo === 'gap_0');
     if (customMsg) {
-      message = customMsg.texto.replace('[nome]', entry.nome);
+      message = customMsg.texto.replace(/\[nome\]/gi, entry.nome).replace(/\[curso\]/gi, entry.curso || '');
       if (missingDocs.length > 0) {
-        message = message.replace('[pendencias]', missingDocs.join(', '));
+        message = message.replace(/\[pendencias\]/gi, missingDocs.join(', '));
       }
     } else if (missingDocs.length > 0) {
        message = `Olá ${entry.nome}, tudo bem? Sou da equipe de captação e meu contato é referente à sua matrícula no curso de ${entry.curso}. Identificamos que sua matrícula ainda não foi finalizada devido à pendência dos seguintes documentos: ${missingDocs.join(', ')}. É fundamental regularizar essa situação o quanto antes para garantir sua vaga e evitar o cancelamento do processo.`;
