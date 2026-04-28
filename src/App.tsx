@@ -2793,9 +2793,6 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
     }
   };
 
-  const latestBomDia = bomDia.length > 0 ? bomDia[bomDia.length - 1] : null;
-  const latestForecast = forecast.length > 0 ? forecast[forecast.length - 1] : null;
-
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
@@ -2811,8 +2808,8 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
         </div>
       </div>
 
-      {/* Rápido Resumo da Captação */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Rápido Resumo da Captação (Apenas Período agora, os outros foram movidos para renderizar todos completos abaixo) */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
          {/* Card Contador Período */}
          <div className="bg-gradient-to-br from-indigo-500 to-blue-600 p-6 rounded-3xl shadow-lg border border-indigo-400 text-white flex flex-col justify-between relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-10"><Calendar size={80} /></div>
@@ -2832,55 +2829,160 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                </div>
             )}
          </div>
-
-         {/* Card Bom Dia Captação */}
-         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:border-emerald-200 transition-all">
-            <div>
-               <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-500 font-bold uppercase tracking-wider text-xs">Bom Dia Captação</h3>
-                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-emerald-100 transition-colors"><Sun size={20} /></div>
-               </div>
-               <p className="text-2xl font-bold text-slate-900">{latestBomDia ? latestBomDia.real.insc : '0'}</p>
-               <p className="text-xs font-semibold text-slate-400">Total Inscritos Real</p>
-            </div>
-            {latestBomDia && (
-               <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-50 pt-4">
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Mat. Fin</p>
-                    <p className="text-lg font-bold text-slate-800">{latestBomDia.real.matFin}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Mat. Acad</p>
-                    <p className="text-lg font-bold text-slate-800">{latestBomDia.real.matAcad}</p>
-                  </div>
-               </div>
-            )}
-         </div>
-
-         {/* Card Forecasts */}
-         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:border-amber-200 transition-all">
-            <div>
-               <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-500 font-bold uppercase tracking-wider text-xs">Forecasts</h3>
-                  <div className="p-2 bg-amber-50 text-amber-600 rounded-lg group-hover:bg-amber-100 transition-colors"><TrendingUp size={20} /></div>
-               </div>
-               <p className="text-2xl font-bold text-slate-900">{latestForecast ? latestForecast.nome : '-'}</p>
-               <p className="text-xs font-semibold text-slate-400">Previsão Ativa</p>
-            </div>
-            {latestForecast && (
-               <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-50 pt-4">
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Realizado</p>
-                    <p className="text-lg font-bold text-slate-800">{latestForecast.realizado}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">Meta Fechto.</p>
-                    <p className="text-lg font-bold text-slate-800">{latestForecast.metaFechamento}</p>
-                  </div>
-               </div>
-            )}
-         </div>
       </section>
+
+      {/* Bom Dia Captação (Complete - All cards) */}
+      {widgets.bomDia && bomDia.length > 0 && (
+         <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <div className="flex items-center justify-between mb-6">
+               <div className="flex items-center space-x-2 text-emerald-600">
+                  <Sun size={24} />
+                  <h3 className="text-xl font-bold text-slate-900">Bom Dia Captação</h3>
+               </div>
+               <p className="text-xs text-slate-400 font-medium">
+                  Última atualização: {new Date(bomDia[bomDia.length - 1].data).toLocaleDateString()}
+               </p>
+            </div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
+               {bomDia.map(card => (
+                  <div key={card.id} className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
+                     <div className="bg-emerald-600 p-4">
+                        <h4 className="font-bold text-white text-sm uppercase tracking-wider">{card.titulo}</h4>
+                     </div>
+                     <div className="p-4">
+                        <table className="w-full text-xs">
+                           <thead>
+                              <tr className="text-slate-400 font-bold uppercase tracking-tighter">
+                                 <th className="text-left pb-2">Indicador</th>
+                                 <th className="text-center pb-2">INSC</th>
+                                 <th className="text-center pb-2">MAT FIN</th>
+                                 <th className="text-center pb-2">MAT ACAD</th>
+                              </tr>
+                           </thead>
+                           <tbody className="divide-y divide-slate-200">
+                              {[
+                                 { label: 'Meta Final', data: card.metaFinal, color: 'text-slate-600' },
+                                 { label: 'Meta Dia', data: card.metaDia, color: 'text-slate-600' },
+                                 { label: 'Ano Anterior', data: card.anoAnterior, color: 'text-slate-400' },
+                                 { label: 'Real', data: card.real, color: 'text-emerald-600 font-bold' }
+                              ].map((row, idx) => (
+                                 <tr key={idx} className="hover:bg-white/50 transition-colors">
+                                    <td className="py-2 font-semibold text-slate-500">{row.label}</td>
+                                    <td className={cn("py-2 text-center", row.color)}>{row.data?.insc ?? 0}</td>
+                                    <td className={cn("py-2 text-center", row.color)}>{row.data?.matFin ?? 0}</td>
+                                    <td className={cn("py-2 text-center", row.color)}>{row.data?.matAcad ?? 0}</td>
+                                 </tr>
+                              ))}
+                              {/* Calculated Rows */}
+                              {[
+                                 { 
+                                    label: '% Meta Dia', 
+                                    calc: (m: keyof BomDiaMetrics) => (card.metaDia && card.metaDia[m] > 0 && card.real) ? `${((card.real[m] / card.metaDia[m]) * 100).toFixed(0)}%` : '0%',
+                                    color: 'text-blue-600 font-bold'
+                                 },
+                                 { 
+                                    label: '% Ano Ant.', 
+                                    calc: (m: keyof BomDiaMetrics) => (card.anoAnterior && card.anoAnterior[m] > 0 && card.real) ? `${((card.real[m] / card.anoAnterior[m]) * 100).toFixed(0)}%` : '0%',
+                                    color: 'text-slate-500 font-bold'
+                                 },
+                                 { 
+                                    label: 'Gap Meta Dia', 
+                                    calc: (m: keyof BomDiaMetrics) => (card.real && card.metaDia) ? card.real[m] - card.metaDia[m] : 0,
+                                    color: (m: keyof BomDiaMetrics) => (card.real && card.metaDia && (card.real[m] - card.metaDia[m]) >= 0) ? 'text-emerald-600' : 'text-rose-600'
+                                 },
+                                 { 
+                                    label: 'Gap Ano Ant.', 
+                                    calc: (m: keyof BomDiaMetrics) => (card.real && card.anoAnterior) ? card.real[m] - card.anoAnterior[m] : 0,
+                                    color: (m: keyof BomDiaMetrics) => (card.real && card.anoAnterior && (card.real[m] - card.anoAnterior[m]) >= 0) ? 'text-emerald-600' : 'text-rose-600'
+                                 },
+                                 { 
+                                    label: 'Gap Meta Final', 
+                                    calc: (m: keyof BomDiaMetrics) => (card.real && card.metaFinal) ? card.real[m] - card.metaFinal[m] : 0,
+                                    color: (m: keyof BomDiaMetrics) => (card.real && card.metaFinal && (card.real[m] - card.metaFinal[m]) >= 0) ? 'text-emerald-600' : 'text-rose-600'
+                                 }
+                              ].map((row, idx) => (
+                                 <tr key={`calc-${idx}`} className="bg-slate-100/50">
+                                    <td className="py-1.5 font-bold text-[9px] text-slate-400 uppercase">{row.label}</td>
+                                    <td className={cn("py-1.5 text-center text-[10px] font-bold", typeof row.color === 'function' ? row.color('insc') : row.color)}>{row.calc('insc')}</td>
+                                    <td className={cn("py-1.5 text-center text-[10px] font-bold", typeof row.color === 'function' ? row.color('matFin') : row.color)}>{row.calc('matFin')}</td>
+                                    <td className={cn("py-1.5 text-center text-[10px] font-bold", typeof row.color === 'function' ? row.color('matAcad') : row.color)}>{row.calc('matAcad')}</td>
+                                 </tr>
+                              ))}
+                           </tbody>
+                        </table>
+                     </div>
+                  </div>
+               ))}
+            </div>
+         </section>
+      )}
+
+      {/* Forecasts (Complete - All cards) */}
+      {widgets.forecast && forecast.length > 0 && (
+         <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <div className="flex items-center justify-between mb-6">
+               <h3 className="text-xl font-bold text-slate-900">Forecasts de Captação</h3>
+               <TrendingUp size={24} className="text-blue-600" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+               {forecast.map(f => {
+                  const percFech = f.metaFechamento > 0 ? ((f.realizado / f.metaFechamento) * 100).toFixed(1) : '0';
+                  const gapFech = f.realizado - f.metaFechamento;
+                  const dataFim = new Date(f.dataFim);
+                  const hoje = new Date();
+                  const diffTime = dataFim.getTime() - hoje.getTime();
+                  const diasRestantes = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+                  const pacing = (Math.abs(gapFech) / diasRestantes).toFixed(1);
+
+                  return (
+                     <div key={f.id} className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                        <div className="flex justify-between items-start mb-4">
+                           <div>
+                              <h4 className="font-bold text-slate-900">{f.nome}</h4>
+                              <p className="text-[10px] text-slate-500 font-medium">Até {new Date(f.dataFim).toLocaleDateString('pt-BR')}</p>
+                           </div>
+                           <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${Number(percFech) >= 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
+                              {percFech}%
+                           </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                           <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase">Realizado</p>
+                              <p className="text-lg font-bold text-emerald-600">{f.realizado || 0}</p>
+                           </div>
+                           <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase">Meta</p>
+                              <p className="text-lg font-bold text-slate-700">{f.metaFechamento || 0}</p>
+                           </div>
+                        </div>
+
+                        <div className="space-y-3 pt-4 border-t border-slate-200/60">
+                           <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-slate-400">Meta Dia YTD</span>
+                              <span className="text-xs font-bold text-slate-700">{f.metaDiaYTD || 0}</span>
+                           </div>
+                           <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-rose-400">Gap Fechamento</span>
+                              <span className={`text-xs font-bold ${gapFech >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                 {gapFech >= 0 ? '+' : ''}{gapFech}
+                              </span>
+                           </div>
+                           <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-blue-400">Pacing (por dia)</span>
+                              <span className="text-xs font-bold text-blue-600">{pacing}</span>
+                           </div>
+                           <div className="flex justify-between items-center bg-slate-200/50 p-2 rounded-lg mt-2">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dias Restantes</span>
+                              <span className="text-xs font-bold text-slate-800">{diasRestantes}</span>
+                           </div>
+                        </div>
+                     </div>
+                  );
+               })}
+            </div>
+         </section>
+      )}
 
       {widgets.periodo && periodos.length > 0 && (
         <section>
@@ -2973,166 +3075,6 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
         </section>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {widgets.bomDia && bomDia.length > 0 && (
-          <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 col-span-full">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-2 text-emerald-600">
-                <Sun size={24} />
-                <h3 className="text-xl font-bold text-slate-900">Bom Dia Captação</h3>
-              </div>
-              <p className="text-xs text-slate-400 font-medium">
-                Última atualização: {new Date(bomDia[bomDia.length - 1].data).toLocaleDateString()}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {bomDia.map(card => (
-                <div key={card.id} className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
-                  <div className="bg-emerald-600 p-4">
-                    <h4 className="font-bold text-white text-sm uppercase tracking-wider">{card.titulo}</h4>
-                  </div>
-                  <div className="p-4">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="text-slate-400 font-bold uppercase tracking-tighter">
-                          <th className="text-left pb-2">Indicador</th>
-                          <th className="text-center pb-2">INSC</th>
-                          <th className="text-center pb-2">MAT FIN</th>
-                          <th className="text-center pb-2">MAT ACAD</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200">
-                        {[
-                          { label: 'Meta Final', data: card.metaFinal, color: 'text-slate-600' },
-                          { label: 'Meta Dia', data: card.metaDia, color: 'text-slate-600' },
-                          { label: 'Ano Anterior', data: card.anoAnterior, color: 'text-slate-400' },
-                          { label: 'Real', data: card.real, color: 'text-emerald-600 font-bold' }
-                        ].map((row, idx) => (
-                          <tr key={idx} className="hover:bg-white/50 transition-colors">
-                            <td className="py-2 font-semibold text-slate-500">{row.label}</td>
-                            <td className={cn("py-2 text-center", row.color)}>{row.data.insc}</td>
-                            <td className={cn("py-2 text-center", row.color)}>{row.data.matFin}</td>
-                            <td className={cn("py-2 text-center", row.color)}>{row.data.matAcad}</td>
-                          </tr>
-                        ))}
-                        {/* Calculated Rows */}
-                        {[
-                          { 
-                            label: '% Meta Dia', 
-                            calc: (m: keyof BomDiaMetrics) => card.metaDia[m] > 0 ? `${((card.real[m] / card.metaDia[m]) * 100).toFixed(0)}%` : '0%',
-                            color: 'text-blue-600 font-bold'
-                          },
-                          { 
-                            label: '% Ano Ant.', 
-                            calc: (m: keyof BomDiaMetrics) => card.anoAnterior[m] > 0 ? `${((card.real[m] / card.anoAnterior[m]) * 100).toFixed(0)}%` : '0%',
-                            color: 'text-slate-500 font-bold'
-                          },
-                          { 
-                            label: 'Gap Meta Dia', 
-                            calc: (m: keyof BomDiaMetrics) => card.real[m] - card.metaDia[m],
-                            color: (m: keyof BomDiaMetrics) => (card.real[m] - card.metaDia[m]) >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                          },
-                          { 
-                            label: 'Gap Ano Ant.', 
-                            calc: (m: keyof BomDiaMetrics) => card.real[m] - card.anoAnterior[m],
-                            color: (m: keyof BomDiaMetrics) => (card.real[m] - card.anoAnterior[m]) >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                          },
-                          { 
-                            label: 'Gap Meta Final', 
-                            calc: (m: keyof BomDiaMetrics) => card.real[m] - card.metaFinal[m],
-                            color: (m: keyof BomDiaMetrics) => (card.real[m] - card.metaFinal[m]) >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                          }
-                        ].map((row, idx) => (
-                          <tr key={`calc-${idx}`} className="bg-slate-100/50">
-                            <td className="py-1.5 font-bold text-[9px] text-slate-400 uppercase">{row.label}</td>
-                            <td className={cn("py-1.5 text-center text-[10px] font-bold", typeof row.color === 'function' ? row.color('insc') : row.color)}>{row.calc('insc')}</td>
-                            <td className={cn("py-1.5 text-center text-[10px] font-bold", typeof row.color === 'function' ? row.color('matFin') : row.color)}>{row.calc('matFin')}</td>
-                            <td className={cn("py-1.5 text-center text-[10px] font-bold", typeof row.color === 'function' ? row.color('matAcad') : row.color)}>{row.calc('matAcad')}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {widgets.forecast && forecast.length > 0 && (
-          <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 col-span-full">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-slate-900">Forecasts de Captação</h3>
-              <TrendingUp size={24} className="text-blue-600" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {forecast.map(f => {
-                const percFech = f.metaFechamento > 0 ? ((f.realizado / f.metaFechamento) * 100).toFixed(1) : '0';
-                const gapFech = f.realizado - f.metaFechamento;
-                const dataFim = new Date(f.dataFim);
-                const hoje = new Date();
-                const diffTime = dataFim.getTime() - hoje.getTime();
-                const diasRestantes = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-                const pacing = (Math.abs(gapFech) / diasRestantes).toFixed(1);
-
-                return (
-                  <div key={f.id} className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="font-bold text-slate-900">{f.nome}</h4>
-                        <p className="text-[10px] text-slate-500 font-medium">Até {new Date(f.dataFim).toLocaleDateString('pt-BR')}</p>
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${Number(percFech) >= 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
-                        {percFech}%
-                      </span>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Realizado</p>
-                        <p className="text-lg font-bold text-emerald-600">{f.realizado}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Meta</p>
-                        <p className="text-lg font-bold text-slate-700">{f.metaFechamento}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-[10px] font-bold">
-                        <span className="text-slate-500">Progresso</span>
-                        <span className="text-slate-900">{percFech}%</span>
-                      </div>
-                      <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-600 rounded-full transition-all duration-500" 
-                          style={{ width: `${Math.min(100, Number(percFech))}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-2 gap-2">
-                      <div>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">Gap</p>
-                        <p className={`text-sm font-bold ${gapFech >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {gapFech}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">Pacing</p>
-                        <p className="text-sm font-bold text-slate-900">
-                          {f.realizado >= f.metaFechamento ? 'Meta Batida' : `${(Math.abs(gapFech) / Math.max(1, getWorkingDaysRemaining(f.dataFim))).toFixed(1)}/dia`}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-      </div>
-
       {widgets.planner && (
         <section>
           <h3 className="text-xl font-bold text-slate-900 mb-4">Planner da Semana</h3>
@@ -3183,6 +3125,9 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                 <p className="text-sm text-slate-500 mb-4">Escolha quais blocos você deseja visualizar na sua tela principal.</p>
                 
                 {[
+                  { id: 'periodo', label: 'Período Ativo', icon: Calendar },
+                  { id: 'bomDia', label: 'Bom Dia Captação', icon: Sun },
+                  { id: 'forecast', label: 'Forecasts', icon: TrendingUp },
                   { id: 'links', label: 'Links Úteis', icon: ExternalLink },
                   { id: 'planner', label: 'Planner da Semana', icon: Calendar },
                 ].map((item) => (
