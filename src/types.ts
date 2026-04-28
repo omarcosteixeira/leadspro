@@ -243,5 +243,6 @@ export interface BotConfig {
   id?: string;
   url: string;
   active: boolean;
+  trainingContext?: string;
   updatedAt?: any;
 }

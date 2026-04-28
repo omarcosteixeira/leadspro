@@ -1978,7 +1978,7 @@ export default function App() {
       const response = await fetch(`${cleanUrl}/api/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ botNumber: currentBotNumber, number: rawPhone, message })
+        body: JSON.stringify({ botNumber: currentBotNumber, number: rawPhone, message, force: true, manual: true })
       });
       
       if (response.ok) {
@@ -2574,9 +2574,9 @@ export default function App() {
               {currentView === 'dashboard' && <DashboardView leads={leads} planner={planner} links={links} profile={profile!} onToast={showToast} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} />}
               {currentView === 'cadastro' && <CadastroView onToast={showToast} profile={profile!} />}
               {currentView === 'historico' && <HistoricoView leads={leads} profile={profile!} onToast={showToast} users={users} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
-              {currentView === 'bases' && <BasesView bases={bases} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} />}
-              {currentView === 'gap' && <GapView gap={gap} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} />}
-              {currentView === 'fiesProuni' && <FiesProuniView data={fiesProuni} onToast={showToast} profile={profile!} whatsappMessages={whatsappMessages} periodos={periodos} botConfig={botConfig} onSendBot={handleSendBotMessage} />}
+              {currentView === 'bases' && <BasesView bases={bases} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
+              {currentView === 'gap' && <GapView gap={gap} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
+              {currentView === 'fiesProuni' && <FiesProuniView data={fiesProuni} onToast={showToast} profile={profile!} whatsappMessages={whatsappMessages} periodos={periodos} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
               {currentView === 'mapao' && <MapaoAcademicoView mapao={mapao} onToast={showToast} profile={profile!} />}
               {currentView === 'basesDisparo' && <BasesDisparoView bases={basesDisparo} onToast={showToast} />}
               {currentView === 'campanhas' && <CampanhasView campanhas={campanhas} onToast={showToast} />}
@@ -4070,13 +4070,15 @@ function GapView({
   onToast, 
   whatsappMessages,
   botConfig,
-  onSendBot
+  onSendBot,
+  onMassSendBot
 }: { 
   gap: GapEntry[]; 
   onToast: (m: string, t?: 'success' | 'error') => void; 
   whatsappMessages: WhatsAppMessage[];
   botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
+  onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [cpfFilter, setCpfFilter] = useState('');
@@ -5615,7 +5617,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
           { id: 'forecast', label: 'Forecast' },
           { id: 'planner', label: 'Planner da Semana' },
           { id: 'periodo', label: 'Período da Captação' },
-          { id: 'whatsapp', label: 'Mensagens WhatsApp' },
+          { id: 'whatsapp', label: 'Gestão WhatsApp' },
+          { id: 'treinamento', label: 'Treinamento Bot' },
           { id: 'links', label: 'Links Úteis' },
           { id: 'backup', label: 'Backup e Segurança' }
         ].map(tab => (
@@ -6735,6 +6738,47 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
           </div>
         </section>
         </div>
+      )}
+
+      {activeTab === 'treinamento' && (
+        <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden max-w-4xl mx-auto">
+          <div className="p-6 border-b border-slate-100">
+            <h3 className="text-xl font-bold text-slate-900">Treinamento do Bot</h3>
+            <p className="text-slate-500 text-sm">Insira o texto sobre a sua empresa para refinar as respostas da IA.</p>
+          </div>
+          <div className="p-6 space-y-6">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">Contexto da Empresa</label>
+              <textarea 
+                placeholder="Insira aqui informações sobre preços, cursos, política da empresa..."
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm min-h-[300px]"
+                defaultValue={botConfig.trainingContext || ''}
+                onBlur={async (e) => {
+                  const newContext = e.target.value.trim();
+                  if (newContext === botConfig.trainingContext) return;
+                  try {
+                    await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
+                      trainingContext: newContext,
+                      updatedAt: serverTimestamp() 
+                    }, { merge: true });
+                    onToast("Treinamento do Bot atualizado!");
+                  } catch (err: any) {
+                    onToast(`Erro ao salvar treinamento: ${err.message}`, 'error');
+                  }
+                }}
+              />
+              <p className="text-xs text-slate-400 mt-2">Dica: Quanto mais claro e objetivo for o texto, melhores serão as respostas da IA.</p>
+            </div>
+            
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center">
+               <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
+                  <span className="font-bold text-xl">PDF</span>
+               </div>
+               <h4 className="font-bold text-slate-800 mb-2">Treinamento via PDF em breve</h4>
+               <p className="text-xs text-slate-500 max-w-sm">No momento, você pode treinar a IA adicionando o texto no campo acima. A funcionalidade de envio de PDF estará disponível em futuras atualizações.</p>
+            </div>
+          </div>
+        </section>
       )}
 
       {activeTab === 'links' && (
