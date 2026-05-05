@@ -3692,6 +3692,8 @@ function BasesView({
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<BaseEntry | null>(null);
   const [massSelectorOpen, setMassSelectorOpen] = useState(false);
+  const [isAddMsgModalOpen, setIsAddMsgModalOpen] = useState(false);
+  const [newMsgData, setNewMsgData] = useState({ modelName: '', texto: '' });
 
   const filteredBases = bases.filter(b => {
     const matchesSearch = b.nome.toLowerCase().includes(searchTerm.toLowerCase());
@@ -3732,6 +3734,54 @@ function BasesView({
       onToast(err.message, 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddCustomMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMsgData.texto.trim()) return;
+    setLoading(true);
+    try {
+      await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
+        tipo: 'bases',
+        texto: newMsgData.texto,
+        createdAt: serverTimestamp()
+      });
+      onToast("Mensagem de base salva!");
+      setNewMsgData({ modelName: '', texto: '' });
+      setIsAddMsgModalOpen(false);
+    } catch (err: any) {
+      onToast("Erro ao salvar mensagem.", 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInsertDefaultBasesMessages = async () => {
+    try {
+      const existing = whatsappMessages.filter(m => m.tipo === 'bases');
+      if (existing.length > 0) {
+        if (!window.confirm("Já existem mensagens para Bases. Deseja adicionar as mensagens padrões mesmo assim?")) {
+          return;
+        }
+      }
+      
+      const defaults = [
+        "Olá [nome], vi que você tem interesse no curso de [curso]. Vamos tirar suas dúvidas?",
+        "Oi [nome], aqui é da faculdade! Recebemos sua solicitação sobre o curso de [curso]. Qual o melhor horário para conversarmos?",
+        "Tudo bem, [nome]? Preparamos uma oferta especial para você começar o curso de [curso] ainda este semestre! Vamos lá?"
+      ];
+      
+      for (const texto of defaults) {
+        await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
+          tipo: 'bases',
+          texto,
+          createdAt: serverTimestamp()
+        });
+      }
+      onToast("Mensagens padrões de base inseridas!");
+    } catch (err: any) {
+      onToast("Erro ao inserir mensagens padrões.", 'error');
     }
   };
 
@@ -3854,9 +3904,23 @@ function BasesView({
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center max-w-xl mx-auto">
-        <h3 className="text-xl font-bold text-slate-900">Bases</h3>
-        <div className="flex space-x-2">
+      <div className="flex flex-col md:flex-row justify-between items-center max-w-xl mx-auto gap-4">
+        <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap">Bases</h3>
+        <div className="flex flex-wrap justify-center gap-2">
+          <button 
+             onClick={() => setIsAddMsgModalOpen(true)}
+             className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
+          >
+             <Plus size={18} />
+             <span>Inserir Mensagens</span>
+          </button>
+          <button 
+             onClick={handleInsertDefaultBasesMessages}
+             className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold"
+             title="Inserir Mensagens Padrões"
+          >
+             <MessageSquare size={14} />
+          </button>
           <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
             <Upload size={18} />
             <span>Importar</span>
@@ -4147,6 +4211,56 @@ function BasesView({
         }}
         forceBotOnly={true}
       />
+
+      <AnimatePresence>
+        {isAddMsgModalOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="text-xl font-bold text-slate-900">Nova Mensagem de Base</h3>
+                <button onClick={() => setIsAddMsgModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={24} />
+                </button>
+              </div>
+              <form onSubmit={handleAddCustomMessage} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Nome do Modelo (Opcional)</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: WhatsApp Boas Vindas"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
+                    value={newMsgData.modelName}
+                    onChange={e => setNewMsgData({...newMsgData, modelName: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Texto da Mensagem</label>
+                  <textarea 
+                    placeholder="Use [nome] para o nome do aluno e [curso] para o curso."
+                    rows={6}
+                    required
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    value={newMsgData.texto}
+                    onChange={e => setNewMsgData({...newMsgData, texto: e.target.value})}
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 shadow-lg shadow-blue-100"
+                >
+                  {loading ? 'Salvando...' : 'Salvar e Ir para Histórico'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -4188,6 +4302,8 @@ function BasesRenovacaoView({
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<BaseEntry | null>(null);
   const [massSelectorOpen, setMassSelectorOpen] = useState(false);
+  const [isAddMsgModalOpen, setIsAddMsgModalOpen] = useState(false);
+  const [newMsgData, setNewMsgData] = useState({ modelName: '', texto: '' });
 
   const filteredBases = bases.filter(b => {
     const matchesSearch = b.nome.toLowerCase().includes(searchTerm.toLowerCase());
@@ -4323,6 +4439,26 @@ function BasesRenovacaoView({
     });
   };
 
+  const handleAddCustomMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMsgData.texto.trim()) return;
+    setLoading(true);
+    try {
+      await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
+        tipo: 'bases_renovacao',
+        texto: newMsgData.texto,
+        createdAt: serverTimestamp()
+      });
+      onToast("Mensagem de renovação salva!");
+      setNewMsgData({ modelName: '', texto: '' });
+      setIsAddMsgModalOpen(false);
+    } catch (err: any) {
+      onToast("Erro ao salvar mensagem.", 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleInsertDefaultRenovacaoMessages = async () => {
     try {
       const existing = whatsappMessages.filter(m => m.tipo === 'bases_renovacao');
@@ -4357,11 +4493,18 @@ function BasesRenovacaoView({
         <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap">Bases Renovação</h3>
         <div className="flex flex-wrap justify-center gap-2">
           <button 
-             onClick={handleInsertDefaultRenovacaoMessages}
+             onClick={() => setIsAddMsgModalOpen(true)}
              className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
           >
-             <MessageSquare size={18} />
-             <span>Inserir Mensagens Padrões</span>
+             <Plus size={18} />
+             <span>Inserir Mensagens</span>
+          </button>
+          <button 
+             onClick={handleInsertDefaultRenovacaoMessages}
+             className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold"
+             title="Inserir Mensagens Padrões"
+          >
+             <MessageSquare size={14} />
           </button>
           <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
             <Upload size={18} />
@@ -4653,6 +4796,56 @@ function BasesRenovacaoView({
         }}
         forceBotOnly={true}
       />
+
+      <AnimatePresence>
+        {isAddMsgModalOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="text-xl font-bold text-slate-900">Nova Mensagem de Renovação</h3>
+                <button onClick={() => setIsAddMsgModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={24} />
+                </button>
+              </div>
+              <form onSubmit={handleAddCustomMessage} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Nome do Modelo (Opcional)</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: WhatsApp Renovação 1"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
+                    value={newMsgData.modelName}
+                    onChange={e => setNewMsgData({...newMsgData, modelName: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Texto da Mensagem</label>
+                  <textarea 
+                    placeholder="Use [nome] para o nome do aluno e [curso] para o curso."
+                    rows={6}
+                    required
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    value={newMsgData.texto}
+                    onChange={e => setNewMsgData({...newMsgData, texto: e.target.value})}
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 shadow-lg shadow-blue-100"
+                >
+                  {loading ? 'Salvando...' : 'Salvar e Ir para Histórico'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
