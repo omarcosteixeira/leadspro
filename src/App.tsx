@@ -4287,10 +4287,8 @@ function BasesRenovacaoView({
     cpf: '',
     curso: '',
     produto: 'Graduação' as 'Graduação' | 'Técnico' | 'Pós-graduação',
-    numeroOportunidade: '',
     semestre: '',
     metodologia: '',
-    formaIngresso: '',
     numeroMatricula: ''
   });
   const [loading, setLoading] = useState(false);
@@ -4335,10 +4333,8 @@ function BasesRenovacaoView({
         cpf: '', 
         curso: '',
         produto: 'Graduação',
-        numeroOportunidade: '',
         semestre: '',
         metodologia: '',
-        formaIngresso: '',
         numeroMatricula: ''
       });
     } catch (err: any) {
@@ -4555,10 +4551,10 @@ function BasesRenovacaoView({
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
               <input 
-                placeholder="N° Oportunidade" 
+                placeholder="N° de Matrícula" 
                 required 
-                value={formData.numeroOportunidade}
-                onChange={e => setFormData({...formData, numeroOportunidade: e.target.value})}
+                value={formData.numeroMatricula}
+                onChange={e => setFormData({...formData, numeroMatricula: e.target.value})}
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
@@ -4578,19 +4574,12 @@ function BasesRenovacaoView({
                 {uniqueProdutos.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1">
               <input 
                 placeholder="Metodologia" 
                 required 
                 value={formData.metodologia}
                 onChange={e => setFormData({...formData, metodologia: e.target.value})}
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input 
-                placeholder="Forma de Ingresso" 
-                required 
-                value={formData.formaIngresso}
-                onChange={e => setFormData({...formData, formaIngresso: e.target.value})}
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
