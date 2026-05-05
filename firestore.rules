@@ -62,7 +62,7 @@ service cloud.firestore {
 
     function isValidWhatsAppMessage(data) {
       return data.keys().hasAll(['tipo', 'texto']) &&
-             data.tipo in ['historico', 'bases', 'gap', 'fiesProuni', 'gap_0', 'gap_1', 'fiesProuni_0', 'fiesProuni_1', 'gap_ok', 'fiesProuni_ok'] &&
+             data.tipo in ['historico', 'bases', 'gap', 'fiesProuni', 'gap_0', 'gap_1', 'fiesProuni_0', 'fiesProuni_1', 'gap_ok', 'fiesProuni_ok', 'bases_renovacao'] &&
              data.texto is string;
     }
 
@@ -196,6 +196,12 @@ service cloud.firestore {
     match /artifacts/gestaopro-761e1/public/data/bot_config/{id} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
+    }
+
+    match /artifacts/gestaopro-761e1/public/data/bases_renovacao/{id} {
+      allow read: if isLider() || isSSA() || isAdminMaster();
+      allow create, update: if isLider() || isSSA() || isAdminMaster();
+      allow delete: if isLider() || isAdminMaster();
     }
   }
 }

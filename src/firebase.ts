@@ -32,6 +32,7 @@ export const COLLECTIONS = {
   WHATSAPP_MESSAGES: `artifacts/${appId}/public/data/whatsapp_messages`,
   MAPAO_ACADEMICO: `artifacts/${appId}/public/data/mapao_academico`,
   BASES_DISPARO: `artifacts/${appId}/public/data/bases_disparo`,
+  BASES_RENOVACAO: `artifacts/${appId}/public/data/bases_renovacao`,
   BOT_CONFIG: `artifacts/${appId}/public/data/bot_config`,
 };
 
@@ -59,8 +60,10 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -77,6 +80,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
+
+  // Safe to ignore: occurs when unmounting/unsubscribing cancels in-flight requests
+  if (errorMessage.includes('The user aborted a request') || errorMessage.includes('cancelled')) {
+    console.debug('Firestore: Request aborted (likely unmount/unsub)', errInfo.path);
+    return errInfo;
+  }
+
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   // We don't necessarily want to crash the whole app, but we want to log it
   return errInfo;

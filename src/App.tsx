@@ -68,7 +68,14 @@ import {
   Copy,
   Bot,
   Send,
-  Bell
+  Bell,
+  Monitor,
+  Maximize,
+  Cloud,
+  RefreshCw,
+  Play,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth } from './firebase';
@@ -304,6 +311,8 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   calculo: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.SSA],
   mapao: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.ACADEMICO],
   basesDisparo: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
+  basesRenovacao: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SSA],
+  avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.ACADEMICO],
   admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV]
 };
 
@@ -1924,7 +1933,10 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState('cadastro');
+  const [currentView, setCurrentView] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('view') || 'cadastro';
+  });
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -1945,6 +1957,7 @@ export default function App() {
   const [links, setLinks] = useState<LinkUtil[]>([]);
   const [mapao, setMapao] = useState<MapaoAcademicoEntry[]>([]);
   const [basesDisparo, setBasesDisparo] = useState<BaseDisparoEntry[]>([]);
+  const [basesRenovacao, setBasesRenovacao] = useState<BaseEntry[]>([]);
   const [botConfig, setBotConfig] = useState<BotConfig>({ url: '', active: false });
   const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>({});
   const [initialActionData, setInitialActionData] = useState<Partial<CalendarioAcao> | null>(null);
@@ -2122,141 +2135,159 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user || !profile) return;
+    if (!user) return;
 
-    // Listeners
-    const unsubUsers = onSnapshot(collection(db, COLLECTIONS.USERS), snap => {
-      setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.USERS));
+    // Listeners for users require auth
+    let unsubUsers = () => {};
+    if (user) {
+      unsubUsers = onSnapshot(collection(db, COLLECTIONS.USERS), snap => {
+        setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
+      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.USERS));
+    }
 
     let unsubPlanner = () => {};
-    if (VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
       unsubPlanner = onSnapshot(collection(db, COLLECTIONS.PLANNER), snap => {
         setPlanner(snap.docs.map(d => ({ id: d.id, ...d.data() } as PlannerTask)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.PLANNER));
     }
 
     let unsubLinks = () => {};
-    if (VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
       unsubLinks = onSnapshot(collection(db, COLLECTIONS.LINKS), snap => {
         setLinks(snap.docs.map(d => ({ id: d.id, ...d.data() } as LinkUtil)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.LINKS));
     }
 
-    let leadsQuery;
-    if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.GESTOR_UNIDADE].includes(profile.role)) {
-      leadsQuery = query(collection(db, COLLECTIONS.LEADS));
-    } else if (profile.role === ROLES.FDV) {
-      leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user.uid), where("promotorRole", "==", ROLES.PROMOTOR)));
-    } else if (profile.role === ROLES.GESTOR_COMERCIAL) {
-      leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user.uid), where("promotorRole", "in", [ROLES.PROMOTOR, ROLES.FDV])));
-    } else if (profile.role === ROLES.PROMOTOR) {
-      leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("promotorId", "==", user.uid));
-    } else {
-      leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("promotorId", "==", "none"));
+    let unsubLeads = () => {};
+    if (profile) {
+      let leadsQuery;
+      if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.GESTOR_UNIDADE].includes(profile.role)) {
+        leadsQuery = query(collection(db, COLLECTIONS.LEADS));
+      } else if (profile.role === ROLES.FDV) {
+        leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "==", ROLES.PROMOTOR)));
+      } else if (profile.role === ROLES.GESTOR_COMERCIAL) {
+        leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "in", [ROLES.PROMOTOR, ROLES.FDV])));
+      } else if (profile.role === ROLES.PROMOTOR) {
+        leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("promotorId", "==", user!.uid));
+      } else {
+        leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("promotorId", "==", "none"));
+      }
+
+      unsubLeads = onSnapshot(leadsQuery, snap => {
+        setLeads(snap.docs.map(d => ({ id: d.id, ...d.data() } as Lead)));
+      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.LEADS));
     }
 
-    const unsubLeads = onSnapshot(leadsQuery, snap => {
-      setLeads(snap.docs.map(d => ({ id: d.id, ...d.data() } as Lead)));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.LEADS));
-
     let unsubBases = () => {};
-    if (VIEW_PERMISSIONS.bases.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.bases.includes(profile.role)) {
       unsubBases = onSnapshot(collection(db, COLLECTIONS.BASES), snap => {
         setBases(snap.docs.map(d => ({ id: d.id, ...d.data() } as BaseEntry)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BASES));
     }
 
     let unsubGap = () => {};
-    if (VIEW_PERMISSIONS.gap.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.gap.includes(profile.role)) {
       unsubGap = onSnapshot(collection(db, COLLECTIONS.GAP), snap => {
         setGap(snap.docs.map(d => ({ id: d.id, ...d.data() } as GapEntry)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.GAP));
     }
 
     let unsubFiesProuni = () => {};
-    if (VIEW_PERMISSIONS.fiesProuni.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.fiesProuni.includes(profile.role)) {
       unsubFiesProuni = onSnapshot(collection(db, COLLECTIONS.FIES_PROUNI), snap => {
         setFiesProuni(snap.docs.map(d => ({ id: d.id, ...d.data() } as FiesProuniEntry)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.FIES_PROUNI));
     }
 
     let unsubCampanhas = () => {};
-    if (VIEW_PERMISSIONS.campanhas.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.campanhas.includes(profile.role)) {
       unsubCampanhas = onSnapshot(collection(db, COLLECTIONS.CAMPANHAS), snap => {
         setCampanhas(snap.docs.map(d => ({ id: d.id, ...d.data() } as Campanha)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.CAMPANHAS));
     }
 
     let unsubBomDia = () => {};
-    if (VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
       unsubBomDia = onSnapshot(collection(db, COLLECTIONS.BOM_DIA), snap => {
         setBomDia(snap.docs.map(d => ({ id: d.id, ...d.data() } as BomDiaCaptacao)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BOM_DIA));
     }
 
     let unsubForecast = () => {};
-    if (VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
       unsubForecast = onSnapshot(collection(db, COLLECTIONS.FORECAST), snap => {
         setForecast(snap.docs.map(d => ({ id: d.id, ...d.data() } as ForecastCaptacao)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.FORECAST));
     }
 
     let unsubPeriodos = () => {};
-    if (VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
       unsubPeriodos = onSnapshot(collection(db, COLLECTIONS.PERIODO_CAPTACAO), snap => {
         setPeriodos(snap.docs.map(d => ({ id: d.id, ...d.data() } as PeriodoCaptacao)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.PERIODO_CAPTACAO));
     }
 
-    let calendarioQuery;
-    if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL].includes(profile.role)) {
-      calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES));
-    } else if (profile.role === ROLES.FDV) {
-      calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), or(where("creatorId", "==", user.uid), where("creatorRole", "==", ROLES.PROMOTOR)));
-    } else {
-      calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), where("creatorId", "==", "none"));
-    }
-
     let unsubCalendario = () => {};
-    if (VIEW_PERMISSIONS.calendario.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.calendario.includes(profile.role)) {
+      let calendarioQuery;
+      if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL].includes(profile.role)) {
+        calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES));
+      } else if (profile.role === ROLES.FDV) {
+        calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), or(where("creatorId", "==", user!.uid), where("creatorRole", "==", ROLES.PROMOTOR)));
+      } else {
+        calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), where("creatorId", "==", "none"));
+      }
       unsubCalendario = onSnapshot(calendarioQuery, snap => {
         setCalendarioAcoes(snap.docs.map(d => ({ id: d.id, ...d.data() } as CalendarioAcao)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.CALENDARIO_ACOES));
     }
 
     let unsubEmpresas = () => {};
-    if (VIEW_PERMISSIONS.empresas.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.empresas.includes(profile.role)) {
       unsubEmpresas = onSnapshot(collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS), snap => {
         setEmpresasParceiras(snap.docs.map(d => ({ id: d.id, ...d.data() } as EmpresaParceira)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.EMPRESAS_PARCEIRAS));
     }
 
-    const unsubWhatsApp = onSnapshot(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), snap => {
-      setWhatsappMessages(snap.docs.map(d => ({ id: d.id, ...d.data() } as WhatsAppMessage)));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.WHATSAPP_MESSAGES));
+    let unsubWhatsApp = () => {};
+    if (user) {
+      unsubWhatsApp = onSnapshot(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), snap => {
+        setWhatsappMessages(snap.docs.map(d => ({ id: d.id, ...d.data() } as WhatsAppMessage)));
+      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.WHATSAPP_MESSAGES));
+    }
 
     let unsubMapao = () => {};
-    if (VIEW_PERMISSIONS.mapao.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.mapao.includes(profile.role)) {
       unsubMapao = onSnapshot(collection(db, COLLECTIONS.MAPAO_ACADEMICO), snap => {
         setMapao(snap.docs.map(d => ({ id: d.id, ...d.data() } as MapaoAcademicoEntry)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.MAPAO_ACADEMICO));
     }
 
     let unsubBasesDisparo = () => {};
-    if (VIEW_PERMISSIONS.basesDisparo.includes(profile.role)) {
+    if (profile && VIEW_PERMISSIONS.basesDisparo.includes(profile.role)) {
       unsubBasesDisparo = onSnapshot(collection(db, COLLECTIONS.BASES_DISPARO), snap => {
         setBasesDisparo(snap.docs.map(d => ({ id: d.id, ...d.data() } as BaseDisparoEntry)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BASES_DISPARO));
     }
 
-    const unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), snap => {
-      if (snap.exists()) {
-        setBotConfig({ id: snap.id, ...snap.data() } as BotConfig);
-      } else {
-        setBotConfig({ url: '', active: false });
-      }
-    });
+    let unsubBasesRenovacao = () => {};
+    if (profile && VIEW_PERMISSIONS.basesRenovacao.includes(profile.role)) {
+      unsubBasesRenovacao = onSnapshot(collection(db, COLLECTIONS.BASES_RENOVACAO), snap => {
+        setBasesRenovacao(snap.docs.map(d => ({ id: d.id, ...d.data() } as BaseEntry)));
+      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BASES_RENOVACAO));
+    }
+
+    let unsubBotConfig = () => {};
+    if (user) {
+      unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), snap => {
+        if (snap.exists()) {
+          setBotConfig({ id: snap.id, ...snap.data() } as BotConfig);
+        } else {
+          setBotConfig({ url: '', active: false });
+        }
+      }, (err) => handleFirestoreError(err, OperationType.GET, COLLECTIONS.BOT_CONFIG));
+    }
 
     return () => {
       unsubUsers();
@@ -2275,9 +2306,24 @@ export default function App() {
       unsubWhatsApp();
       unsubMapao();
       unsubBasesDisparo();
+      unsubBasesRenovacao();
       unsubBotConfig();
     };
   }, [user, profile]);
+
+  useEffect(() => {
+    // Test connection to Firestore as per instructions
+    const testConnection = async () => {
+      try {
+        const { getDocFromServer, doc } = await import('firebase/firestore');
+        await getDocFromServer(doc(db, COLLECTIONS.BOT_CONFIG, 'connection_test'));
+        console.log("Firestore connection test: OK");
+      } catch (err) {
+        console.warn("Firestore connection test check (expected error if doc doesn't exist):", err);
+      }
+    };
+    testConnection();
+  }, []);
 
   useEffect(() => {
     if (!botConfig.url) return;
@@ -2294,8 +2340,8 @@ export default function App() {
              setBotStatuses(data.bots);
           }
         }
-      } catch (e) {
-        // optionally ignore
+      } catch (e: any) {
+        console.debug("Bot check fail:", e.message);
       }
     };
     
@@ -2361,7 +2407,7 @@ export default function App() {
 
   useEffect(() => {
     if (profile && !canView(currentView)) {
-      const availableViews = ['dashboard', 'cadastro', 'historico', 'bases', 'gap', 'fiesProuni', 'campanhas', 'calendario', 'empresas', 'calculo', 'mapao', 'basesDisparo', 'admin'];
+      const availableViews = ['dashboard', 'cadastro', 'historico', 'bases', 'gap', 'fiesProuni', 'mapao', 'basesDisparo', 'campanhas', 'calendario', 'empresas', 'calculo', 'admin'];
       const firstAvailable = availableViews.find(v => canView(v));
       if (firstAvailable) {
         setCurrentView(firstAvailable);
@@ -2509,6 +2555,7 @@ export default function App() {
               { id: 'fiesProuni', label: 'Fies/Prouni', icon: FileText },
               { id: 'mapao', label: 'Mapão Acadêmico', icon: MapPin },
               { id: 'basesDisparo', label: 'Bases de Disparo', icon: Globe },
+              { id: 'basesRenovacao', label: 'Bases Renovação', icon: Database },
               { id: 'campanhas', label: 'Campanhas', icon: Megaphone },
               { id: 'calendario', label: 'Calendário de Ações', icon: Calendar },
               { id: 'empresas', label: 'Empresas Parceiras', icon: Building2 },
@@ -2612,6 +2659,16 @@ export default function App() {
               {currentView === 'fiesProuni' && <FiesProuniView data={fiesProuni} onToast={showToast} profile={profile!} whatsappMessages={whatsappMessages} periodos={periodos} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
               {currentView === 'mapao' && <MapaoAcademicoView mapao={mapao} onToast={showToast} profile={profile!} />}
               {currentView === 'basesDisparo' && <BasesDisparoView bases={basesDisparo} onToast={showToast} />}
+              {currentView === 'basesRenovacao' && (
+                <BasesRenovacaoView 
+                  bases={basesRenovacao} 
+                  onToast={showToast} 
+                  whatsappMessages={whatsappMessages} 
+                  botConfig={botConfig} 
+                  onSendBot={handleSendBotMessage} 
+                  onMassSendBot={handleMassSendBotMessages} 
+                />
+              )}
               {currentView === 'campanhas' && <CampanhasView campanhas={campanhas} onToast={showToast} />}
               {currentView === 'calculo' && <CalculoRemuneracaoView />}
               {currentView === 'calendario' && <CalendarioAcoesView data={calendarioAcoes} onToast={showToast} profile={profile!} initialData={initialActionData} onClearInitialData={() => setInitialActionData(null)} />}
@@ -2661,6 +2718,11 @@ export default function App() {
 }
 
 // --- View Components ---
+
+function AvisosView() {
+  return null;
+}
+
 
 function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error') => void }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -4089,6 +4151,512 @@ function BasesView({
   );
 }
 
+function BasesRenovacaoView({ 
+  bases, 
+  onToast, 
+  whatsappMessages,
+  botConfig,
+  onSendBot,
+  onMassSendBot
+}: { 
+  bases: BaseEntry[]; 
+  onToast: (m: string, t?: 'success' | 'error') => void; 
+  whatsappMessages: WhatsAppMessage[];
+  botConfig: BotConfig;
+  onSendBot: (tel: string, msg: string) => void;
+  onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
+}) {
+  const [formData, setFormData] = useState({
+    nomeBase: '',
+    nome: '',
+    telefone: '',
+    cpf: '',
+    curso: '',
+    produto: 'Graduação' as 'Graduação' | 'Técnico' | 'Pós-graduação',
+    numeroOportunidade: '',
+    semestre: '',
+    metodologia: '',
+    formaIngresso: '',
+    numeroMatricula: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [baseFilter, setBaseFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [produtoFilter, setProdutoFilter] = useState('');
+  const [cursoFilter, setCursoFilter] = useState('');
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<BaseEntry | null>(null);
+  const [massSelectorOpen, setMassSelectorOpen] = useState(false);
+
+  const filteredBases = bases.filter(b => {
+    const matchesSearch = b.nome.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesBase = !baseFilter || b.nomeBase === baseFilter;
+    const matchesStatus = !statusFilter || b.status === statusFilter;
+    const matchesProduto = !produtoFilter || b.produto === produtoFilter;
+    const matchesCurso = !cursoFilter || b.curso.toLowerCase().includes(cursoFilter.toLowerCase());
+    return matchesSearch && matchesBase && matchesStatus && matchesProduto && matchesCurso;
+  });
+
+  const uniqueBases = Array.from(new Set(bases.map(b => b.nomeBase))).sort();
+  const uniqueProdutos = ['Graduação', 'Técnico', 'Pós-graduação'];
+  const uniqueCursos = Array.from(new Set(bases.map(b => b.curso))).sort();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await addDoc(collection(db, COLLECTIONS.BASES_RENOVACAO), {
+        ...formData,
+        status: 'Pendente',
+        createdAt: serverTimestamp()
+      });
+      onToast("Registro salvo na base de renovação!");
+      setFormData({ 
+        nomeBase: '', 
+        nome: '', 
+        telefone: '', 
+        cpf: '', 
+        curso: '',
+        produto: 'Graduação',
+        numeroOportunidade: '',
+        semestre: '',
+        metodologia: '',
+        formaIngresso: '',
+        numeroMatricula: ''
+      });
+    } catch (err: any) {
+      onToast(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
+  
+  const handleBulkDelete = async () => {
+    if (selectedEntries.length === 0) return;
+    if (window.confirm(`Deseja excluir ${selectedEntries.length} registros selecionados?`)) {
+        try {
+            for (const id of selectedEntries) {
+                await deleteDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, id));
+            }
+            onToast(`${selectedEntries.length} registros removidos.`);
+            setSelectedEntries([]);
+        } catch (err: any) {
+            onToast("Erro ao excluir registros.", 'error');
+        }
+    }
+  };
+
+  const toggleSelect = (id: string, checked: boolean) => {
+    if (checked) {
+        setSelectedEntries([...selectedEntries, id]);
+    } else {
+        setSelectedEntries(selectedEntries.filter(s => s !== id));
+    }
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+      if (checked) {
+          setSelectedEntries(filteredBases.map(b => b.id));
+      } else {
+          setSelectedEntries([]);
+      }
+  };
+
+  const handleStatusChange = async (entry: BaseEntry, status: string) => {
+    try {
+      await updateDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, entry.id), { status });
+      onToast("Status atualizado!");
+    } catch (err: any) {
+      onToast(err.message, 'error');
+    }
+  };
+
+  const handleDeleteBase = async (id: string) => {
+    if (window.confirm('Deseja excluir este registro da base?')) {
+      try {
+        await deleteDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, id));
+        onToast("Registro removido.");
+      } catch (err: any) {
+        onToast("Erro ao excluir registro.", 'error');
+      }
+    }
+  };
+
+  const handleExport = () => {
+    const data = bases.map(b => ({
+      Nome: b.nome,
+      Telefone: b.telefone,
+      CPF: b.cpf || '',
+      Curso: b.curso,
+      Base: b.nomeBase,
+      Status: b.status
+    }));
+    exportToExcel(data, 'Bases_Renovacao');
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    importFromExcel(file, async (data) => {
+      try {
+        const batch = data.map(item => ({
+          nome: item.Nome || item.nome || '',
+          telefone: String(item.Telefone || item.telefone || ''),
+          cpf: String(item.CPF || item.cpf || '').replace(/\D/g, ''),
+          curso: item.Curso || item.curso || '',
+          nomeBase: item.Base || item.nomeBase || 'Importado Renovação',
+          status: item.Status || item.status || 'Pendente',
+          createdAt: serverTimestamp()
+        }));
+
+        for (const entry of batch) {
+          await addDoc(collection(db, COLLECTIONS.BASES_RENOVACAO), entry);
+        }
+        onToast(`${batch.length} registros importados com sucesso!`);
+      } catch (err: any) {
+        onToast("Erro ao importar dados.", 'error');
+      }
+    });
+  };
+
+  const handleInsertDefaultRenovacaoMessages = async () => {
+    try {
+      const existing = whatsappMessages.filter(m => m.tipo === 'bases_renovacao');
+      if (existing.length > 0) {
+        if (!window.confirm("Já existem mensagens de renovação. Deseja adicionar as mensagens padrões mesmo assim?")) {
+          return;
+        }
+      }
+      
+      const defaults = [
+        "Olá [nome], notamos que sua matrícula ainda não foi renovada. Vamos garantir sua vaga para o próximo semestre?",
+        "Oi [nome], preparamos condições exclusivas para sua renovação hoje! Vamos conferir?",
+        "Atenção [nome]! O prazo para renovação está terminando. Não perca sua vaga!"
+      ];
+      
+      for (const texto of defaults) {
+        await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
+          tipo: 'bases_renovacao',
+          texto,
+          createdAt: serverTimestamp()
+        });
+      }
+      onToast("Mensagens padrões inseridas com sucesso!");
+    } catch (err: any) {
+      onToast("Erro ao inserir mensagens padrões.", 'error');
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-center max-w-xl mx-auto gap-4">
+        <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap">Bases Renovação</h3>
+        <div className="flex flex-wrap justify-center gap-2">
+          <button 
+             onClick={handleInsertDefaultRenovacaoMessages}
+             className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
+          >
+             <MessageSquare size={18} />
+             <span>Inserir Mensagens Padrões</span>
+          </button>
+          <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
+            <Upload size={18} />
+            <span>Importar</span>
+            <input type="file" accept=".xlsx, .xls" onChange={handleImport} className="hidden" />
+          </label>
+          <button 
+            onClick={handleExport}
+            className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
+          >
+            <Download size={18} />
+            <span>Exportar</span>
+          </button>
+        </div>
+      </div>
+      <div className="max-w-xl mx-auto">
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Novo Registro em Renovação</h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input 
+              placeholder="Nome da Base (Ex: Renovação 2024.2)" 
+              required 
+              value={formData.nomeBase}
+              onChange={e => setFormData({...formData, nomeBase: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <input 
+                placeholder="Nome" 
+                required 
+                value={formData.nome}
+                onChange={e => setFormData({...formData, nome: e.target.value})}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <input 
+                placeholder="Telefone" 
+                required 
+                value={formData.telefone}
+                onChange={e => setFormData({...formData, telefone: e.target.value})}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <input 
+                placeholder="CPF" 
+                value={formData.cpf}
+                onChange={e => setFormData({...formData, cpf: e.target.value})}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <input 
+                placeholder="N° Oportunidade" 
+                required 
+                value={formData.numeroOportunidade}
+                onChange={e => setFormData({...formData, numeroOportunidade: e.target.value})}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <input 
+                placeholder="Semestre" 
+                required 
+                value={formData.semestre}
+                onChange={e => setFormData({...formData, semestre: e.target.value})}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <select 
+                value={formData.produto}
+                onChange={e => setFormData({...formData, produto: e.target.value as any})}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                {uniqueProdutos.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <input 
+                placeholder="Metodologia" 
+                required 
+                value={formData.metodologia}
+                onChange={e => setFormData({...formData, metodologia: e.target.value})}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <input 
+                placeholder="Forma de Ingresso" 
+                required 
+                value={formData.formaIngresso}
+                onChange={e => setFormData({...formData, formaIngresso: e.target.value})}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <input 
+              placeholder="Curso" 
+              required 
+              value={formData.curso}
+              onChange={e => setFormData({...formData, curso: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50"
+            >
+              {loading ? 'Salvando...' : 'Adicionar à Renovação'}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h3 className="text-xl font-bold text-slate-900">Bases a Trabalhar (Renovação)</h3>
+          <div className="flex flex-wrap gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Buscar por nome..."
+                className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <select 
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              value={baseFilter}
+              onChange={e => setBaseFilter(e.target.value)}
+            >
+              <option value="">Todas as Bases</option>
+              {uniqueBases.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+            <select 
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              value={produtoFilter}
+              onChange={e => setProdutoFilter(e.target.value)}
+            >
+              <option value="">Todos os Produtos</option>
+              {uniqueProdutos.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select 
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              value={cursoFilter}
+              onChange={e => setCursoFilter(e.target.value)}
+            >
+              <option value="">Todos os Cursos</option>
+              {uniqueCursos.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select 
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+            >
+              <option value="">Todos Status</option>
+              <option value="Pendente">Pendente</option>
+              <option value="Interessado">Interessado</option>
+              <option value="Convertido">Convertido</option>
+              <option value="Não tem interesse">Não tem interesse</option>
+              <option value="Sem retorno">Sem retorno</option>
+            </select>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <th className="px-6 py-4 w-12 text-center">
+                  #
+                </th>
+                <th className="px-6 py-4 w-12">
+                  <input type="checkbox" checked={selectedEntries.length === filteredBases.length && filteredBases.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
+                </th>
+                <th className="px-6 py-4">Nome</th>
+                <th className="px-6 py-4">Base</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 flex items-center gap-4">
+                  {selectedEntries.length > 0 && (
+                      <button onClick={handleBulkDelete} className="text-rose-600 font-bold hover:underline">excluir selecionados</button>
+                  )}
+                  {selectedEntries.length > 0 && botConfig.url && (
+                      <button 
+                         onClick={() => setMassSelectorOpen(true)} 
+                         className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                      >
+                         <Bot size={14} /> Em Massa
+                      </button>
+                  )}
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredBases.map((entry, index) => (
+                <tr key={entry.id} className="hover:bg-slate-50/50 transition-all">
+                  <td className="px-6 py-4 text-center font-bold text-slate-400 text-xs">
+                    {index + 1}
+                  </td>
+                  <td className="px-6 py-4">
+                    <input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={e => toggleSelect(entry.id, e.target.checked)} />
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-slate-900">{entry.nome}</span>
+                      <span className="text-xs text-slate-500">{entry.curso}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{entry.nomeBase}</td>
+                  <td className="px-6 py-4">
+                    <select 
+                      value={entry.status}
+                      onChange={e => handleStatusChange(entry, e.target.value)}
+                      className={cn(
+                        "px-2 py-1 rounded-lg text-xs font-bold outline-none border-none",
+                        entry.status === 'Pendente' && "bg-slate-100 text-slate-600",
+                        entry.status === 'Interessado' && "bg-blue-100 text-blue-600",
+                        entry.status === 'Convertido' && "bg-emerald-100 text-emerald-600",
+                        entry.status === 'Não tem interesse' && "bg-rose-100 text-rose-600",
+                        entry.status === 'Sem retorno' && "bg-orange-100 text-orange-600"
+                      )}
+                    >
+                      <option value="Pendente">Pendente</option>
+                      <option value="Interessado">Interessado</option>
+                      <option value="Convertido">Convertido</option>
+                      <option value="Não tem interesse">Não tem interesse</option>
+                      <option value="Sem retorno">Sem retorno</option>
+                    </select>
+                  </td>
+                  <td className="px-6 py-4 flex items-center space-x-2">
+                    <button 
+                      onClick={() => {
+                        setSelectedEntry(entry);
+                        setSelectorOpen(true);
+                      }}
+                      className="text-emerald-600 hover:text-emerald-700 font-bold text-sm flex items-center space-x-1"
+                    >
+                      <MessageSquare size={14} />
+                      <span>WhatsApp</span>
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteBase(entry.id)}
+                      className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filteredBases.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Nenhum registro encontrado com os filtros aplicados.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <WhatsAppMessageSelector 
+        isOpen={selectorOpen}
+        onClose={() => setSelectorOpen(false)}
+        leadName={selectedEntry?.nome || ''}
+        leadCurso={selectedEntry?.curso || ''}
+        messages={whatsappMessages.filter(m => m.tipo === 'bases_renovacao')}
+        onSelect={(msg) => {
+          if (selectedEntry) {
+            window.open(getWhatsAppUrl(selectedEntry.telefone, msg), '_blank');
+          }
+        }}
+        botConfig={botConfig}
+        onSendBot={(msg) => {
+          if (selectedEntry) {
+            onSendBot(selectedEntry.telefone, msg);
+          }
+        }}
+      />
+      
+      <WhatsAppMessageSelector 
+        isOpen={massSelectorOpen}
+        onClose={() => setMassSelectorOpen(false)}
+        leadName="Candidatos"
+        messages={whatsappMessages.filter(m => m.tipo === 'bases_renovacao')}
+        onSelect={(msg) => {}}
+        botConfig={botConfig}
+        onSendBot={(msgTemplate) => {
+          const selectedLeadObjs = bases.filter(b => selectedEntries.includes(b.id));
+          const messagesPayload = selectedLeadObjs.map(l => ({
+            telefone: l.telefone,
+            message: msgTemplate.replace(/\[nome\]/gi, l.nome).replace(/\[curso\]/gi, l.curso || '')
+          }));
+          onMassSendBot(messagesPayload);
+          setMassSelectorOpen(false);
+          setSelectedEntries([]);
+        }}
+        forceBotOnly={true}
+      />
+    </div>
+  );
+}
+
 function GapView({ 
   gap, 
   onToast, 
@@ -5458,6 +6026,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
 }) {
   const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento'>('usuarios');
   const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -6576,16 +7145,32 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-slate-800">Gestão de Sessões WhatsApp (Multi-Device)</h3>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                          const num = prompt("Digite o número no formato 5511999999999:");
                          if (num) {
+                            const botNumber = num.replace(/\D/g, '');
+                            if (!botNumber) return;
                             const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
-                            fetch(`${cleanUrl}/api/connect`, {
-                               method: 'POST',
-                               headers: { 'Content-Type': 'application/json' },
-                               body: JSON.stringify({ botNumber: num.replace(/\D/g, '') })
-                            }).then(() => onToast('Solicitação enviada. Aguarde o QRCode/Pairing Code.'))
-                              .catch(() => onToast('Erro ao enviar solicitação para API no Railway', 'error'));
+                            try {
+                               await fetch(`${cleanUrl}/api/connect`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ botNumber })
+                               });
+                               onToast('Solicitação enviada! Aguarde alguns segundos o QR Code.');
+                               // Force a status check after 3 seconds
+                               setTimeout(async () => {
+                                 try {
+                                   const res = await fetch(`${cleanUrl}/api/status`);
+                                   if (res.ok) {
+                                      const data = await res.json();
+                                      if (data.bots) setBotStatuses(data.bots);
+                                   }
+                                 } catch (e) {}
+                               }, 3000);
+                            } catch (err) {
+                               onToast('Erro ao enviar solicitação para API no Railway', 'error');
+                            }
                          }
                       }}
                       className="bg-green-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-green-700 transition"
@@ -6707,7 +7292,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
               { id: 'historico', label: 'Histórico', multi: true },
               { id: 'bases', label: 'Bases', multi: true },
               { id: 'gap', label: 'GAP Acadêmico', multi: false, subLabels: ['Padrão', 'Matrícula Acadêmica OK'] },
-              { id: 'fiesProuni', label: 'Fies/Prouni', multi: false, subLabels: ['Padrão', 'Matrícula Acadêmica OK'] }
+              { id: 'fiesProuni', label: 'Fies/Prouni', multi: false, subLabels: ['Padrão', 'Matrícula Acadêmica OK'] },
+              { id: 'bases_renovacao', label: 'Bases Renovação', multi: true }
             ].map(tipo => {
               const messages = whatsappMessages.filter(m => m.tipo === tipo.id);
               
@@ -6902,6 +7488,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
           </div>
         </section>
       )}
+
 
       {activeTab === 'backup' && (
         <section className="bg-rose-50 p-6 rounded-3xl border border-rose-100 max-w-2xl mx-auto">
