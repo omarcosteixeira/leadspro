@@ -182,7 +182,9 @@ function WhatsAppMessageSelector({
                 className="w-full text-left p-4 rounded-2xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all flex flex-col space-y-3"
               >
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Modelo {idx + 1}</span>
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">
+                    {msg.nome ? msg.nome : `Modelo ${idx + 1}`}
+                  </span>
                   <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
                     <MessageSquare size={16} />
                   </div>
@@ -3745,13 +3747,15 @@ function BasesView({
       await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
         tipo: 'bases',
         texto: newMsgData.texto,
+        nome: newMsgData.modelName || undefined,
         createdAt: serverTimestamp()
       });
       onToast("Mensagem de base salva!");
       setNewMsgData({ modelName: '', texto: '' });
       setIsAddMsgModalOpen(false);
     } catch (err: any) {
-      onToast("Erro ao salvar mensagem.", 'error');
+      console.error("Erro ao salvar mensagem:", err);
+      onToast(`Erro ao salvar mensagem: ${err.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -4443,13 +4447,15 @@ function BasesRenovacaoView({
       await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
         tipo: 'bases_renovacao',
         texto: newMsgData.texto,
+        nome: newMsgData.modelName || undefined,
         createdAt: serverTimestamp()
       });
       onToast("Mensagem de renovação salva!");
       setNewMsgData({ modelName: '', texto: '' });
       setIsAddMsgModalOpen(false);
     } catch (err: any) {
-      onToast("Erro ao salvar mensagem.", 'error');
+      console.error("Erro ao salvar mensagem renovação:", err);
+      onToast(`Erro ao salvar mensagem: ${err.message}`, 'error');
     } finally {
       setLoading(false);
     }

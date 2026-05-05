@@ -203,6 +203,7 @@ export interface WhatsAppMessage {
   id: string;
   tipo: 'historico' | 'bases' | 'gap' | 'fiesProuni' | 'gap_0' | 'gap_1' | 'fiesProuni_0' | 'fiesProuni_1' | 'gap_ok' | 'fiesProuni_ok' | 'bases_renovacao';
   texto: string;
+  nome?: string;
   updatedAt: any;
 }
 
