@@ -4489,6 +4489,10 @@ function BasesRenovacaoView({
     }
   };
 
+  const totalAlunos = filteredBases.length;
+  const renovados = filteredBases.filter(b => b.status === 'Convertido').length;
+  const naoRenovados = totalAlunos - renovados;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-center max-w-xl mx-auto gap-4">
@@ -4522,6 +4526,32 @@ function BasesRenovacaoView({
           </button>
         </div>
       </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center">
+          <div className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Total na Base</div>
+          <div className="text-3xl font-black text-slate-800">{totalAlunos}</div>
+        </div>
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-emerald-100 flex flex-col justify-center items-center text-center">
+          <div className="text-sm font-bold text-emerald-600 uppercase tracking-wider mb-2">Renovados</div>
+          <div className="text-3xl font-black text-emerald-700">{renovados}</div>
+        </div>
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-orange-100 flex flex-col justify-center items-center text-center">
+          <div className="text-sm font-bold text-orange-600 uppercase tracking-wider mb-2">Não Renovados</div>
+          <div className="text-3xl font-black text-orange-700">{naoRenovados}</div>
+        </div>
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-rose-100 flex flex-col justify-center items-center text-center relative overflow-hidden">
+          <div className="absolute inset-0 bg-rose-50 opacity-50"></div>
+          <div className="relative z-10 w-full">
+            <div className="text-sm font-bold text-rose-600 uppercase tracking-wider mb-2">Gap</div>
+            <div className="text-3xl font-black text-rose-700">{totalAlunos > 0 ? naoRenovados : 0}</div>
+            <div className="text-xs text-rose-500 font-bold mt-1">
+              Faltam {totalAlunos > 0 ? ((naoRenovados / totalAlunos) * 100).toFixed(1) : 0}% para a meta
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-xl mx-auto">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
           <h3 className="text-xl font-bold text-slate-900 mb-4">Novo Registro em Renovação</h3>

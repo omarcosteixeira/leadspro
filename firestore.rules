@@ -151,27 +151,27 @@ service cloud.firestore {
     // Dashboard & Config Collections
     match /artifacts/gestaopro-761e1/public/data/campanhas/{id} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
-      allow write: if isAdminMaster() || isLider();
+      allow write: if isAdminMaster() || isLider() || isGestorUnidade() || isGestorComercial();
     }
     match /artifacts/gestaopro-761e1/public/data/bom_dia/{id} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
-      allow write: if isAdminMaster() || isLider();
+      allow write: if isAdminMaster() || isLider() || isGestorUnidade() || isGestorComercial();
     }
     match /artifacts/gestaopro-761e1/public/data/forecast/{id} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
-      allow write: if isAdminMaster() || isLider();
+      allow write: if isAdminMaster() || isLider() || isGestorUnidade() || isGestorComercial();
     }
     match /artifacts/gestaopro-761e1/public/data/planner/{id} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
-      allow write: if isAdminMaster() || isLider();
+      allow write: if isAdminMaster() || isLider() || isGestorUnidade() || isGestorComercial();
     }
     match /artifacts/gestaopro-761e1/public/data/periodo_captacao/{id} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
-      allow write: if isAdminMaster() || isLider();
+      allow write: if isAdminMaster() || isLider() || isGestorUnidade() || isGestorComercial();
     }
     match /artifacts/gestaopro-761e1/public/data/linksUteis/{id} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isFDV() || isGestorUnidade() || isGestorComercial();
-      allow write: if isAdminMaster() || isLider();
+      allow write: if isAdminMaster() || isLider() || isGestorUnidade() || isGestorComercial();
     }
     match /artifacts/gestaopro-761e1/public/data/empresas_parceiras/{id} {
       allow read: if isAuthenticated();
