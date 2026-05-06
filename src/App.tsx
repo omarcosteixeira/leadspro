@@ -3691,6 +3691,7 @@ function BasesView({
   const [statusFilter, setStatusFilter] = useState('');
   const [produtoFilter, setProdutoFilter] = useState('');
   const [cursoFilter, setCursoFilter] = useState('');
+  const [semestreFilter, setSemestreFilter] = useState('');
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<BaseEntry | null>(null);
   const [massSelectorOpen, setMassSelectorOpen] = useState(false);
@@ -3703,12 +3704,14 @@ function BasesView({
     const matchesStatus = !statusFilter || b.status === statusFilter;
     const matchesProduto = !produtoFilter || b.produto === produtoFilter;
     const matchesCurso = !cursoFilter || b.curso.toLowerCase().includes(cursoFilter.toLowerCase());
-    return matchesSearch && matchesBase && matchesStatus && matchesProduto && matchesCurso;
+    const matchesSemestre = !semestreFilter || (b.semestre && b.semestre.toLowerCase().includes(semestreFilter.toLowerCase()));
+    return matchesSearch && matchesBase && matchesStatus && matchesProduto && matchesCurso && matchesSemestre;
   });
 
   const uniqueBases = Array.from(new Set(bases.map(b => b.nomeBase))).sort();
   const uniqueProdutos = ['Graduação', 'Técnico', 'Pós-graduação'];
   const uniqueCursos = Array.from(new Set(bases.map(b => b.curso))).sort();
+  const uniqueSemestres = Array.from(new Set(bases.map(b => b.semestre).filter(Boolean))).sort();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -4071,6 +4074,14 @@ function BasesView({
             </select>
             <select 
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              value={semestreFilter}
+              onChange={e => setSemestreFilter(e.target.value)}
+            >
+              <option value="">Todos os Semestres</option>
+              {uniqueSemestres.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select 
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
             >
@@ -4124,6 +4135,10 @@ function BasesView({
                     <div className="flex flex-col">
                       <span className="font-bold text-slate-900">{entry.nome}</span>
                       <span className="text-xs text-slate-500">{entry.curso}</span>
+                      <div className="flex items-center space-x-2 mt-1">
+                        {entry.telefone && <span className="text-[10px] text-slate-400 font-bold">{entry.telefone}</span>}
+                        {entry.semestre && <span className="text-[10px] text-blue-500 font-bold px-2 py-0.5 bg-blue-50 rounded-full">{entry.semestre}</span>}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600">{entry.nomeBase}</td>
@@ -4301,6 +4316,7 @@ function BasesRenovacaoView({
   const [statusFilter, setStatusFilter] = useState('');
   const [produtoFilter, setProdutoFilter] = useState('');
   const [cursoFilter, setCursoFilter] = useState('');
+  const [semestreFilter, setSemestreFilter] = useState('');
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<BaseEntry | null>(null);
   const [massSelectorOpen, setMassSelectorOpen] = useState(false);
@@ -4313,12 +4329,14 @@ function BasesRenovacaoView({
     const matchesStatus = !statusFilter || b.status === statusFilter;
     const matchesProduto = !produtoFilter || b.produto === produtoFilter;
     const matchesCurso = !cursoFilter || b.curso.toLowerCase().includes(cursoFilter.toLowerCase());
-    return matchesSearch && matchesBase && matchesStatus && matchesProduto && matchesCurso;
+    const matchesSemestre = !semestreFilter || (b.semestre && b.semestre.toLowerCase().includes(semestreFilter.toLowerCase()));
+    return matchesSearch && matchesBase && matchesStatus && matchesProduto && matchesCurso && matchesSemestre;
   });
 
   const uniqueBases = Array.from(new Set(bases.map(b => b.nomeBase))).sort();
   const uniqueProdutos = ['Graduação', 'Técnico', 'Pós-graduação'];
   const uniqueCursos = Array.from(new Set(bases.map(b => b.curso))).sort();
+  const uniqueSemestres = Array.from(new Set(bases.map(b => b.semestre).filter(Boolean))).sort();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -4677,6 +4695,14 @@ function BasesRenovacaoView({
             </select>
             <select 
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              value={semestreFilter}
+              onChange={e => setSemestreFilter(e.target.value)}
+            >
+              <option value="">Todos os Semestres</option>
+              {uniqueSemestres.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select 
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
             >
@@ -4730,6 +4756,10 @@ function BasesRenovacaoView({
                     <div className="flex flex-col">
                       <span className="font-bold text-slate-900">{entry.nome}</span>
                       <span className="text-xs text-slate-500">{entry.curso}</span>
+                      <div className="flex items-center space-x-2 mt-1">
+                        {entry.telefone && <span className="text-[10px] text-slate-400 font-bold">{entry.telefone}</span>}
+                        {entry.semestre && <span className="text-[10px] text-blue-500 font-bold px-2 py-0.5 bg-blue-50 rounded-full">{entry.semestre}</span>}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600">{entry.nomeBase}</td>
