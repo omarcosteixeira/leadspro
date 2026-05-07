@@ -3872,11 +3872,17 @@ function BasesView({
   };
 
   const handleExport = () => {
-    const data = bases.map(b => ({
+    const data = filteredBases.map(b => ({
       Nome: b.nome,
       Telefone: b.telefone,
       CPF: b.cpf || '',
       Curso: b.curso,
+      Produto: b.produto || 'Graduação',
+      'Nº Oportunidade': b.numeroOportunidade || '',
+      Semestre: b.semestre || '',
+      Metodologia: b.metodologia || '',
+      'Forma de Ingresso': b.formaIngresso || '',
+      'Nº Matrícula': b.numeroMatricula || '',
       Base: b.nomeBase,
       Status: b.status
     }));
@@ -4420,11 +4426,15 @@ function BasesRenovacaoView({
   };
 
   const handleExport = () => {
-    const data = bases.map(b => ({
+    const data = filteredBases.map(b => ({
       Nome: b.nome,
       Telefone: b.telefone,
       CPF: b.cpf || '',
       Curso: b.curso,
+      Produto: b.produto || 'Graduação',
+      Semestre: b.semestre || '',
+      Metodologia: b.metodologia || '',
+      'Nº Matrícula': b.numeroMatricula || '',
       Base: b.nomeBase,
       Status: b.status
     }));
@@ -5117,7 +5127,11 @@ function GapView({
       Telefone: g.telefone,
       CPF: g.cpf,
       Produto: g.produto,
+      'Nº Oportunidade': g.numeroOportunidade || '',
       Curso: g.curso,
+      Semestre: g.semestre || '',
+      Metodologia: g.metodologia || '',
+      'Forma de Ingresso': g.formaIngresso || '',
       Periodo: g.periodo || '',
       Matricula: g.numeroMatricula || '',
       MatAcad: g.matAcad ? 'Sim' : 'Não',
