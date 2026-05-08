@@ -7435,13 +7435,20 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                            if (num) {
                               const botNumber = num.replace(/\D/g, '');
                               if (!botNumber) return;
+                              if (!botConfig || !botConfig.url) {
+                                 onToast('Configura a URL do bot primeiro.', 'error'); return;
+                              }
                               const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
                               try {
-                                 await fetch(`${cleanUrl}/api/connect`, {
+                                 const connectRes = await fetch(`${cleanUrl}/api/connect`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ botNumber })
                                  });
+                                 if (!connectRes.ok) {
+                                    onToast(`Erro da API: ${connectRes.status} ${connectRes.statusText}`, 'error');
+                                    return;
+                                 }
                                  onToast('Solicitação enviada! Aguarde alguns segundos o QR Code.');
                                  // Force a status check after 3 seconds
                                  setTimeout(async () => {
@@ -7453,8 +7460,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                      }
                                    } catch (e) {}
                                  }, 3000);
-                              } catch (err) {
-                                 onToast('Erro ao enviar solicitação para API no Railway', 'error');
+                              } catch (err: any) {
+                                 onToast(`Servidor oflline ou reiniciando... ${err.message}`, 'error');
                               }
                            }
                         }}
