@@ -7406,39 +7406,63 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 <div className="pt-4 border-t border-slate-100">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-slate-800">Gestão de Sessões WhatsApp (Multi-Device)</h3>
-                    <button
-                      onClick={async () => {
-                         const num = prompt("Digite o número no formato 5511999999999:");
-                         if (num) {
-                            const botNumber = num.replace(/\D/g, '');
-                            if (!botNumber) return;
-                            const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
-                            try {
-                               await fetch(`${cleanUrl}/api/connect`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ botNumber })
-                               });
-                               onToast('Solicitação enviada! Aguarde alguns segundos o QR Code.');
-                               // Force a status check after 3 seconds
-                               setTimeout(async () => {
-                                 try {
-                                   const res = await fetch(`${cleanUrl}/api/status`);
-                                   if (res.ok) {
-                                      const data = await res.json();
-                                      if (data.bots) setBotStatuses(data.bots);
-                                   }
-                                 } catch (e) {}
-                               }, 3000);
-                            } catch (err) {
-                               onToast('Erro ao enviar solicitação para API no Railway', 'error');
-                            }
-                         }
-                      }}
-                      className="bg-green-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-green-700 transition"
-                    >
-                      + Novo Número
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                           if (!botConfig.url) return;
+                           const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                           if (window.confirm('Tem certeza que deseja resetar TODAS as sessões criptografadas? (Esta ação apagará a pasta corrompida e solicitará nova conexão em todos os números)')) {
+                              try {
+                                 const res = await fetch(`${cleanUrl}/api/reset`, { method: 'POST' });
+                                 if (res.ok) {
+                                    onToast('A Rota Mágica de Reset foi ativada. Todas as sessões foram apagadas e o bot será reiniciado.', 'success');
+                                    setBotStatuses({});
+                                 } else {
+                                    onToast('Erro ao acionar a rota de reset.', 'error');
+                                 }
+                              } catch (err: any) {
+                                 onToast(`Erro ao resetar: ${err.message}`, 'error');
+                              }
+                           }
+                        }}
+                        className="bg-red-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-red-700 transition"
+                      >
+                        Resetar Sessões (Pasta Corrompida)
+                      </button>
+                      <button
+                        onClick={async () => {
+                           const num = prompt("Digite o número no formato 5511999999999:");
+                           if (num) {
+                              const botNumber = num.replace(/\D/g, '');
+                              if (!botNumber) return;
+                              const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                              try {
+                                 await fetch(`${cleanUrl}/api/connect`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ botNumber })
+                                 });
+                                 onToast('Solicitação enviada! Aguarde alguns segundos o QR Code.');
+                                 // Force a status check after 3 seconds
+                                 setTimeout(async () => {
+                                   try {
+                                     const res = await fetch(`${cleanUrl}/api/status`);
+                                     if (res.ok) {
+                                        const data = await res.json();
+                                        if (data.bots) setBotStatuses(data.bots);
+                                     }
+                                   } catch (e) {}
+                                 }, 3000);
+                              } catch (err) {
+                                 onToast('Erro ao enviar solicitação para API no Railway', 'error');
+                              }
+                           }
+                        }}
+                        className="bg-green-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-green-700 transition"
+                      >
+                        + Novo Número
+                      </button>
+                    </div>
                   </div>
                   
                   {Object.keys(botStatuses || {}).length === 0 ? (
@@ -7449,9 +7473,46 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                          <div key={botNumber} className="border border-slate-200 rounded-xl p-4 flex flex-col gap-2">
                             <div className="flex items-center justify-between">
                               <div className="font-bold text-slate-700 text-lg">{botNumber}</div>
-                              <span className={`px-2 py-1 rounded-full text-xs font-bold ${info?.status === 'online' ? 'bg-green-100 text-green-700' : info?.status === 'pairing' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
-                                 {info?.status?.toUpperCase() || 'DESCONHECIDO'}
-                              </span>
+                              <div className="flex items-center space-x-2">
+                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${info?.status === 'online' ? 'bg-green-100 text-green-700' : info?.status === 'pairing' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
+                                   {info?.status?.toUpperCase() || 'DESCONHECIDO'}
+                                </span>
+                                <button
+                                  onClick={async () => {
+                                    if (window.confirm(`Tem certeza que deseja apagar a sessão do bot ${botNumber}?`)) {
+                                      try {
+                                        const cleanUrl = botConfig.url?.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                                        if (!cleanUrl) return;
+                                        const res = await fetch(`${cleanUrl}/api/reset`, {
+                                           method: 'POST',
+                                           headers: { 'Content-Type': 'application/json' },
+                                           body: JSON.stringify({ botNumber })
+                                        });
+                                        if (res.ok) {
+                                          onToast(`Sessão ${botNumber} apagada.`);
+                                          setTimeout(async () => {
+                                            try {
+                                              const resStatus = await fetch(`${cleanUrl}/api/status`);
+                                              if (resStatus.ok) {
+                                                 const data = await resStatus.json();
+                                                 setBotStatuses(data.bots || {});
+                                              }
+                                            } catch(e) {}
+                                          }, 1000);
+                                        } else {
+                                          onToast(`Erro ao apagar sessão ${botNumber}.`, 'error');
+                                        }
+                                      } catch (e) {
+                                        onToast('Erro de rede ao apagar sessão', 'error');
+                                      }
+                                    }
+                                  }}
+                                  className="text-red-500 hover:text-red-700 px-2 py-1 bg-red-50 rounded-lg transition"
+                                  title="Apagar sessão do Railway"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                             </div>
                             
                             {info?.status === 'pairing' && (info?.pairingCode || info?.qrUrl) && (
