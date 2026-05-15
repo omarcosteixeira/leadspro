@@ -5063,7 +5063,23 @@ function GapView({
       .map(([_, label]) => label);
 
     // If matAcad is OK, use gap_1
-    if (entry.matAcad) {
+    if (entry.matAcad && entry.numeroMatricula) {
+      return `PARABÉNS ${entry.nome} 🎊 Agora você é aluno Estácio 💎  
+ 
+É com grande orgulho e muita determinação que esse novo ciclo em sua vida se inicia! 🤓   
+
+📝 Anote sua matrícula será importante em toda a sua jornada na Estácio. ${entry.numeroMatricula} 
+ 
+Acesse seu portal usando os dados abaixo:
+
+Seu e-mail de estudante: ${entry.numeroMatricula}@alunos.estacio.br 
+
+Senha de primeiro acesso para usar com o e-mail: os seis primeiros dígitos do seu CPF + @ + a primeira letra do seu nome maiúscula + a segunda letra do seu nome minúscula 
+
+Aplicativo de celular: Minha Estácio 
+
+Pela internet: https://sia.estacio.br/sianet/Logon`;
+    } else if (entry.matAcad) {
       const msgOk = whatsappMessages.find(m => m.tipo === 'gap_1');
       if (msgOk) return msgOk.texto.replace(/\[nome\]/gi, entry.nome).replace(/\[curso\]/gi, entry.curso || '');
       return `Olá ${entry.nome}, vimos que sua matrícula acadêmica está ok! Parabéns!`;
