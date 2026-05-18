@@ -144,6 +144,7 @@ function WhatsAppMessageSelector({
   botConfig?: BotConfig;
   onSendBot?: (msg: string) => void;
   forceBotOnly?: boolean;
+  leadMatricula?: string;
 }) {
   if (!isOpen) return null;
 
@@ -172,6 +173,7 @@ function WhatsAppMessageSelector({
             if (!forceBotOnly) {
                preview = preview.replace(/\[nome\]/gi, leadName || '');
                if (leadCurso) preview = preview.replace(/\[curso\]/gi, leadCurso);
+               if (leadMatricula) preview = preview.replace(/\[matr[ií]cula\]/gi, leadMatricula);
             }
             
             const canUseBot = botConfig?.url && onSendBot;
@@ -1629,7 +1631,7 @@ function FiesProuniView({
                                const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
                                const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
                                const msgTemplate = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                               const text = msgTemplate ? msgTemplate.texto.replace(/\[nome\]/gi, item.nome).replace(/\[curso\]/gi, item.curso || '') : `Olá ${item.nome}, tudo bem?`;
+                               const text = msgTemplate ? msgTemplate.texto.replace(/\[nome\]/gi, item.nome).replace(/\[curso\]/gi, item.curso || '').replace(/\[matr[ií]cula\]/gi, item.numeroMatricula || '') : `Olá ${item.nome}, tudo bem?`;
                                return {
                                    telefone: item.telefone,
                                    message: text
@@ -1717,7 +1719,7 @@ function FiesProuniView({
                                 const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
                                 const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
                                 const msgObj = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                                const msg = (msgObj ? msgObj.texto : `Olá [nome], tudo bem?`).replace(/\[nome\]/gi, item.nome).replace(/\[curso\]/gi, item.curso || '');
+                                const msg = (msgObj ? msgObj.texto : `Olá [nome], tudo bem?`).replace(/\[nome\]/gi, item.nome).replace(/\[curso\]/gi, item.curso || '').replace(/\[matr[ií]cula\]/gi, item.numeroMatricula || '');
                                 onSendBot(item.telefone, msg);
                               }}
                               className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-all"
@@ -1731,7 +1733,7 @@ function FiesProuniView({
                               const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
                               const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
                               const msg = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                              if (msg) return msg.texto.replace(/\[nome\]/gi, item.nome).replace(/\[curso\]/gi, item.curso || '');
+                              if (msg) return msg.texto.replace(/\[nome\]/gi, item.nome).replace(/\[curso\]/gi, item.curso || '').replace(/\[matr[ií]cula\]/gi, item.numeroMatricula || '');
                               return `Olá ${item.nome}, tudo bem?`;
                             })())}
                             target="_blank"
@@ -3681,6 +3683,7 @@ function BasesView({
     produto: 'Graduação' as 'Graduação' | 'Técnico' | 'Pós-graduação',
     numeroOportunidade: '',
     semestre: '',
+    periodo: '',
     metodologia: '',
     formaIngresso: '',
     numeroMatricula: ''
@@ -3732,8 +3735,10 @@ function BasesView({
         produto: 'Graduação',
         numeroOportunidade: '',
         semestre: '',
+        periodo: '',
         metodologia: '',
-        formaIngresso: ''
+        formaIngresso: '',
+        numeroMatricula: ''
       });
     } catch (err: any) {
       onToast(err.message, 'error');
@@ -3880,6 +3885,7 @@ function BasesView({
       Produto: b.produto || 'Graduação',
       'Nº Oportunidade': b.numeroOportunidade || '',
       Semestre: b.semestre || '',
+      Periodo: b.periodo || '',
       Metodologia: b.metodologia || '',
       'Forma de Ingresso': b.formaIngresso || '',
       'Nº Matrícula': b.numeroMatricula || '',
@@ -3900,6 +3906,13 @@ function BasesView({
           telefone: String(item.Telefone || item.telefone || ''),
           cpf: String(item.CPF || item.cpf || '').replace(/\D/g, ''),
           curso: item.Curso || item.curso || '',
+          produto: item.Produto || item.produto || 'Graduação',
+          numeroOportunidade: item['Nº Oportunidade'] || item.numeroOportunidade || '',
+          semestre: item.Semestre || item.semestre || '',
+          periodo: item.Periodo || item.periodo || '',
+          metodologia: item.Metodologia || item.metodologia || '',
+          formaIngresso: item['Forma de Ingresso'] || item.formaIngresso || '',
+          numeroMatricula: item['Nº Matrícula'] || item.numeroMatricula || '',
           nomeBase: item.Base || item.nomeBase || 'Importado',
           status: item.Status || item.status || 'Pendente',
           createdAt: serverTimestamp()
@@ -4019,6 +4032,20 @@ function BasesView({
                 required 
                 value={formData.formaIngresso}
                 onChange={e => setFormData({...formData, formaIngresso: e.target.value})}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <input 
+                placeholder="Período" 
+                value={formData.periodo}
+                onChange={e => setFormData({...formData, periodo: e.target.value})}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <input 
+                placeholder="Nº Matrícula" 
+                value={formData.numeroMatricula}
+                onChange={e => setFormData({...formData, numeroMatricula: e.target.value})}
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
@@ -4144,6 +4171,7 @@ function BasesView({
                       <div className="flex items-center space-x-2 mt-1">
                         {entry.telefone && <span className="text-[10px] text-slate-400 font-bold">{entry.telefone}</span>}
                         {entry.semestre && <span className="text-[10px] text-blue-500 font-bold px-2 py-0.5 bg-blue-50 rounded-full">{entry.semestre}</span>}
+                        {entry.periodo && <span className="text-[10px] text-purple-500 font-bold px-2 py-0.5 bg-purple-50 rounded-full">{entry.periodo}</span>}
                       </div>
                     </div>
                   </td>
@@ -4203,6 +4231,7 @@ function BasesView({
         onClose={() => setSelectorOpen(false)}
         leadName={selectedEntry?.nome || ''}
         leadCurso={selectedEntry?.curso || ''}
+        leadMatricula={selectedEntry?.numeroMatricula || ''}
         messages={whatsappMessages.filter(m => m.tipo === 'bases')}
         onSelect={(msg) => {
           if (selectedEntry) {
@@ -4228,7 +4257,7 @@ function BasesView({
           const selectedLeadObjs = bases.filter(b => selectedEntries.includes(b.id));
           const messagesPayload = selectedLeadObjs.map(l => ({
             telefone: l.telefone,
-            message: msgTemplate.replace(/\[nome\]/gi, l.nome).replace(/\[curso\]/gi, l.curso || '')
+            message: msgTemplate.replace(/\[nome\]/gi, l.nome).replace(/\[curso\]/gi, l.curso || '').replace(/\[matr[ií]cula\]/gi, l.numeroMatricula || '')
           }));
           onMassSendBot(messagesPayload);
           setMassSelectorOpen(false);
@@ -4312,8 +4341,11 @@ function BasesRenovacaoView({
     cpf: '',
     curso: '',
     produto: 'Graduação' as 'Graduação' | 'Técnico' | 'Pós-graduação',
+    numeroOportunidade: '',
     semestre: '',
+    periodo: '',
     metodologia: '',
+    formaIngresso: '',
     numeroMatricula: ''
   });
   const [loading, setLoading] = useState(false);
@@ -4361,8 +4393,11 @@ function BasesRenovacaoView({
         cpf: '', 
         curso: '',
         produto: 'Graduação',
+        numeroOportunidade: '',
         semestre: '',
+        periodo: '',
         metodologia: '',
+        formaIngresso: '',
         numeroMatricula: ''
       });
     } catch (err: any) {
@@ -4432,8 +4467,11 @@ function BasesRenovacaoView({
       CPF: b.cpf || '',
       Curso: b.curso,
       Produto: b.produto || 'Graduação',
+      'Nº Oportunidade': b.numeroOportunidade || '',
       Semestre: b.semestre || '',
+      Periodo: b.periodo || '',
       Metodologia: b.metodologia || '',
+      'Forma de Ingresso': b.formaIngresso || '',
       'Nº Matrícula': b.numeroMatricula || '',
       Base: b.nomeBase,
       Status: b.status
@@ -4452,6 +4490,13 @@ function BasesRenovacaoView({
           telefone: String(item.Telefone || item.telefone || ''),
           cpf: String(item.CPF || item.cpf || '').replace(/\D/g, ''),
           curso: item.Curso || item.curso || '',
+          produto: item.Produto || item.produto || 'Graduação',
+          numeroOportunidade: item['Nº Oportunidade'] || item.numeroOportunidade || '',
+          semestre: item.Semestre || item.semestre || '',
+          periodo: item.Periodo || item.periodo || '',
+          metodologia: item.Metodologia || item.metodologia || '',
+          formaIngresso: item['Forma de Ingresso'] || item.formaIngresso || '',
+          numeroMatricula: item['Nº Matrícula'] || item.numeroMatricula || '',
           nomeBase: item.Base || item.nomeBase || 'Importado Renovação',
           status: item.Status || item.status || 'Pendente',
           createdAt: serverTimestamp()
@@ -4769,6 +4814,7 @@ function BasesRenovacaoView({
                       <div className="flex items-center space-x-2 mt-1">
                         {entry.telefone && <span className="text-[10px] text-slate-400 font-bold">{entry.telefone}</span>}
                         {entry.semestre && <span className="text-[10px] text-blue-500 font-bold px-2 py-0.5 bg-blue-50 rounded-full">{entry.semestre}</span>}
+                        {entry.periodo && <span className="text-[10px] text-purple-500 font-bold px-2 py-0.5 bg-purple-50 rounded-full">{entry.periodo}</span>}
                       </div>
                     </div>
                   </td>
@@ -4828,6 +4874,7 @@ function BasesRenovacaoView({
         onClose={() => setSelectorOpen(false)}
         leadName={selectedEntry?.nome || ''}
         leadCurso={selectedEntry?.curso || ''}
+        leadMatricula={selectedEntry?.numeroMatricula || ''}
         messages={whatsappMessages.filter(m => m.tipo === 'bases_renovacao')}
         onSelect={(msg) => {
           if (selectedEntry) {
@@ -4853,7 +4900,7 @@ function BasesRenovacaoView({
           const selectedLeadObjs = bases.filter(b => selectedEntries.includes(b.id));
           const messagesPayload = selectedLeadObjs.map(l => ({
             telefone: l.telefone,
-            message: msgTemplate.replace(/\[nome\]/gi, l.nome).replace(/\[curso\]/gi, l.curso || '')
+            message: msgTemplate.replace(/\[nome\]/gi, l.nome).replace(/\[curso\]/gi, l.curso || '').replace(/\[matr[ií]cula\]/gi, l.numeroMatricula || '')
           }));
           onMassSendBot(messagesPayload);
           setMassSelectorOpen(false);
@@ -5061,27 +5108,39 @@ function GapView({
     const missingDocs = Object.entries(docLabels)
       .filter(([key]) => !(docs as any)[key])
       .map(([_, label]) => label);
+      
+    const applyReplacements = (text: string) => {
+       return text
+         .replace(/\[nome\]/gi, entry.nome || '')
+         .replace(/\[curso\]/gi, entry.curso || '')
+         .replace(/\[matr[ií]cula\]/gi, entry.numeroMatricula || '')
+         .replace(/\[pendencias\]/gi, missingDocs.join(', '));
+    };
 
-    // If matAcad is OK, use gap_1
+    // se ok e tiver matricula
     if (entry.matAcad && entry.numeroMatricula) {
-      return `PARABÉNS ${entry.nome} 🎊 Agora você é aluno Estácio 💎  
+      const msgOk = whatsappMessages.find(m => m.tipo === 'gap_1');
+      if (msgOk) {
+         return applyReplacements(msgOk.texto);
+      }
+      return applyReplacements(`PARABÉNS [nome] 🎊 Agora você é aluno Estácio 💎  
  
 É com grande orgulho e muita determinação que esse novo ciclo em sua vida se inicia! 🤓   
 
-📝 Anote sua matrícula será importante em toda a sua jornada na Estácio. ${entry.numeroMatricula} 
+📝 Anote sua matrícula será importante em toda a sua jornada na Estácio. [matricula] 
  
 Acesse seu portal usando os dados abaixo:
 
-Seu e-mail de estudante: ${entry.numeroMatricula}@alunos.estacio.br 
+Seu e-mail de estudante: [matricula]@alunos.estacio.br 
 
 Senha de primeiro acesso para usar com o e-mail: os seis primeiros dígitos do seu CPF + @ + a primeira letra do seu nome maiúscula + a segunda letra do seu nome minúscula 
 
 Aplicativo de celular: Minha Estácio 
 
-Pela internet: https://sia.estacio.br/sianet/Logon`;
+Pela internet: https://sia.estacio.br/sianet/Logon`);
     } else if (entry.matAcad) {
       const msgOk = whatsappMessages.find(m => m.tipo === 'gap_1');
-      if (msgOk) return msgOk.texto.replace(/\[nome\]/gi, entry.nome).replace(/\[curso\]/gi, entry.curso || '');
+      if (msgOk) return applyReplacements(msgOk.texto);
       return `Olá ${entry.nome}, vimos que sua matrícula acadêmica está ok! Parabéns!`;
     }
     
@@ -5089,15 +5148,12 @@ Pela internet: https://sia.estacio.br/sianet/Logon`;
     let message = '';
     const customMsg = whatsappMessages.find(m => m.tipo === 'gap' || m.tipo === 'gap_0');
     if (customMsg) {
-      message = customMsg.texto.replace(/\[nome\]/gi, entry.nome).replace(/\[curso\]/gi, entry.curso || '');
-      if (missingDocs.length > 0) {
-        message = message.replace(/\[pendencias\]/gi, missingDocs.join(', '));
-      }
+      message = applyReplacements(customMsg.texto);
     } else if (missingDocs.length > 0) {
        message = `Olá ${entry.nome}, tudo bem? Sou da equipe de captação e meu contato é referente à sua matrícula no curso de ${entry.curso}. Identificamos que sua matrícula ainda não foi finalizada devido à pendência dos seguintes documentos: ${missingDocs.join(', ')}. É fundamental regularizar essa situação o quanto antes para garantir sua vaga e evitar o cancelamento do processo.`;
     }
 
-    if (entry.numeroMatricula) {
+    if (entry.numeroMatricula && !message.includes(entry.numeroMatricula)) {
         message += `\n\nNº Matrícula: ${entry.numeroMatricula}`;
     }
     
@@ -5170,9 +5226,13 @@ Pela internet: https://sia.estacio.br/sianet/Logon`;
           telefone: String(item.Telefone || item.telefone || ''),
           produto: item.Produto || item.produto || '',
           curso: item.Curso || item.curso || '',
+          semestre: item.Semestre || item.semestre || '',
+          metodologia: item.Metodologia || item.metodologia || '',
+          formaIngresso: item['Forma de Ingresso'] || item.formaIngresso || '',
+          numeroOportunidade: item['Nº Oportunidade'] || item.numeroOportunidade || '',
           periodo: item.Periodo || item.periodo || '',
-          numeroMatricula: String(item.Matricula || item.numeroMatricula || ''),
-          matAcad: item.MatAcad === 'Sim' || item.matAcad === true,
+          numeroMatricula: String(item.Matricula || item.numeroMatricula || item['Nº Matrícula'] || item.Matrícula || item['Nº Matricula'] || ''),
+          matAcad: item.MatAcad === 'Sim' || item.matAcad === true || item['Mat. Acad.'] === 'OK',
           documentos: {},
           createdAt: serverTimestamp()
         }));

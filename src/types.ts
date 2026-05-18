@@ -75,6 +75,8 @@ export interface BaseEntry {
   produto: 'Graduação' | 'Técnico' | 'Pós-graduação';
   numeroOportunidade: string;
   semestre: string;
+  periodo?: string;
+  numeroMatricula?: string;
   metodologia: string;
   formaIngresso: string;
   status: 'Pendente' | 'Interessado' | 'Convertido' | 'Não tem interesse' | 'Sem retorno';
