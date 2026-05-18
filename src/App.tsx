@@ -5156,6 +5156,10 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
     if (entry.numeroMatricula && !message.includes(entry.numeroMatricula)) {
         message += `\n\nNº Matrícula: ${entry.numeroMatricula}`;
     }
+
+    if (!docs.contrato || !docs.carta) {
+        message += `\n\nACEITE DO CONTRATO, para isso vou lhe enviar o passo a passo aqui a baixo: \n\n1º PASSO:ACESSAR O PORTAL DO CANDIDATO: https://candidatos.portal.estacio.br/acompanhe-sua-matricula \n\n2° COLOQUE SEU CPF E SENHA, CASO SEJA A 1° VEZ, COLOQUE ESQUECI MINHA SENHA. \n\n3° CLIQUE EM CONTRATO EDUCACIONAL E EM SEGUIDA EM ACEITAR E CONTINUAR`;
+    }
     
     return message;
   };
