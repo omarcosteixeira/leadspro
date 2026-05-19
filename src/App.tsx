@@ -449,6 +449,19 @@ function MapaoAcademicoView({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const isDuplicate = mapao.some(m => 
+      m.curso?.toLowerCase() === formData.curso?.toLowerCase() && 
+      m.modalidade === formData.modalidade &&
+      m.periodo === formData.periodo && 
+      m.id !== editingEntry?.id
+    );
+
+    if (isDuplicate) {
+       onToast("Este curso/modalidade/período já está cadastrado no Mapão.", "error");
+       return;
+    }
+
     try {
       if (editingEntry) {
         await updateDoc(doc(db, COLLECTIONS.MAPAO_ACADEMICO, editingEntry.id), {
@@ -1075,6 +1088,12 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
       updatedAt: serverTimestamp(),
     };
 
+    const isDuplicate = campanhas.some(c => c.nome.toLowerCase() === payload.nome.toLowerCase() && c.id !== editingCampanha?.id);
+    if (isDuplicate) {
+      onToast("Já existe uma campanha com este nome.", "error");
+      return;
+    }
+
     try {
       if (editingCampanha) {
         await updateDoc(doc(db, COLLECTIONS.CAMPANHAS, editingCampanha.id), payload);
@@ -1117,10 +1136,20 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
           createdAt: serverTimestamp()
         }));
 
+        let imported = 0;
+        let skipped = 0;
+        const inserted = new Set();
         for (const entry of batch) {
-          await addDoc(collection(db, COLLECTIONS.CAMPANHAS), entry);
+          const isDup = campanhas.some(c => c.nome === entry.nome) || inserted.has(entry.nome);
+          if (!isDup) {
+             await addDoc(collection(db, COLLECTIONS.CAMPANHAS), entry);
+             inserted.add(entry.nome);
+             imported++;
+          } else {
+             skipped++;
+          }
         }
-        onToast(`${batch.length} campanhas importadas!`);
+        onToast(`${imported} campanhas importadas! ${skipped > 0 ? `${skipped} ignoradas.` : ''}`);
       } catch (err: any) {
         onToast("Erro ao importar campanhas.", 'error');
       }
@@ -1390,6 +1419,13 @@ function FiesProuniView({
 
     if (!validateCPF(cpf)) {
       onToast("CPF inválido. Por favor, verifique os 11 dígitos.", 'error');
+      return;
+    }
+
+    const cleanCpf = cpf.replace(/\D/g, '');
+    const isDuplicate = data.some(item => item.cpf === cleanCpf && item.id !== editingEntry?.id);
+    if (isDuplicate) {
+      onToast("Este CPF já está cadastrado no FIES/Prouni.", "error");
       return;
     }
 
@@ -3261,10 +3297,33 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Duplicate check
+    const cleanCpf = formData.cpf.replace(/\D/g, '');
+    const cleanTelefone = formData.telefone.replace(/\D/g, '');
+    
+    if (cleanCpf) {
+      const qCpf = query(collection(db, COLLECTIONS.LEADS), where('cpf', '==', cleanCpf));
+      const snapCpf = await getDocs(qCpf);
+      if (!snapCpf.empty) {
+        onToast("Atenção: Este CPF já possui um lead cadastrado no sistema.", "error");
+        return;
+      }
+    } else if (cleanTelefone) {
+      const qTel = query(collection(db, COLLECTIONS.LEADS), where('telefone', '==', cleanTelefone));
+      const snapTel = await getDocs(qTel);
+      if (!snapTel.empty) {
+        onToast("Atenção: Este Telefone já possui um lead cadastrado no sistema.", "error");
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       await addDoc(collection(db, COLLECTIONS.LEADS), {
         ...formData,
+        cpf: cleanCpf,
+        telefone: cleanTelefone,
         converted: false,
         createdAt: serverTimestamp(),
         promotorId: profile.uid,
@@ -3471,10 +3530,25 @@ function HistoricoView({
           createdAt: serverTimestamp()
         }));
 
+        let imported = 0;
+        let skipped = 0;
+        const insertedCpfs = new Set();
+        const insertedTels = new Set();
+
         for (const entry of batch) {
-          await addDoc(collection(db, COLLECTIONS.LEADS), entry);
+          const isDupCpf = entry.cpf && (leads.some(l => l.cpf === entry.cpf) || insertedCpfs.has(entry.cpf));
+          const isDupTel = entry.telefone && (leads.some(l => l.telefone === entry.telefone) || insertedTels.has(entry.telefone));
+          
+          if (!isDupCpf && !isDupTel) {
+            await addDoc(collection(db, COLLECTIONS.LEADS), entry);
+            if (entry.cpf) insertedCpfs.add(entry.cpf);
+            if (entry.telefone) insertedTels.add(entry.telefone);
+            imported++;
+          } else {
+            skipped++;
+          }
         }
-        onToast(`${batch.length} leads importados!`);
+        onToast(`${imported} leads importados! ${skipped > 0 ? `${skipped} ignorados por duplicidade.` : ''}`);
       } catch (err: any) {
         onToast("Erro ao importar leads.", 'error');
       }
@@ -3718,6 +3792,19 @@ function BasesView({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const cleanCpf = formData.cpf ? formData.cpf.replace(/\D/g, '') : '';
+    const cleanTelefone = formData.telefone.replace(/\D/g, '');
+    
+    const isDuplicate = bases.some(b => 
+      (cleanCpf && b.cpf === cleanCpf) || (!cleanCpf && cleanTelefone && b.telefone === cleanTelefone)
+    );
+
+    if (isDuplicate) {
+       onToast("Registro já existe na base (verificado CPF/Telefone).", "error");
+       return;
+    }
+
     setLoading(true);
     try {
       await addDoc(collection(db, COLLECTIONS.BASES), {
@@ -3918,10 +4005,25 @@ function BasesView({
           createdAt: serverTimestamp()
         }));
 
+        let imported = 0;
+        let skipped = 0;
+        const insertedCpfs = new Set();
+        const insertedTels = new Set();
+
         for (const entry of batch) {
-          await addDoc(collection(db, COLLECTIONS.BASES), entry);
+          const isDupCpf = entry.cpf && (bases.some(b => b.cpf === entry.cpf) || insertedCpfs.has(entry.cpf));
+          const isDupTel = entry.telefone && (bases.some(b => b.telefone === entry.telefone) || insertedTels.has(entry.telefone));
+          
+          if (!isDupCpf && !isDupTel) {
+            await addDoc(collection(db, COLLECTIONS.BASES), entry);
+            if (entry.cpf) insertedCpfs.add(entry.cpf);
+            if (entry.telefone) insertedTels.add(entry.telefone);
+            imported++;
+          } else {
+            skipped++;
+          }
         }
-        onToast(`${batch.length} registros importados com sucesso!`);
+        onToast(`${imported} registros importados com sucesso! ${skipped > 0 ? `${skipped} ignorados por duplicidade.` : ''}`);
       } catch (err: any) {
         onToast("Erro ao importar dados.", 'error');
       }
@@ -4378,6 +4480,19 @@ function BasesRenovacaoView({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const cleanCpf = formData.cpf ? formData.cpf.replace(/\D/g, '') : '';
+    const cleanTelefone = formData.telefone.replace(/\D/g, '');
+    
+    const isDuplicate = bases.some(b => 
+      (cleanCpf && b.cpf === cleanCpf) || (!cleanCpf && cleanTelefone && b.telefone === cleanTelefone)
+    );
+
+    if (isDuplicate) {
+       onToast("Registro já existe na base (verificado CPF/Telefone).", "error");
+       return;
+    }
+
     setLoading(true);
     try {
       await addDoc(collection(db, COLLECTIONS.BASES_RENOVACAO), {
@@ -4502,10 +4617,25 @@ function BasesRenovacaoView({
           createdAt: serverTimestamp()
         }));
 
+        let imported = 0;
+        let skipped = 0;
+        const insertedCpfs = new Set();
+        const insertedTels = new Set();
+
         for (const entry of batch) {
-          await addDoc(collection(db, COLLECTIONS.BASES_RENOVACAO), entry);
+          const isDupCpf = entry.cpf && (bases.some(b => b.cpf === entry.cpf) || insertedCpfs.has(entry.cpf));
+          const isDupTel = entry.telefone && (bases.some(b => b.telefone === entry.telefone) || insertedTels.has(entry.telefone));
+          
+          if (!isDupCpf && !isDupTel) {
+            await addDoc(collection(db, COLLECTIONS.BASES_RENOVACAO), entry);
+            if (entry.cpf) insertedCpfs.add(entry.cpf);
+            if (entry.telefone) insertedTels.add(entry.telefone);
+            imported++;
+          } else {
+            skipped++;
+          }
         }
-        onToast(`${batch.length} registros importados com sucesso!`);
+        onToast(`${imported} registros importados com sucesso! ${skipped > 0 ? `${skipped} ignorados por duplicidade.` : ''}`);
       } catch (err: any) {
         onToast("Erro ao importar dados.", 'error');
       }
@@ -5166,6 +5296,20 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const cleanCpf = formData.cpf ? formData.cpf.replace(/\D/g, '') : '';
+    const cleanTelefone = formData.telefone.replace(/\D/g, '');
+
+    const isDuplicate = gap.some(g => 
+      g.id !== editingEntry?.id && 
+      ((cleanCpf && g.cpf === cleanCpf) || (!cleanCpf && cleanTelefone && g.telefone === cleanTelefone))
+    );
+
+    if (isDuplicate) {
+       onToast("Candidato já cadastrado no GAP (verificado CPF/Telefone).", "error");
+       return;
+    }
+
     setLoading(true);
     try {
       if (editingEntry) {
@@ -5241,10 +5385,25 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
           createdAt: serverTimestamp()
         }));
 
+        let imported = 0;
+        let skipped = 0;
+        const insertedCpfs = new Set();
+        const insertedTels = new Set();
+
         for (const entry of batch) {
-          await addDoc(collection(db, COLLECTIONS.GAP), entry);
+          const isDupCpf = entry.cpf && (gap.some(g => g.cpf === entry.cpf) || insertedCpfs.has(entry.cpf));
+          const isDupTel = entry.telefone && (gap.some(g => g.telefone === entry.telefone) || insertedTels.has(entry.telefone));
+          
+          if (!isDupCpf && !isDupTel) {
+            await addDoc(collection(db, COLLECTIONS.GAP), entry);
+            if (entry.cpf) insertedCpfs.add(entry.cpf);
+            if (entry.telefone) insertedTels.add(entry.telefone);
+            imported++;
+          } else {
+            skipped++;
+          }
         }
-        onToast(`${batch.length} registros importados!`);
+        onToast(`${imported} registros importados! ${skipped > 0 ? `${skipped} ignorados por duplicidade.` : ''}`);
       } catch (err: any) {
         onToast("Erro ao importar dados.", 'error');
       }
@@ -5639,6 +5798,12 @@ function CalendarioAcoesView({
         updatedAt: serverTimestamp()
       };
 
+      const isDuplicate = data.some(action => action.nome.toLowerCase() === payload.nome.toLowerCase() && action.dataInicio === payload.dataInicio && action.id !== editingAction?.id);
+      if (isDuplicate) {
+         onToast("Já existe uma ação com este nome e data.", "error");
+         return;
+      }
+
       if (editingAction) {
         await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, editingAction.id), payload);
         onToast("Ação atualizada com sucesso!");
@@ -5713,10 +5878,20 @@ function CalendarioAcoesView({
           createdAt: serverTimestamp()
         }));
 
+        let imported = 0;
+        let skipped = 0;
+        const inserted = new Set();
         for (const entry of batch) {
-          await addDoc(collection(db, COLLECTIONS.CALENDARIO_ACOES), entry);
+          const isDup = data.some(a => a.nome === entry.nome && a.dataInicio === entry.dataInicio) || inserted.has(`${entry.nome}-${entry.dataInicio}`);
+          if (!isDup) {
+            await addDoc(collection(db, COLLECTIONS.CALENDARIO_ACOES), entry);
+            inserted.add(`${entry.nome}-${entry.dataInicio}`);
+            imported++;
+          } else {
+            skipped++;
+          }
         }
-        onToast(`${batch.length} ações importadas!`);
+        onToast(`${imported} ações importadas! ${skipped > 0 ? `${skipped} ignoradas.` : ''}`);
       } catch (err: any) {
         onToast("Erro ao importar ações.", 'error');
       }
@@ -6042,6 +6217,12 @@ function EmpresasParceirasView({
       updatedAt: serverTimestamp(),
     };
 
+    const isDuplicate = data.some(emp => emp.nome.toLowerCase() === payload.nome.toLowerCase() && emp.id !== editingEmpresa?.id);
+    if (isDuplicate) {
+      onToast("Já existe uma empresa cadastrada com este nome.", "error");
+      return;
+    }
+
     try {
       if (editingEmpresa) {
         await updateDoc(doc(db, COLLECTIONS.EMPRESAS_PARCEIRAS, editingEmpresa.id), payload);
@@ -6097,10 +6278,20 @@ function EmpresasParceirasView({
           createdAt: serverTimestamp()
         }));
 
+        let imported = 0;
+        let skipped = 0;
+        const inserted = new Set();
         for (const entry of batch) {
-          await addDoc(collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS), entry);
+          const isDup = data.some(e => e.nome === entry.nome) || inserted.has(entry.nome);
+          if (!isDup) {
+            await addDoc(collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS), entry);
+            inserted.add(entry.nome);
+            imported++;
+          } else {
+            skipped++;
+          }
         }
-        onToast(`${batch.length} empresas importadas!`);
+        onToast(`${imported} empresas importadas! ${skipped > 0 ? `${skipped} ignoradas.` : ''}`);
       } catch (err: any) {
         onToast("Erro ao importar empresas.", 'error');
       }
@@ -7556,11 +7747,38 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     <p className="text-sm text-slate-500 italic">Nenhum número conectado ou conectando. Adicione um clicando no botão acima.</p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       {Object.entries(botStatuses || {}).map(([botNumber, info]) => (
-                         <div key={botNumber} className="border border-slate-200 rounded-xl p-4 flex flex-col gap-2">
-                            <div className="flex items-center justify-between">
-                              <div className="font-bold text-slate-700 text-lg">{botNumber}</div>
-                              <div className="flex items-center space-x-2">
+                       {Object.entries(botStatuses || {}).map(([botNumber, info]) => {
+                         const userForBot = users.find(u => u.botNumber && u.botNumber.replace(/\D/g, '') === botNumber.replace(/\D/g, ''));
+                         const nameForBot = userForBot ? userForBot.displayName : (botConfig.botNames?.[botNumber] || '');
+                         
+                         return (
+                          <div key={botNumber} className="border border-slate-200 rounded-xl p-4 flex flex-col gap-2">
+                             <div className="flex items-center justify-between">
+                               <div className="flex flex-col">
+                                 <div className="font-bold text-slate-700 text-lg">{botNumber}</div>
+                                 <div className="flex items-center mt-1">
+                                    <span className="text-[10px] text-slate-500 mr-1 uppercase font-bold tracking-wider">Resp:</span>
+                                    {userForBot ? (
+                                      <span className="text-xs font-bold text-blue-600 truncate max-w-[150px]">{userForBot.displayName} (Auto)</span>
+                                    ) : (
+                                      <input 
+                                        type="text" 
+                                        className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs w-32 focus:ring-1 focus:ring-blue-500 focus:outline-none text-slate-600"
+                                        placeholder="Nome"
+                                        defaultValue={nameForBot}
+                                        onBlur={async (e) => {
+                                          const newName = e.target.value;
+                                          try {
+                                             await updateDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), {
+                                                [`botNames.${botNumber}`]: newName
+                                             });
+                                          } catch(err) {}
+                                        }}
+                                      />
+                                    )}
+                                 </div>
+                               </div>
+                               <div className="flex items-center space-x-2">
                                 <span className={`px-2 py-1 rounded-full text-xs font-bold ${info?.status === 'online' ? 'bg-green-100 text-green-700' : info?.status === 'pairing' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
                                    {info?.status?.toUpperCase() || 'DESCONHECIDO'}
                                 </span>
@@ -7684,7 +7902,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                               </div>
                             )}
                          </div>
-                       ))}
+                        );
+                       })}
                     </div>
                   )}
                 </div>

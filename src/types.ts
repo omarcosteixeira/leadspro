@@ -255,5 +255,6 @@ export interface BotConfig {
   url: string;
   active: boolean;
   trainingContext?: string;
+  botNames?: Record<string, string>;
   updatedAt?: any;
 }
