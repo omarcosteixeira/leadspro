@@ -3433,6 +3433,9 @@ function HistoricoView({
   onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [courseFilter, setCourseFilter] = useState('');
+  const [baseFilter, setBaseFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
@@ -3440,6 +3443,16 @@ function HistoricoView({
   const [isAddMsgModalOpen, setIsAddMsgModalOpen] = useState(false);
   const [newMsgData, setNewMsgData] = useState({ modelName: '', texto: '' });
   const [msgLoading, setMsgLoading] = useState(false);
+
+  const uniqueCursos = useMemo(() => {
+    return Array.from(new Set(leads.map(l => l.cursoInteresse).filter(Boolean))).sort();
+  }, [leads]);
+
+  const uniqueBases = useMemo(() => {
+    return Array.from(new Set(leads.map(l => l.acao).filter(Boolean))).sort();
+  }, [leads]);
+
+  const uniqueStatuses = ['Pendente', 'Sem retorno', 'Interessado', 'Não Interessado', 'Convertido'];
 
   const handleAddCustomMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -3493,13 +3506,18 @@ function HistoricoView({
   
   const filteredLeads = useMemo(() => {
     return leads
-      .filter(l => 
-        l.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        l.telefone.includes(searchTerm) ||
-        l.acao.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      .filter(l => {
+        const matchesSearch = !searchTerm || 
+          l.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
+          l.telefone.includes(searchTerm) ||
+          l.acao.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCourse = !courseFilter || l.cursoInteresse === courseFilter;
+        const matchesBase = !baseFilter || l.acao === baseFilter;
+        const matchesStatus = !statusFilter || l.status === statusFilter;
+        return matchesSearch && matchesCourse && matchesBase && matchesStatus;
+      })
       .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-  }, [leads, searchTerm]);
+  }, [leads, searchTerm, courseFilter, baseFilter, statusFilter]);
 
   const stats = useMemo(() => {
     const total = filteredLeads.length;
@@ -3649,17 +3667,43 @@ function HistoricoView({
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h3 className="text-xl font-bold text-slate-900">Lista de Leads</h3>
-          <div className="relative max-w-md w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Buscar por nome, telefone ou ação..." 
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
-            />
+        <div className="p-6 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+          <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap font-sans tracking-tight">Lista de Leads</h3>
+          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto xl:justify-end">
+            <div className="relative flex-1 min-w-[200px] xl:flex-none">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Buscar por nome, telefone..." 
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
+              />
+            </div>
+            <select 
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 max-w-[180px] lg:max-w-[220px] truncate"
+              value={baseFilter}
+              onChange={e => setBaseFilter(e.target.value)}
+            >
+              <option value="">Todas as Origens / Ações</option>
+              {uniqueBases.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+            <select 
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 max-w-[150px] lg:max-w-[200px] truncate"
+              value={courseFilter}
+              onChange={e => setCourseFilter(e.target.value)}
+            >
+              <option value="">Todos os Cursos</option>
+              {uniqueCursos.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select 
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+            >
+              <option value="">Todos os Status</option>
+              {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
           </div>
         </div>
 
