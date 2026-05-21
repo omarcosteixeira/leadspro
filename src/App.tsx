@@ -3437,6 +3437,59 @@ function HistoricoView({
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
   const [massSelectorOpen, setMassSelectorOpen] = useState(false);
+  const [isAddMsgModalOpen, setIsAddMsgModalOpen] = useState(false);
+  const [newMsgData, setNewMsgData] = useState({ modelName: '', texto: '' });
+  const [msgLoading, setMsgLoading] = useState(false);
+
+  const handleAddCustomMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMsgData.texto.trim()) return;
+    setMsgLoading(true);
+    try {
+      await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
+        tipo: 'historico',
+        texto: newMsgData.texto,
+        nome: newMsgData.modelName || undefined,
+        createdAt: serverTimestamp()
+      });
+      onToast("Mensagem de histórico salva!");
+      setNewMsgData({ modelName: '', texto: '' });
+      setIsAddMsgModalOpen(false);
+    } catch (err: any) {
+      console.error("Erro ao salvar mensagem:", err);
+      onToast(`Erro ao salvar mensagem: ${err.message}`, 'error');
+    } finally {
+      setMsgLoading(false);
+    }
+  };
+
+  const handleInsertDefaultHistoricoMessages = async () => {
+    try {
+      const existing = whatsappMessages.filter(m => m.tipo === 'historico');
+      if (existing.length > 0) {
+        if (!window.confirm("Já existem mensagens para Histórico. Deseja adicionar as mensagens padrões mesmo assim?")) {
+          return;
+        }
+      }
+      
+      const defaults = [
+        "Olá [nome], tudo bem? Vimos aqui seu interesse no curso de [curso]. Podemos te ajudar?",
+        "Oi [nome], aqui é da faculdade! Recebemos seu cadastro sobre o curso de [curso]. Qual o melhor horário para conversarmos?",
+        "Olá [nome]! Qual a sua dúvida sobre o curso de [curso]?"
+      ];
+      
+      for (const texto of defaults) {
+        await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
+          tipo: 'historico',
+          texto,
+          createdAt: serverTimestamp()
+        });
+      }
+      onToast("Mensagens padrões de histórico inseridas!");
+    } catch (err: any) {
+      onToast("Erro ao inserir mensagens padrões.", 'error');
+    }
+  };
   
   const filteredLeads = useMemo(() => {
     return leads
@@ -3560,6 +3613,20 @@ function HistoricoView({
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-800">Histórico de Leads</h2>
         <div className="flex space-x-2">
+          <button 
+             onClick={() => setIsAddMsgModalOpen(true)}
+             className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
+          >
+             <Plus size={18} />
+             <span>Inserir Mensagens</span>
+          </button>
+          <button 
+             onClick={handleInsertDefaultHistoricoMessages}
+             className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold"
+             title="Inserir Mensagens Padrões"
+          >
+             <MessageSquare size={14} />
+          </button>
           <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
             <Upload size={18} />
             <span>Importar</span>
@@ -3735,6 +3802,58 @@ function HistoricoView({
         }}
         forceBotOnly={true}
       />
+
+      {isAddMsgModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-xl font-bold text-slate-900">Nova Mensagem de Histórico</h3>
+              <button onClick={() => setIsAddMsgModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleAddCustomMessage} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Nome do Modelo (Opcional)</label>
+                <input 
+                  type="text" 
+                  placeholder="Ex: WhatsApp Histórico 1"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
+                  value={newMsgData.modelName}
+                  onChange={e => setNewMsgData({ ...newMsgData, modelName: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Texto da Mensagem</label>
+                <textarea 
+                  rows={4}
+                  placeholder="Insira o texto da mensagem. Use [nome] para o nome do lead e [curso] para o curso de interesse."
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={newMsgData.texto}
+                  onChange={e => setNewMsgData({ ...newMsgData, texto: e.target.value })}
+                  required
+                />
+              </div>
+              <button 
+                type="submit" 
+                disabled={msgLoading}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white py-3 rounded-xl font-bold transition flex items-center justify-center space-x-2 shadow-lg shadow-blue-100"
+              >
+                {msgLoading ? (
+                  <RefreshCw className="animate-spin" size={18} />
+                ) : (
+                  <span>Salvar Mensagem</span>
+                )}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
