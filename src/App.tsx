@@ -3670,6 +3670,7 @@ function HistoricoView({
                 <th className="px-6 py-4 w-12">
                   <input type="checkbox" checked={selectedEntries.length === filteredLeads.length && filteredLeads.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
                 </th>
+                <th className="px-3 py-4 w-12 text-slate-400">#</th>
                 <th className="px-6 py-4">Candidato</th>
                 <th className="px-6 py-4">Ação / Origem</th>
                 <th className="px-6 py-4">Promotor</th>
@@ -3687,10 +3688,13 @@ function HistoricoView({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredLeads.map(lead => (
+              {filteredLeads.map((lead, index) => (
                 <tr key={lead.id} className="hover:bg-slate-50/50 transition-all">
                   <td className="px-6 py-4">
                       <input type="checkbox" checked={selectedEntries.includes(lead.id)} onChange={e => toggleSelect(lead.id, e.target.checked)} />
+                  </td>
+                  <td className="px-3 py-4 text-xs font-bold text-slate-400 font-mono">
+                      {index + 1}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
@@ -3754,7 +3758,7 @@ function HistoricoView({
               ))}
               {filteredLeads.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">Nenhum lead encontrado.</td>
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400 italic">Nenhum lead encontrado.</td>
                 </tr>
               )}
             </tbody>
