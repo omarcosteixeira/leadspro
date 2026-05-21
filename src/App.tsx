@@ -3629,6 +3629,12 @@ function HistoricoView({
                     <div className="flex flex-col">
                       <span className="font-bold text-slate-900">{lead.nome}</span>
                       <span className="text-xs text-slate-500">{formatPhone(lead.telefone)}</span>
+                      {lead.cursoInteresse && (
+                        <span className="text-xs text-slate-600 font-medium">Curso: {lead.cursoInteresse}</span>
+                      )}
+                      {lead.cpf && (
+                        <span className="text-xs text-slate-400">CPF: {formatCPF(lead.cpf)}</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600">{lead.acao}</td>
