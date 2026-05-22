@@ -104,6 +104,15 @@ import {
 } from './types';
 
 // --- Helpers ---
+const getBotUrl = (url: string | undefined): string => {
+  if (!url) return '';
+  let clean = url.endsWith('/') ? url.slice(0, -1) : url;
+  if (clean.startsWith('http://') && !clean.includes('localhost') && !clean.includes('127.0.0.1')) {
+    clean = clean.replace('http://', 'https://');
+  }
+  return clean;
+};
+
 const exportToExcel = (data: any[], fileName: string) => {
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
@@ -133,7 +142,8 @@ function WhatsAppMessageSelector({
   leadCurso,
   botConfig,
   onSendBot,
-  forceBotOnly
+  forceBotOnly,
+  leadMatricula
 }: { 
   isOpen: boolean;
   onClose: () => void;
@@ -2025,7 +2035,10 @@ export default function App() {
        return;
     }
     
-    const safeBotNumber = currentBotNumber.replace(/\D/g, '');
+    let safeBotNumber = currentBotNumber.replace(/\D/g, '');
+    if (safeBotNumber.length === 10 || safeBotNumber.length === 11) {
+      safeBotNumber = `55${safeBotNumber}`;
+    }
     
     // Format phone: remove non-numeric, strip leading zero if present
     let rawPhone = telefone.replace(/\D/g, '');
@@ -2036,7 +2049,7 @@ export default function App() {
     }
 
     try {
-      const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+      const cleanUrl = getBotUrl(botConfig.url);
       const response = await fetch(`${cleanUrl}/api/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2372,7 +2385,7 @@ export default function App() {
     
     const checkBotStatus = async () => {
       try {
-        const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+        const cleanUrl = getBotUrl(botConfig.url);
         const res = await fetch(`${cleanUrl}/api/status`);
         if (res.ok) {
           const data = await res.json();
@@ -7826,7 +7839,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                           return;
                         }
                         try {
-                          const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                          const cleanUrl = getBotUrl(botConfig.url);
                           const res = await fetch(`${cleanUrl}/api/status`, {
                             method: 'GET'
                           });
@@ -7854,7 +7867,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       <button
                         onClick={async () => {
                            if (!botConfig.url) return;
-                           const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                           const cleanUrl = getBotUrl(botConfig.url);
                            if (window.confirm('Tem certeza que deseja resetar TODAS as sessões criptografadas? (Esta ação apagará a pasta corrompida e solicitará nova conexão em todos os números)')) {
                               try {
                                  const res = await fetch(`${cleanUrl}/api/reset`, { method: 'POST' });
@@ -7882,7 +7895,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                               if (!botConfig || !botConfig.url) {
                                  onToast('Configura a URL do bot primeiro.', 'error'); return;
                               }
-                              const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                              const cleanUrl = getBotUrl(botConfig.url);
                               try {
                                  const connectRes = await fetch(`${cleanUrl}/api/connect`, {
                                     method: 'POST',
@@ -7921,8 +7934,17 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        {Object.entries(botStatuses || {}).map(([botNumber, info]) => {
-                         const userForBot = users.find(u => u.botNumber && u.botNumber.replace(/\D/g, '') === botNumber.replace(/\D/g, ''));
-                         const nameForBot = userForBot ? userForBot.displayName : (botConfig.botNames?.[botNumber] || '');
+                         const userForBot = users.find(u => {
+                           if (!u.botNumber) return false;
+                           let uNum = u.botNumber.replace(/\D/g, '');
+                           if (uNum.length === 10 || uNum.length === 11) uNum = '55' + uNum;
+                           
+                           let bNum = botNumber.replace(/\D/g, '');
+                           if (bNum.length === 10 || bNum.length === 11) bNum = '55' + bNum;
+                           
+                           return uNum === bNum;
+                         });
+                         const nameForBot = userForBot ? userForBot.name : (botConfig.botNames?.[botNumber] || '');
                          
                          return (
                           <div key={botNumber} className="border border-slate-200 rounded-xl p-4 flex flex-col gap-2">
@@ -7932,7 +7954,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                  <div className="flex items-center mt-1">
                                     <span className="text-[10px] text-slate-500 mr-1 uppercase font-bold tracking-wider">Resp:</span>
                                     {userForBot ? (
-                                      <span className="text-xs font-bold text-blue-600 truncate max-w-[150px]">{userForBot.displayName} (Auto)</span>
+                                      <span className="text-xs font-bold text-blue-600 truncate max-w-[150px]">{userForBot.name} (Auto)</span>
                                     ) : (
                                       <input 
                                         type="text" 
@@ -7959,7 +7981,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                   onClick={async () => {
                                     if (window.confirm(`Tem certeza que deseja apagar a sessão do bot ${botNumber}?`)) {
                                       try {
-                                        const cleanUrl = botConfig.url?.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                                        const cleanUrl = getBotUrl(botConfig.url);
                                         if (!cleanUrl) return;
                                         const res = await fetch(`${cleanUrl}/api/reset`, {
                                            method: 'POST',
@@ -8031,7 +8053,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                       }));
                                       
                                       try {
-                                        const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                                        const cleanUrl = getBotUrl(botConfig.url);
                                         const res = await fetch(`${cleanUrl}/api/toggle`, {
                                           method: 'POST',
                                           headers: { 'Content-Type': 'application/json' },
