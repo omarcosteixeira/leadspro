@@ -78,7 +78,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth } from './firebase';
+import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, setRoleContext, switchEnv, currentEnv } from './firebase';
 import { cn, formatPhone, getWhatsAppUrl, validateCPF, formatCPF } from './lib/utils';
 import * as XLSX from 'xlsx';
 import { 
@@ -111,6 +111,15 @@ const getBotUrl = (url: string | undefined): string => {
     clean = clean.replace('http://', 'https://');
   }
   return clean;
+};
+
+const proxyFetch = async (targetUrl: string, options: RequestInit = {}): Promise<Response> => {
+  const headers = new Headers(options.headers || {});
+  headers.set('x-target-url', targetUrl);
+  return fetch('/api/bot-proxy', {
+    ...options,
+    headers
+  });
 };
 
 const exportToExcel = (data: any[], fileName: string) => {
@@ -327,7 +336,7 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   basesDisparo: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
   basesRenovacao: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SSA],
   avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.ACADEMICO],
-  admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV]
+  admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL]
 };
 
 // --- Components ---
@@ -2050,7 +2059,7 @@ export default function App() {
 
     try {
       const cleanUrl = getBotUrl(botConfig.url);
-      const response = await fetch(`${cleanUrl}/api/send`, {
+      const response = await proxyFetch(`${cleanUrl}/api/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ botNumber: safeBotNumber, number: rawPhone, message, force: true, manual: true })
@@ -2149,6 +2158,9 @@ export default function App() {
               let role = ROLES.PROMOTOR;
               const allUsers = await getDocs(query(collection(db, COLLECTIONS.USERS), limit(1)));
               if (allUsers.empty) role = ROLES.LIDER_FDV;
+              if (user.email === "marcos.teixeira@estacio.br" || user.email === "canaldonutri@gmail.com") {
+                role = ROLES.ADMIN_MASTER;
+              }
               
               const newProfile = {
                 uid: user.uid,
@@ -2165,7 +2177,9 @@ export default function App() {
           }
           
           if (userDoc.exists()) {
-            setProfile({ uid: user.uid, ...userDoc.data() } as UserProfile);
+            const profileData = userDoc.data() as UserProfile;
+            setRoleContext(profileData.role);
+            setProfile({ uid: user.uid, ...profileData });
           }
           setUser(user);
         } catch (error: any) {
@@ -2177,10 +2191,12 @@ export default function App() {
           showToast(`Erro ao carregar perfil: ${error.message}`, "error");
           setUser(null);
           setProfile(null);
+          setRoleContext(undefined);
         }
       } else {
         setUser(null);
         setProfile(null);
+        setRoleContext(undefined);
       }
       setLoading(false);
     });
@@ -2386,7 +2402,7 @@ export default function App() {
     const checkBotStatus = async () => {
       try {
         const cleanUrl = getBotUrl(botConfig.url);
-        const res = await fetch(`${cleanUrl}/api/status`);
+        const res = await proxyFetch(`${cleanUrl}/api/status`);
         if (res.ok) {
           const data = await res.json();
           if (data.bots) {
@@ -2826,6 +2842,23 @@ function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error')
           </div>
           <h2 className="text-2xl font-bold text-slate-900">Gestão de Leads Pro</h2>
           <p className="text-slate-500 mt-2">{isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta agora'}</p>
+        </div>
+        
+        <div className="bg-slate-100 p-2 rounded-xl flex items-center justify-between mb-6">
+          <button
+            type="button"
+            onClick={() => currentEnv !== 'main' && switchEnv('main')}
+            className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all ${currentEnv === 'main' ? "bg-white shadow text-blue-600" : "text-slate-500 hover:text-slate-700"}`}
+          >
+            Acesso Geral
+          </button>
+          <button
+            type="button"
+            onClick={() => currentEnv !== 'fdv' && switchEnv('fdv')}
+            className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all ${currentEnv === 'fdv' ? "bg-white shadow text-blue-600" : "text-slate-500 hover:text-slate-700"}`}
+          >
+            Acesso Comercial
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -7840,7 +7873,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         }
                         try {
                           const cleanUrl = getBotUrl(botConfig.url);
-                          const res = await fetch(`${cleanUrl}/api/status`, {
+                          const res = await proxyFetch(`${cleanUrl}/api/status`, {
                             method: 'GET'
                           });
                           if (res.ok) {
@@ -7870,7 +7903,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                            const cleanUrl = getBotUrl(botConfig.url);
                            if (window.confirm('Tem certeza que deseja resetar TODAS as sessões criptografadas? (Esta ação apagará a pasta corrompida e solicitará nova conexão em todos os números)')) {
                               try {
-                                 const res = await fetch(`${cleanUrl}/api/reset`, { method: 'POST' });
+                                 const res = await proxyFetch(`${cleanUrl}/api/reset`, { method: 'POST' });
                                  if (res.ok) {
                                     onToast('A Rota Mágica de Reset foi ativada. Todas as sessões foram apagadas e o bot será reiniciado.', 'success');
                                     setBotStatuses({});
@@ -7897,7 +7930,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                               }
                               const cleanUrl = getBotUrl(botConfig.url);
                               try {
-                                 const connectRes = await fetch(`${cleanUrl}/api/connect`, {
+                                 const connectRes = await proxyFetch(`${cleanUrl}/api/connect`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ botNumber })
@@ -7910,7 +7943,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                  // Force a status check after 3 seconds
                                  setTimeout(async () => {
                                    try {
-                                     const res = await fetch(`${cleanUrl}/api/status`);
+                                     const res = await proxyFetch(`${cleanUrl}/api/status`);
                                      if (res.ok) {
                                         const data = await res.json();
                                         if (data.bots) setBotStatuses(data.bots);
@@ -7983,7 +8016,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                       try {
                                         const cleanUrl = getBotUrl(botConfig.url);
                                         if (!cleanUrl) return;
-                                        const res = await fetch(`${cleanUrl}/api/reset`, {
+                                        const res = await proxyFetch(`${cleanUrl}/api/reset`, {
                                            method: 'POST',
                                            headers: { 'Content-Type': 'application/json' },
                                            body: JSON.stringify({ botNumber })
@@ -7992,7 +8025,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                           onToast(`Sessão ${botNumber} apagada.`);
                                           setTimeout(async () => {
                                             try {
-                                              const resStatus = await fetch(`${cleanUrl}/api/status`);
+                                              const resStatus = await proxyFetch(`${cleanUrl}/api/status`);
                                               if (resStatus.ok) {
                                                  const data = await resStatus.json();
                                                  setBotStatuses(data.bots || {});
@@ -8054,7 +8087,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                       
                                       try {
                                         const cleanUrl = getBotUrl(botConfig.url);
-                                        const res = await fetch(`${cleanUrl}/api/toggle`, {
+                                        const res = await proxyFetch(`${cleanUrl}/api/toggle`, {
                                           method: 'POST',
                                           headers: { 'Content-Type': 'application/json' },
                                           body: JSON.stringify({ botNumber, active: newActive, isAutoReplyActive: newActive })
