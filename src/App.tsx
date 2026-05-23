@@ -3672,6 +3672,33 @@ function HistoricoView({
     });
   };
 
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Certeza que deseja excluir este lead?")) {
+      try {
+        await deleteDoc(doc(db, COLLECTIONS.LEADS, id));
+        setSelectedEntries(prev => prev.filter(s => s !== id));
+        onToast("Lead excluído!");
+      } catch (err: any) {
+        onToast("Erro ao excluir lead.", 'error');
+      }
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedEntries.length === 0) return;
+    if (window.confirm(`Deseja excluir ${selectedEntries.length} leads selecionados?`)) {
+      try {
+        for (const id of selectedEntries) {
+          await deleteDoc(doc(db, COLLECTIONS.LEADS, id));
+        }
+        setSelectedEntries([]);
+        onToast(`${selectedEntries.length} leads excluídos!`);
+      } catch (err: any) {
+        onToast("Erro ao excluir leads em massa.", 'error');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -3766,14 +3793,24 @@ function HistoricoView({
                 <th className="px-6 py-4">Promotor</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">
-                  {selectedEntries.length > 0 && botConfig.url && (
-                      <button 
-                         onClick={() => setMassSelectorOpen(true)} 
-                         className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
-                      >
-                         <Bot size={14} /> Em Massa
-                      </button>
-                  )}
+                  <div className="flex flex-col gap-2">
+                    {selectedEntries.length > 0 && botConfig.url && (
+                        <button 
+                           onClick={() => setMassSelectorOpen(true)} 
+                           className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                        >
+                           <Bot size={14} /> Em Massa
+                        </button>
+                    )}
+                    {selectedEntries.length > 0 && (
+                        <button 
+                           onClick={handleBulkDelete}
+                           className="text-rose-600 font-bold hover:underline py-1 px-2 bg-rose-50 rounded-lg flex items-center gap-1"
+                        >
+                           <Trash2 size={14} /> Excluir ({selectedEntries.length})
+                        </button>
+                    )}
+                  </div>
                 </th>
               </tr>
             </thead>
@@ -3842,6 +3879,13 @@ function HistoricoView({
                           <span>GAP</span>
                         </button>
                       )}
+                      <button 
+                         onClick={() => handleDelete(lead.id)}
+                         className="text-rose-500 hover:text-rose-600 transition-colors p-1 rounded-lg hover:bg-rose-50"
+                         title="Excluir Lead"
+                      >
+                         <Trash2 size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
