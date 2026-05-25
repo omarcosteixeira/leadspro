@@ -110,10 +110,7 @@ const getBotUrl = (url: string | undefined): string => {
   if (!url) return '';
   let clean = url.trim();
   clean = clean.endsWith('/') ? clean.slice(0, -1) : clean;
-  if (clean.endsWith('/api')) {
-    clean = clean.slice(0, -4);
-  }
-  // Strip common misconfiguration where user includes the internal Railway port
+  clean = clean.replace(/\/(api\/status|status|api)$/i, '');
   if (clean.includes('.railway.app:8080')) {
     clean = clean.replace(':8080', '');
   }
@@ -2914,7 +2911,7 @@ export default function App() {
                                 onClick={async () => {
                                   try {
                                     const cleanUrl = getBotUrl(botConfig.url);
-                                    const res = await proxyFetch(`${cleanUrl}/api/start`, {
+                                    const res = await proxyFetch(`${cleanUrl}/api/connect`, {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({ botNumber: profile.botNumber })
