@@ -108,7 +108,11 @@ import {
 // --- Helpers ---
 const getBotUrl = (url: string | undefined): string => {
   if (!url) return '';
-  let clean = url.endsWith('/') ? url.slice(0, -1) : url;
+  let clean = url.trim();
+  clean = clean.endsWith('/') ? clean.slice(0, -1) : clean;
+  if (clean.endsWith('/api')) {
+    clean = clean.slice(0, -4);
+  }
   if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
     clean = `https://${clean}`;
   }
