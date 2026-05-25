@@ -2367,7 +2367,7 @@ export default function App() {
 
     let unsubBotConfig = () => {};
     if (user) {
-      unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), snap => {
+      unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, currentEnv || 'main'), snap => {
         if (snap.exists()) {
           setBotConfig({ id: snap.id, ...snap.data() } as BotConfig);
         } else {
@@ -2396,7 +2396,7 @@ export default function App() {
       unsubBasesRenovacao();
       unsubBotConfig();
     };
-  }, [user, profile]);
+  }, [user, profile, currentEnv]);
 
   useEffect(() => {
     // Test connection to Firestore as per instructions
@@ -6878,7 +6878,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
       const currentContext = botConfig.trainingContext || '';
       const newContext = currentContext + (currentContext ? '\n\n' : '') + `=== Conteúdo do Arquivo: ${file.name} ===\n` + text;
       
-      await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
+      await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, currentEnv || 'main'), { 
         trainingContext: newContext,
         updatedAt: serverTimestamp() 
       }, { merge: true });
@@ -7924,7 +7924,9 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
             <div className="p-6">
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">URL do App Railway (API do Bot)</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    URL do App Railway (API do Bot) - Configuração: {currentEnv === 'fdv' ? 'Acesso Comercial' : 'Acesso Geral'}
+                  </label>
                   <div className="flex gap-2">
                     <input 
                       type="text"
@@ -7938,7 +7940,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         }
                         if (newUrl === botConfig.url) return;
                         try {
-                          await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
+                          await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, currentEnv || 'main'), { 
                             url: newUrl,
                             active: botConfig.active || false,
                             updatedAt: serverTimestamp() 
@@ -8082,7 +8084,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                         onBlur={async (e) => {
                                           const newName = e.target.value;
                                           try {
-                                             await updateDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), {
+                                             await updateDoc(doc(db, COLLECTIONS.BOT_CONFIG, currentEnv || 'main'), {
                                                 [`botNames.${botNumber}`]: newName
                                              });
                                           } catch(err) {}
@@ -8358,7 +8360,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   const newContext = e.target.value.trim();
                   if (newContext === botConfig.trainingContext) return;
                   try {
-                    await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
+                    await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, currentEnv || 'main'), { 
                       trainingContext: newContext,
                       updatedAt: serverTimestamp() 
                     }, { merge: true });
