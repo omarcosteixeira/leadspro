@@ -113,6 +113,10 @@ const getBotUrl = (url: string | undefined): string => {
   if (clean.endsWith('/api')) {
     clean = clean.slice(0, -4);
   }
+  // Strip common misconfiguration where user includes the internal Railway port
+  if (clean.includes('.railway.app:8080')) {
+    clean = clean.replace(':8080', '');
+  }
   if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
     clean = `https://${clean}`;
   }
