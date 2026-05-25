@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type UserRole = 'Admin Master' | 'Promotor' | 'FDV' | 'Sala de Matrícula' | 'QG' | 'Líder/FDV' | 'SSA' | 'Gestor Unidade' | 'Gestor Comercial' | 'Acadêmico' | 'Promotor/FDV';
+export type UserRole = 'Admin Master' | 'Promotor' | 'FDV' | 'Sala de Matrícula' | 'QG' | 'Líder/FDV' | 'SSA' | 'Gestor Unidade' | 'Gestor Comercial' | 'Acadêmico';
 
 export interface UserProfile {
   uid: string;
@@ -15,7 +15,6 @@ export interface UserProfile {
   blocked?: boolean;
   mustChangePassword?: boolean;
   botNumber?: string;
-  responsavelFdvId?: string;
   createdAt: any;
   updatedAt?: any;
   dashboardWidgets?: {
@@ -64,7 +63,6 @@ export interface Lead {
   promotorId: string;
   promotorName: string;
   promotorRole?: string;
-  responsavelFdvId?: string;
 }
 
 export interface BaseEntry {

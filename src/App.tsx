@@ -23,8 +23,7 @@ import {
   limit,
   getDoc,
   setDoc,
-  getDocs,
-  deleteField
+  getDocs
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -79,7 +78,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, setRoleContext, switchEnv, currentEnv } from './firebase';
+import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth } from './firebase';
 import { cn, formatPhone, getWhatsAppUrl, validateCPF, formatCPF } from './lib/utils';
 import * as XLSX from 'xlsx';
 import { 
@@ -105,33 +104,6 @@ import {
 } from './types';
 
 // --- Helpers ---
-const getBotUrl = (url: string | undefined): string => {
-  if (!url) return '';
-  let clean = url.trim();
-  clean = clean.endsWith('/') ? clean.slice(0, -1) : clean;
-  clean = clean.replace(/\/(api\/status|status|api)$/i, '');
-  if (clean.includes('.railway.app:8080')) {
-    clean = clean.replace(':8080', '');
-  }
-  if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
-    clean = `https://${clean}`;
-  }
-  if (clean.startsWith('http://') && !clean.includes('localhost') && !clean.includes('127.0.0.1')) {
-    clean = clean.replace('http://', 'https://');
-  }
-  return clean;
-};
-
-const proxyFetch = async (targetUrl: string, options: RequestInit = {}): Promise<Response> => {
-  const headers = new Headers(options.headers || {});
-  headers.set('x-target-url', targetUrl);
-  return fetch(`/api/bot-proxy?_t=${Date.now()}`, {
-    ...options,
-    headers,
-    cache: 'no-store'
-  });
-};
-
 const exportToExcel = (data: any[], fileName: string) => {
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
@@ -161,8 +133,7 @@ function WhatsAppMessageSelector({
   leadCurso,
   botConfig,
   onSendBot,
-  forceBotOnly,
-  leadMatricula
+  forceBotOnly
 }: { 
   isOpen: boolean;
   onClose: () => void;
@@ -328,13 +299,12 @@ const ROLES: Record<string, UserRole> = {
   SSA: 'SSA',
   GESTOR_UNIDADE: 'Gestor Unidade',
   GESTOR_COMERCIAL: 'Gestor Comercial',
-  ACADEMICO: 'Acadêmico',
-  PROMOTOR_FDV: 'Promotor/FDV'
+  ACADEMICO: 'Acadêmico'
 };
 
 const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   dashboard: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
-  cadastro: [ROLES.ADMIN_MASTER, ROLES.PROMOTOR, ROLES.PROMOTOR_FDV, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
+  cadastro: [ROLES.ADMIN_MASTER, ROLES.PROMOTOR, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
   historico: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL],
   bases: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV],
   gap: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV],
@@ -342,12 +312,12 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   campanhas: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
   calendario: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
   empresas: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
-  calculo: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.PROMOTOR_FDV, ROLES.SSA],
+  calculo: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.SSA],
   mapao: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.ACADEMICO],
   basesDisparo: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
   basesRenovacao: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SSA],
-  avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.PROMOTOR_FDV, ROLES.ACADEMICO],
-  admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL]
+  avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.ACADEMICO],
+  admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV]
 };
 
 // --- Components ---
@@ -2055,10 +2025,7 @@ export default function App() {
        return;
     }
     
-    let safeBotNumber = currentBotNumber.replace(/\D/g, '');
-    if (safeBotNumber.length === 10 || safeBotNumber.length === 11) {
-      safeBotNumber = `55${safeBotNumber}`;
-    }
+    const safeBotNumber = currentBotNumber.replace(/\D/g, '');
     
     // Format phone: remove non-numeric, strip leading zero if present
     let rawPhone = telefone.replace(/\D/g, '');
@@ -2069,8 +2036,8 @@ export default function App() {
     }
 
     try {
-      const cleanUrl = getBotUrl(botConfig.url);
-      const response = await proxyFetch(`${cleanUrl}/api/send`, {
+      const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+      const response = await fetch(`${cleanUrl}/api/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ botNumber: safeBotNumber, number: rawPhone, message, force: true, manual: true })
@@ -2169,9 +2136,6 @@ export default function App() {
               let role = ROLES.PROMOTOR;
               const allUsers = await getDocs(query(collection(db, COLLECTIONS.USERS), limit(1)));
               if (allUsers.empty) role = ROLES.LIDER_FDV;
-              if (user.email === "marcos.teixeira@estacio.br" || user.email === "canaldonutri@gmail.com") {
-                role = ROLES.ADMIN_MASTER;
-              }
               
               const newProfile = {
                 uid: user.uid,
@@ -2188,9 +2152,7 @@ export default function App() {
           }
           
           if (userDoc.exists()) {
-            const profileData = userDoc.data() as UserProfile;
-            setRoleContext(profileData.role);
-            setProfile({ uid: user.uid, ...profileData });
+            setProfile({ uid: user.uid, ...userDoc.data() } as UserProfile);
           }
           setUser(user);
         } catch (error: any) {
@@ -2202,12 +2164,10 @@ export default function App() {
           showToast(`Erro ao carregar perfil: ${error.message}`, "error");
           setUser(null);
           setProfile(null);
-          setRoleContext(undefined);
         }
       } else {
         setUser(null);
         setProfile(null);
-        setRoleContext(undefined);
       }
       setLoading(false);
     });
@@ -2242,17 +2202,13 @@ export default function App() {
     let unsubLeads = () => {};
     if (profile) {
       let leadsQuery;
-      if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.GESTOR_UNIDADE].includes(profile.role) || (profile.role === ROLES.GESTOR_COMERCIAL && currentEnv === 'fdv')) {
+      if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.GESTOR_UNIDADE].includes(profile.role)) {
         leadsQuery = query(collection(db, COLLECTIONS.LEADS));
       } else if (profile.role === ROLES.FDV) {
-        if (currentEnv === 'fdv') {
-          leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("responsavelFdvId", "==", user!.uid)));
-        } else {
-          leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "==", ROLES.PROMOTOR)));
-        }
+        leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "==", ROLES.PROMOTOR)));
       } else if (profile.role === ROLES.GESTOR_COMERCIAL) {
-        leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "in", [ROLES.PROMOTOR, ROLES.FDV, ROLES.PROMOTOR_FDV])));
-      } else if (profile.role === ROLES.PROMOTOR || profile.role === ROLES.PROMOTOR_FDV) {
+        leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "in", [ROLES.PROMOTOR, ROLES.FDV])));
+      } else if (profile.role === ROLES.PROMOTOR) {
         leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("promotorId", "==", user!.uid));
       } else {
         leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("promotorId", "==", "none"));
@@ -2318,11 +2274,7 @@ export default function App() {
       if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL].includes(profile.role)) {
         calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES));
       } else if (profile.role === ROLES.FDV) {
-        if (currentEnv === 'fdv') {
-          calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), or(where("creatorId", "==", user!.uid), where("creatorRole", "==", ROLES.PROMOTOR_FDV)));
-        } else {
-          calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), or(where("creatorId", "==", user!.uid), where("creatorRole", "==", ROLES.PROMOTOR)));
-        }
+        calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), or(where("creatorId", "==", user!.uid), where("creatorRole", "==", ROLES.PROMOTOR)));
       } else {
         calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), where("creatorId", "==", "none"));
       }
@@ -2368,7 +2320,7 @@ export default function App() {
 
     let unsubBotConfig = () => {};
     if (user) {
-      unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, currentEnv || 'main'), snap => {
+      unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), snap => {
         if (snap.exists()) {
           setBotConfig({ id: snap.id, ...snap.data() } as BotConfig);
         } else {
@@ -2397,7 +2349,7 @@ export default function App() {
       unsubBasesRenovacao();
       unsubBotConfig();
     };
-  }, [user, profile, currentEnv]);
+  }, [user, profile]);
 
   useEffect(() => {
     // Test connection to Firestore as per instructions
@@ -2420,8 +2372,8 @@ export default function App() {
     
     const checkBotStatus = async () => {
       try {
-        const cleanUrl = getBotUrl(botConfig.url);
-        const res = await proxyFetch(`${cleanUrl}/api/status`);
+        const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+        const res = await fetch(`${cleanUrl}/api/status`);
         if (res.ok) {
           const data = await res.json();
           if (data.bots) {
@@ -2487,14 +2439,6 @@ export default function App() {
 
   const canView = (view: string) => {
     if (!profile) return false;
-
-    if (currentEnv === 'fdv') {
-      const fdvAllowedViews = ['dashboard', 'cadastro', 'historico', 'campanhas', 'calendario', 'empresas', 'calculo', 'admin'];
-      if (!fdvAllowedViews.includes(view)) {
-        return false;
-      }
-    }
-
     if (profile.email === "canaldonutri@gmail.com" || profile.email === "marcos.teixeira@estacio.br" || profile.role === 'Admin Master') {
       return true;
     }
@@ -2869,23 +2813,6 @@ function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error')
           </div>
           <h2 className="text-2xl font-bold text-slate-900">Gestão de Leads Pro</h2>
           <p className="text-slate-500 mt-2">{isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta agora'}</p>
-        </div>
-        
-        <div className="bg-slate-100 p-2 rounded-xl flex items-center justify-between mb-6">
-          <button
-            type="button"
-            onClick={() => currentEnv !== 'main' && switchEnv('main')}
-            className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all ${currentEnv === 'main' ? "bg-white shadow text-blue-600" : "text-slate-500 hover:text-slate-700"}`}
-          >
-            Acesso Geral
-          </button>
-          <button
-            type="button"
-            onClick={() => currentEnv !== 'fdv' && switchEnv('fdv')}
-            className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all ${currentEnv === 'fdv' ? "bg-white shadow text-blue-600" : "text-slate-500 hover:text-slate-700"}`}
-          >
-            Acesso Comercial
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -3401,8 +3328,7 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
         createdAt: serverTimestamp(),
         promotorId: profile.uid,
         promotorName: profile.name,
-        promotorRole: profile.role,
-        ...(profile.responsavelFdvId && { responsavelFdvId: profile.responsavelFdvId })
+        promotorRole: profile.role
       });
       onToast("Lead cadastrado com sucesso!");
       setFormData({ acao: '', nome: '', telefone: '', cpf: '', cursoInteresse: '' });
@@ -3700,33 +3626,6 @@ function HistoricoView({
     });
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Certeza que deseja excluir este lead?")) {
-      try {
-        await deleteDoc(doc(db, COLLECTIONS.LEADS, id));
-        setSelectedEntries(prev => prev.filter(s => s !== id));
-        onToast("Lead excluído!");
-      } catch (err: any) {
-        onToast("Erro ao excluir lead.", 'error');
-      }
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedEntries.length === 0) return;
-    if (window.confirm(`Deseja excluir ${selectedEntries.length} leads selecionados?`)) {
-      try {
-        for (const id of selectedEntries) {
-          await deleteDoc(doc(db, COLLECTIONS.LEADS, id));
-        }
-        setSelectedEntries([]);
-        onToast(`${selectedEntries.length} leads excluídos!`);
-      } catch (err: any) {
-        onToast("Erro ao excluir leads em massa.", 'error');
-      }
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -3821,24 +3720,14 @@ function HistoricoView({
                 <th className="px-6 py-4">Promotor</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">
-                  <div className="flex flex-col gap-2">
-                    {selectedEntries.length > 0 && botConfig.url && (
-                        <button 
-                           onClick={() => setMassSelectorOpen(true)} 
-                           className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
-                        >
-                           <Bot size={14} /> Em Massa
-                        </button>
-                    )}
-                    {selectedEntries.length > 0 && (
-                        <button 
-                           onClick={handleBulkDelete}
-                           className="text-rose-600 font-bold hover:underline py-1 px-2 bg-rose-50 rounded-lg flex items-center gap-1"
-                        >
-                           <Trash2 size={14} /> Excluir ({selectedEntries.length})
-                        </button>
-                    )}
-                  </div>
+                  {selectedEntries.length > 0 && botConfig.url && (
+                      <button 
+                         onClick={() => setMassSelectorOpen(true)} 
+                         className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                      >
+                         <Bot size={14} /> Em Massa
+                      </button>
+                  )}
                 </th>
               </tr>
             </thead>
@@ -3907,13 +3796,6 @@ function HistoricoView({
                           <span>GAP</span>
                         </button>
                       )}
-                      <button 
-                         onClick={() => handleDelete(lead.id)}
-                         className="text-rose-500 hover:text-rose-600 transition-colors p-1 rounded-lg hover:bg-rose-50"
-                         title="Excluir Lead"
-                      >
-                         <Trash2 size={16} />
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -6879,7 +6761,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
       const currentContext = botConfig.trainingContext || '';
       const newContext = currentContext + (currentContext ? '\n\n' : '') + `=== Conteúdo do Arquivo: ${file.name} ===\n` + text;
       
-      await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, currentEnv || 'main'), { 
+      await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
         trainingContext: newContext,
         updatedAt: serverTimestamp() 
       }, { merge: true });
@@ -6926,7 +6808,6 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   const [editingBomDia, setEditingBomDia] = useState<BomDiaCaptacao | null>(null);
   const [editingForecast, setEditingForecast] = useState<ForecastCaptacao | null>(null);
   const [isAddingUser, setIsAddingUser] = useState(false);
-  const [newUserRole, setNewUserRole] = useState<UserRole | ''>('');
 
   const handleUpdateUser = async (uid: string, data: Partial<UserProfile>) => {
     try {
@@ -7304,7 +7185,6 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         role,
                         phone: formData.get('phone') as string,
                         chavePix: formData.get('chavePix') as string,
-                        ...(role === ROLES.PROMOTOR_FDV && currentEnv === 'fdv' ? { responsavelFdvId: formData.get('responsavelFdvId') as string } : {}),
                         blocked: false,
                         mustChangePassword: true,
                         createdAt: serverTimestamp(),
@@ -7338,22 +7218,10 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">Cargo</label>
-                    <select name="role" value={newUserRole} onChange={(e) => setNewUserRole(e.target.value as UserRole)} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
-                      <option value="">Selecione...</option>
+                    <select name="role" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
                       {Object.values(ROLES).map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </div>
-                  {newUserRole === ROLES.PROMOTOR_FDV && currentEnv === 'fdv' && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1">FDV Responsável</label>
-                      <select name="responsavelFdvId" required className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
-                        <option value="">Selecione um FDV...</option>
-                        {users.filter(u => u.role === ROLES.FDV || u.role === ROLES.LIDER_FDV).map(fdv => (
-                          <option key={fdv.uid} value={fdv.uid}>{fdv.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-500 mb-1">Telefone</label>
@@ -7925,9 +7793,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
             <div className="p-6">
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">
-                    URL do App Railway (API do Bot) - Configuração: {currentEnv === 'fdv' ? 'Acesso Comercial' : 'Acesso Geral'}
-                  </label>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">URL do App Railway (API do Bot)</label>
                   <div className="flex gap-2">
                     <input 
                       type="text"
@@ -7941,7 +7807,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         }
                         if (newUrl === botConfig.url) return;
                         try {
-                          await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, currentEnv || 'main'), { 
+                          await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
                             url: newUrl,
                             active: botConfig.active || false,
                             updatedAt: serverTimestamp() 
@@ -7960,8 +7826,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                           return;
                         }
                         try {
-                          const cleanUrl = getBotUrl(botConfig.url);
-                          const res = await proxyFetch(`${cleanUrl}/api/status`, {
+                          const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                          const res = await fetch(`${cleanUrl}/api/status`, {
                             method: 'GET'
                           });
                           if (res.ok) {
@@ -7988,10 +7854,10 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       <button
                         onClick={async () => {
                            if (!botConfig.url) return;
-                           const cleanUrl = getBotUrl(botConfig.url);
+                           const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
                            if (window.confirm('Tem certeza que deseja resetar TODAS as sessões criptografadas? (Esta ação apagará a pasta corrompida e solicitará nova conexão em todos os números)')) {
                               try {
-                                 const res = await proxyFetch(`${cleanUrl}/api/reset`, { method: 'POST' });
+                                 const res = await fetch(`${cleanUrl}/api/reset`, { method: 'POST' });
                                  if (res.ok) {
                                     onToast('A Rota Mágica de Reset foi ativada. Todas as sessões foram apagadas e o bot será reiniciado.', 'success');
                                     setBotStatuses({});
@@ -8016,9 +7882,9 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                               if (!botConfig || !botConfig.url) {
                                  onToast('Configura a URL do bot primeiro.', 'error'); return;
                               }
-                              const cleanUrl = getBotUrl(botConfig.url);
+                              const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
                               try {
-                                 const connectRes = await proxyFetch(`${cleanUrl}/api/connect`, {
+                                 const connectRes = await fetch(`${cleanUrl}/api/connect`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ botNumber })
@@ -8031,7 +7897,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                  // Force a status check after 3 seconds
                                  setTimeout(async () => {
                                    try {
-                                     const res = await proxyFetch(`${cleanUrl}/api/status`);
+                                     const res = await fetch(`${cleanUrl}/api/status`);
                                      if (res.ok) {
                                         const data = await res.json();
                                         if (data.bots) setBotStatuses(data.bots);
@@ -8055,17 +7921,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        {Object.entries(botStatuses || {}).map(([botNumber, info]) => {
-                         const userForBot = users.find(u => {
-                           if (!u.botNumber) return false;
-                           let uNum = u.botNumber.replace(/\D/g, '');
-                           if (uNum.length === 10 || uNum.length === 11) uNum = '55' + uNum;
-                           
-                           let bNum = botNumber.replace(/\D/g, '');
-                           if (bNum.length === 10 || bNum.length === 11) bNum = '55' + bNum;
-                           
-                           return uNum === bNum;
-                         });
-                         const nameForBot = userForBot ? userForBot.name : (botConfig.botNames?.[botNumber] || '');
+                         const userForBot = users.find(u => u.botNumber && u.botNumber.replace(/\D/g, '') === botNumber.replace(/\D/g, ''));
+                         const nameForBot = userForBot ? userForBot.displayName : (botConfig.botNames?.[botNumber] || '');
                          
                          return (
                           <div key={botNumber} className="border border-slate-200 rounded-xl p-4 flex flex-col gap-2">
@@ -8075,7 +7932,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                  <div className="flex items-center mt-1">
                                     <span className="text-[10px] text-slate-500 mr-1 uppercase font-bold tracking-wider">Resp:</span>
                                     {userForBot ? (
-                                      <span className="text-xs font-bold text-blue-600 truncate max-w-[150px]">{userForBot.name} (Auto)</span>
+                                      <span className="text-xs font-bold text-blue-600 truncate max-w-[150px]">{userForBot.displayName} (Auto)</span>
                                     ) : (
                                       <input 
                                         type="text" 
@@ -8085,7 +7942,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                         onBlur={async (e) => {
                                           const newName = e.target.value;
                                           try {
-                                             await updateDoc(doc(db, COLLECTIONS.BOT_CONFIG, currentEnv || 'main'), {
+                                             await updateDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), {
                                                 [`botNames.${botNumber}`]: newName
                                              });
                                           } catch(err) {}
@@ -8102,9 +7959,9 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                   onClick={async () => {
                                     if (window.confirm(`Tem certeza que deseja apagar a sessão do bot ${botNumber}?`)) {
                                       try {
-                                        const cleanUrl = getBotUrl(botConfig.url);
+                                        const cleanUrl = botConfig.url?.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
                                         if (!cleanUrl) return;
-                                        const res = await proxyFetch(`${cleanUrl}/api/reset`, {
+                                        const res = await fetch(`${cleanUrl}/api/reset`, {
                                            method: 'POST',
                                            headers: { 'Content-Type': 'application/json' },
                                            body: JSON.stringify({ botNumber })
@@ -8113,7 +7970,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                           onToast(`Sessão ${botNumber} apagada.`);
                                           setTimeout(async () => {
                                             try {
-                                              const resStatus = await proxyFetch(`${cleanUrl}/api/status`);
+                                              const resStatus = await fetch(`${cleanUrl}/api/status`);
                                               if (resStatus.ok) {
                                                  const data = await resStatus.json();
                                                  setBotStatuses(data.bots || {});
@@ -8174,8 +8031,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                       }));
                                       
                                       try {
-                                        const cleanUrl = getBotUrl(botConfig.url);
-                                        const res = await proxyFetch(`${cleanUrl}/api/toggle`, {
+                                        const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+                                        const res = await fetch(`${cleanUrl}/api/toggle`, {
                                           method: 'POST',
                                           headers: { 'Content-Type': 'application/json' },
                                           body: JSON.stringify({ botNumber, active: newActive, isAutoReplyActive: newActive })
@@ -8361,7 +8218,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   const newContext = e.target.value.trim();
                   if (newContext === botConfig.trainingContext) return;
                   try {
-                    await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, currentEnv || 'main'), { 
+                    await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
                       trainingContext: newContext,
                       updatedAt: serverTimestamp() 
                     }, { merge: true });
