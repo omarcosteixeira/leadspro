@@ -41,6 +41,7 @@ import {
   Phone, 
   Search,
   Users,
+  User as UserIcon,
   TrendingUp,
   Calendar,
   Download,
@@ -102,6 +103,7 @@ import {
   BaseDisparoEntry,
   BotConfig
 } from './types';
+import { ProfileModal } from './components/ProfileModal';
 
 // --- Helpers ---
 const exportToExcel = (data: any[], fileName: string) => {
@@ -133,7 +135,8 @@ function WhatsAppMessageSelector({
   leadCurso,
   botConfig,
   onSendBot,
-  forceBotOnly
+  forceBotOnly,
+  leadMatricula
 }: { 
   isOpen: boolean;
   onClose: () => void;
@@ -2002,6 +2005,7 @@ export default function App() {
   const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>({});
   const [initialActionData, setInitialActionData] = useState<Partial<CalendarioAcao> | null>(null);
   const [activePopup, setActivePopup] = useState<{ title: string; message: string } | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [massSendProgress, setMassSendProgress] = useState<{ total: number, sent: number, active: boolean, info: string }>({ total: 0, sent: 0, active: false, info: '' });
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -2572,6 +2576,20 @@ export default function App() {
         />
       )}
 
+      <AnimatePresence>
+        {isProfileModalOpen && profile && (
+          <ProfileModal
+            isOpen={isProfileModalOpen}
+            onClose={() => setIsProfileModalOpen(false)}
+            profile={profile}
+            setProfile={setProfile}
+            botConfig={botConfig}
+            botStatuses={botStatuses}
+            onToast={showToast}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
       <aside className={cn(
         "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
@@ -2679,6 +2697,13 @@ export default function App() {
               <Calendar size={16} />
               <span>{new Date().toLocaleDateString('pt-BR')}</span>
             </div>
+            <button
+              onClick={() => setIsProfileModalOpen(true)}
+              className="flex items-center space-x-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 text-sm font-semibold transition-all active:scale-95 cursor-pointer"
+            >
+              <UserIcon size={15} className="text-slate-500" />
+              <span>Perfil</span>
+            </button>
           </div>
         </header>
 
@@ -7922,7 +7947,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        {Object.entries(botStatuses || {}).map(([botNumber, info]) => {
                          const userForBot = users.find(u => u.botNumber && u.botNumber.replace(/\D/g, '') === botNumber.replace(/\D/g, ''));
-                         const nameForBot = userForBot ? userForBot.displayName : (botConfig.botNames?.[botNumber] || '');
+                         const nameForBot = userForBot ? userForBot.name : (botConfig.botNames?.[botNumber] || '');
                          
                          return (
                           <div key={botNumber} className="border border-slate-200 rounded-xl p-4 flex flex-col gap-2">
@@ -7932,7 +7957,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                  <div className="flex items-center mt-1">
                                     <span className="text-[10px] text-slate-500 mr-1 uppercase font-bold tracking-wider">Resp:</span>
                                     {userForBot ? (
-                                      <span className="text-xs font-bold text-blue-600 truncate max-w-[150px]">{userForBot.displayName} (Auto)</span>
+                                      <span className="text-xs font-bold text-blue-600 truncate max-w-[150px]">{userForBot.name} (Auto)</span>
                                     ) : (
                                       <input 
                                         type="text" 
