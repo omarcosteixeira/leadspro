@@ -42,7 +42,6 @@ import {
   Phone, 
   Search,
   Users,
-  UserCircle,
   TrendingUp,
   Calendar,
   Download,
@@ -2009,7 +2008,6 @@ export default function App() {
   });
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
 
   // Data States
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -2732,16 +2730,6 @@ export default function App() {
             </h2>
           </div>
           <div className="flex items-center space-x-4">
-            {profile && [ROLES.SALA_MATRICULA, ROLES.SSA, ROLES.FDV, ROLES.LIDER_FDV, ROLES.ADMIN_MASTER, ROLES.GESTOR_COMERCIAL].includes(profile.role) && (
-              <button
-                onClick={() => setIsProfilePopupOpen(true)}
-                className="flex items-center space-x-2 text-slate-600 hover:text-blue-600 transition-colors"
-                title="Meu Perfil"
-              >
-                <UserCircle size={24} />
-                <span className="hidden sm:inline font-medium">Perfil</span>
-              </button>
-            )}
             <div className="hidden md:flex items-center space-x-2 text-sm text-slate-500">
               <Calendar size={16} />
               <span>{new Date().toLocaleDateString('pt-BR')}</span>
@@ -2819,198 +2807,6 @@ export default function App() {
           className="fixed inset-0 bg-slate-900/50 z-30 lg:hidden backdrop-blur-sm"
           onClick={() => setIsSidebarOpen(false)}
         />
-      )}
-
-      {/* Profile Popup */}
-      {isProfilePopupOpen && profile && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <UserCircle size={24} className="text-blue-600" />
-                Meu Perfil
-              </h3>
-              <button onClick={() => setIsProfilePopupOpen(false)} className="text-slate-400 hover:bg-slate-50 p-2 rounded-lg">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6 space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome</p>
-                  <p className="font-medium text-slate-900">{profile.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">E-mail</p>
-                  <p className="font-medium text-slate-900">{profile.email}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Telefone</p>
-                  <p className="font-medium text-slate-900">{profile.phone || 'Não informado'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nível de Acesso</p>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {profile.role}
-                  </span>
-                </div>
-              </div>
-
-              {/* WhatsApp Bot Connection for User */}
-              {botConfig?.url && (
-                <div className="mt-6 pt-6 border-t border-slate-100">
-                  <h4 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    <MessageSquare size={16} className="text-emerald-500" />
-                    Conexão WhatsApp IA
-                  </h4>
-                  
-                  {!profile.botNumber ? (
-                    <div className="space-y-3">
-                      <p className="text-sm text-slate-500">Informe o número do WhatsApp para conectar ao Bot ARGO'S.</p>
-                      <form onSubmit={async (e) => {
-                        e.preventDefault();
-                        const formData = new FormData(e.currentTarget);
-                        const num = (formData.get('botNumber') as string).replace(/\D/g, '');
-                        if (num && user?.uid) {
-                          try {
-                            await updateDoc(doc(db, COLLECTIONS.USERS, user.uid), {
-                              botNumber: num,
-                              updatedAt: serverTimestamp()
-                            });
-                            showToast("Número de WhatsApp atualizado!");
-                          } catch(err: any) {
-                            showToast(err.message, 'error');
-                          }
-                        }
-                      }} className="flex gap-2">
-                        <input name="botNumber" placeholder="Ex: 5511999999999" required className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500" />
-                        <button type="submit" className="bg-emerald-600 text-white px-4 py-2 text-sm font-bold rounded-xl hover:bg-emerald-700 transition">Salvar</button>
-                      </form>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-sm font-medium text-slate-700">Número Adicionado: <span className="font-bold text-slate-900">{profile.botNumber}</span></span>
-                        <button onClick={async () => {
-                           if(window.confirm('Deseja remover este número e adicionar outro?')) {
-                              try {
-                                await updateDoc(doc(db, COLLECTIONS.USERS, user!.uid), { botNumber: deleteField() });
-                                showToast("Número removido.");
-                              } catch(e: any) { showToast(e.message, 'error'); }
-                           }
-                        }} className="text-xs text-red-500 hover:underline">Alterar Número</button>
-                      </div>
-                      {(() => {
-                        const statusInfo = botStatuses[profile.botNumber!];
-                        
-                        if (!statusInfo) {
-                          return (
-                            <div className="text-center space-y-3">
-                              <p className="text-sm text-slate-500">O robô não está ativo neste número ainda. Conecte agora.</p>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const cleanUrl = getBotUrl(botConfig.url);
-                                    const res = await proxyFetch(`${cleanUrl}/api/connect`, {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ botNumber: profile.botNumber })
-                                    });
-                                    if (res.ok) {
-                                      showToast('Iniciando conexão... Aguarde o QR Code/Pairing Code.');
-                                      setTimeout(async () => {
-                                        try {
-                                          const resStatus = await proxyFetch(`${cleanUrl}/api/status`);
-                                          if (resStatus.ok) {
-                                            const data = await resStatus.json();
-                                            if (data.bots) setBotStatuses(data.bots);
-                                          }
-                                        } catch(e) {}
-                                      }, 3000);
-                                    } else {
-                                      showToast('Erro ao iniciar conexão.', 'error');
-                                    }
-                                  } catch (err: any) {
-                                    showToast(`Erro de rede: ${err.message}`, 'error');
-                                  }
-                                }}
-                                className="w-full bg-emerald-600 text-white font-bold py-2 rounded-xl hover:bg-emerald-700 transition"
-                              >
-                                Conectar WhatsApp
-                              </button>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
-                              <span className="text-sm font-medium text-slate-700">Status:</span>
-                              <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                                 statusInfo.status === 'online' ? 'bg-emerald-100 text-emerald-700' :
-                                 statusInfo.status === 'pairing' ? 'bg-amber-100 text-amber-700' :
-                                 'bg-red-100 text-red-700'
-                              }`}>
-                                {statusInfo.status === 'online' ? 'Conectado' : statusInfo.status === 'pairing' ? 'Aguardando' : 'Desconectado'}
-                              </span>
-                            </div>
-
-                            {statusInfo.status === 'pairing' && (statusInfo.pairingCode || statusInfo.qrUrl) && (
-                              <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 text-center flex flex-col gap-4 items-center">
-                                {statusInfo.qrUrl && (
-                                    <div>
-                                      <p className="text-xs text-amber-800 mb-2 font-bold">Escaneie o QR Code:</p>
-                                      <img src={statusInfo.qrUrl} alt="QR Code WhatsApp" className="mx-auto rounded-lg shadow-sm border border-amber-200" />
-                                    </div>
-                                )}
-                                
-                                {statusInfo.pairingCode && (
-                                    <div>
-                                      <p className="text-xs text-amber-800 mb-1 font-bold">{statusInfo.qrUrl ? 'Ou use' : 'Use'} o Pairing Code no celular:</p>
-                                      <p className="text-2xl tracking-widest font-mono font-bold text-amber-900 bg-amber-100 py-2 px-4 rounded-lg inline-block border border-amber-300">{statusInfo.pairingCode}</p>
-                                    </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="p-6 border-t border-slate-100 bg-slate-50 gap-3 flex flex-col sm:flex-row">
-              <button 
-                onClick={async () => {
-                   if (user?.email) {
-                      try {
-                        setIsProfilePopupOpen(false);
-                        await sendPasswordResetEmail(auth, user.email);
-                        showToast("E-mail de redefinição enviado!");
-                      } catch (err: any) {
-                        showToast("Erro ao enviar e-mail.", 'error');
-                      }
-                   }
-                }}
-                className="flex-1 flex justify-center items-center gap-2 bg-white text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-50 transition"
-              >
-                <KeyRound size={18} />
-                Trocar Senha
-              </button>
-              <button 
-                onClick={() => {
-                   setIsProfilePopupOpen(false);
-                   signOut(auth);
-                }}
-                className="flex-1 flex justify-center items-center gap-2 bg-rose-50 text-rose-600 border border-rose-100 px-4 py-2.5 rounded-xl font-bold hover:bg-rose-100 hover:text-rose-700 transition"
-              >
-                <LogOut size={18} />
-                Sair
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
