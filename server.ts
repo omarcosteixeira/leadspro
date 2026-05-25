@@ -23,7 +23,8 @@ async function startServer() {
         method,
         headers: {
           "Content-Type": "application/json"
-        }
+        },
+        cache: "no-store"
       };
 
       if (hasBody) {
@@ -34,6 +35,7 @@ async function startServer() {
       
       const contentType = botResponse.headers.get("content-type") || "";
       res.status(botResponse.status);
+      res.setHeader("Cache-Control", "no-store, max-age=0");
 
       if (contentType.includes("application/json")) {
         const json = await botResponse.json();

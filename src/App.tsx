@@ -125,9 +125,10 @@ const getBotUrl = (url: string | undefined): string => {
 const proxyFetch = async (targetUrl: string, options: RequestInit = {}): Promise<Response> => {
   const headers = new Headers(options.headers || {});
   headers.set('x-target-url', targetUrl);
-  return fetch('/api/bot-proxy', {
+  return fetch(`/api/bot-proxy?_t=${Date.now()}`, {
     ...options,
-    headers
+    headers,
+    cache: 'no-store'
   });
 };
 
