@@ -109,6 +109,9 @@ import {
 const getBotUrl = (url: string | undefined): string => {
   if (!url) return '';
   let clean = url.endsWith('/') ? url.slice(0, -1) : url;
+  if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+    clean = `https://${clean}`;
+  }
   if (clean.startsWith('http://') && !clean.includes('localhost') && !clean.includes('127.0.0.1')) {
     clean = clean.replace('http://', 'https://');
   }
