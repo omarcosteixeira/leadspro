@@ -318,12 +318,13 @@ const ROLES: Record<string, UserRole> = {
   SSA: 'SSA',
   GESTOR_UNIDADE: 'Gestor Unidade',
   GESTOR_COMERCIAL: 'Gestor Comercial',
-  ACADEMICO: 'Acadêmico'
+  ACADEMICO: 'Acadêmico',
+  PROMOTOR_FDV: 'Promotor/FDV'
 };
 
 const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   dashboard: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
-  cadastro: [ROLES.ADMIN_MASTER, ROLES.PROMOTOR, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
+  cadastro: [ROLES.ADMIN_MASTER, ROLES.PROMOTOR, ROLES.PROMOTOR_FDV, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
   historico: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL],
   bases: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV],
   gap: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV],
@@ -331,11 +332,11 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   campanhas: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
   calendario: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
   empresas: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
-  calculo: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.SSA],
+  calculo: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.PROMOTOR_FDV, ROLES.SSA],
   mapao: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.ACADEMICO],
   basesDisparo: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
   basesRenovacao: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SSA],
-  avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.ACADEMICO],
+  avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.PROMOTOR_FDV, ROLES.ACADEMICO],
   admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL]
 };
 
@@ -2231,13 +2232,17 @@ export default function App() {
     let unsubLeads = () => {};
     if (profile) {
       let leadsQuery;
-      if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.GESTOR_UNIDADE].includes(profile.role)) {
+      if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.GESTOR_UNIDADE].includes(profile.role) || (profile.role === ROLES.GESTOR_COMERCIAL && currentEnv === 'fdv')) {
         leadsQuery = query(collection(db, COLLECTIONS.LEADS));
       } else if (profile.role === ROLES.FDV) {
-        leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "==", ROLES.PROMOTOR)));
+        if (currentEnv === 'fdv') {
+          leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("responsavelFdvId", "==", user!.uid)));
+        } else {
+          leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "==", ROLES.PROMOTOR)));
+        }
       } else if (profile.role === ROLES.GESTOR_COMERCIAL) {
-        leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "in", [ROLES.PROMOTOR, ROLES.FDV])));
-      } else if (profile.role === ROLES.PROMOTOR) {
+        leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "in", [ROLES.PROMOTOR, ROLES.FDV, ROLES.PROMOTOR_FDV])));
+      } else if (profile.role === ROLES.PROMOTOR || profile.role === ROLES.PROMOTOR_FDV) {
         leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("promotorId", "==", user!.uid));
       } else {
         leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("promotorId", "==", "none"));
@@ -2303,7 +2308,11 @@ export default function App() {
       if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL].includes(profile.role)) {
         calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES));
       } else if (profile.role === ROLES.FDV) {
-        calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), or(where("creatorId", "==", user!.uid), where("creatorRole", "==", ROLES.PROMOTOR)));
+        if (currentEnv === 'fdv') {
+          calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), or(where("creatorId", "==", user!.uid), where("creatorRole", "==", ROLES.PROMOTOR_FDV)));
+        } else {
+          calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), or(where("creatorId", "==", user!.uid), where("creatorRole", "==", ROLES.PROMOTOR)));
+        }
       } else {
         calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), where("creatorId", "==", "none"));
       }
@@ -2468,6 +2477,14 @@ export default function App() {
 
   const canView = (view: string) => {
     if (!profile) return false;
+
+    if (currentEnv === 'fdv') {
+      const fdvAllowedViews = ['dashboard', 'cadastro', 'historico', 'campanhas', 'calendario', 'empresas', 'calculo', 'admin'];
+      if (!fdvAllowedViews.includes(view)) {
+        return false;
+      }
+    }
+
     if (profile.email === "canaldonutri@gmail.com" || profile.email === "marcos.teixeira@estacio.br" || profile.role === 'Admin Master') {
       return true;
     }
@@ -3374,7 +3391,8 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
         createdAt: serverTimestamp(),
         promotorId: profile.uid,
         promotorName: profile.name,
-        promotorRole: profile.role
+        promotorRole: profile.role,
+        ...(profile.responsavelFdvId && { responsavelFdvId: profile.responsavelFdvId })
       });
       onToast("Lead cadastrado com sucesso!");
       setFormData({ acao: '', nome: '', telefone: '', cpf: '', cursoInteresse: '' });
@@ -6898,6 +6916,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   const [editingBomDia, setEditingBomDia] = useState<BomDiaCaptacao | null>(null);
   const [editingForecast, setEditingForecast] = useState<ForecastCaptacao | null>(null);
   const [isAddingUser, setIsAddingUser] = useState(false);
+  const [newUserRole, setNewUserRole] = useState<UserRole | ''>('');
 
   const handleUpdateUser = async (uid: string, data: Partial<UserProfile>) => {
     try {
@@ -7275,6 +7294,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         role,
                         phone: formData.get('phone') as string,
                         chavePix: formData.get('chavePix') as string,
+                        ...(role === ROLES.PROMOTOR_FDV && currentEnv === 'fdv' ? { responsavelFdvId: formData.get('responsavelFdvId') as string } : {}),
                         blocked: false,
                         mustChangePassword: true,
                         createdAt: serverTimestamp(),
@@ -7308,10 +7328,22 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">Cargo</label>
-                    <select name="role" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                    <select name="role" value={newUserRole} onChange={(e) => setNewUserRole(e.target.value as UserRole)} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                      <option value="">Selecione...</option>
                       {Object.values(ROLES).map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </div>
+                  {newUserRole === ROLES.PROMOTOR_FDV && currentEnv === 'fdv' && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">FDV Responsável</label>
+                      <select name="responsavelFdvId" required className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                        <option value="">Selecione um FDV...</option>
+                        {users.filter(u => u.role === ROLES.FDV || u.role === ROLES.LIDER_FDV).map(fdv => (
+                          <option key={fdv.uid} value={fdv.uid}>{fdv.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-500 mb-1">Telefone</label>
