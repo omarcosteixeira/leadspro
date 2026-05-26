@@ -1,20 +1,32 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+import firebaseConfigPrincipal from '../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
+const firebaseConfigComercial = {
+  apiKey: "AIzaSyBexxjzDAuNSgY90rlVqpz4AQZDE-QwSG4",
+  authDomain: "gestaodeleadspro-d4230.firebaseapp.com",
+  projectId: "gestaodeleadspro-d4230",
+  storageBucket: "gestaodeleadspro-d4230.firebasestorage.app",
+  messagingSenderId: "964003766645",
+  appId: "1:964003766645:web:75aea7b1a825ddfe44333c"
+};
+
+const savedServidor = localStorage.getItem('servidor_selected') || 'principal';
+const activeConfig = savedServidor === 'comercial' ? firebaseConfigComercial : firebaseConfigPrincipal;
+
+const app = initializeApp(activeConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app, (activeConfig as any).firestoreDatabaseId || undefined);
 
 // Secondary app for creating users without signing out the current admin
 export const secondaryApp = getApps().length > 1 
   ? getApp('secondary') 
-  : initializeApp(firebaseConfig, 'secondary');
+  : initializeApp(activeConfig, 'secondary');
 export const secondaryAuth = getAuth(secondaryApp);
 
 // Caminhos das coleções
-const appId = firebaseConfig.projectId;
+const appId = activeConfig.projectId;
 export const COLLECTIONS = {
   LEADS: `artifacts/${appId}/public/data/leads`,
   USERS: `artifacts/${appId}/public/data/users`,

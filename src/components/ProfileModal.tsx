@@ -49,7 +49,7 @@ export function ProfileModal({
 
   if (!isOpen) return null;
 
-  const allowedRoles = ['Sala de Matrícula', 'SSA', 'Líder/FDV', 'Admin Master'];
+  const allowedRoles = ['Sala de Matrícula', 'SSA', 'Líder/FDV', 'Admin Master', 'FDV (Comercial)', 'Gerente Comercial (Comercial)', 'FDV'];
   const canEditBotNumber = profile && allowedRoles.includes(profile.role);
 
   const cleanInputNumber = botNumberInput.replace(/\D/g, '');
@@ -254,7 +254,7 @@ export function ProfileModal({
                 </div>
                 {!canEditBotNumber ? (
                   <p className="text-[10px] text-slate-400 mt-1.5 leading-snug">
-                    Apenas os Perfis <strong>Sala de Matrícula</strong>, <strong>SSA</strong> e <strong>Líder/FDV</strong> têm permissão para inserir ou alterar este número.
+                    Apenas os Perfis <strong>Sala de Matrícula</strong>, <strong>SSA</strong>, <strong>Líder/FDV</strong>, <strong>FDV</strong>, <strong>FDV (Comercial)</strong> e <strong>Gerente Comercial</strong> têm permissão para inserir ou alterar este número.
                   </p>
                 ) : (
                   <p className="text-[10px] text-slate-400 mt-1.5">

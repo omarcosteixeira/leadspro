@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      let path = /databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid);
+      return get(path).data;
+    }
+    
+    function hasAnyRole(roles) {
+      return isAuthenticated() && (
+        request.auth.token.email == "canaldonutri@gmail.com" || 
+        request.auth.token.email == "marcos.teixeira@estacio.br" ||
+        (
+          exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.role in roles
+        )
+      );
+    }
+    
+    // Perfis do servidor Comercial
+    function isAdminMaster() { return hasAnyRole(['Admin Master']); }
+    function isGerenteComercial() { return hasAnyRole(['Gerente Comercial (Comercial)']); }
+    function isFDVComercial() { return hasAnyRole(['FDV (Comercial)']); }
+    function isPromotorRua() { return hasAnyRole(['Promotor/rua']); }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Validation Helpers
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'name', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.name is string &&
+             data.role in ['Admin Master', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua'];
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /artifacts/gestaodeleadspro-d4230/public/data/users/{userId} {
+      allow read: if isAuthenticated();
+      // Apenas Gerente Comercial e Admin Master criam e editam usuários
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isGerenteComercial() || isAdminMaster());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isGerenteComercial() || isAdminMaster() || (isOwner(userId) && request.resource.data.role == resource.data.role));
+      allow delete: if isGerenteComercial() || isAdminMaster();
+    }
+
+    match /artifacts/gestaodeleadspro-d4230/public/data/leads/{leadId} {
+      // Promotor/rua vê apenas os seus
+      // FDV vê os próprios e os leads linkados a ele ("linkadoA" == seu uid ou promotorId == seu uid)
+      // Gerente vê tudo
+      allow read: if isGerenteComercial() || isAdminMaster() ||
+                     (isFDVComercial() && (resource.data.promotorId == request.auth.uid || resource.data.linkadoA == request.auth.uid)) ||
+                     (isPromotorRua() && resource.data.promotorId == request.auth.uid);
+      allow create: if isGerenteComercial() || isAdminMaster() || isFDVComercial() || isPromotorRua();
+      allow update: if isGerenteComercial() || isAdminMaster() ||
+                     (isFDVComercial() && (resource.data.promotorId == request.auth.uid || resource.data.linkadoA == request.auth.uid)) ||
+                     (isPromotorRua() && resource.data.promotorId == request.auth.uid);
+      allow delete: if isGerenteComercial() || isAdminMaster();
+    }
+
+    match /artifacts/gestaodeleadspro-d4230/public/data/calendario_acoes/{acaoId} {
+      allow read: if isGerenteComercial() || isAdminMaster() ||
+                     (isFDVComercial() && (resource.data.creatorId == request.auth.uid || resource.data.creatorRole == 'Promotor/rua'));
+      allow create, update: if isGerenteComercial() || isAdminMaster() || isFDVComercial();
+      allow delete: if isGerenteComercial() || isAdminMaster();
+    }
+
+    // Dashboard & Config Collections
+    match /artifacts/gestaodeleadspro-d4230/public/data/campanhas/{id} {
+      allow read: if isGerenteComercial() || isAdminMaster() || isFDVComercial();
+      allow write: if isGerenteComercial() || isAdminMaster();
+    }
+    match /artifacts/gestaodeleadspro-d4230/public/data/empresas_parceiras/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isGerenteComercial() || isAdminMaster();
+    }
+    match /artifacts/gestaodeleadspro-d4230/public/data/bot_config/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated(); // Controlado via UI pelas abas visíveis
+    }
+  }
+}

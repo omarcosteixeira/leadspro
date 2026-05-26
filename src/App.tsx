@@ -302,25 +302,28 @@ const ROLES: Record<string, UserRole> = {
   SSA: 'SSA',
   GESTOR_UNIDADE: 'Gestor Unidade',
   GESTOR_COMERCIAL: 'Gestor Comercial',
-  ACADEMICO: 'Acadêmico'
+  ACADEMICO: 'Acadêmico',
+  PROMOTOR_RUA: 'Promotor/rua',
+  GESTOR_COMERCIAL_COMERCIAL: 'Gerente Comercial (Comercial)',
+  FDV_COMERCIAL: 'FDV (Comercial)'
 };
 
 const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
-  dashboard: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
-  cadastro: [ROLES.ADMIN_MASTER, ROLES.PROMOTOR, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
-  historico: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL],
+  dashboard: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL],
+  cadastro: [ROLES.ADMIN_MASTER, ROLES.PROMOTOR, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR_RUA, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
+  historico: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
   bases: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV],
   gap: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV],
   fiesProuni: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.SSA],
-  campanhas: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
-  calendario: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
-  empresas: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
-  calculo: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.SSA],
+  campanhas: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
+  calendario: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
+  empresas: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
+  calculo: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.SSA, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
   mapao: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.ACADEMICO],
   basesDisparo: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
   basesRenovacao: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SSA],
   avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.ACADEMICO],
-  admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV]
+  admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL_COMERCIAL]
 };
 
 // --- Components ---
@@ -2138,14 +2141,33 @@ export default function App() {
             } else {
               // 3. Create default profile if not exists at all
               let role = ROLES.PROMOTOR;
-              const allUsers = await getDocs(query(collection(db, COLLECTIONS.USERS), limit(1)));
-              if (allUsers.empty) role = ROLES.LIDER_FDV;
+              let servidor: 'principal' | 'comercial' = 'principal';
+              let name = user.email!.split('@')[0];
+              
+              if (user.displayName) {
+                const parts = user.displayName.split('|');
+                name = parts[0] || name;
+                if (parts.length > 1 && parts[1] === 'comercial') {
+                  servidor = 'comercial';
+                  role = 'Promotor/rua' as any;
+                }
+              }
+
+              if (user.email === "marcos.teixeira@estacio.br" || user.email === "canaldonutri@gmail.com") {
+                role = ROLES.ADMIN_MASTER;
+              } else {
+                const allUsers = await getDocs(query(collection(db, COLLECTIONS.USERS), limit(1)));
+                if (allUsers.empty) {
+                  role = (servidor === 'comercial' ? 'Gerente Comercial (Comercial)' : ROLES.LIDER_FDV) as any;
+                }
+              }
               
               const newProfile = {
                 uid: user.uid,
                 email: user.email!,
-                name: user.email!.split('@')[0],
+                name,
                 role,
+                servidor,
                 mustChangePassword: false, // Default for self-signup
                 createdAt: serverTimestamp(),
                 dashboardWidgets: { stats: true, links: true, planner: true }
@@ -2156,7 +2178,11 @@ export default function App() {
           }
           
           if (userDoc.exists()) {
-            setProfile({ uid: user.uid, ...userDoc.data() } as UserProfile);
+            const data = userDoc.data() as UserProfile;
+            if (data.email === "marcos.teixeira@estacio.br" || data.email === "canaldonutri@gmail.com") {
+              data.role = ROLES.ADMIN_MASTER;
+            }
+            setProfile({ uid: user.uid, ...data } as UserProfile);
           }
           setUser(user);
         } catch (error: any) {
@@ -2208,11 +2234,17 @@ export default function App() {
       let leadsQuery;
       if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.GESTOR_UNIDADE].includes(profile.role)) {
         leadsQuery = query(collection(db, COLLECTIONS.LEADS));
+      } else if (profile.role === ROLES.GESTOR_COMERCIAL_COMERCIAL) {
+        // Gerente Comercial (Comercial) ver everything in Comercial
+        leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("servidor", "==", "comercial"));
+      } else if (profile.role === ROLES.FDV_COMERCIAL) {
+        // FDV (Comercial) sees their own leads and those from their linked promontors.
+        leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("linkadoA", "==", user!.uid)));
       } else if (profile.role === ROLES.FDV) {
         leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "==", ROLES.PROMOTOR)));
       } else if (profile.role === ROLES.GESTOR_COMERCIAL) {
         leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "in", [ROLES.PROMOTOR, ROLES.FDV])));
-      } else if (profile.role === ROLES.PROMOTOR) {
+      } else if (profile.role === ROLES.PROMOTOR || profile.role === ROLES.PROMOTOR_RUA) {
         leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("promotorId", "==", user!.uid));
       } else {
         leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("promotorId", "==", "none"));
@@ -2794,6 +2826,7 @@ function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error')
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [servidor, setServidor] = useState<'principal' | 'comercial'>((localStorage.getItem('servidor_selected') as 'principal' | 'comercial') || 'principal');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -2806,11 +2839,13 @@ function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error')
     }
     try {
       if (isLogin) {
+        // Sign in normally. We can't pass 'servidor' through auth directly, 
+        // we'll rely on what's in the DB or we can enforce login tab rules later.
         await signInWithEmailAndPassword(auth, email, password);
       } else {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCred.user, { displayName: name });
-        // Profile creation is handled in useEffect of main App
+        // Pack the chosen servidor into displayName so App.tsx can extract it
+        await updateProfile(userCred.user, { displayName: `${name}|${servidor}` });
         onToast("Conta criada com sucesso!");
       }
     } catch (err: any) {
@@ -2832,12 +2867,39 @@ function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error')
         animate={{ scale: 1, opacity: 1 }}
         className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100"
       >
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200 mx-auto mb-4">
             <TrendingUp size={32} />
           </div>
           <h2 className="text-2xl font-bold text-slate-900">Gestão de Leads Pro</h2>
           <p className="text-slate-500 mt-2">{isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta agora'}</p>
+        </div>
+
+        <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+          <button
+            type="button"
+            onClick={() => {
+              if (servidor !== 'principal') {
+                localStorage.setItem('servidor_selected', 'principal');
+                window.location.reload();
+              }
+            }}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${servidor === 'principal' ? 'bg-white shadow border border-slate-200 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Principal
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (servidor !== 'comercial') {
+                localStorage.setItem('servidor_selected', 'comercial');
+                window.location.reload();
+              }
+            }}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${servidor === 'comercial' ? 'bg-white shadow border border-slate-200 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Comercial
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -3345,7 +3407,7 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
 
     setLoading(true);
     try {
-      await addDoc(collection(db, COLLECTIONS.LEADS), {
+      const newLeadData: any = {
         ...formData,
         cpf: cleanCpf,
         telefone: cleanTelefone,
@@ -3353,8 +3415,15 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
         createdAt: serverTimestamp(),
         promotorId: profile.uid,
         promotorName: profile.name,
-        promotorRole: profile.role
-      });
+        promotorRole: profile.role,
+        servidor: profile.servidor || 'principal'
+      };
+      
+      if (profile.linkadoA) {
+        newLeadData.linkadoA = profile.linkadoA;
+      }
+
+      await addDoc(collection(db, COLLECTIONS.LEADS), newLeadData);
       onToast("Lead cadastrado com sucesso!");
       setFormData({ acao: '', nome: '', telefone: '', cpf: '', cursoInteresse: '' });
     } catch (err: any) {
@@ -7110,13 +7179,17 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   onSubmit={(e) => {
                     e.preventDefault();
                     const formData = new FormData(e.currentTarget);
-                    handleUpdateUser(editingUser.uid, {
+                    const updateData: any = {
                       name: formData.get('name') as string,
                       phone: formData.get('phone') as string,
                       email: formData.get('email') as string,
                       chavePix: formData.get('chavePix') as string,
                       botNumber: formData.get('botNumber') as string,
-                    });
+                    };
+                    if (editingUser.role === ROLES.PROMOTOR_RUA) {
+                      updateData.linkadoA = formData.get('linkadoA') as string;
+                    }
+                    handleUpdateUser(editingUser.uid, updateData);
                   }} 
                   className="p-6 space-y-4"
                 >
@@ -7158,6 +7231,17 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Este será o número de WhatsApp usado pelo sistema para enviar mensagens desta conta.</p>
                   </div>
+                  {(editingUser.role === ROLES.PROMOTOR_RUA) && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">Linkado a (FDV do Comercial)</label>
+                      <select name="linkadoA" defaultValue={editingUser.linkadoA || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                        <option value="">Selecione um FDV...</option>
+                        {users.filter(u => u.role === ROLES.FDV_COMERCIAL || u.role === ROLES.FDV).map(fdv => (
+                          <option key={fdv.uid} value={fdv.uid}>{fdv.name} ({fdv.email})</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">Chave PIX (Opcional)</label>
                     <input 
@@ -7195,6 +7279,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     const email = formData.get('email') as string;
                     const name = formData.get('name') as string;
                     const role = formData.get('role') as UserRole;
+                    const linkadoA = formData.get('linkadoA')?.toString() || '';
                     
                     try {
                       // Create user in Auth using secondary app to avoid signing out admin
@@ -7202,8 +7287,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       await updateProfile(userCredential.user, { displayName: name });
                       const newUid = userCredential.user.uid;
 
-                      // Create profile in Firestore
-                      await setDoc(doc(db, COLLECTIONS.USERS, newUid), {
+                      const profileData: any = {
                         uid: newUid,
                         name,
                         email,
@@ -7214,7 +7298,13 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         mustChangePassword: true,
                         createdAt: serverTimestamp(),
                         updatedAt: serverTimestamp()
-                      });
+                      };
+                      if (role === ROLES.PROMOTOR_RUA && linkadoA) {
+                        profileData.linkadoA = linkadoA;
+                      }
+
+                      // Create profile in Firestore
+                      await setDoc(doc(db, COLLECTIONS.USERS, newUid), profileData);
 
                       onToast("Usuário criado com sucesso! Senha padrão: 123456");
                       setIsAddingUser(false);
@@ -7245,6 +7335,15 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     <label className="block text-xs font-bold text-slate-500 mb-1">Cargo</label>
                     <select name="role" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
                       {Object.values(ROLES).map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Linkado a (FDV - Apenas para Promotor/rua)</label>
+                    <select name="linkadoA" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                      <option value="">Nenhum</option>
+                      {users.filter(u => u.role === ROLES.FDV_COMERCIAL || u.role === ROLES.FDV).map(fdv => (
+                        <option key={fdv.uid} value={fdv.uid}>{fdv.name} ({fdv.email})</option>
+                      ))}
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">

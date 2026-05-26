@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type UserRole = 'Admin Master' | 'Promotor' | 'FDV' | 'Sala de Matrícula' | 'QG' | 'Líder/FDV' | 'SSA' | 'Gestor Unidade' | 'Gestor Comercial' | 'Acadêmico';
+export type UserRole = 'Admin Master' | 'Promotor' | 'FDV' | 'Sala de Matrícula' | 'QG' | 'Líder/FDV' | 'SSA' | 'Gestor Unidade' | 'Gestor Comercial' | 'Acadêmico' | 'Promotor/rua' | 'Gerente Comercial (Comercial)' | 'FDV (Comercial)';
 
 export interface UserProfile {
   uid: string;
@@ -15,6 +15,8 @@ export interface UserProfile {
   blocked?: boolean;
   mustChangePassword?: boolean;
   botNumber?: string;
+  servidor?: 'principal' | 'comercial';
+  linkadoA?: string; // used for Promotor/rua to link to FDV
   createdAt: any;
   updatedAt?: any;
   dashboardWidgets?: {
@@ -63,6 +65,7 @@ export interface Lead {
   promotorId: string;
   promotorName: string;
   promotorRole?: string;
+  linkadoA?: string;
 }
 
 export interface BaseEntry {
