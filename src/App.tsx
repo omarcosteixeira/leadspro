@@ -82,6 +82,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth } from './firebase';
 import { cn, formatPhone, getWhatsAppUrl, validateCPF, formatCPF } from './lib/utils';
 import * as XLSX from 'xlsx';
+import { EmailMarketingView } from './components/EmailMarketingView';
 import { 
   UserProfile, 
   Lead, 
@@ -323,6 +324,7 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   basesDisparo: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
   basesRenovacao: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SSA],
   avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.ACADEMICO],
+  emailMarketing: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
   admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL_COMERCIAL]
 };
 
@@ -2483,7 +2485,7 @@ export default function App() {
 
   useEffect(() => {
     if (profile && !canView(currentView)) {
-      const availableViews = ['dashboard', 'cadastro', 'historico', 'bases', 'gap', 'fiesProuni', 'mapao', 'basesDisparo', 'campanhas', 'calendario', 'empresas', 'calculo', 'admin'];
+      const availableViews = ['dashboard', 'cadastro', 'historico', 'bases', 'gap', 'fiesProuni', 'mapao', 'basesDisparo', 'campanhas', 'calendario', 'empresas', 'calculo', 'emailMarketing', 'admin'];
       const firstAvailable = availableViews.find(v => canView(v));
       if (firstAvailable) {
         setCurrentView(firstAvailable);
@@ -2650,6 +2652,7 @@ export default function App() {
               { id: 'calendario', label: 'Calendário de Ações', icon: Calendar },
               { id: 'empresas', label: 'Empresas Parceiras', icon: Building2 },
               { id: 'calculo', label: 'Cálculo de Remuneração', icon: Calculator },
+              { id: 'emailMarketing', label: 'Envio de e-mail Marketing', icon: Mail },
               { id: 'admin', label: 'Administração', icon: Settings },
             ].map((item) => canView(item.id) && (
               <button
@@ -2768,6 +2771,7 @@ export default function App() {
               )}
               {currentView === 'campanhas' && <CampanhasView campanhas={campanhas} onToast={showToast} />}
               {currentView === 'calculo' && <CalculoRemuneracaoView />}
+              {currentView === 'emailMarketing' && <EmailMarketingView onToast={showToast} />}
               {currentView === 'calendario' && <CalendarioAcoesView data={calendarioAcoes} onToast={showToast} profile={profile!} initialData={initialActionData} onClearInitialData={() => setInitialActionData(null)} />}
               {currentView === 'empresas' && (
                 <EmpresasParceirasView 
