@@ -7296,6 +7296,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         name,
                         email,
                         role,
+                        servidor: localStorage.getItem('servidor_selected') || 'principal',
                         phone: formData.get('phone') as string,
                         chavePix: formData.get('chavePix') as string,
                         blocked: false,
@@ -7338,7 +7339,16 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">Cargo</label>
                     <select name="role" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
-                      {Object.values(ROLES).map(r => <option key={r} value={r}>{r}</option>)}
+                      {Object.values(ROLES)
+                        .filter(r => {
+                           const isComercial = localStorage.getItem('servidor_selected') === 'comercial';
+                           if (isComercial) {
+                             return ['Admin Master', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua'].includes(r);
+                           } else {
+                             return !['Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua'].includes(r);
+                           }
+                        })
+                        .map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </div>
                   <div>
