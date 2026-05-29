@@ -2024,6 +2024,36 @@ export default function App() {
     setActivePopup({ title, message });
   };
 
+  const callBotApi = async (path: string, options: { method?: 'GET'|'POST', body?: any } = {}) => {
+    if (!botConfig.url) {
+      throw new Error("URL do bot não configurada.");
+    }
+    const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+    const targetUrl = `${cleanUrl}${path}`;
+    
+    const response = await fetch('/api/bot-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetUrl,
+        method: options.method || 'GET',
+        body: options.body
+      })
+    });
+    
+    if (!response.ok) {
+      const json = await response.json().catch(() => ({}));
+      throw new Error(json.error || `Erro ao chamar o proxy (${response.status})`);
+    }
+    
+    const resData = await response.json();
+    if (!resData.success) {
+      throw new Error(resData.data?.error || resData.error || `Falha no bot (status ${resData.status})`);
+    }
+    
+    return resData.data;
+  };
+
   const handleSendBotMessage = async (telefone: string, message: string) => {
     if (!botConfig.url) {
       showToast('O Bot ARGO\'S não está configurado na URL principal.', 'error');
@@ -2057,25 +2087,13 @@ export default function App() {
     }
 
     try {
-      const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
-      const response = await fetch(`${cleanUrl}/api/send`, {
+      await callBotApi('/api/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ botNumber: safeBotNumber, number: rawPhone, message, force: true, manual: true })
+        body: { botNumber: safeBotNumber, number: rawPhone, message, force: true, manual: true }
       });
-      
-      if (response.ok) {
-        showToast('Mensagem enviada com sucesso pelo Bot ARGO\'S!');
-      } else {
-        const errData = await response.json().catch(() => ({}));
-        showToast(errData.error || 'Falha ao enviar mensagem pelo Bot.', 'error');
-      }
+      showToast('Mensagem enviada com sucesso pelo Bot ARGO\'S!');
     } catch (err: any) {
-      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-         showToast(`Erro de rede: O servidor no Railway está offline, dormindo, ou com erro de CORS.`, 'error');
-      } else {
-         showToast(`Erro de conexão com o Bot: ${err.message}`, 'error');
-      }
+      showToast(`Erro ao enviar mensagem: ${err.message}`, 'error');
     }
   };
 
@@ -2422,16 +2440,12 @@ export default function App() {
     
     const checkBotStatus = async () => {
       try {
-        const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
-        const res = await fetch(`${cleanUrl}/api/status`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.bots) {
-             setBotStatuses(data.bots);
-          }
+        const data = await callBotApi('/api/status');
+        if (data && data.bots) {
+          setBotStatuses(data.bots);
         }
       } catch (e: any) {
-        console.debug("Bot check fail:", e.message);
+        console.debug("Bot check fail via proxy:", e.message);
       }
     };
     
@@ -2799,7 +2813,7 @@ export default function App() {
                   }} 
                 />
               )}
-              {currentView === 'admin' && <AdminView users={users} links={links} onToast={showToast} leads={leads} bases={bases} gap={gap} planner={planner} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} whatsappMessages={whatsappMessages} empresasParceiras={empresasParceiras} botConfig={botConfig} botStatuses={botStatuses} setBotStatuses={setBotStatuses} />}
+              {currentView === 'admin' && <AdminView users={users} links={links} onToast={showToast} leads={leads} bases={bases} gap={gap} planner={planner} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} whatsappMessages={whatsappMessages} empresasParceiras={empresasParceiras} botConfig={botConfig} botStatuses={botStatuses} setBotStatuses={setBotStatuses} callBotApi={callBotApi} />}
             </motion.div>
           </AnimatePresence>
 
@@ -6866,7 +6880,7 @@ function CalculoRemuneracaoView() {
   );
 }
 
-function AdminView({ users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras, botConfig, botStatuses, setBotStatuses }: { 
+function AdminView({ users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras, botConfig, botStatuses, setBotStatuses, callBotApi }: { 
   users: UserProfile[], 
   links: LinkUtil[], 
   onToast: (m: string, t?: 'success' | 'error') => void,
@@ -6882,7 +6896,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   empresasParceiras: EmpresaParceira[],
   botConfig: BotConfig,
   botStatuses: Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>,
-  setBotStatuses: React.Dispatch<React.SetStateAction<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>>
+  setBotStatuses: React.Dispatch<React.SetStateAction<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>>,
+  callBotApi: (path: string, options?: { method?: 'GET'|'POST', body?: any }) => Promise<any>
 }) {
   const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento'>('usuarios');
   const [isProcessingPdf, setIsProcessingPdf] = useState(false);
@@ -8020,16 +8035,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                           return;
                         }
                         try {
-                          const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
-                          const res = await fetch(`${cleanUrl}/api/status`, {
-                            method: 'GET'
-                          });
-                          if (res.ok) {
-                            const data = await res.json();
-                            onToast(`Servidor online! Status: ${data.name || 'OK'}`, 'success');
-                          } else {
-                            onToast(`Servidor respondeu com erro ${res.status}.`, 'error');
-                          }
+                          const data = await callBotApi('/api/status');
+                          onToast(`Servidor online! Status: ${data.name || 'OK'}`, 'success');
                         } catch (e: any) {
                           onToast(`Falha de rede (CORS/Offline): O Railway pode estar reiniciando o bot ou o bot está quebrado. Erro: ${e.message}`, 'error');
                         }
@@ -8048,16 +8055,11 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       <button
                         onClick={async () => {
                            if (!botConfig.url) return;
-                           const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
                            if (window.confirm('Tem certeza que deseja resetar TODAS as sessões criptografadas? (Esta ação apagará a pasta corrompida e solicitará nova conexão em todos os números)')) {
                               try {
-                                 const res = await fetch(`${cleanUrl}/api/reset`, { method: 'POST' });
-                                 if (res.ok) {
-                                    onToast('A Rota Mágica de Reset foi ativada. Todas as sessões foram apagadas e o bot será reiniciado.', 'success');
-                                    setBotStatuses({});
-                                 } else {
-                                    onToast('Erro ao acionar a rota de reset.', 'error');
-                                 }
+                                 await callBotApi('/api/reset', { method: 'POST' });
+                                 onToast('A Rota Mágica de Reset foi ativada. Todas as sessões foram apagadas e o bot será reiniciado.', 'success');
+                                 setBotStatuses({});
                               } catch (err: any) {
                                  onToast(`Erro ao resetar: ${err.message}`, 'error');
                               }
@@ -8076,30 +8078,21 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                               if (!botConfig || !botConfig.url) {
                                  onToast('Configura a URL do bot primeiro.', 'error'); return;
                               }
-                              const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
                               try {
-                                 const connectRes = await fetch(`${cleanUrl}/api/connect`, {
+                                 await callBotApi('/api/connect', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ botNumber })
+                                    body: { botNumber }
                                  });
-                                 if (!connectRes.ok) {
-                                    onToast(`Erro da API: ${connectRes.status} ${connectRes.statusText}`, 'error');
-                                    return;
-                                 }
                                  onToast('Solicitação enviada! Aguarde alguns segundos o QR Code.');
                                  // Force a status check after 3 seconds
                                  setTimeout(async () => {
-                                   try {
-                                     const res = await fetch(`${cleanUrl}/api/status`);
-                                     if (res.ok) {
-                                        const data = await res.json();
-                                        if (data.bots) setBotStatuses(data.bots);
-                                     }
-                                   } catch (e) {}
+                                    try {
+                                      const data = await callBotApi('/api/status');
+                                      if (data && data.bots) setBotStatuses(data.bots);
+                                    } catch (e) {}
                                  }, 3000);
                               } catch (err: any) {
-                                 onToast(`Servidor oflline ou reiniciando... ${err.message}`, 'error');
+                                 onToast(`Servidor offline ou reiniciando... ${err.message}`, 'error');
                               }
                            }
                         }}
@@ -8153,29 +8146,19 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                   onClick={async () => {
                                     if (window.confirm(`Tem certeza que deseja apagar a sessão do bot ${botNumber}?`)) {
                                       try {
-                                        const cleanUrl = botConfig.url?.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
-                                        if (!cleanUrl) return;
-                                        const res = await fetch(`${cleanUrl}/api/reset`, {
+                                        await callBotApi('/api/reset', {
                                            method: 'POST',
-                                           headers: { 'Content-Type': 'application/json' },
-                                           body: JSON.stringify({ botNumber })
+                                           body: { botNumber }
                                         });
-                                        if (res.ok) {
-                                          onToast(`Sessão ${botNumber} apagada.`);
-                                          setTimeout(async () => {
-                                            try {
-                                              const resStatus = await fetch(`${cleanUrl}/api/status`);
-                                              if (resStatus.ok) {
-                                                 const data = await resStatus.json();
-                                                 setBotStatuses(data.bots || {});
-                                              }
-                                            } catch(e) {}
-                                          }, 1000);
-                                        } else {
-                                          onToast(`Erro ao apagar sessão ${botNumber}.`, 'error');
-                                        }
-                                      } catch (e) {
-                                        onToast('Erro de rede ao apagar sessão', 'error');
+                                        onToast(`Sessão ${botNumber} apagada.`);
+                                        setTimeout(async () => {
+                                          try {
+                                            const data = await callBotApi('/api/status');
+                                            setBotStatuses(data.bots || {});
+                                          } catch(e) {}
+                                        }, 1000);
+                                      } catch (e: any) {
+                                        onToast(`Erro ao apagar sessão: ${e.message}`, 'error');
                                       }
                                     }
                                   }}
@@ -8225,28 +8208,13 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                       }));
                                       
                                       try {
-                                        const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
-                                        const res = await fetch(`${cleanUrl}/api/toggle`, {
+                                        await callBotApi('/api/toggle', {
                                           method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ botNumber, active: newActive, isAutoReplyActive: newActive })
+                                          body: { botNumber, active: newActive, isAutoReplyActive: newActive }
                                         });
-                                        if (res.ok) {
-                                          onToast(`IA para ${botNumber} alterada para ${newActive ? 'ON' : 'OFF'}`);
-                                        } else {
-                                          onToast(`Erro ao alterar IA. API pode estar indisponível.`, 'error');
-                                          // Revert back
-                                          setBotStatuses(prev => ({
-                                            ...prev,
-                                            [botNumber]: {
-                                              ...prev[botNumber],
-                                              active: !newActive,
-                                              isAutoReplyActive: !newActive
-                                            }
-                                          }));
-                                        }
-                                      } catch (e) {
-                                        onToast(`Erro de rede ao alterar IA para ${botNumber}.`, 'error');
+                                        onToast(`IA para ${botNumber} alterada para ${newActive ? 'ON' : 'OFF'}`);
+                                      } catch (e: any) {
+                                        onToast(`Erro ao alterar IA para ${botNumber}: ${e.message}`, 'error');
                                         // Revert back
                                         setBotStatuses(prev => ({
                                           ...prev,

@@ -11,6 +11,71 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+  // API endpoint for testing bot connections and sending messages (Proxy)
+  app.post("/api/bot-proxy", async (req, res) => {
+    try {
+      const { targetUrl, method, headers, body } = req.body;
+      if (!targetUrl) {
+        return res.status(400).json({ success: false, error: "Parâmetro targetUrl é obrigatório." });
+      }
+
+      if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+        return res.status(400).json({ success: false, error: "O targetUrl deve começar com http:// ou https://" });
+      }
+
+      const fetchOptions: RequestInit = {
+        method: method || "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...headers
+        }
+      };
+
+      if (method && method.toUpperCase() === "POST" && body) {
+        fetchOptions.body = JSON.stringify(body);
+      }
+
+      // 15 seconds timeout to prevent pending threads
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      fetchOptions.signal = controller.signal;
+
+      try {
+        const botResponse = await fetch(targetUrl, fetchOptions);
+        clearTimeout(timeoutId);
+
+        const contentType = botResponse.headers.get("content-type") || "";
+        let data;
+        if (contentType.includes("application/json")) {
+          data = await botResponse.json().catch(() => ({}));
+        } else {
+          data = { text: await botResponse.text().catch(() => "") };
+        }
+
+        return res.status(botResponse.status).json({
+          success: botResponse.ok,
+          status: botResponse.status,
+          data
+        });
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (err.name === "AbortError" || err.code === "ETIMEDOUT") {
+          return res.status(504).json({
+            success: false,
+            error: "Tempo limite esgotado (15 s). O bot no Railway está inativo ou demorando muito para responder."
+          });
+        }
+        throw err;
+      }
+    } catch (err: any) {
+      console.error("Bot Proxy error:", err);
+      return res.status(502).json({
+        success: false,
+        error: `O servidor proxy do LeadsPro não conseguiu se conectar ao Bot no Railway. Ele pode estar reiniciando ou Offline. Detalhes: ${err.message}`
+      });
+    }
+  });
+
   // API endpoint for Brevo E-mail Marketing sending
   app.post("/api/send-email", async (req, res) => {
     try {
