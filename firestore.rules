@@ -47,10 +47,13 @@ service cloud.firestore {
              data.uid is string &&
              data.email is string &&
              data.name is string &&
-             data.role in ['Admin Master', 'Promotor', 'FDV', 'Sala de Matrícula', 'QG', 'Líder/FDV', 'SSA', 'Gestor Unidade', 'Gestor Comercial', 'Acadêmico'] &&
+             data.role in ['Admin Master', 'Promotor', 'FDV', 'Sala de Matrícula', 'QG', 'Líder/FDV', 'SSA', 'Gestor Unidade', 'Gestor Comercial', 'Acadêmico', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua'] &&
              (!('chavePix' in data) || data.chavePix is string) &&
              (!('blocked' in data) || data.blocked is bool) &&
-             (!('mustChangePassword' in data) || data.mustChangePassword is bool);
+             (!('mustChangePassword' in data) || data.mustChangePassword is bool) &&
+             (!('phone' in data) || data.phone is string) &&
+             (!('botNumber' in data) || data.botNumber is string) &&
+             (!('servidor' in data) || data.servidor is string);
     }
 
     function isValidEmpresa(data) {

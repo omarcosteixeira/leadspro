@@ -3,7 +3,9 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import firebaseConfigPrincipal from '../firebase-applet-config.json';
 
-const firebaseConfigComercial = {
+export { firebaseConfigPrincipal };
+
+export const firebaseConfigComercial = {
   apiKey: "AIzaSyBexxjzDAuNSgY90rlVqpz4AQZDE-QwSG4",
   authDomain: "gestaodeleadspro-d4230.firebaseapp.com",
   projectId: "gestaodeleadspro-d4230",

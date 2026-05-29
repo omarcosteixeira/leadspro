@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { initializeApp, getApp } from 'firebase/app';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -7,6 +8,7 @@ import {
   sendPasswordResetEmail,
   updatePassword,
   updateProfile,
+  getAuth,
   User
 } from 'firebase/auth';
 import { 
@@ -79,7 +81,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth } from './firebase';
+import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, firebaseConfigPrincipal, firebaseConfigComercial } from './firebase';
 import { cn, formatPhone, getWhatsAppUrl, validateCPF, formatCPF } from './lib/utils';
 import * as XLSX from 'xlsx';
 import { EmailMarketingView } from './components/EmailMarketingView';
@@ -2029,12 +2031,22 @@ export default function App() {
     }
 
     const currentBotNumber = profile?.botNumber;
-    if (!currentBotNumber) {
-       showToast('Você ainda não tem um número de WhatsApp configurado (Administração -> GestãoPro).', 'error');
-       return;
-    }
+    let safeBotNumber = currentBotNumber ? currentBotNumber.replace(/\D/g, '') : '';
     
-    const safeBotNumber = currentBotNumber.replace(/\D/g, '');
+    // Auto-fallback: if the user's personal bot number is offline, not active,
+    // or not set, look for any online bot session in the system to route the dispatch.
+    const isUserBotOnline = safeBotNumber && (botStatuses as any)[safeBotNumber]?.status === 'online';
+    
+    if (!isUserBotOnline) {
+      const firstOnlineBot = Object.entries(botStatuses).find(([_, info]) => (info as any)?.status === 'online')?.[0];
+      if (firstOnlineBot) {
+        console.log(`Fallback bot activated: Routing message via active online session: ${firstOnlineBot}`);
+        safeBotNumber = firstOnlineBot;
+      } else if (!safeBotNumber) {
+        showToast('Você ainda não tem um número de WhatsApp configurado (Administração -> GestãoPro) e nenhum bot está ativo no momento.', 'error');
+        return;
+      }
+    }
     
     // Format phone: remove non-numeric, strip leading zero if present
     let rawPhone = telefone.replace(/\D/g, '');
@@ -2843,9 +2855,47 @@ function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error')
     }
     try {
       if (isLogin) {
-        // Sign in normally. We can't pass 'servidor' through auth directly, 
-        // we'll rely on what's in the DB or we can enforce login tab rules later.
-        await signInWithEmailAndPassword(auth, email, password);
+        try {
+          // Attempt login on the CURRENTLY SELECTED server
+          await signInWithEmailAndPassword(auth, email, password);
+        } catch (err: any) {
+          // If user login fails with invalid credentials or user not found, 
+          // let's check programmatically if the credentials are valid on the OTHER server!
+          const isUserNotFound = err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential';
+          if (isUserNotFound) {
+            const currentSelected = servidor;
+            const alternativeServer = currentSelected === 'principal' ? 'comercial' : 'principal';
+            
+            // Build the alternative config
+            const altConfig = alternativeServer === 'comercial' ? firebaseConfigComercial : firebaseConfigPrincipal;
+            
+            // Resolve alternative app
+            let altApp;
+            try {
+              altApp = getApp('alternative_login_check');
+            } catch {
+              altApp = initializeApp(altConfig, 'alternative_login_check');
+            }
+            const altAuth = getAuth(altApp);
+            
+            try {
+              // Attempt login on the ALTERNATIVE server
+              await signInWithEmailAndPassword(altAuth, email, password);
+              // SUCCESS on the other server! Let's update localStorage and reload to apply the active configuration
+              localStorage.setItem('servidor_selected', alternativeServer);
+              onToast(`Login bem sucedido! Redirecionando para o Servidor ${alternativeServer === 'principal' ? 'Principal' : 'Comercial'}...`, 'success');
+              setTimeout(() => {
+                window.location.reload();
+              }, 1200);
+              return;
+            } catch (altErr) {
+              // Failed on both servers, throw the original authentication error
+              throw err;
+            }
+          } else {
+            throw err;
+          }
+        }
       } else {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         // Pack the chosen servidor into displayName so App.tsx can extract it
@@ -2858,7 +2908,13 @@ function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error')
         message: err.message,
         stack: err.stack
       });
-      onToast(`Erro: ${err.message}`, 'error');
+      let friendlyMessage = err.message;
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        friendlyMessage = "E-mail ou senha inválidos em ambos os servidores (Principal / Comercial).";
+      } else if (err.code === 'auth/wrong-password') {
+        friendlyMessage = "Senha incorreta.";
+      }
+      onToast(`Erro: ${friendlyMessage}`, 'error');
     } finally {
       setLoading(false);
     }

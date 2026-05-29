@@ -87,21 +87,75 @@ export function EmailMarketingView({ onToast }: { onToast: (m: string, t?: 'succ
 
   // Sending progress states
   const [isSending, setIsSending] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [sendLogs, setSendLogs] = useState<EmailLog[]>([]);
   const [progress, setProgress] = useState({ current: 0, total: 0, success: 0, error: 0 });
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  // Load logs from localStorage on mount
+  // Internal silent status verification
+  const handleCheckStatusSilently = async (currentLogs?: EmailLog[]) => {
+    const logsToCheck = currentLogs || sendLogs;
+    const toCheck = logsToCheck.filter(log => (log.status === 'success' || log.status === 'delivered') && log.messageId);
+    if (toCheck.length === 0) return;
+
+    try {
+      const messageIds = toCheck.map(l => l.messageId);
+      const response = await fetch('/api/email-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageIds })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.statuses) {
+          let updated = 0;
+          const newLogs = logsToCheck.map(log => {
+            if (log.messageId && data.statuses[log.messageId]) {
+              const newStatus = data.statuses[log.messageId];
+              if (log.status !== newStatus) {
+                updated++;
+                return { ...log, status: newStatus };
+              }
+            }
+            return log;
+          });
+          if (updated > 0) {
+            saveLogs(newLogs);
+            onToast(`${updated} e-mail(s) atualizados com confirmação de abertura!`, "success");
+          }
+        }
+      }
+    } catch (e) {
+      console.debug("Silent status check error:", e);
+    }
+  };
+
+  // Load logs from localStorage on mount and verify opening events
   useEffect(() => {
     const saved = localStorage.getItem('email_marketing_logs');
     if (saved) {
       try {
-        setSendLogs(JSON.parse(saved));
+        const parsed = JSON.parse(saved) as EmailLog[];
+        setSendLogs(parsed);
+        // Silent check on load
+        setTimeout(() => {
+          handleCheckStatusSilently(parsed);
+        }, 1500);
       } catch (e) {
         console.error("Failed to load logs from localStorage");
       }
     }
   }, []);
+
+  // Periodic automatic poller to track customer opens in background
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isSending && !isCheckingStatus) {
+        handleCheckStatusSilently();
+      }
+    }, 20000); // Run every 20 seconds
+    return () => clearInterval(interval);
+  }, [sendLogs, isSending, isCheckingStatus]);
 
   // Save logs to localStorage
   const saveLogs = (logs: EmailLog[]) => {
@@ -414,12 +468,10 @@ export function EmailMarketingView({ onToast }: { onToast: (m: string, t?: 'succ
     onToast("Envio em massa finalizado!");
   };
 
-  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
-
   const handleCheckStatus = async () => {
     const toCheck = sendLogs.filter(log => (log.status === 'success' || log.status === 'delivered') && log.messageId);
     if (toCheck.length === 0) {
-      onToast("Não há e-mails pendentes para verificar status (abreviados por aberturas).", "info");
+      onToast("Não há e-mails pendentes para verificar status (abreviados por aberturas).");
       return;
     }
 
@@ -679,29 +731,52 @@ export function EmailMarketingView({ onToast }: { onToast: (m: string, t?: 'succ
               />
             </div>
 
-            {/* Mode selector */}
-            <div className="flex bg-slate-100 p-1 rounded-2xl flex-wrap gap-1">
-              <button
-                type="button"
-                onClick={() => setContentMode('text')}
-                className={`flex-1 min-w-[120px] py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${contentMode === 'text' ? 'bg-white shadow border border-slate-200 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <FileText size={14} /> Somente Texto
-              </button>
-              <button
-                type="button"
-                onClick={() => setContentMode('html')}
-                className={`flex-1 min-w-[120px] py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${contentMode === 'html' ? 'bg-white shadow border border-slate-200 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <FileText size={14} /> Código HTML
-              </button>
-              <button
-                type="button"
-                onClick={() => setContentMode('image')}
-                className={`flex-1 min-w-[120px] py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${contentMode === 'image' ? 'bg-white shadow border border-slate-200 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <ImageIcon size={14} /> Imagem / Encarte
-              </button>
+            {/* Separation of formatting options: write plain text, HTML, or upload image with distinct descriptions */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-500">Formato / Conteúdo do E-mail</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setContentMode('text')}
+                  className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-1.5 text-center group ${
+                    contentMode === 'text'
+                      ? 'border-blue-600 bg-blue-50/15 text-blue-700 shadow-sm'
+                      : 'border-slate-100 bg-slate-50/50 text-slate-600 hover:border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <FileText className={`w-5 h-5 transition-transform group-hover:scale-110 ${contentMode === 'text' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <span className="text-xs font-bold font-sans">1. Escrever em Texto</span>
+                  <span className="text-[9px] text-slate-400 leading-none">Corpo em texto simples (sem formatação HTML)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setContentMode('html')}
+                  className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-1.5 text-center group ${
+                    contentMode === 'html'
+                      ? 'border-blue-600 bg-blue-50/15 text-blue-700 shadow-sm'
+                      : 'border-slate-100 bg-slate-50/50 text-slate-600 hover:border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <Sparkles className={`w-5 h-5 transition-transform group-hover:scale-110 ${contentMode === 'html' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <span className="text-xs font-bold font-sans">2. Escrever em HTML</span>
+                  <span className="text-[9px] text-slate-400 leading-none">Layout ou template responsivo personalizado</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setContentMode('image')}
+                  className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-1.5 text-center group ${
+                    contentMode === 'image'
+                      ? 'border-blue-600 bg-blue-50/15 text-blue-700 shadow-sm'
+                      : 'border-slate-100 bg-slate-50/50 text-slate-600 hover:border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <ImageIcon className={`w-5 h-5 transition-transform group-hover:scale-110 ${contentMode === 'image' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <span className="text-xs font-bold font-sans">3. Enviar Imagem / Encarte</span>
+                  <span className="text-[9px] text-slate-400 leading-none">Panfleto, imagem promocional inteira ou banner</span>
+                </button>
+              </div>
             </div>
 
             {contentMode === 'text' ? (
