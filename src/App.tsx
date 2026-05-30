@@ -2028,7 +2028,10 @@ export default function App() {
     if (!botConfig.url) {
       throw new Error("URL do bot não configurada.");
     }
-    const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+    let cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
+    if (cleanUrl.endsWith('/api')) {
+      cleanUrl = cleanUrl.slice(0, -4);
+    }
     const targetUrl = `${cleanUrl}${path}`;
     
     const response = await fetch('/api/bot-proxy', {
