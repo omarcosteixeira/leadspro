@@ -21,28 +21,14 @@ const app = initializeApp(activeConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app, (activeConfig as any).firestoreDatabaseId || undefined);
 
-// DB specifically for botConfig (always on the principal server)
-let appPrincipalForBot;
-if (savedServidor === 'principal') {
-  appPrincipalForBot = app;
-} else {
-  try {
-    appPrincipalForBot = getApp('principal_for_bot');
-  } catch {
-    appPrincipalForBot = initializeApp(firebaseConfigPrincipal, 'principal_for_bot');
-  }
-}
-export const dbBot = getFirestore(appPrincipalForBot, (firebaseConfigPrincipal as any).firestoreDatabaseId || undefined);
-
 // Secondary app for creating users without signing out the current admin
-export const secondaryApp = getApps().some(a => a.name === 'secondary') 
+export const secondaryApp = getApps().length > 1 
   ? getApp('secondary') 
   : initializeApp(activeConfig, 'secondary');
 export const secondaryAuth = getAuth(secondaryApp);
 
 // Caminhos das coleções
 const appId = activeConfig.projectId;
-const appIdPrincipal = firebaseConfigPrincipal.projectId;
 export const COLLECTIONS = {
   LEADS: `artifacts/${appId}/public/data/leads`,
   USERS: `artifacts/${appId}/public/data/users`,
@@ -61,7 +47,7 @@ export const COLLECTIONS = {
   MAPAO_ACADEMICO: `artifacts/${appId}/public/data/mapao_academico`,
   BASES_DISPARO: `artifacts/${appId}/public/data/bases_disparo`,
   BASES_RENOVACAO: `artifacts/${appId}/public/data/bases_renovacao`,
-  BOT_CONFIG: `artifacts/${appIdPrincipal}/public/data/bot_config`,
+  BOT_CONFIG: `artifacts/${appId}/public/data/bot_config`,
 };
 
 export enum OperationType {

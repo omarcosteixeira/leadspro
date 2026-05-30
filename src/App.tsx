@@ -81,7 +81,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, db, dbBot, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, firebaseConfigPrincipal, firebaseConfigComercial } from './firebase';
+import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, firebaseConfigPrincipal, firebaseConfigComercial } from './firebase';
 import { cn, formatPhone, getWhatsAppUrl, validateCPF, formatCPF } from './lib/utils';
 import * as XLSX from 'xlsx';
 import { EmailMarketingView } from './components/EmailMarketingView';
@@ -2028,10 +2028,7 @@ export default function App() {
     if (!botConfig.url) {
       throw new Error("URL do bot não configurada.");
     }
-    let cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
-    if (cleanUrl.endsWith('/api')) {
-      cleanUrl = cleanUrl.slice(0, -4);
-    }
+    const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
     const targetUrl = `${cleanUrl}${path}`;
     
     const response = await fetch('/api/bot-proxy', {
@@ -2391,7 +2388,7 @@ export default function App() {
 
     let unsubBotConfig = () => {};
     if (user) {
-      unsubBotConfig = onSnapshot(doc(dbBot, COLLECTIONS.BOT_CONFIG, 'main'), snap => {
+      unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), snap => {
         if (snap.exists()) {
           setBotConfig({ id: snap.id, ...snap.data() } as BotConfig);
         } else {
@@ -2427,7 +2424,7 @@ export default function App() {
     const testConnection = async () => {
       try {
         const { getDocFromServer, doc } = await import('firebase/firestore');
-        await getDocFromServer(doc(dbBot, COLLECTIONS.BOT_CONFIG, 'connection_test'));
+        await getDocFromServer(doc(db, COLLECTIONS.BOT_CONFIG, 'connection_test'));
         console.log("Firestore connection test: OK");
       } catch (err) {
         console.warn("Firestore connection test check (expected error if doc doesn't exist):", err);
@@ -2816,7 +2813,7 @@ export default function App() {
                   }} 
                 />
               )}
-              {currentView === 'admin' && <AdminView profile={profile!} users={users} links={links} onToast={showToast} leads={leads} bases={bases} gap={gap} planner={planner} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} whatsappMessages={whatsappMessages} empresasParceiras={empresasParceiras} botConfig={botConfig} botStatuses={botStatuses} setBotStatuses={setBotStatuses} callBotApi={callBotApi} />}
+              {currentView === 'admin' && <AdminView users={users} links={links} onToast={showToast} leads={leads} bases={bases} gap={gap} planner={planner} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} whatsappMessages={whatsappMessages} empresasParceiras={empresasParceiras} botConfig={botConfig} botStatuses={botStatuses} setBotStatuses={setBotStatuses} callBotApi={callBotApi} />}
             </motion.div>
           </AnimatePresence>
 
@@ -2952,43 +2949,32 @@ function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error')
           <p className="text-slate-500 mt-2">{isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta agora'}</p>
         </div>
 
-        <AnimatePresence>
-          {(email.toLowerCase().trim() === 'marcos.teixeira@estacio.br' || email.toLowerCase().trim() === 'canaldonutri@gmail.com') && (
-            <motion.div 
-              initial={{ height: 0, opacity: 0, marginBottom: 0 }}
-              animate={{ height: 'auto', opacity: 1, marginBottom: 24 }}
-              exit={{ height: 0, opacity: 0, marginBottom: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="flex bg-slate-100 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (servidor !== 'principal') {
-                      localStorage.setItem('servidor_selected', 'principal');
-                      window.location.reload();
-                    }
-                  }}
-                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${servidor === 'principal' ? 'bg-white shadow border border-slate-200 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  Principal
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (servidor !== 'comercial') {
-                      localStorage.setItem('servidor_selected', 'comercial');
-                      window.location.reload();
-                    }
-                  }}
-                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${servidor === 'comercial' ? 'bg-white shadow border border-slate-200 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  Comercial
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+          <button
+            type="button"
+            onClick={() => {
+              if (servidor !== 'principal') {
+                localStorage.setItem('servidor_selected', 'principal');
+                window.location.reload();
+              }
+            }}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${servidor === 'principal' ? 'bg-white shadow border border-slate-200 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Principal
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (servidor !== 'comercial') {
+                localStorage.setItem('servidor_selected', 'comercial');
+                window.location.reload();
+              }
+            }}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${servidor === 'comercial' ? 'bg-white shadow border border-slate-200 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Comercial
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
@@ -6894,8 +6880,7 @@ function CalculoRemuneracaoView() {
   );
 }
 
-function AdminView({ profile, users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras, botConfig, botStatuses, setBotStatuses, callBotApi }: { 
-  profile: UserProfile,
+function AdminView({ users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras, botConfig, botStatuses, setBotStatuses, callBotApi }: { 
   users: UserProfile[], 
   links: LinkUtil[], 
   onToast: (m: string, t?: 'success' | 'error') => void,
@@ -6917,8 +6902,6 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
   const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento'>('usuarios');
   const [isProcessingPdf, setIsProcessingPdf] = useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
-
-  const isServerAdmin = profile?.email === 'marcos.teixeira@estacio.br' || profile?.email === 'canaldonutri@gmail.com' || profile?.role === 'Admin Master';
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -6947,7 +6930,7 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
       const currentContext = botConfig.trainingContext || '';
       const newContext = currentContext + (currentContext ? '\n\n' : '') + `=== Conteúdo do Arquivo: ${file.name} ===\n` + text;
       
-      await setDoc(doc(dbBot, COLLECTIONS.BOT_CONFIG, 'main'), { 
+      await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
         trainingContext: newContext,
         updatedAt: serverTimestamp() 
       }, { merge: true });
@@ -8011,16 +7994,6 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
 
       {activeTab === 'whatsapp' && (
         <div className="space-y-6">
-          {!isServerAdmin && (
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-start space-x-3 max-w-4xl">
-              <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={20} />
-              <div className="text-xs text-amber-700 leading-relaxed">
-                <p className="font-bold mb-0.5">Acesso Restrito</p>
-                <p>Apenas o login <span className="font-bold">marcos.teixeira@estacio.br</span> e Administradores Master possuem permissão para configurar o servidor do Bot e adicionar ou resetar sessões.</p>
-              </div>
-            </div>
-          )}
-
           <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-100">
               <h3 className="text-xl font-bold text-slate-900">Integração Bot ARGO'S</h3>
@@ -8035,9 +8008,7 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
                       type="text"
                       placeholder="https://seu-app-no-railway.app"
                       defaultValue={botConfig.url}
-                      disabled={!isServerAdmin}
                       onBlur={async (e) => {
-                        if (!isServerAdmin) return;
                         let newUrl = e.target.value.trim();
                         if (newUrl && !newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
                           newUrl = `https://${newUrl}`;
@@ -8045,17 +8016,17 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
                         }
                         if (newUrl === botConfig.url) return;
                         try {
-                          await setDoc(doc(dbBot, COLLECTIONS.BOT_CONFIG, 'main'), { 
+                          await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
                             url: newUrl,
                             active: botConfig.active || false,
                             updatedAt: serverTimestamp() 
                           }, { merge: true });
-                          onToast("URL do Bot updated!");
+                          onToast("URL do Bot atualizada!");
                         } catch (err: any) {
                           onToast(`Erro ao salvar URL: ${err.message}`, 'error');
                         }
                       }}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm disabled:opacity-75 disabled:bg-slate-50 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                     />
                     <button 
                       onClick={async () => {
@@ -8067,7 +8038,7 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
                           const data = await callBotApi('/api/status');
                           onToast(`Servidor online! Status: ${data.name || 'OK'}`, 'success');
                         } catch (e: any) {
-                          onToast(`Erro ao testar (GET /api/status): O bot retornou 404 ou está offline. Erro: ${e.message}`, 'error');
+                          onToast(`Falha de rede (CORS/Offline): O Railway pode estar reiniciando o bot ou o bot está quebrado. Erro: ${e.message}`, 'error');
                         }
                       }}
                       className="bg-blue-100 text-blue-700 px-4 py-3 rounded-xl hover:bg-blue-200 transition-colors whitespace-nowrap text-sm font-bold"
@@ -8080,64 +8051,60 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
                 <div className="pt-4 border-t border-slate-100">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-slate-800">Gestão de Sessões WhatsApp (Multi-Device)</h3>
-                    {isServerAdmin && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={async () => {
-                             if (!botConfig.url) return;
-                             if (window.confirm('Tem certeza que deseja resetar TODAS as sessões criptografadas? (Esta ação apagará a pasta corrompida e solicitará nova conexão em todos os números)')) {
-                                try {
-                                   await callBotApi('/api/reset', { method: 'POST', body: {} });
-                                   onToast('A Rota Mágica de Reset foi ativada. Todas as sessões foram apagadas e o bot será reiniciado.', 'success');
-                                   setBotStatuses({});
-                                } catch (err: any) {
-                                   onToast(`Erro ao resetar (POST /api/reset): ${err.message}`, 'error');
-                                }
-                             }
-                          }}
-                          className="bg-red-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-red-700 transition"
-                        >
-                          Resetar Sessões (Pasta Corrompida)
-                        </button>
-                        <button
-                          onClick={async () => {
-                             const num = prompt("Digite o número no formato 5511999999999:");
-                             if (num) {
-                                const botNumber = num.replace(/\D/g, '');
-                                if (!botNumber) return;
-                                if (!botConfig || !botConfig.url) {
-                                   onToast('Configura a URL do bot primeiro.', 'error'); return;
-                                }
-                                try {
-                                   await callBotApi('/api/connect', {
-                                      method: 'POST',
-                                      body: { botNumber }
-                                   });
-                                   onToast('Solicitação enviada! Aguarde alguns segundos o QR Code.');
-                                   // Force a status check after 3 seconds
-                                   setTimeout(async () => {
-                                      try {
-                                        const data = await callBotApi('/api/status');
-                                        if (data && data.bots) setBotStatuses(data.bots);
-                                      } catch (e) {}
-                                   }, 3000);
-                                } catch (err: any) {
-                                   onToast(`Servidor offline ou reiniciando... ${err.message}`, 'error');
-                                }
-                             }
-                          }}
-                          className="bg-green-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-green-700 transition"
-                        >
-                          + Novo Número
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                           if (!botConfig.url) return;
+                           if (window.confirm('Tem certeza que deseja resetar TODAS as sessões criptografadas? (Esta ação apagará a pasta corrompida e solicitará nova conexão em todos os números)')) {
+                              try {
+                                 await callBotApi('/api/reset', { method: 'POST' });
+                                 onToast('A Rota Mágica de Reset foi ativada. Todas as sessões foram apagadas e o bot será reiniciado.', 'success');
+                                 setBotStatuses({});
+                              } catch (err: any) {
+                                 onToast(`Erro ao resetar: ${err.message}`, 'error');
+                              }
+                           }
+                        }}
+                        className="bg-red-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-red-700 transition"
+                      >
+                        Resetar Sessões (Pasta Corrompida)
+                      </button>
+                      <button
+                        onClick={async () => {
+                           const num = prompt("Digite o número no formato 5511999999999:");
+                           if (num) {
+                              const botNumber = num.replace(/\D/g, '');
+                              if (!botNumber) return;
+                              if (!botConfig || !botConfig.url) {
+                                 onToast('Configura a URL do bot primeiro.', 'error'); return;
+                              }
+                              try {
+                                 await callBotApi('/api/connect', {
+                                    method: 'POST',
+                                    body: { botNumber }
+                                 });
+                                 onToast('Solicitação enviada! Aguarde alguns segundos o QR Code.');
+                                 // Force a status check after 3 seconds
+                                 setTimeout(async () => {
+                                    try {
+                                      const data = await callBotApi('/api/status');
+                                      if (data && data.bots) setBotStatuses(data.bots);
+                                    } catch (e) {}
+                                 }, 3000);
+                              } catch (err: any) {
+                                 onToast(`Servidor offline ou reiniciando... ${err.message}`, 'error');
+                              }
+                           }
+                        }}
+                        className="bg-green-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-green-700 transition"
+                      >
+                        + Novo Número
+                      </button>
+                    </div>
                   </div>
                   
                   {Object.keys(botStatuses || {}).length === 0 ? (
-                    <p className="text-sm text-slate-500 italic">
-                      {isServerAdmin ? "Nenhum número conectado ou conectando. Adicione um clicando no botão acima." : "Nenhum número conectado ou conectando."}
-                    </p>
+                    <p className="text-sm text-slate-500 italic">Nenhum número conectado ou conectando. Adicione um clicando no botão acima.</p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        {Object.entries(botStatuses || {}).map(([botNumber, info]) => {
@@ -8156,15 +8123,13 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
                                     ) : (
                                       <input 
                                         type="text" 
-                                        className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs w-32 focus:ring-1 focus:ring-blue-500 focus:outline-none text-slate-600 disabled:opacity-75 disabled:cursor-not-allowed"
+                                        className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs w-32 focus:ring-1 focus:ring-blue-500 focus:outline-none text-slate-600"
                                         placeholder="Nome"
                                         defaultValue={nameForBot}
-                                        disabled={!isServerAdmin}
                                         onBlur={async (e) => {
-                                          if (!isServerAdmin) return;
                                           const newName = e.target.value;
                                           try {
-                                             await updateDoc(doc(dbBot, COLLECTIONS.BOT_CONFIG, 'main'), {
+                                             await updateDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), {
                                                 [`botNames.${botNumber}`]: newName
                                              });
                                           } catch(err) {}
@@ -8177,33 +8142,31 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
                                 <span className={`px-2 py-1 rounded-full text-xs font-bold ${info?.status === 'online' ? 'bg-green-100 text-green-700' : info?.status === 'pairing' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
                                    {info?.status?.toUpperCase() || 'DESCONHECIDO'}
                                 </span>
-                                {isServerAdmin && (
-                                  <button
-                                    onClick={async () => {
-                                      if (window.confirm(`Tem certeza que deseja apagar a sessão do bot ${botNumber}?`)) {
-                                        try {
-                                          await callBotApi('/api/reset', {
-                                             method: 'POST',
-                                             body: { botNumber }
-                                          });
-                                          onToast(`Sessão ${botNumber} apagada.`);
-                                          setTimeout(async () => {
-                                            try {
-                                              const data = await callBotApi('/api/status');
-                                              setBotStatuses(data.bots || {});
-                                            } catch(e) {}
-                                          }, 1000);
-                                        } catch (e: any) {
-                                          onToast(`Erro ao apagar sessão (POST /api/reset): ${e.message}`, 'error');
-                                        }
+                                <button
+                                  onClick={async () => {
+                                    if (window.confirm(`Tem certeza que deseja apagar a sessão do bot ${botNumber}?`)) {
+                                      try {
+                                        await callBotApi('/api/reset', {
+                                           method: 'POST',
+                                           body: { botNumber }
+                                        });
+                                        onToast(`Sessão ${botNumber} apagada.`);
+                                        setTimeout(async () => {
+                                          try {
+                                            const data = await callBotApi('/api/status');
+                                            setBotStatuses(data.bots || {});
+                                          } catch(e) {}
+                                        }, 1000);
+                                      } catch (e: any) {
+                                        onToast(`Erro ao apagar sessão: ${e.message}`, 'error');
                                       }
-                                    }}
-                                    className="text-red-500 hover:text-red-700 px-2 py-1 bg-red-50 rounded-lg transition"
-                                    title="Apagar sessão do Railway"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                )}
+                                    }
+                                  }}
+                                  className="text-red-500 hover:text-red-700 px-2 py-1 bg-red-50 rounded-lg transition"
+                                  title="Apagar sessão do Railway"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
                               </div>
                             </div>
                             
@@ -8401,72 +8364,52 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
       )}
 
       {activeTab === 'treinamento' && (
-        <div className="space-y-6">
-          {!isServerAdmin && (
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-start space-x-3 max-w-4xl mx-auto">
-              <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={20} />
-              <div className="text-xs text-amber-700 leading-relaxed">
-                <p className="font-bold mb-0.5">Acesso Restrito</p>
-                <p>Apenas o login <span className="font-bold">marcos.teixeira@estacio.br</span> e Administradores Master possuem permissão para treinar ou alterar as instruções do Bot.</p>
-              </div>
+        <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden max-w-4xl mx-auto">
+          <div className="p-6 border-b border-slate-100">
+            <h3 className="text-xl font-bold text-slate-900">Treinamento do Bot</h3>
+            <p className="text-slate-500 text-sm">Insira o texto sobre a sua empresa para refinar as respostas da IA.</p>
+          </div>
+          <div className="p-6 space-y-6">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">Contexto da Empresa</label>
+              <textarea 
+                placeholder="Insira aqui informações sobre preços, cursos, política da empresa..."
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm min-h-[300px]"
+                defaultValue={botConfig.trainingContext || ''}
+                onBlur={async (e) => {
+                  const newContext = e.target.value.trim();
+                  if (newContext === botConfig.trainingContext) return;
+                  try {
+                    await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
+                      trainingContext: newContext,
+                      updatedAt: serverTimestamp() 
+                    }, { merge: true });
+                    onToast("Treinamento do Bot atualizado!");
+                  } catch (err: any) {
+                    onToast(`Erro ao salvar treinamento: ${err.message}`, 'error');
+                  }
+                }}
+              />
+              <p className="text-xs text-slate-400 mt-2">Dica: Quanto mais claro e objetivo for o texto, melhores serão as respostas da IA.</p>
             </div>
-          )}
-
-          <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden max-w-4xl mx-auto">
-            <div className="p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-900">Treinamento do Bot</h3>
-              <p className="text-slate-500 text-sm">Insira o texto sobre a sua empresa para refinar as respostas da IA.</p>
+            
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center">
+               <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
+                  {isProcessingPdf ? (
+                    <span className="animate-spin text-xl font-bold">...</span>
+                  ) : (
+                    <span className="font-bold text-xl">PDF</span>
+                  )}
+               </div>
+               <h4 className="font-bold text-slate-800 mb-2">Treinamento via PDF</h4>
+               <p className="text-xs text-slate-500 max-w-sm mb-4">Faça o upload de um arquivo PDF para extrair o texto automaticamente e anexá-lo ao contexto da empresa.</p>
+               <label className="cursor-pointer bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                 {isProcessingPdf ? "Processando..." : "Selecionar PDF"}
+                 <input type="file" accept=".pdf" className="hidden" onChange={handlePdfUpload} disabled={isProcessingPdf} />
+               </label>
             </div>
-            <div className="p-6 space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Contexto da Empresa</label>
-                <textarea 
-                  placeholder="Insira aqui informações sobre preços, cursos, política da empresa..."
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm min-h-[300px] disabled:opacity-75 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                  defaultValue={botConfig.trainingContext || ''}
-                  disabled={!isServerAdmin}
-                  onBlur={async (e) => {
-                    if (!isServerAdmin) return;
-                    const newContext = e.target.value.trim();
-                    if (newContext === botConfig.trainingContext) return;
-                    try {
-                      await setDoc(doc(dbBot, COLLECTIONS.BOT_CONFIG, 'main'), { 
-                        trainingContext: newContext,
-                        updatedAt: serverTimestamp() 
-                      }, { merge: true });
-                      onToast("Treinamento do Bot atualizado!");
-                    } catch (err: any) {
-                      onToast(`Erro ao salvar treinamento: ${err.message}`, 'error');
-                    }
-                  }}
-                />
-                <p className="text-xs text-slate-400 mt-2">Dica: Quanto mais claro e objetivo for o texto, melhores serão as respostas da IA.</p>
-              </div>
-              
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center">
-                 <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
-                    {isProcessingPdf ? (
-                      <span className="animate-spin text-xl font-bold">...</span>
-                    ) : (
-                      <span className="font-bold text-xl">PDF</span>
-                    )}
-                 </div>
-                 <h4 className="font-bold text-slate-800 mb-2">Treinamento via PDF</h4>
-                 <p className="text-xs text-slate-500 max-w-sm mb-4">Faça o upload de um arquivo PDF para extrair o texto automaticamente e anexá-lo ao contexto da empresa.</p>
-                 {isServerAdmin ? (
-                   <label className="cursor-pointer bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-colors">
-                     {isProcessingPdf ? "Processando..." : "Selecionar PDF"}
-                     <input type="file" accept=".pdf" className="hidden" onChange={handlePdfUpload} disabled={isProcessingPdf} />
-                   </label>
-                 ) : (
-                   <span className="bg-slate-200 text-slate-400 px-6 py-2 rounded-xl font-bold cursor-not-allowed">
-                     Selecionar PDF (Indisponível)
-                   </span>
-                 )}
-              </div>
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
       )}
 
       {activeTab === 'links' && (

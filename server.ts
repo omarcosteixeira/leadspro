@@ -55,7 +55,6 @@ async function startServer() {
         return res.status(botResponse.status).json({
           success: botResponse.ok,
           status: botResponse.status,
-          error: !botResponse.ok ? (data?.error || data?.message || data?.text || `Retorno do bot: ${botResponse.status} ${botResponse.statusText} -> ${method} ${targetUrl}`) : undefined,
           data
         });
       } catch (err: any) {
