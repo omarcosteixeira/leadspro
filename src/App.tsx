@@ -8084,7 +8084,7 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
                              if (!botConfig.url) return;
                              if (window.confirm('Tem certeza que deseja resetar TODAS as sessões criptografadas? (Esta ação apagará a pasta corrompida e solicitará nova conexão em todos os números)')) {
                                 try {
-                                   await callBotApi('/api/reset', { method: 'POST' });
+                                   await callBotApi('/api/reset', { method: 'POST', body: {} });
                                    onToast('A Rota Mágica de Reset foi ativada. Todas as sessões foram apagadas e o bot será reiniciado.', 'success');
                                    setBotStatuses({});
                                 } catch (err: any) {
