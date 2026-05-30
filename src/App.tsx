@@ -8067,7 +8067,7 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
                           const data = await callBotApi('/api/status');
                           onToast(`Servidor online! Status: ${data.name || 'OK'}`, 'success');
                         } catch (e: any) {
-                          onToast(`Falha de rede (CORS/Offline): O Railway pode estar reiniciando o bot ou o bot está quebrado. Erro: ${e.message}`, 'error');
+                          onToast(`Erro ao testar (GET /api/status): O bot retornou 404 ou está offline. Erro: ${e.message}`, 'error');
                         }
                       }}
                       className="bg-blue-100 text-blue-700 px-4 py-3 rounded-xl hover:bg-blue-200 transition-colors whitespace-nowrap text-sm font-bold"
@@ -8091,7 +8091,7 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
                                    onToast('A Rota Mágica de Reset foi ativada. Todas as sessões foram apagadas e o bot será reiniciado.', 'success');
                                    setBotStatuses({});
                                 } catch (err: any) {
-                                   onToast(`Erro ao resetar: ${err.message}`, 'error');
+                                   onToast(`Erro ao resetar (POST /api/reset): ${err.message}`, 'error');
                                 }
                              }
                           }}
@@ -8194,7 +8194,7 @@ function AdminView({ profile, users, links, onToast, leads, bases, gap, planner,
                                             } catch(e) {}
                                           }, 1000);
                                         } catch (e: any) {
-                                          onToast(`Erro ao apagar sessão: ${e.message}`, 'error');
+                                          onToast(`Erro ao apagar sessão (POST /api/reset): ${e.message}`, 'error');
                                         }
                                       }
                                     }}
