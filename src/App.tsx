@@ -2031,15 +2031,45 @@ export default function App() {
     const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
     const targetUrl = `${cleanUrl}${path}`;
     
-    const response = await fetch('/api/bot-proxy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        targetUrl,
+    let response;
+    let proxyFailed = false;
+    
+    try {
+      response = await fetch('/api/bot-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUrl,
+          method: options.method || 'GET',
+          body: options.body
+        })
+      });
+      if (response.status === 404) {
+        proxyFailed = true;
+      }
+    } catch (e) {
+      proxyFailed = true;
+    }
+
+    if (proxyFailed) {
+      console.warn("Proxy /api/bot-proxy offline ou retornou 404 (ambientes estáticos como Vercel). Tentando conexão direta com o bot...");
+      const fetchOptions: RequestInit = {
         method: options.method || 'GET',
-        body: options.body
-      })
-    });
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+      if (options.method === 'POST' && options.body) {
+        fetchOptions.body = JSON.stringify(options.body);
+      }
+      
+      const directResponse = await fetch(targetUrl, fetchOptions);
+      if (!directResponse.ok) {
+        throw new Error(`Erro ao conectar diretamente ao Bot (${directResponse.status})`);
+      }
+      const directData = await directResponse.json();
+      return directData;
+    }
     
     if (!response.ok) {
       const json = await response.json().catch(() => ({}));
