@@ -189,6 +189,25 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["tipo", "mensagem"]
+    },
+    "MetaDia": {
+      "title": "MetaDia",
+      "description": "Meta dia control",
+      "type": "object",
+      "properties": {
+        "data": { "type": "string", "format": "date" },
+        "aaPresencial": { "type": "number" },
+        "ytdPresencial": { "type": "number" },
+        "realizadoPresencial": { "type": "number" },
+        "aaSemipresencial": { "type": "number" },
+        "ytdSemipresencial": { "type": "number" },
+        "realizadoSemipresencial": { "type": "number" },
+        "aaDigital": { "type": "number" },
+        "ytdDigital": { "type": "number" },
+        "realizadoDigital": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["data"]
     }
   },
   "firestore": {
@@ -239,6 +258,10 @@
     "artifacts/gestaopro-761e1/public/data/whatsapp_messages/{messageId}": {
       "schema": "WhatsAppMessage",
       "description": "WhatsApp default messages data"
+    },
+    "artifacts/gestaopro-761e1/public/data/meta_dia/{id}": {
+      "schema": "MetaDia",
+      "description": "Meta Dia goals and performance entries"
     }
   }
 }

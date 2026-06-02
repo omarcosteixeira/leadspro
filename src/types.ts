@@ -253,6 +253,21 @@ export interface BaseDisparoEntry {
   createdAt: any;
 }
 
+export interface MetaDia {
+  id: string;
+  data: string;
+  aaPresencial: number;
+  ytdPresencial: number;
+  realizadoPresencial: number;
+  aaSemipresencial: number;
+  ytdSemipresencial: number;
+  realizadoSemipresencial: number;
+  aaDigital: number;
+  ytdDigital: number;
+  realizadoDigital: number;
+  createdAt: any;
+}
+
 export interface BotConfig {
   id?: string;
   url: string;

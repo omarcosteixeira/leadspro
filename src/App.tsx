@@ -78,7 +78,8 @@ import {
   RefreshCw,
   Play,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Target
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, firebaseConfigPrincipal, firebaseConfigComercial } from './firebase';
@@ -104,7 +105,8 @@ import {
   WhatsAppMessage,
   MapaoAcademicoEntry,
   BaseDisparoEntry,
-  BotConfig
+  BotConfig,
+  MetaDia
 } from './types';
 import { ProfileModal } from './components/ProfileModal';
 
@@ -1999,6 +2001,7 @@ export default function App() {
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [bomDia, setBomDia] = useState<BomDiaCaptacao[]>([]);
   const [forecast, setForecast] = useState<ForecastCaptacao[]>([]);
+  const [metaDia, setMetaDia] = useState<MetaDia[]>([]);
   const [planner, setPlanner] = useState<PlannerTask[]>([]);
   const [periodos, setPeriodos] = useState<PeriodoCaptacao[]>([]);
   const [calendarioAcoes, setCalendarioAcoes] = useState<CalendarioAcao[]>([]);
@@ -2359,6 +2362,13 @@ export default function App() {
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.FORECAST));
     }
 
+    let unsubMetaDia = () => {};
+    if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
+      unsubMetaDia = onSnapshot(collection(db, COLLECTIONS.META_DIA), snap => {
+        setMetaDia(snap.docs.map(d => ({ id: d.id, ...d.data() } as MetaDia)));
+      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.META_DIA));
+    }
+
     let unsubPeriodos = () => {};
     if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
       unsubPeriodos = onSnapshot(collection(db, COLLECTIONS.PERIODO_CAPTACAO), snap => {
@@ -2438,6 +2448,7 @@ export default function App() {
       unsubCampanhas();
       unsubBomDia();
       unsubForecast();
+      unsubMetaDia();
       unsubPeriodos();
       unsubCalendario();
       unsubEmpresas();
@@ -2807,7 +2818,7 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {currentView === 'dashboard' && <DashboardView leads={leads} planner={planner} links={links} profile={profile!} onToast={showToast} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} />}
+              {currentView === 'dashboard' && <DashboardView leads={leads} planner={planner} links={links} profile={profile!} onToast={showToast} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} metaDia={metaDia} />}
               {currentView === 'cadastro' && <CadastroView onToast={showToast} profile={profile!} />}
               {currentView === 'historico' && <HistoricoView leads={leads} profile={profile!} onToast={showToast} users={users} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
               {currentView === 'bases' && <BasesView bases={bases} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
@@ -2843,7 +2854,28 @@ export default function App() {
                   }} 
                 />
               )}
-              {currentView === 'admin' && <AdminView users={users} links={links} onToast={showToast} leads={leads} bases={bases} gap={gap} planner={planner} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} whatsappMessages={whatsappMessages} empresasParceiras={empresasParceiras} botConfig={botConfig} botStatuses={botStatuses} setBotStatuses={setBotStatuses} callBotApi={callBotApi} />}
+              {currentView === 'admin' && (
+                <AdminView 
+                  users={users} 
+                  links={links} 
+                  onToast={showToast} 
+                  leads={leads} 
+                  bases={bases} 
+                  gap={gap} 
+                  planner={planner} 
+                  campanhas={campanhas} 
+                  bomDia={bomDia} 
+                  forecast={forecast} 
+                  periodos={periodos} 
+                  whatsappMessages={whatsappMessages} 
+                  empresasParceiras={empresasParceiras} 
+                  botConfig={botConfig} 
+                  botStatuses={botStatuses} 
+                  setBotStatuses={setBotStatuses} 
+                  callBotApi={callBotApi} 
+                  metaDia={metaDia}
+                />
+              )}
             </motion.div>
           </AnimatePresence>
 
@@ -3088,7 +3120,7 @@ function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error')
   );
 }
 
-function DashboardView({ leads, planner, links, profile, onToast, campanhas, bomDia, forecast, periodos }: { 
+function DashboardView({ leads, planner, links, profile, onToast, campanhas, bomDia, forecast, periodos, metaDia }: { 
   leads: Lead[], 
   planner: PlannerTask[], 
   links: LinkUtil[],
@@ -3097,13 +3129,19 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
   campanhas: Campanha[],
   bomDia: BomDiaCaptacao[],
   forecast: ForecastCaptacao[],
-  periodos: PeriodoCaptacao[]
+  periodos: PeriodoCaptacao[],
+  metaDia: MetaDia[]
 }) {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const widgets = profile.dashboardWidgets || { stats: false, links: true, planner: true, campanhas: false, bomDia: true, forecast: true, periodo: true };
 
   const today = new Date().toISOString().split('T')[0];
   const activePeriod = periodos.find(p => today >= p.inicioInscricao && today <= p.fimMatFin);
+
+  // Find meta for today, or find the latest meta as a fallback
+  const todayEntry = metaDia.find(m => m.data === today);
+  const latestEntry = metaDia.length > 0 ? [...metaDia].sort((a,b) => b.data.localeCompare(a.data))[0] : null;
+  const activeMeta = todayEntry || latestEntry;
 
   const days = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
 
@@ -3133,6 +3171,144 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
           </button>
         </div>
       </div>
+
+      {activeMeta && (
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+            <div>
+              <div className="flex items-center space-x-2 text-slate-900">
+                <Target size={20} className="text-blue-600" />
+                <h3 className="text-lg font-bold">Acompanhamento de Meta Diária</h3>
+              </div>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                Referente ao dia: <span className="font-bold">{new Date(activeMeta.data + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                {activeMeta.data === today ? ' (Hoje)' : ' (Última meta registrada)'}
+              </p>
+            </div>
+            
+            {(() => {
+              const totYTD = activeMeta.ytdPresencial + activeMeta.ytdSemipresencial + activeMeta.ytdDigital;
+              const totReal = activeMeta.realizadoPresencial + activeMeta.realizadoSemipresencial + activeMeta.realizadoDigital;
+              
+              let statusText = "Abaixo da Meta";
+              let statusColor = "bg-rose-50 text-rose-600 border-rose-100";
+              if (totReal > totYTD) {
+                statusText = "Meta Superada!";
+                statusColor = "bg-emerald-50 text-emerald-600 border-emerald-100";
+              } else if (totReal === totYTD) {
+                statusText = "Meta Atingida";
+                statusColor = "bg-blue-50 text-blue-600 border-blue-100";
+              }
+              
+              return (
+                <span className={cn("px-3 py-1.5 rounded-full text-xs font-bold border mt-2 sm:mt-0", statusColor)}>
+                  {statusText}
+                </span>
+              );
+            })()}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Boletos Necessários (YTD)</span>
+              <span className="text-2xl font-black text-slate-800 mt-2">
+                {activeMeta.ytdPresencial + activeMeta.ytdSemipresencial + activeMeta.ytdDigital}
+              </span>
+            </div>
+            
+            {(() => {
+              const totYTD = activeMeta.ytdPresencial + activeMeta.ytdSemipresencial + activeMeta.ytdDigital;
+              const totReal = activeMeta.realizadoPresencial + activeMeta.realizadoSemipresencial + activeMeta.realizadoDigital;
+              
+              let color = "text-rose-600";
+              if (totReal > totYTD) color = "text-emerald-600";
+              else if (totReal === totYTD) color = "text-blue-600";
+              
+              return (
+                <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Total Realizado</span>
+                  <span className={cn("text-2xl font-black mt-2", color)}>
+                    {totReal}
+                  </span>
+                </div>
+              );
+            })()}
+
+            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Ano Anterior (A.A)</span>
+              <span className="text-2xl font-black text-slate-500 mt-2">
+                {activeMeta.aaPresencial + activeMeta.aaSemipresencial + activeMeta.aaDigital}
+              </span>
+            </div>
+
+            {(() => {
+              const totYTD = activeMeta.ytdPresencial + activeMeta.ytdSemipresencial + activeMeta.ytdDigital;
+              const totReal = activeMeta.realizadoPresencial + activeMeta.realizadoSemipresencial + activeMeta.realizadoDigital;
+              const pct = totYTD > 0 ? (totReal / totYTD) * 100 : 0;
+              
+              let pctBg = "bg-rose-50 text-rose-700";
+              if (totReal > totYTD) pctBg = "bg-emerald-50 text-emerald-700";
+              else if (totReal === totYTD) pctBg = "bg-blue-50 text-blue-700";
+              
+              return (
+                <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Aproveitamento</span>
+                  <div className="flex items-baseline space-x-2 mt-2">
+                    <span className={cn("text-xl font-extrabold px-2.5 py-0.5 rounded-lg", pctBg)}>
+                      {pct.toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
+            {[
+              { 
+                label: 'Presencial', 
+                ytd: activeMeta.ytdPresencial, 
+                real: activeMeta.realizadoPresencial, 
+                aa: activeMeta.aaPresencial,
+                accent: 'border-l-4 border-l-blue-500'
+              },
+              { 
+                label: 'Semipresencial', 
+                ytd: activeMeta.ytdSemipresencial, 
+                real: activeMeta.realizadoSemipresencial, 
+                aa: activeMeta.aaSemipresencial,
+                accent: 'border-l-4 border-l-orange-500'
+              },
+              { 
+                label: 'Digital', 
+                ytd: activeMeta.ytdDigital, 
+                real: activeMeta.realizadoDigital, 
+                aa: activeMeta.aaDigital,
+                accent: 'border-l-4 border-l-indigo-500'
+              }
+            ].map((modal, idx) => {
+              let color = 'text-rose-600';
+              if (modal.real > modal.ytd) color = 'text-emerald-600';
+              else if (modal.real === modal.ytd) color = 'text-blue-600';
+              
+              return (
+                <div key={idx} className={cn("bg-slate-50/30 p-3 rounded-xl border border-slate-100 flex justify-between items-center", modal.accent)}>
+                  <div>
+                    <span className="text-xs font-bold text-slate-700">{modal.label}</span>
+                    <span className="block text-[10px] text-slate-400">Ano Ant: {modal.aa}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Meta / Real</span>
+                    <span className="text-xs font-semibold text-slate-600">{modal.ytd}</span>
+                    <span className="mx-1 text-slate-300">/</span>
+                    <span className={cn("text-xs font-bold", color)}>{modal.real}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Bom Dia Captação (Complete - All cards) */}
       {widgets.bomDia && bomDia.length > 0 && (
@@ -6910,7 +7086,7 @@ function CalculoRemuneracaoView() {
   );
 }
 
-function AdminView({ users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras, botConfig, botStatuses, setBotStatuses, callBotApi }: { 
+function AdminView({ users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras, botConfig, botStatuses, setBotStatuses, callBotApi, metaDia }: { 
   users: UserProfile[], 
   links: LinkUtil[], 
   onToast: (m: string, t?: 'success' | 'error') => void,
@@ -6927,9 +7103,10 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   botConfig: BotConfig,
   botStatuses: Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>,
   setBotStatuses: React.Dispatch<React.SetStateAction<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>>,
-  callBotApi: (path: string, options?: { method?: 'GET'|'POST', body?: any }) => Promise<any>
+  callBotApi: (path: string, options?: { method?: 'GET'|'POST', body?: any }) => Promise<any>,
+  metaDia: MetaDia[]
 }) {
-  const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento'>('usuarios');
+  const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento' | 'metaDia'>('usuarios');
   const [isProcessingPdf, setIsProcessingPdf] = useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
@@ -7006,7 +7183,65 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editingBomDia, setEditingBomDia] = useState<BomDiaCaptacao | null>(null);
   const [editingForecast, setEditingForecast] = useState<ForecastCaptacao | null>(null);
+  const [editingMetaDia, setEditingMetaDia] = useState<MetaDia | null>(null);
+  const [newMetaDia, setNewMetaDia] = useState({
+    data: new Date().toISOString().split('T')[0],
+    aaPresencial: 0,
+    ytdPresencial: 0,
+    realizadoPresencial: 0,
+    aaSemipresencial: 0,
+    ytdSemipresencial: 0,
+    realizadoSemipresencial: 0,
+    aaDigital: 0,
+    ytdDigital: 0,
+    realizadoDigital: 0,
+  });
   const [isAddingUser, setIsAddingUser] = useState(false);
+
+  const handleAddMetaDia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        data: newMetaDia.data,
+        aaPresencial: Number(newMetaDia.aaPresencial),
+        ytdPresencial: Number(newMetaDia.ytdPresencial),
+        realizadoPresencial: Number(newMetaDia.realizadoPresencial),
+        aaSemipresencial: Number(newMetaDia.aaSemipresencial),
+        ytdSemipresencial: Number(newMetaDia.ytdSemipresencial),
+        realizadoSemipresencial: Number(newMetaDia.realizadoSemipresencial),
+        aaDigital: Number(newMetaDia.aaDigital),
+        ytdDigital: Number(newMetaDia.ytdDigital),
+        realizadoDigital: Number(newMetaDia.realizadoDigital),
+      };
+
+      if (editingMetaDia) {
+        await updateDoc(doc(db, COLLECTIONS.META_DIA, editingMetaDia.id), payload);
+        onToast("Meta Diária atualizada com sucesso!");
+        setEditingMetaDia(null);
+      } else {
+        await addDoc(collection(db, COLLECTIONS.META_DIA), {
+          ...payload,
+          createdAt: serverTimestamp()
+        });
+        onToast("Meta Diária cadastrada com sucesso!");
+      }
+
+      setNewMetaDia({
+        data: new Date().toISOString().split('T')[0],
+        aaPresencial: 0,
+        ytdPresencial: 0,
+        realizadoPresencial: 0,
+        aaSemipresencial: 0,
+        ytdSemipresencial: 0,
+        realizadoSemipresencial: 0,
+        aaDigital: 0,
+        ytdDigital: 0,
+        realizadoDigital: 0,
+      });
+    } catch (err: any) {
+      onToast(`Erro ao salvar Meta Diária: ${err.message}`, 'error');
+    }
+  };
 
   const handleUpdateUser = async (uid: string, data: Partial<UserProfile>) => {
     try {
@@ -7158,6 +7393,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
           { id: 'usuarios', label: 'Usuários' },
           { id: 'bomDia', label: 'Bom Dia Captação' },
           { id: 'forecast', label: 'Forecast' },
+          { id: 'metaDia', label: 'Meta Dia' },
           { id: 'planner', label: 'Planner da Semana' },
           { id: 'periodo', label: 'Período da Captação' },
           { id: 'whatsapp', label: 'Gestão WhatsApp' },
@@ -7479,6 +7715,278 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
             </div>
           )}
         </section>
+      )}
+
+      {activeTab === 'metaDia' && (
+        <div className="space-y-8">
+          <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 max-w-4xl mx-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-slate-900">{editingMetaDia ? 'Editar Registro de Meta Dia' : 'Adicionar Novo Registro de Meta Dia'}</h3>
+              {editingMetaDia && (
+                <button 
+                  onClick={() => {
+                    setEditingMetaDia(null);
+                    setNewMetaDia({
+                      data: new Date().toISOString().split('T')[0],
+                      aaPresencial: 0,
+                      ytdPresencial: 0,
+                      realizadoPresencial: 0,
+                      aaSemipresencial: 0,
+                      ytdSemipresencial: 0,
+                      realizadoSemipresencial: 0,
+                      aaDigital: 0,
+                      ytdDigital: 0,
+                      realizadoDigital: 0,
+                    });
+                  }}
+                  className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                >
+                  Cancelar Edição
+                </button>
+              )}
+            </div>
+            
+            <form onSubmit={handleAddMetaDia} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="flex items-center space-x-2 text-xs font-bold text-slate-500 mb-2">
+                    <Calendar size={14} className="text-blue-600" />
+                    <span>Data *</span>
+                  </label>
+                  <input 
+                    type="date"
+                    required 
+                    value={newMetaDia.data}
+                    onChange={e => setNewMetaDia({...newMetaDia, data: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  />
+                </div>
+                <div className="flex bg-slate-50 items-center justify-around rounded-xl p-3 border border-slate-100/80">
+                  <div className="text-center">
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase">Total A.A</span>
+                    <span className="text-sm font-extrabold text-slate-700">
+                      {Number(newMetaDia.aaPresencial) + Number(newMetaDia.aaSemipresencial) + Number(newMetaDia.aaDigital)}
+                    </span>
+                  </div>
+                  <div className="text-center border-x border-slate-200 px-6">
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase">Total YTD</span>
+                    <span className="text-sm font-extrabold text-blue-600">
+                      {Number(newMetaDia.ytdPresencial) + Number(newMetaDia.ytdSemipresencial) + Number(newMetaDia.ytdDigital)}
+                    </span>
+                  </div>
+                  <div className="text-center">
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase">Total Realizado</span>
+                    <span className="text-sm font-extrabold text-emerald-600">
+                      {Number(newMetaDia.realizadoPresencial) + Number(newMetaDia.realizadoSemipresencial) + Number(newMetaDia.realizadoDigital)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {[
+                { 
+                  key: 'Presencial', 
+                  label: 'Modalidade Presencial', 
+                  color: 'border-blue-100 bg-blue-50/10',
+                  aa: 'aaPresencial',
+                  ytd: 'ytdPresencial',
+                  realizado: 'realizadoPresencial'
+                },
+                { 
+                  key: 'Semipresencial', 
+                  label: 'Modalidade Semipresencial', 
+                  color: 'border-orange-100 bg-orange-50/10',
+                  aa: 'aaSemipresencial',
+                  ytd: 'ytdSemipresencial',
+                  realizado: 'realizadoSemipresencial'
+                },
+                { 
+                  key: 'Digital', 
+                  label: 'Modalidade Digital', 
+                  color: 'border-indigo-100 bg-indigo-50/10',
+                  aa: 'aaDigital',
+                  ytd: 'ytdDigital',
+                  realizado: 'realizadoDigital'
+                }
+              ].map((modal) => (
+                <div key={modal.key} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/30">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-4">{modal.label}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">A.A (Ano Anterior) *</label>
+                      <input 
+                        type="number" 
+                        required 
+                        value={newMetaDia[modal.aa as keyof typeof newMetaDia]}
+                        onChange={e => setNewMetaDia({...newMetaDia, [modal.aa]: Number(e.target.value)})}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">YTD (Meta Dia) *</label>
+                      <input 
+                        type="number" 
+                        required 
+                        value={newMetaDia[modal.ytd as keyof typeof newMetaDia]}
+                        onChange={e => setNewMetaDia({...newMetaDia, [modal.ytd]: Number(e.target.value)})}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Realizado no Dia *</label>
+                      <input 
+                        type="number" 
+                        required 
+                        value={newMetaDia[modal.realizado as keyof typeof newMetaDia]}
+                        onChange={e => setNewMetaDia({...newMetaDia, [modal.realizado]: Number(e.target.value)})}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button 
+                type="submit" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-100 flex items-center justify-center space-x-2 text-sm"
+              >
+                <span>{editingMetaDia ? 'Salvar Alterações' : 'Salvar Registro de Meta Dia'}</span>
+              </button>
+            </form>
+          </section>
+
+          {/* Table display */}
+          <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-slate-900">Histórico de Metas Diárias</h3>
+              <p className="text-xs text-slate-400 font-medium">Registrados: {metaDia.length}</p>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                    <th className="p-4">Data</th>
+                    <th className="p-4 text-center text-blue-600">Presencial (A.A / YTD / Real)</th>
+                    <th className="p-4 text-center text-orange-600">Semipresencial (A.A / YTD / Real)</th>
+                    <th className="p-4 text-center text-indigo-600">Digital (A.A / YTD / Real)</th>
+                    <th className="p-4 text-center bg-slate-50/50">Total (A.A / YTD / Real)</th>
+                    <th className="p-4 text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
+                  {metaDia.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-400 italic">
+                        Nenhum registro de Meta Diária encontrado.
+                      </td>
+                    </tr>
+                  ) : (
+                    [...metaDia]
+                      .sort((a,b) => b.data.localeCompare(a.data))
+                      .map((item) => {
+                        const totAA = item.aaPresencial + item.aaSemipresencial + item.aaDigital;
+                        const totYTD = item.ytdPresencial + item.ytdSemipresencial + item.ytdDigital;
+                        const totReal = item.realizadoPresencial + item.realizadoSemipresencial + item.realizadoDigital;
+
+                        // Function to get color class comparison Realizado vs YTD
+                        const getColorClass = (real: number, ytd: number) => {
+                          if (real > ytd) return "text-emerald-600 font-extrabold";
+                          if (real < ytd) return "text-rose-600 font-extrabold";
+                          return "text-blue-600 font-extrabold";
+                        };
+
+                        return (
+                          <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
+                            <td className="p-4 font-bold text-slate-800 whitespace-nowrap">
+                              {new Date(item.data + 'T00:00:00').toLocaleDateString('pt-BR')}
+                            </td>
+                            <td className="p-4 text-center">
+                              <span className="text-slate-400">{item.aaPresencial}</span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span className="text-slate-600 font-semibold">{item.ytdPresencial}</span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span className={cn(getColorClass(item.realizadoPresencial, item.ytdPresencial))}>
+                                {item.realizadoPresencial}
+                              </span>
+                            </td>
+                            <td className="p-4 text-center">
+                              <span className="text-slate-400">{item.aaSemipresencial}</span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span className="text-slate-600 font-semibold">{item.ytdSemipresencial}</span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span className={cn(getColorClass(item.realizadoSemipresencial, item.ytdSemipresencial))}>
+                                {item.realizadoSemipresencial}
+                              </span>
+                            </td>
+                            <td className="p-4 text-center">
+                              <span className="text-slate-400">{item.aaDigital}</span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span className="text-slate-600 font-semibold">{item.ytdDigital}</span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span className={cn(getColorClass(item.realizadoDigital, item.ytdDigital))}>
+                                {item.realizadoDigital}
+                              </span>
+                            </td>
+                            <td className="p-4 text-center bg-slate-50/20 font-bold">
+                              <span className="text-slate-400">{totAA}</span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span className="text-slate-600 font-semibold">{totYTD}</span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span className={cn(getColorClass(totReal, totYTD))}>
+                                {totReal}
+                              </span>
+                            </td>
+                            <td className="p-4 text-center whitespace-nowrap">
+                              <div className="flex items-center justify-center space-x-2">
+                                <button
+                                  onClick={() => {
+                                    setEditingMetaDia(item);
+                                    setNewMetaDia({
+                                      data: item.data,
+                                      aaPresencial: item.aaPresencial,
+                                      ytdPresencial: item.ytdPresencial,
+                                      realizadoPresencial: item.realizadoPresencial,
+                                      aaSemipresencial: item.aaSemipresencial,
+                                      ytdSemipresencial: item.ytdSemipresencial,
+                                      realizadoSemipresencial: item.realizadoSemipresencial,
+                                      aaDigital: item.aaDigital,
+                                      ytdDigital: item.ytdDigital,
+                                      realizadoDigital: item.realizadoDigital,
+                                    });
+                                    // Scroll to form smoothly
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                  }}
+                                  className="p-1 px-2.5 text-blue-600 hover:bg-blue-50 rounded-lg font-bold hover:scale-105 transition-all text-xs"
+                                >
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (window.confirm("Deseja excluir permanentemente este registro de Meta Diária?")) {
+                                      try {
+                                        await deleteDoc(doc(db, COLLECTIONS.META_DIA, item.id));
+                                        onToast("Registro de Meta Diária excluído.");
+                                      } catch (err: any) {
+                                        onToast("Erro ao excluir registro.", "error");
+                                      }
+                                    }
+                                  }}
+                                  className="p-1 px-2.5 text-rose-600 hover:bg-rose-50 rounded-lg font-bold hover:scale-105 transition-all text-xs"
+                                >
+                                  Excluir
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       )}
 
       {activeTab === 'bomDia' && (

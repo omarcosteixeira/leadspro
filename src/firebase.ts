@@ -48,6 +48,7 @@ export const COLLECTIONS = {
   BASES_DISPARO: `artifacts/${appId}/public/data/bases_disparo`,
   BASES_RENOVACAO: `artifacts/${appId}/public/data/bases_renovacao`,
   BOT_CONFIG: `artifacts/${appId}/public/data/bot_config`,
+  META_DIA: `artifacts/${appId}/public/data/meta_dia`,
 };
 
 export enum OperationType {

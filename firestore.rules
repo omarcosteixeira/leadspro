@@ -208,5 +208,10 @@ service cloud.firestore {
       allow create, update: if isLider() || isSSA() || isAdminMaster();
       allow delete: if isLider() || isAdminMaster();
     }
+
+    match /artifacts/gestaopro-761e1/public/data/meta_dia/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isLider() || isAdminMaster() || isSalaMatricula() || isQG() || isGestorUnidade() || isGestorComercial();
+    }
   }
 }
