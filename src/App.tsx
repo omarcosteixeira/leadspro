@@ -80,7 +80,8 @@ import {
   Play,
   ChevronUp,
   ChevronDown,
-  Target
+  Target,
+  Cake
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, firebaseConfigPrincipal, firebaseConfigComercial } from './firebase';
@@ -2820,7 +2821,7 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {currentView === 'dashboard' && <DashboardView leads={leads} planner={planner} links={links} profile={profile!} onToast={showToast} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} metaDia={metaDia} />}
+              {currentView === 'dashboard' && <DashboardView leads={leads} planner={planner} links={links} profile={profile!} onToast={showToast} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} metaDia={metaDia} users={users} />}
               {currentView === 'cadastro' && <CadastroView onToast={showToast} profile={profile!} />}
               {currentView === 'historico' && <HistoricoView leads={leads} profile={profile!} onToast={showToast} users={users} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
               {currentView === 'bases' && <BasesView bases={bases} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
@@ -3122,7 +3123,7 @@ function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error')
   );
 }
 
-function DashboardView({ leads, planner, links, profile, onToast, campanhas, bomDia, forecast, periodos, metaDia }: { 
+function DashboardView({ leads, planner, links, profile, onToast, campanhas, bomDia, forecast, periodos, metaDia, users }: { 
   leads: Lead[], 
   planner: PlannerTask[], 
   links: LinkUtil[],
@@ -3132,10 +3133,40 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
   bomDia: BomDiaCaptacao[],
   forecast: ForecastCaptacao[],
   periodos: PeriodoCaptacao[],
-  metaDia: MetaDia[]
+  metaDia: MetaDia[],
+  users: UserProfile[]
 }) {
   const [isCustomizing, setIsCustomizing] = useState(false);
-  const widgets = profile.dashboardWidgets || { stats: false, links: true, planner: true, campanhas: false, bomDia: true, forecast: true, periodo: true };
+  const widgets = profile.dashboardWidgets || { stats: false, links: true, planner: true, campanhas: false, bomDia: true, forecast: true, periodo: true, aniversarios: true };
+
+  const currentMonthNum = new Date().getMonth() + 1; // 1-12
+  const monthNamesPt = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+  const currentMonthName = monthNamesPt[currentMonthNum - 1];
+
+  const currentDayNum = new Date().getDate();
+  const checkIsToday = (dob: string) => {
+    const parts = dob.split('-');
+    if (parts.length !== 3) return false;
+    return parseInt(parts[2], 10) === currentDayNum && parseInt(parts[1], 10) === currentMonthNum;
+  };
+
+  const birthdaysThisMonth = (users || [])
+    .filter(u => {
+      if (u.blocked) return false;
+      if (!u.dataNascimento) return false;
+      const dateParts = u.dataNascimento.split('-');
+      if (dateParts.length !== 3) return false;
+      const birthMonth = parseInt(dateParts[1], 10);
+      return birthMonth === currentMonthNum;
+    })
+    .sort((a, b) => {
+      const dayA = parseInt(a.dataNascimento!.split('-')[2], 10);
+      const dayB = parseInt(b.dataNascimento!.split('-')[2], 10);
+      return dayA - dayB;
+    });
 
   const today = new Date().toISOString().split('T')[0];
   const activePeriod = periodos.find(p => today >= p.inicioInscricao && today <= p.fimMatFin);
@@ -3310,6 +3341,66 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
             })}
           </div>
         </div>
+      )}
+
+      {/* Aniversariantes do Mês Widget */}
+      {widgets.aniversarios !== false && (
+         <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <div className="flex items-center space-x-2 text-rose-500 mb-6">
+               <Cake size={24} />
+               <h3 className="text-xl font-bold text-slate-900">Aniversariantes do Mês ({currentMonthName})</h3>
+            </div>
+            {birthdaysThisMonth.length > 0 ? (
+               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {birthdaysThisMonth.map((u) => {
+                     const bday = parseInt(u.dataNascimento!.split('-')[2], 10);
+                     const isToday = checkIsToday(u.dataNascimento!);
+                     return (
+                        <div
+                           key={u.uid}
+                           className={cn(
+                              "p-4 rounded-2xl border transition-all flex items-center justify-between",
+                              isToday
+                                 ? "bg-rose-50/50 border-rose-200 shadow-sm shadow-rose-50"
+                                 : "bg-slate-50/50 border-slate-100 hover:border-slate-200"
+                           )}
+                        >
+                           <div className="flex items-center space-x-3 overflow-hidden">
+                              <div className={cn(
+                                 "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0",
+                                 isToday
+                                    ? "bg-rose-600 text-white animate-bounce"
+                                    : "bg-blue-50 text-blue-600"
+                              )}>
+                                 {u.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="overflow-hidden">
+                                 <h4 className="font-bold text-slate-800 text-sm truncate">{u.name}</h4>
+                                 <p className="text-[10px] text-slate-400 font-semibold truncate uppercase tracking-wider">{u.role}</p>
+                              </div>
+                           </div>
+                           <div className="text-right shrink-0">
+                              {isToday ? (
+                                 <span className="inline-block px-2 py-1 bg-amber-100 text-amber-800 text-[10px] font-black rounded-lg uppercase tracking-wide animate-pulse">
+                                    Hoje! 🎉
+                                 </span>
+                              ) : (
+                                 <span className="text-xs font-black text-slate-500">
+                                    Dia {bday}
+                                 </span>
+                              )}
+                           </div>
+                        </div>
+                     );
+                  })}
+               </div>
+            ) : (
+               <div className="text-center py-8 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl">
+                  <Cake size={32} className="mx-auto text-slate-300 mb-2" />
+                  <p className="text-sm text-slate-400 font-semibold">Nenhum aniversariante registrado neste mês de {currentMonthName}.</p>
+               </div>
+            )}
+         </section>
       )}
 
       {/* Bom Dia Captação (Complete - All cards) */}
@@ -3611,6 +3702,7 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                   { id: 'forecast', label: 'Forecasts', icon: TrendingUp },
                   { id: 'links', label: 'Links Úteis', icon: ExternalLink },
                   { id: 'planner', label: 'Planner da Semana', icon: Calendar },
+                  { id: 'aniversarios', label: 'Aniversariantes do Mês', icon: Cake },
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -7586,6 +7678,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       phone: formData.get('phone') as string,
                       email: formData.get('email') as string,
                       cpf: formData.get('cpf') as string,
+                      dataNascimento: formData.get('dataNascimento') as string,
                       chavePix: formData.get('chavePix') as string,
                       botNumber: formData.get('botNumber') as string,
                     };
@@ -7621,6 +7714,15 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       name="cpf"
                       defaultValue={editingUser.cpf || ''}
                       placeholder="000.000.000-00"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Data de Nascimento (Opcional)</label>
+                    <input 
+                      name="dataNascimento"
+                      type="date"
+                      defaultValue={editingUser.dataNascimento || ''}
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                     />
                   </div>
@@ -7704,6 +7806,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         name,
                         email,
                         cpf: (formData.get('cpf') as string) || '',
+                        dataNascimento: (formData.get('dataNascimento') as string) || '',
                         role,
                         servidor: localStorage.getItem('servidor_selected') || 'principal',
                         phone: formData.get('phone') as string,
@@ -7748,6 +7851,10 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">CPF (Opcional)</label>
                     <input name="cpf" placeholder="000.000.000-00" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Data de Nascimento (Opcional)</label>
+                    <input name="dataNascimento" type="date" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">Cargo</label>

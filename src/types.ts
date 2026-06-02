@@ -10,6 +10,7 @@ export interface UserProfile {
   email: string;
   name: string;
   cpf?: string;
+  dataNascimento?: string;
   phone?: string;
   role: UserRole;
   chavePix?: string;
@@ -28,6 +29,7 @@ export interface UserProfile {
     bomDia: boolean;
     forecast: boolean;
     periodo: boolean;
+    aniversarios?: boolean;
   };
 }
 

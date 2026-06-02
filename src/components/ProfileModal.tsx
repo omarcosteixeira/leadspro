@@ -47,6 +47,10 @@ export function ProfileModal({
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
 
+  const [birthDateInput, setBirthDateInput] = useState(profile?.dataNascimento || '');
+  const [isEditingBirthDate, setIsEditingBirthDate] = useState(false);
+  const [submittingBirthDate, setSubmittingBirthDate] = useState(false);
+
   const [activeTab, setActiveTab] = useState<'config' | 'folgas'>('config');
   const [tipo, setTipo] = useState<'Folga' | 'Férias'>('Folga');
   const [dataInicio, setDataInicio] = useState('');
@@ -95,6 +99,33 @@ export function ProfileModal({
       setBotNumberInput(profile.botNumber);
     }
   }, [profile?.botNumber]);
+
+  useEffect(() => {
+    if (profile?.dataNascimento) {
+      setBirthDateInput(profile.dataNascimento);
+    }
+  }, [profile?.dataNascimento]);
+
+  const handleSaveBirthDate = async () => {
+    if (!profile?.uid) return;
+    setSubmittingBirthDate(true);
+    try {
+      const updatedData = {
+        dataNascimento: birthDateInput,
+        updatedAt: serverTimestamp()
+      };
+      await updateDoc(doc(db, COLLECTIONS.USERS, profile.uid), updatedData);
+      
+      setProfile(prev => prev ? { ...prev, dataNascimento: birthDateInput } : null);
+      onToast('Data de nascimento atualizada com sucesso!', 'success');
+      setIsEditingBirthDate(false);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `${COLLECTIONS.USERS}/${profile.uid}`);
+      onToast('Erro ao atualizar data de nascimento.', 'error');
+    } finally {
+      setSubmittingBirthDate(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -257,6 +288,53 @@ export function ProfileModal({
                     <div className="flex-1">
                       <span className="text-xs text-slate-400 block font-medium">CPF</span>
                       <span className="text-sm font-bold text-slate-800">{profile?.cpf || '-'}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <div className="mt-0.5 text-slate-400">
+                      <Calendar size={16} />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-xs text-slate-400 block font-medium">Data de Nascimento</span>
+                      {isEditingBirthDate ? (
+                        <div className="flex items-center space-x-2 mt-1">
+                          <input 
+                            type="date"
+                            value={birthDateInput}
+                            onChange={(e) => setBirthDateInput(e.target.value)}
+                            className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                          />
+                          <button 
+                            disabled={submittingBirthDate}
+                            onClick={handleSaveBirthDate}
+                            className="p-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setIsEditingBirthDate(false);
+                              setBirthDateInput(profile?.dataNascimento || '');
+                            }}
+                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-bold text-slate-800">
+                            {profile?.dataNascimento ? formatDateBr(profile.dataNascimento) : 'Não informada'}
+                          </span>
+                          <button 
+                            onClick={() => setIsEditingBirthDate(true)}
+                            className="text-xs text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer"
+                          >
+                            Alterar
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
