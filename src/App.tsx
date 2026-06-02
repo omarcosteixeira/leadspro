@@ -7492,6 +7492,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
                   <th className="px-6 py-4">Nome</th>
                   <th className="px-6 py-4">Email</th>
+                  <th className="px-6 py-4">CPF</th>
                   <th className="px-6 py-4">Telefone</th>
                   <th className="px-6 py-4">Cargo</th>
                   <th className="px-6 py-4">Status</th>
@@ -7510,6 +7511,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500">{u.email}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{u.cpf || '-'}</td>
                     <td className="px-6 py-4 text-sm text-slate-500">{u.phone || '-'}</td>
                     <td className="px-6 py-4">
                       <select 
@@ -7583,6 +7585,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       name: formData.get('name') as string,
                       phone: formData.get('phone') as string,
                       email: formData.get('email') as string,
+                      cpf: formData.get('cpf') as string,
                       chavePix: formData.get('chavePix') as string,
                       botNumber: formData.get('botNumber') as string,
                     };
@@ -7609,6 +7612,15 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       type="email"
                       required
                       defaultValue={editingUser.email}
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">CPF (Opcional)</label>
+                    <input 
+                      name="cpf"
+                      defaultValue={editingUser.cpf || ''}
+                      placeholder="000.000.000-00"
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                     />
                   </div>
@@ -7691,6 +7703,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         uid: newUid,
                         name,
                         email,
+                        cpf: (formData.get('cpf') as string) || '',
                         role,
                         servidor: localStorage.getItem('servidor_selected') || 'principal',
                         phone: formData.get('phone') as string,
@@ -7731,6 +7744,10 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">Email (Google)</label>
                     <input name="email" type="email" required className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">CPF (Opcional)</label>
+                    <input name="cpf" placeholder="000.000.000-00" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">Cargo</label>

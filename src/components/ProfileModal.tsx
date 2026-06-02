@@ -16,7 +16,8 @@ import {
   Plus,
   Clock,
   Check,
-  Send
+  Send,
+  FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { doc, updateDoc, serverTimestamp, collection, addDoc, query, where, getDocs, onSnapshot } from 'firebase/firestore';
@@ -246,6 +247,16 @@ export function ProfileModal({
                     <div className="flex-1">
                       <span className="text-xs text-slate-400 block font-medium">E-mail</span>
                       <span className="text-sm font-bold text-slate-800">{profile?.email}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <div className="mt-0.5 text-slate-400">
+                      <FileText size={16} />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-xs text-slate-400 block font-medium">CPF</span>
+                      <span className="text-sm font-bold text-slate-800">{profile?.cpf || '-'}</span>
                     </div>
                   </div>
 
