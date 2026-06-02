@@ -276,3 +276,20 @@ export interface BotConfig {
   botNames?: Record<string, string>;
   updatedAt?: any;
 }
+
+export interface SolicitacaoFolga {
+  id: string;
+  solicitanteId: string;
+  solicitanteNome: string;
+  solicitanteEmail: string;
+  solicitanteRole: UserRole;
+  dataInicio: string;  // Format YYYY-MM-DD
+  dataFim: string;     // Format YYYY-MM-DD
+  tipo: 'Folga' | 'Férias';
+  status: 'Pendente' | 'Aprovado' | 'Recusado';
+  aprovadoPorId?: string;
+  aprovadoPorNome?: string;
+  justificativa?: string;
+  createdAt: any;
+  updatedAt?: any;
+}

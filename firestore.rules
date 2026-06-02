@@ -213,5 +213,9 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isLider() || isAdminMaster() || isSalaMatricula() || isQG() || isGestorUnidade() || isGestorComercial();
     }
+
+    match /artifacts/gestaopro-761e1/public/data/solicitacoes_folga/{id} {
+      allow read, write: if isAuthenticated();
+    }
   }
 }

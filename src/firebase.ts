@@ -49,6 +49,7 @@ export const COLLECTIONS = {
   BASES_RENOVACAO: `artifacts/${appId}/public/data/bases_renovacao`,
   BOT_CONFIG: `artifacts/${appId}/public/data/bot_config`,
   META_DIA: `artifacts/${appId}/public/data/meta_dia`,
+  SOLICITACAO_FOLGA: `artifacts/${appId}/public/data/solicitacoes_folga`,
 };
 
 export enum OperationType {

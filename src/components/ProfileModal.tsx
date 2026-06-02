@@ -10,12 +10,18 @@ import {
   XCircle, 
   RefreshCw, 
   Smartphone,
-  Wallet
+  Wallet,
+  Calendar,
+  AlertCircle,
+  Plus,
+  Clock,
+  Check,
+  Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, addDoc, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db, COLLECTIONS, handleFirestoreError, OperationType } from '../firebase';
-import { UserProfile, BotConfig } from '../types';
+import { UserProfile, BotConfig, SolicitacaoFolga } from '../types';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -40,6 +46,48 @@ export function ProfileModal({
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<'config' | 'folgas'>('config');
+  const [tipo, setTipo] = useState<'Folga' | 'Férias'>('Folga');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+  const [justificativa, setJustificativa] = useState('');
+  const [submittingFolga, setSubmittingFolga] = useState(false);
+  const [folgas, setFolgas] = useState<SolicitacaoFolga[]>([]);
+  const [loadingFolgas, setLoadingFolgas] = useState(false);
+
+  // Load folgas for user
+  useEffect(() => {
+    if (!profile?.uid || activeTab !== 'folgas' || !isOpen) return;
+
+    setLoadingFolgas(true);
+    const q = query(
+      collection(db, COLLECTIONS.SOLICITACAO_FOLGA),
+      where('solicitanteId', '==', profile.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as SolicitacaoFolga[];
+      
+      // Sort descending by createdAt
+      list.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
+
+      setFolgas(list);
+      setLoadingFolgas(false);
+    }, (error) => {
+      console.error("Error loading folgas:", error);
+      setLoadingFolgas(false);
+    });
+
+    return () => unsubscribe();
+  }, [profile?.uid, activeTab, isOpen]);
+
   // Synchronize input with external profile state changes
   useEffect(() => {
     if (profile?.botNumber) {
@@ -51,6 +99,18 @@ export function ProfileModal({
 
   const allowedRoles = ['Sala de Matrícula', 'SSA', 'Líder/FDV', 'Admin Master', 'FDV (Comercial)', 'Gerente Comercial (Comercial)', 'FDV'];
   const canEditBotNumber = profile && allowedRoles.includes(profile.role);
+
+  const allowedRolesForFolga = ['Sala de Matrícula', 'FDV', 'FDV (Comercial)', 'Líder/FDV', 'Gestor Comercial', 'Gerente Comercial (Comercial)', 'Admin Master'];
+  const canRequestFolga = profile && allowedRolesForFolga.includes(profile.role);
+
+  const formatDateBr = (dateStr: string) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  };
 
   const cleanInputNumber = botNumberInput.replace(/\D/g, '');
   const cleanSavedNumber = (profile?.botNumber || '').replace(/\D/g, '');
@@ -121,7 +181,7 @@ export function ProfileModal({
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
         id="profile-modal-content"
-        className="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden my-8"
+        className="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden my-12"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/50">
@@ -142,206 +202,414 @@ export function ProfileModal({
           </button>
         </div>
 
+        {canRequestFolga && (
+          <div className="flex border-b border-slate-100 bg-slate-50/50 px-4 font-bold text-xs gap-2">
+            <button
+              id="tab-config"
+              onClick={() => setActiveTab('config')}
+              className={`py-3 px-3 border-b-2 transition-all ${activeTab === 'config' ? 'border-blue-600 text-blue-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            >
+              Configurações e Bot
+            </button>
+            <button
+              id="tab-folgas"
+              onClick={() => setActiveTab('folgas')}
+              className={`py-3 px-3 border-b-2 transition-all ${activeTab === 'folgas' ? 'border-blue-600 text-blue-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            >
+              Solicitar Folga / Férias
+            </button>
+          </div>
+        )}
+
         {/* Modal body */}
         <div className="p-6 space-y-6 overflow-y-auto max-h-[75vh]">
-          {/* Section 1: Personal Data */}
-          <div>
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Informações de Perfil</h3>
-            <div className="grid grid-cols-1 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-              <div className="flex items-start space-x-3">
-                <div className="mt-0.5 text-slate-400">
-                  <User size={16} />
-                </div>
-                <div className="flex-1">
-                  <span className="text-xs text-slate-400 block font-medium">Nome</span>
-                  <span className="text-sm font-bold text-slate-800">{profile?.name}</span>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="mt-0.5 text-slate-400">
-                  <Mail size={16} />
-                </div>
-                <div className="flex-1">
-                  <span className="text-xs text-slate-400 block font-medium">E-mail</span>
-                  <span className="text-sm font-bold text-slate-800">{profile?.email}</span>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="mt-0.5 text-slate-400">
-                  <ShieldCheck size={16} />
-                </div>
-                <div className="flex-1">
-                  <span className="text-xs text-slate-400 block font-medium">Cargo / Nível de Acesso</span>
-                  <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 text-[11px] font-bold rounded-full mt-1">
-                    {profile?.role}
-                  </span>
-                </div>
-              </div>
-
-              {profile?.phone && (
-                <div className="flex items-start space-x-3">
-                  <div className="mt-0.5 text-slate-400">
-                    <Phone size={16} />
-                  </div>
-                  <div className="flex-1">
-                    <span className="text-xs text-slate-400 block font-medium">Fone</span>
-                    <span className="text-sm font-bold text-slate-800">{profile.phone}</span>
-                  </div>
-                </div>
-              )}
-
-              {profile?.chavePix && (
-                <div className="flex items-start space-x-3">
-                  <div className="mt-0.5 text-slate-400">
-                    <Wallet size={16} />
-                  </div>
-                  <div className="flex-1">
-                    <span className="text-xs text-slate-400 block font-medium">Chave Pix</span>
-                    <span className="text-sm font-bold text-slate-800">{profile.chavePix}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Section 2: Whatsapp bot connection */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Bot do WhatsApp</h3>
-              <div className="flex items-center space-x-1.5">
-                <div className={`w-2 h-2 rounded-full ${botStatus === 'online' ? 'bg-green-500 animate-pulse' : botStatus === 'pairing' ? 'bg-orange-500 animate-pulse' : 'bg-red-400'}`} />
-                <span className={`text-[11px] font-bold uppercase tracking-wider ${botStatus === 'online' ? 'text-green-600' : botStatus === 'pairing' ? 'text-orange-600' : 'text-slate-500'}`}>
-                  {botStatus === 'online' ? 'Online' : botStatus === 'pairing' ? 'Apareando' : 'Offline'}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-              {/* Informative description */}
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Este número é utilizado pelo sistema automatizado de respostas e disparos inteligentes associado ao seu usuário.
-              </p>
-
-              {/* Input for the phone number */}
+          {activeTab === 'config' ? (
+            <>
+              {/* Section 1: Personal Data */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  Número do WhatsApp do Bot {canEditBotNumber && <span className="text-red-500">*</span>}
-                </label>
-                <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    disabled={!canEditBotNumber || saving}
-                    placeholder="Ex: 5511999999999"
-                    value={botNumberInput}
-                    onChange={(e) => setBotNumberInput(e.target.value)}
-                    className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-slate-800 disabled:bg-slate-100 disabled:text-slate-400 transition-all font-mono"
-                  />
-                  {canEditBotNumber && (
-                    <button
-                      onClick={handleSaveBotNumber}
-                      disabled={saving || !botNumberInput}
-                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md shadow-blue-100 flex items-center justify-center gap-1 min-w-[90px]"
-                    >
-                      {saving ? (
-                        <RefreshCw size={14} className="animate-spin" />
-                      ) : (
-                        'Salvar'
-                      )}
-                    </button>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Informações de Perfil</h3>
+                <div className="grid grid-cols-1 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <div className="flex items-start space-x-3">
+                    <div className="mt-0.5 text-slate-400">
+                      <User size={16} />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-xs text-slate-400 block font-medium">Nome</span>
+                      <span className="text-sm font-bold text-slate-800">{profile?.name}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <div className="mt-0.5 text-slate-400">
+                      <Mail size={16} />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-xs text-slate-400 block font-medium">E-mail</span>
+                      <span className="text-sm font-bold text-slate-800">{profile?.email}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <div className="mt-0.5 text-slate-400">
+                      <ShieldCheck size={16} />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-xs text-slate-400 block font-medium">Cargo / Nível de Acesso</span>
+                      <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 text-[11px] font-bold rounded-full mt-1">
+                        {profile?.role}
+                      </span>
+                    </div>
+                  </div>
+
+                  {profile?.phone && (
+                    <div className="flex items-start space-x-3">
+                      <div className="mt-0.5 text-slate-400">
+                        <Phone size={16} />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-xs text-slate-400 block font-medium">Fone</span>
+                        <span className="text-sm font-bold text-slate-800">{profile.phone}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {profile?.chavePix && (
+                    <div className="flex items-start space-x-3">
+                      <div className="mt-0.5 text-slate-400">
+                        <Wallet size={16} />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-xs text-slate-400 block font-medium">Chave Pix</span>
+                        <span className="text-sm font-bold text-slate-800">{profile.chavePix}</span>
+                      </div>
+                    </div>
                   )}
                 </div>
-                {!canEditBotNumber ? (
-                  <p className="text-[10px] text-slate-400 mt-1.5 leading-snug">
-                    Apenas os Perfis <strong>Sala de Matrícula</strong>, <strong>SSA</strong>, <strong>Líder/FDV</strong>, <strong>FDV</strong>, <strong>FDV (Comercial)</strong> e <strong>Gerente Comercial</strong> têm permissão para inserir ou alterar este número.
-                  </p>
-                ) : (
-                  <p className="text-[10px] text-slate-400 mt-1.5">
-                    Digite o DDI + DDD + número (ex: 55 para Brasil). Use apenas números.
-                  </p>
-                )}
               </div>
 
-              {/* Bot status-based connection actions */}
-              {cleanSavedNumber ? (
-                <div className="pt-2 border-t border-slate-200/60">
-                  {botStatus === 'online' ? (
-                    <div className="bg-green-50 rounded-xl p-3 border border-green-100 flex items-center space-x-3 text-green-800">
-                      <CheckCircle2 className="text-green-500 shrink-0" size={18} />
-                      <div className="text-xs">
-                        <p className="font-bold">WhatsApp Conectado!</p>
-                        <p className="text-[11px] text-green-600 mt-0.5">O bot está atendendo e enviando mensagens ativamente no número {profile.botNumber}.</p>
-                      </div>
+              {/* Section 2: Whatsapp bot connection */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Bot do WhatsApp</h3>
+                  <div className="flex items-center space-x-1.5">
+                    <div className={`w-2 h-2 rounded-full ${botStatus === 'online' ? 'bg-green-500 animate-pulse' : botStatus === 'pairing' ? 'bg-orange-500 animate-pulse' : 'bg-red-400'}`} />
+                    <span className={`text-[11px] font-bold uppercase tracking-wider ${botStatus === 'online' ? 'text-green-600' : botStatus === 'pairing' ? 'text-orange-600' : 'text-slate-500'}`}>
+                      {botStatus === 'online' ? 'Online' : botStatus === 'pairing' ? 'Apareando' : 'Offline'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  {/* Informative description */}
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Este número é utilizado pelo sistema automatizado de respostas e disparos inteligentes associado ao seu usuário.
+                  </p>
+
+                  {/* Input for the phone number */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Número do WhatsApp do Bot {canEditBotNumber && <span className="text-red-500">*</span>}
+                    </label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        disabled={!canEditBotNumber || saving}
+                        placeholder="Ex: 5511999999999"
+                        value={botNumberInput}
+                        onChange={(e) => setBotNumberInput(e.target.value)}
+                        className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-slate-800 disabled:bg-slate-100 disabled:text-slate-400 transition-all font-mono"
+                      />
+                      {canEditBotNumber && (
+                        <button
+                          onClick={handleSaveBotNumber}
+                          disabled={saving || !botNumberInput}
+                          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md shadow-blue-100 flex items-center justify-center gap-1 min-w-[90px]"
+                        >
+                          {saving ? (
+                            <RefreshCw size={14} className="animate-spin" />
+                          ) : (
+                            'Salvar'
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    {!canEditBotNumber ? (
+                      <p className="text-[10px] text-slate-400 mt-1.5 leading-snug">
+                        Apenas os Perfis <strong>Sala de Matrícula</strong>, <strong>SSA</strong>, <strong>Líder/FDV</strong>, <strong>FDV</strong>, <strong>FDV (Comercial)</strong> e <strong>Gerente Comercial</strong> têm permissão para inserir ou alterar este número.
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 mt-1.5">
+                        Digite o DDI + DDD + número (ex: 55 para Brasil). Use apenas números.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Bot status-based connection actions */}
+                  {cleanSavedNumber ? (
+                    <div className="pt-2 border-t border-slate-200/60">
+                      {botStatus === 'online' ? (
+                        <div className="bg-green-50 rounded-xl p-3 border border-green-100 flex items-center space-x-3 text-green-800">
+                          <CheckCircle2 className="text-green-500 shrink-0" size={18} />
+                          <div className="text-xs">
+                            <p className="font-bold">WhatsApp Conectado!</p>
+                            <p className="text-[11px] text-green-600 mt-0.5">O bot está atendendo e enviando mensagens ativamente no número {profile.botNumber}.</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="bg-red-50 rounded-xl p-3 border border-red-100 flex items-center space-x-3 text-red-800">
+                            <XCircle className="text-red-500 shrink-0" size={18} />
+                            <div className="text-xs">
+                              <p className="font-bold">WhatsApp Desconectado</p>
+                              <p className="text-[11px] text-red-600 mt-0.5">Seu bot está offline. Inicie uma solicitação de conexão para gerar o código.</p>
+                            </div>
+                          </div>
+
+                          {/* Connection Trigger Button */}
+                          <button
+                            onClick={handleConnect}
+                            disabled={connecting}
+                            className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-600 text-white py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
+                          >
+                            {connecting ? (
+                              <>
+                                <RefreshCw size={16} className="animate-spin" />
+                                <span>Solicitando Conexão...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Smartphone size={16} />
+                                <span>Conectar e Gerar QR / Código</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      <div className="bg-red-50 rounded-xl p-3 border border-red-100 flex items-center space-x-3 text-red-800">
-                        <XCircle className="text-red-500 shrink-0" size={18} />
-                        <div className="text-xs">
-                          <p className="font-bold">WhatsApp Desconectado</p>
-                          <p className="text-[11px] text-red-600 mt-0.5">Seu bot está offline. Inicie uma solicitação de conexão para gerar o código.</p>
-                        </div>
-                      </div>
-
-                      {/* Connection Trigger Button */}
-                      <button
-                        onClick={handleConnect}
-                        disabled={connecting}
-                        className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-600 text-white py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
-                      >
-                        {connecting ? (
-                          <>
-                            <RefreshCw size={16} className="animate-spin" />
-                            <span>Solicitando Conexão...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Smartphone size={16} />
-                            <span>Conectar e Gerar QR / Código</span>
-                          </>
-                        )}
-                      </button>
+                    <div className="bg-slate-100/70 p-3 rounded-xl text-center text-xs text-slate-500">
+                      Cadastre um número de WhatsApp acima para ativar as opções de conexão do bot.
                     </div>
                   )}
-                </div>
-              ) : (
-                <div className="bg-slate-100/70 p-3 rounded-xl text-center text-xs text-slate-500">
-                  Cadastre um número de WhatsApp acima para ativar as opções de conexão do bot.
-                </div>
-              )}
 
-              {/* Real-time QR and pairing code container pulled from server status */}
-              {botInfo && botStatus === 'pairing' && (botInfo.pairingCode || botInfo.qrUrl) && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-3 bg-white p-4 rounded-xl border-2 border-dashed border-slate-200 text-center flex flex-col gap-4 items-center shadow-inner"
+                  {/* Real-time QR and pairing code container pulled from server status */}
+                  {botInfo && botStatus === 'pairing' && (botInfo.pairingCode || botInfo.qrUrl) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-3 bg-white p-4 rounded-xl border-2 border-dashed border-slate-200 text-center flex flex-col gap-4 items-center shadow-inner"
+                    >
+                      <div className="flex items-center space-x-1.5 text-orange-600">
+                        <QrIcon size={16} />
+                        <span className="text-xs font-bold uppercase tracking-wider">Código Prontidão</span>
+                      </div>
+
+                      {botInfo.qrUrl && (
+                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                          <p className="text-[10px] text-slate-500 mb-2">Aponte a câmera do WhatsApp para escancear o QR Code:</p>
+                          <img src={botInfo.qrUrl} alt="QR Code WhatsApp" className="mx-auto rounded w-48 h-48 object-contain" referrerPolicy="no-referrer" />
+                        </div>
+                      )}
+
+                      {botInfo.pairingCode && (
+                        <div className="w-full">
+                          <p className="text-[10px] text-slate-500 mb-1">{botInfo.qrUrl ? 'Ou utilize' : 'Utilize'} o Pairing Code no aparelho:</p>
+                          <div className="bg-slate-950 text-white rounded-lg p-3 font-mono text-2xl tracking-widest font-bold max-w-[200px] mx-auto select-all shadow-md">
+                            {botInfo.pairingCode}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-6">
+              {/* Solicitação Form */}
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Plus className="text-blue-600" size={18} />
+                  Nova Solicitação de Folga ou Férias
+                </h3>
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!dataInicio || !dataFim) {
+                      onToast('Por favor, informe a data de início e término.', 'error');
+                      return;
+                    }
+                    if (dataInicio > dataFim) {
+                      onToast('A data de início não pode ser maior que a data de término.', 'error');
+                      return;
+                    }
+
+                    setSubmittingFolga(true);
+                    try {
+                      // Check overlap logic
+                      const approvalsQuery = query(
+                        collection(db, COLLECTIONS.SOLICITACAO_FOLGA),
+                        where('status', '==', 'Aprovado')
+                      );
+                      const querySnapshot = await getDocs(approvalsQuery);
+                      const existingApprovals = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+                      
+                      const conflict = existingApprovals.find(appr => {
+                        if (appr.solicitanteId === profile.uid) return false;
+                        return (dataInicio <= appr.dataFim && appr.dataInicio <= dataFim);
+                      });
+
+                      if (conflict) {
+                        onToast(`Atenção: A data selecionada já está aprovada para outro funcionário (${conflict.solicitanteNome}, de ${formatDateBr(conflict.dataInicio)} a ${formatDateBr(conflict.dataFim)}).`, 'error');
+                        setSubmittingFolga(false);
+                        return;
+                      }
+
+                      const docData = {
+                        solicitanteId: profile.uid,
+                        solicitanteNome: profile.name,
+                        solicitanteEmail: profile.email,
+                        solicitanteRole: profile.role,
+                        dataInicio,
+                        dataFim,
+                        tipo,
+                        status: 'Pendente',
+                        justificativa,
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp()
+                      };
+                      
+                      await addDoc(collection(db, COLLECTIONS.SOLICITACAO_FOLGA), docData);
+                      onToast('Solicitação de folga enviada com sucesso!', 'success');
+                      
+                      // reset
+                      setDataInicio('');
+                      setDataFim('');
+                      setJustificativa('');
+                    } catch (err) {
+                      handleFirestoreError(err, OperationType.CREATE, COLLECTIONS.SOLICITACAO_FOLGA);
+                      onToast('Erro ao submeter solicitação.', 'error');
+                    } finally {
+                      setSubmittingFolga(false);
+                    }
+                  }}
+                  className="space-y-4 text-xs text-slate-700"
                 >
-                  <div className="flex items-center space-x-1.5 text-orange-600">
-                    <QrIcon size={16} />
-                    <span className="text-xs font-bold uppercase tracking-wider">Código Prontidão</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">Tipo de Ausência</label>
+                      <select 
+                        value={tipo}
+                        onChange={(e) => setTipo(e.target.value as 'Folga' | 'Férias')}
+                        className="bg-white w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none font-medium h-[38px]"
+                      >
+                        <option value="Folga">Folga</option>
+                        <option value="Férias">Férias</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">Dia de Início</label>
+                      <input 
+                        type="date"
+                        value={dataInicio}
+                        onChange={(e) => setDataInicio(e.target.value)}
+                        className="bg-white w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none h-[38px]"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">Dia de Fim</label>
+                      <input 
+                        type="date"
+                        value={dataFim}
+                        onChange={(e) => setDataFim(e.target.value)}
+                        className="bg-white w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none h-[38px]"
+                        required
+                      />
+                    </div>
                   </div>
 
-                  {botInfo.qrUrl && (
-                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                      <p className="text-[10px] text-slate-500 mb-2">Aponte a câmera do WhatsApp para escancear o QR Code:</p>
-                      <img src={botInfo.qrUrl} alt="QR Code WhatsApp" className="mx-auto rounded w-48 h-48 object-contain" referrerPolicy="no-referrer" />
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Motivo / Justificativa (Opcional)</label>
+                    <textarea 
+                      value={justificativa}
+                      onChange={(e) => setJustificativa(e.target.value)}
+                      placeholder="Diga brevemente o motivo de sua solicitação..."
+                      className="bg-white w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none h-16 resize-none"
+                    />
+                  </div>
 
-                  {botInfo.pairingCode && (
-                    <div className="w-full">
-                      <p className="text-[10px] text-slate-500 mb-1">{botInfo.qrUrl ? 'Ou utilize' : 'Utilize'} o Pairing Code no aparelho:</p>
-                      <div className="bg-slate-950 text-white rounded-lg p-3 font-mono text-2xl tracking-widest font-bold max-w-[200px] mx-auto select-all shadow-md">
-                        {botInfo.pairingCode}
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              )}
+                  <button 
+                    type="submit"
+                    disabled={submittingFolga}
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-100"
+                  >
+                    {submittingFolga ? <RefreshCw className="animate-spin" size={16} /> : <Send size={15} />}
+                    <span>Enviar Solicitação</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* List of current user's requested folgas */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Seu Histórico de Solicitações</h3>
+                {loadingFolgas ? (
+                  <div className="flex justify-center py-6 text-slate-400">
+                    <RefreshCw className="animate-spin text-blue-500" size={24} />
+                  </div>
+                ) : folgas.length === 0 ? (
+                  <div className="bg-slate-50 p-6 rounded-2xl text-center text-slate-400 text-xs">
+                    Nenhuma solicitação de folga ou férias enviada ainda.
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                    {folgas.map((folga) => {
+                      const isApproved = folga.status === 'Aprovado';
+                      const isRejected = folga.status === 'Recusado';
+                      const isPending = folga.status === 'Pendente';
+                      
+                      return (
+                        <div key={folga.id} className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex flex-col gap-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${folga.tipo === 'Férias' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                              {folga.tipo}
+                            </span>
+                            
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              isApproved ? 'bg-green-100 text-green-700' : 
+                              isRejected ? 'bg-red-100 text-red-700' : 
+                              'bg-amber-100 text-amber-700'
+                            }`}>
+                              {isApproved && <Check size={10} />}
+                              {isRejected && <X size={10} />}
+                              {isPending && <Clock size={10} />}
+                              {folga.status}
+                            </span>
+                          </div>
+
+                          <div className="text-slate-700 font-semibold flex justify-between items-center">
+                            <span>Período: <strong className="text-slate-950 font-bold">{formatDateBr(folga.dataInicio)}</strong> a <strong className="text-slate-950 font-bold">{formatDateBr(folga.dataFim)}</strong></span>
+                          </div>
+
+                          {folga.justificativa && (
+                            <div className="text-slate-500 text-[11px] italic bg-slate-50/70 px-2 py-1 rounded-lg">
+                              "{folga.justificativa}"
+                            </div>
+                          )}
+
+                          {folga.aprovadoPorNome && (
+                            <div className="text-[10px] text-slate-400 pt-1.5 border-t border-slate-100 flex justify-between items-center">
+                              <span>Julgado por: <strong>{folga.aprovadoPorNome}</strong></span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer */}

@@ -208,6 +208,28 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["data"]
+    },
+    "SolicitacaoFolga": {
+      "title": "SolicitacaoFolga",
+      "description": "Time off and vacation requests",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "solicitanteId": { "type": "string" },
+        "solicitanteNome": { "type": "string" },
+        "solicitanteEmail": { "type": "string" },
+        "solicitanteRole": { "type": "string" },
+        "dataInicio": { "type": "string", "format": "date" },
+        "dataFim": { "type": "string", "format": "date" },
+        "tipo": { "type": "string", "enum": ["Folga", "Férias"] },
+        "status": { "type": "string", "enum": ["Pendente", "Aprovado", "Recusado"] },
+        "aprovadoPorId": { "type": "string" },
+        "aprovadoPorNome": { "type": "string" },
+        "justificativa": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["solicitanteId", "solicitanteNome", "dataInicio", "dataFim", "tipo", "status"]
     }
   },
   "firestore": {
@@ -262,6 +284,10 @@
     "artifacts/gestaopro-761e1/public/data/meta_dia/{id}": {
       "schema": "MetaDia",
       "description": "Meta Dia goals and performance entries"
+    },
+    "artifacts/gestaopro-761e1/public/data/solicitacoes_folga/{id}": {
+      "schema": "SolicitacaoFolga",
+      "description": "Time off and vacation requests data"
     }
   }
 }

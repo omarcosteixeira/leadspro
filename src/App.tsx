@@ -50,6 +50,7 @@ import {
   Upload,
   Menu,
   X,
+  Check,
   ChevronRight,
   AlertCircle,
   FileText,
@@ -106,7 +107,8 @@ import {
   MapaoAcademicoEntry,
   BaseDisparoEntry,
   BotConfig,
-  MetaDia
+  MetaDia,
+  SolicitacaoFolga
 } from './types';
 import { ProfileModal } from './components/ProfileModal';
 
@@ -329,7 +331,7 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   basesRenovacao: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SSA],
   avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.ACADEMICO],
   emailMarketing: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
-  admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL_COMERCIAL]
+  admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.GESTOR_COMERCIAL]
 };
 
 // --- Components ---
@@ -7106,7 +7108,63 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   callBotApi: (path: string, options?: { method?: 'GET'|'POST', body?: any }) => Promise<any>,
   metaDia: MetaDia[]
 }) {
-  const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento' | 'metaDia'>('usuarios');
+  const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento' | 'metaDia' | 'folgas'>('usuarios');
+  const [adminRequests, setAdminRequests] = useState<SolicitacaoFolga[]>([]);
+  const [loadingAdminRequests, setLoadingAdminRequests] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'Todos' | 'Pendente' | 'Aprovado' | 'Recusado'>('Todos');
+
+  // Subscribe to all folga requests in AdminView
+  useEffect(() => {
+    if (activeTab !== 'folgas') return;
+
+    setLoadingAdminRequests(true);
+    const q = collection(db, COLLECTIONS.SOLICITACAO_FOLGA);
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as SolicitacaoFolga[];
+
+      // Sort descending by createdAt
+      list.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
+
+      setAdminRequests(list);
+      setLoadingAdminRequests(false);
+    }, (error) => {
+      console.error("Error loading admin folgas:", error);
+      setLoadingAdminRequests(false);
+    });
+
+    return () => unsubscribe();
+  }, [activeTab]);
+
+  const handleDecideRequest = async (request: SolicitacaoFolga, status: 'Aprovado' | 'Recusado') => {
+    try {
+      if (!auth.currentUser) return;
+      const currentUserUid = auth.currentUser.uid;
+      const decider = users.find(u => u.uid === currentUserUid);
+      const deciderName = decider ? decider.name : auth.currentUser.email || 'Admin';
+
+      const requestRef = doc(db, COLLECTIONS.SOLICITACAO_FOLGA, request.id);
+      await updateDoc(requestRef, {
+        status,
+        aprovadoPorId: currentUserUid,
+        aprovadoPorNome: deciderName,
+        updatedAt: serverTimestamp()
+      });
+      
+      onToast(`Solicitação de ${request.solicitanteNome} foi ${status === 'Aprovado' ? 'aprovada' : 'recusada'}.`, 'success');
+    } catch (err: any) {
+      console.error("Error deciding request:", err);
+      onToast("Erro ao processar decisão.", "error");
+    }
+  };
+
   const [isProcessingPdf, setIsProcessingPdf] = useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
@@ -7391,6 +7449,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
       <div className="flex overflow-x-auto space-x-2 border-b border-slate-200 pb-4 mb-6 scrollbar-hide">
         {[
           { id: 'usuarios', label: 'Usuários' },
+          { id: 'folgas', label: 'Folgas e Férias' },
           { id: 'bomDia', label: 'Bom Dia Captação' },
           { id: 'forecast', label: 'Forecast' },
           { id: 'metaDia', label: 'Meta Dia' },
@@ -7988,6 +8047,211 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
           </section>
         </div>
       )}
+
+      {activeTab === 'folgas' && (() => {
+        const currentUserUid = auth.currentUser?.uid;
+        const userProfile = users.find(u => u.uid === currentUserUid);
+
+        const filteredRequests = adminRequests.filter(req => {
+          if (!userProfile) return false;
+          if (userProfile.role === 'Admin Master') return true;
+          if (userProfile.role === 'Líder/FDV') return req.solicitanteRole === 'Sala de Matrícula';
+          if (userProfile.role === 'Gestor Comercial' || userProfile.role === 'Gerente Comercial (Comercial)') {
+            return req.solicitanteRole === 'FDV' || req.solicitanteRole === 'FDV (Comercial)';
+          }
+          return false;
+        });
+
+        const pendingCount = filteredRequests.filter(r => r.status === 'Pendente').length;
+        const approvedCount = filteredRequests.filter(r => r.status === 'Aprovado').length;
+        const rejectedCount = filteredRequests.filter(r => r.status === 'Recusado').length;
+
+        return (
+          <div id="admin-folgas-section" className="space-y-6">
+            {/* Header Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
+                  <Clock size={24} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">Pendentes</span>
+                  <span className="text-2xl font-black text-slate-800">
+                    {pendingCount}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
+                  <CheckCircle2 size={24} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">Aprovados</span>
+                  <span className="text-2xl font-black text-slate-800">
+                    {approvedCount}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
+                  <XCircle size={24} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">Recusados</span>
+                  <span className="text-2xl font-black text-slate-800">
+                    {rejectedCount}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+              <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Solicitações de Folgas e Férias</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Líder/FDV aprova para Sala de Matrícula | Gestores aprovam para FDV / FDV Comercial
+                  </p>
+                </div>
+
+                {/* Filter controls */}
+                <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-xl font-bold text-xs">
+                  {(['Todos', 'Pendente', 'Aprovado', 'Recusado'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setStatusFilter(f)}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        statusFilter === f 
+                          ? 'bg-blue-600 text-white shadow-sm font-semibold' 
+                          : 'text-slate-500 hover:text-slate-800 font-semibold'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {loadingAdminRequests ? (
+                <div className="flex justify-center items-center py-12 text-slate-400">
+                  <RefreshCw size={28} className="animate-spin text-blue-600 mr-2" />
+                  <span className="font-semibold text-sm">Carregando solicitações...</span>
+                </div>
+              ) : filteredRequests.length === 0 ? (
+                <div className="p-12 text-center text-slate-400 text-sm">
+                  Nenhuma solicitação de folga ou férias para exibir sob sua responsabilidade de aprovação.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
+                        <th className="px-6 py-4">Funcionário / Cargo</th>
+                        <th className="px-6 py-4">Tipo</th>
+                        <th className="px-6 py-4">Período</th>
+                        <th className="px-6 py-4">Justificativa</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                      {filteredRequests
+                        .filter(r => statusFilter === 'Todos' || r.status === statusFilter)
+                        .map((request) => {
+                          const isApproved = request.status === 'Aprovado';
+                          const isRejected = request.status === 'Recusado';
+                          const isPending = request.status === 'Pendente';
+                          
+                          // Helper to format date with DD/MM/YYYY
+                          const formatBrDate = (d: string) => {
+                            if (!d) return '';
+                            const parts = d.split('-');
+                            return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : d;
+                          };
+
+                          return (
+                            <tr key={request.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-bold text-xs mt-0.5">
+                                    {request.solicitanteNome?.charAt(0) || 'U'}
+                                  </div>
+                                  <div>
+                                    <span className="font-bold text-slate-900 block">{request.solicitanteNome}</span>
+                                    <span className="text-[10px] text-slate-400 font-medium block">{request.solicitanteRole}</span>
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="px-6 py-4">
+                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                  request.tipo === 'Férias' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {request.tipo}
+                                </span>
+                              </td>
+
+                              <td className="px-6 py-4 font-semibold text-slate-800">
+                                <span className="text-blue-600 font-bold">{formatBrDate(request.dataInicio)}</span>
+                                <span className="mx-1 text-slate-400">até</span>
+                                <span className="text-blue-600 font-bold">{formatBrDate(request.dataFim)}</span>
+                              </td>
+
+                              <td className="px-6 py-4 max-w-xs truncate text-[11px] text-slate-500 italic">
+                                {request.justificativa ? `"${request.justificativa}"` : '-'}
+                              </td>
+
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                  isApproved ? 'bg-green-100 text-green-700' : 
+                                  isRejected ? 'bg-red-100 text-red-700' : 
+                                  'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {isApproved && <Check size={10} />}
+                                  {isRejected && <X size={10} />}
+                                  {isPending && <Clock size={10} />}
+                                  {request.status}
+                                </span>
+                                {request.aprovadoPorNome && (
+                                  <span className="block text-[9px] text-slate-400 mt-0.5 font-medium">Por {request.aprovadoPorNome}</span>
+                                )}
+                              </td>
+
+                              <td className="px-6 py-4">
+                                {isPending ? (
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={() => handleDecideRequest(request, 'Aprovado')}
+                                      className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-[10px] flex items-center gap-1 transition-all"
+                                    >
+                                      <Check size={10} />
+                                      <span>Aprovar</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDecideRequest(request, 'Recusado')}
+                                      className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-[10px] flex items-center gap-1 transition-all"
+                                    >
+                                      <X size={10} />
+                                      <span>Recusar</span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 font-medium">Decidido</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </div>
+        );
+      })()}
 
       {activeTab === 'bomDia' && (
         <div className="space-y-8">
