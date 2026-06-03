@@ -163,7 +163,7 @@ export function PublicRegistrationForm({ onToast }: PublicRegistrationFormProps)
         acao: 'Ação ( formulario)',
         nome: formData.nome.trim(),
         telefone: cleanTelefone,
-        cpf: cleanCpf || undefined,
+        cpf: cleanCpf,
         email: formData.email.trim(),
         tipoCurso: formData.tipoCurso,
         cursoInteresse: formData.cursoInteresse.trim(),
