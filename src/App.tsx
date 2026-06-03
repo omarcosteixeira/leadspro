@@ -81,7 +81,10 @@ import {
   ChevronUp,
   ChevronDown,
   Target,
-  Cake
+  Cake,
+  CheckSquare,
+  Square,
+  Coins
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, firebaseConfigPrincipal, firebaseConfigComercial } from './firebase';
@@ -313,7 +316,8 @@ const ROLES: Record<string, UserRole> = {
   ACADEMICO: 'Acadêmico',
   PROMOTOR_RUA: 'Promotor/rua',
   GESTOR_COMERCIAL_COMERCIAL: 'Gerente Comercial (Comercial)',
-  FDV_COMERCIAL: 'FDV (Comercial)'
+  FDV_COMERCIAL: 'FDV (Comercial)',
+  FINANCEIRO: 'Financeiro'
 };
 
 const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
@@ -332,7 +336,8 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   basesRenovacao: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SSA],
   avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.ACADEMICO],
   emailMarketing: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
-  admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.GESTOR_COMERCIAL]
+  admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.GESTOR_COMERCIAL],
+  controlePagamentos: [ROLES.ADMIN_MASTER, ROLES.FINANCEIRO, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_UNIDADE]
 };
 
 // --- Components ---
@@ -2380,9 +2385,9 @@ export default function App() {
     }
 
     let unsubCalendario = () => {};
-    if (profile && VIEW_PERMISSIONS.calendario.includes(profile.role)) {
+    if (profile && (VIEW_PERMISSIONS.calendario.includes(profile.role) || VIEW_PERMISSIONS.controlePagamentos.includes(profile.role))) {
       let calendarioQuery;
-      if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL].includes(profile.role)) {
+      if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.FINANCEIRO].includes(profile.role)) {
         calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES));
       } else if (profile.role === ROLES.FDV) {
         calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), or(where("creatorId", "==", user!.uid), where("creatorRole", "==", ROLES.PROMOTOR)));
@@ -2555,7 +2560,7 @@ export default function App() {
 
   useEffect(() => {
     if (profile && !canView(currentView)) {
-      const availableViews = ['dashboard', 'cadastro', 'historico', 'bases', 'gap', 'fiesProuni', 'mapao', 'basesDisparo', 'campanhas', 'calendario', 'empresas', 'calculo', 'emailMarketing', 'admin'];
+      const availableViews = ['dashboard', 'cadastro', 'historico', 'bases', 'gap', 'fiesProuni', 'mapao', 'basesDisparo', 'campanhas', 'calendario', 'empresas', 'calculo', 'emailMarketing', 'admin', 'controlePagamentos'];
       const firstAvailable = availableViews.find(v => canView(v));
       if (firstAvailable) {
         setCurrentView(firstAvailable);
@@ -2722,6 +2727,7 @@ export default function App() {
               { id: 'calendario', label: 'Calendário de Ações', icon: Calendar },
               { id: 'empresas', label: 'Empresas Parceiras', icon: Building2 },
               { id: 'calculo', label: 'Cálculo de Remuneração', icon: Calculator },
+              { id: 'controlePagamentos', label: 'Controle de Pagamentos', icon: Coins },
               { id: 'emailMarketing', label: 'Envio de e-mail Marketing', icon: Mail },
               { id: 'admin', label: 'Administração', icon: Settings },
             ].map((item) => canView(item.id) && (
@@ -2842,7 +2848,8 @@ export default function App() {
               {currentView === 'campanhas' && <CampanhasView campanhas={campanhas} onToast={showToast} />}
               {currentView === 'calculo' && <CalculoRemuneracaoView />}
               {currentView === 'emailMarketing' && <EmailMarketingView onToast={showToast} />}
-              {currentView === 'calendario' && <CalendarioAcoesView data={calendarioAcoes} onToast={showToast} profile={profile!} initialData={initialActionData} onClearInitialData={() => setInitialActionData(null)} />}
+              {currentView === 'controlePagamentos' && <ControlePagamentosView calendarioAcoes={calendarioAcoes} users={users} onToast={showToast} />}
+              {currentView === 'calendario' && <CalendarioAcoesView data={calendarioAcoes} onToast={showToast} profile={profile!} initialData={initialActionData} onClearInitialData={() => setInitialActionData(null)} users={users} />}
               {currentView === 'empresas' && (
                 <EmpresasParceirasView 
                   data={empresasParceiras} 
@@ -6380,13 +6387,15 @@ function CalendarioAcoesView({
   onToast, 
   profile,
   initialData,
-  onClearInitialData
+  onClearInitialData,
+  users
 }: { 
   data: CalendarioAcao[], 
   onToast: (m: string, t?: 'success' | 'error') => void, 
   profile: UserProfile,
   initialData?: Partial<CalendarioAcao> | null,
-  onClearInitialData?: () => void
+  onClearInitialData?: () => void,
+  users: UserProfile[]
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'concluida' | 'pendente'>('all');
@@ -6401,8 +6410,16 @@ function CalendarioAcoesView({
     local: '',
     observacao: '',
     concluida: false,
-    fotos: ['', '', '']
+    fotos: ['', '', ''],
+    metaBoletos: '' as number | '',
+    metaInscritos: '' as number | '',
+    precisaPromotor: false,
+    promotoresSelecionados: [] as string[],
+    valorPromotor: '' as number | '',
+    valorOrcado: '' as number | ''
   });
+
+  const promotoresDisponiveis = (users || []).filter(u => u.role === ROLES.PROMOTOR || u.role === ROLES.PROMOTOR_RUA);
 
   useEffect(() => {
     if (initialData) {
@@ -6413,7 +6430,13 @@ function CalendarioAcoesView({
         local: initialData.local || '',
         observacao: initialData.observacao || '',
         concluida: false,
-        fotos: ['', '', '']
+        fotos: ['', '', ''],
+        metaBoletos: (initialData as any).metaBoletos !== undefined ? (initialData as any).metaBoletos : '',
+        metaInscritos: (initialData as any).metaInscritos !== undefined ? (initialData as any).metaInscritos : '',
+        precisaPromotor: !!(initialData as any).precisaPromotor,
+        promotoresSelecionados: (initialData as any).promotoresSelecionados || [],
+        valorPromotor: (initialData as any).valorPromotor !== undefined ? (initialData as any).valorPromotor : '',
+        valorOrcado: (initialData as any).valorOrcado !== undefined ? (initialData as any).valorOrcado : ''
       });
       setIsAdding(true);
       if (onClearInitialData) onClearInitialData();
@@ -6435,6 +6458,10 @@ function CalendarioAcoesView({
     try {
       const payload = {
         ...newAction,
+        metaBoletos: newAction.metaBoletos === '' ? 0 : Number(newAction.metaBoletos),
+        metaInscritos: newAction.metaInscritos === '' ? 0 : Number(newAction.metaInscritos),
+        valorPromotor: newAction.valorPromotor === '' ? 0 : Number(newAction.valorPromotor),
+        valorOrcado: newAction.valorOrcado === '' ? 0 : Number(newAction.valorOrcado),
         fotos: newAction.fotos.filter(f => f.trim() !== ''),
         updatedAt: serverTimestamp()
       };
@@ -6447,7 +6474,7 @@ function CalendarioAcoesView({
 
       if (editingAction) {
         await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, editingAction.id), payload);
-        onToast("Ação atualizada com sucesso!");
+        onToast("Ação updated com sucesso!");
       } else {
         await addDoc(collection(db, COLLECTIONS.CALENDARIO_ACOES), {
           ...payload,
@@ -6459,10 +6486,83 @@ function CalendarioAcoesView({
       }
       setIsAdding(false);
       setEditingAction(null);
-      setNewAction({ nome: '', dataInicio: '', dataFim: '', local: '', observacao: '', concluida: false, fotos: ['', '', ''] });
+      setNewAction({
+        nome: '',
+        dataInicio: '',
+        dataFim: '',
+        local: '',
+        observacao: '',
+        concluida: false,
+        fotos: ['', '', ''],
+        metaBoletos: '',
+        metaInscritos: '',
+        precisaPromotor: false,
+        promotoresSelecionados: [],
+        valorPromotor: '',
+        valorOrcado: ''
+      });
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, COLLECTIONS.CALENDARIO_ACOES);
       onToast("Erro ao salvar ação.", 'error');
+    }
+  };
+
+  const togglePromoterAttendance = async (action: CalendarioAcao, promoterUid: string) => {
+    try {
+      const currentAttendance = action.presencaPromotores || {};
+      const nextVal = !currentAttendance[promoterUid];
+      const updatedAttendance = {
+        ...currentAttendance,
+        [promoterUid]: nextVal
+      };
+
+      const payload: any = {
+        presencaPromotores: updatedAttendance
+      };
+
+      if (nextVal) {
+        const currentDetails = action.dadosPresencaPromotores || {};
+        if (!currentDetails[promoterUid]) {
+          payload.dadosPresencaPromotores = {
+            ...currentDetails,
+            [promoterUid]: {
+              empresa: 'GR15',
+              horas: 4
+            }
+          };
+        }
+      }
+
+      await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, action.id), payload);
+      onToast(nextVal ? "Formulário de presença aberto e registrado!" : "Presença do promotor removida!");
+    } catch (err: any) {
+      onToast("Erro ao atualizar presença do promotor.", 'error');
+    }
+  };
+
+  const updatePromoterPresenceDetails = async (
+    action: CalendarioAcao,
+    promoterUid: string,
+    empresa?: 'GR15' | 'RP7',
+    horas?: number
+  ) => {
+    try {
+      const currentDetails = action.dadosPresencaPromotores || {};
+      const promoterDetails = currentDetails[promoterUid] || {};
+      const updatedDetails = {
+        ...currentDetails,
+        [promoterUid]: {
+          ...promoterDetails,
+          ...(empresa !== undefined ? { empresa } : {}),
+          ...(horas !== undefined ? { horas } : {})
+        }
+      };
+      await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, action.id), {
+        dadosPresencaPromotores: updatedDetails
+      });
+      onToast("Dados de pagamento atualizados!");
+    } catch (err: any) {
+      onToast("Erro ao atualizar dados de pagamento.", 'error');
     }
   };
 
@@ -6639,7 +6739,13 @@ function CalendarioAcoesView({
                       local: action.local,
                       observacao: action.observacao,
                       concluida: action.concluida,
-                      fotos: [...(action.fotos || []), '', '', ''].slice(0, 3)
+                      fotos: [...(action.fotos || []), '', '', ''].slice(0, 3),
+                      metaBoletos: action.metaBoletos !== undefined ? action.metaBoletos : '',
+                      metaInscritos: action.metaInscritos !== undefined ? action.metaInscritos : '',
+                      precisaPromotor: !!action.precisaPromotor,
+                      promotoresSelecionados: action.promotoresSelecionados || [],
+                      valorPromotor: action.valorPromotor !== undefined ? action.valorPromotor : '',
+                      valorOrcado: action.valorOrcado !== undefined ? action.valorOrcado : ''
                     });
                     setIsAdding(true);
                   }}
@@ -6670,6 +6776,131 @@ function CalendarioAcoesView({
                 {new Date(action.dataInicio).toLocaleDateString('pt-BR')} {action.dataFim !== action.dataInicio && `- ${new Date(action.dataFim).toLocaleDateString('pt-BR')}`}
               </p>
             </div>
+
+            {/* Metas da Ação */}
+            {((action.metaBoletos !== undefined && action.metaBoletos > 0) || (action.metaInscritos !== undefined && action.metaInscritos > 0)) && (
+              <div className="grid grid-cols-2 gap-2 mb-4 bg-slate-50 p-3 rounded-2xl">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Meta Boletos</span>
+                  <span className="text-xs font-bold text-slate-700">{action.metaBoletos || 0}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Meta Inscritos</span>
+                  <span className="text-xs font-bold text-slate-700">{action.metaInscritos || 0}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Promotores e Presenças */}
+            {action.precisaPromotor && (
+              <div className="bg-slate-50 p-3 rounded-2xl mb-4 border border-slate-100">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Promotores Escala</span>
+                {(!action.promotoresSelecionados || action.promotoresSelecionados.length === 0) ? (
+                  <span className="text-xs text-slate-400 italic">Nenhum promotor escalado</span>
+                ) : (
+                  <div className="space-y-2">
+                    {action.promotoresSelecionados.map(pUid => {
+                      const promoterObj = (users || []).find(u => u.uid === pUid);
+                      const isPresent = !!(action.presencaPromotores?.[pUid]);
+                      const details = action.dadosPresencaPromotores?.[pUid] || { empresa: 'GR15', horas: 4 };
+
+                      return (
+                        <div key={pUid} className="p-2.5 rounded-xl border border-slate-100 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2 overflow-hidden mr-1">
+                              <div className={cn(
+                                "w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0",
+                                isPresent ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"
+                              )}>
+                                {promoterObj ? promoterObj.name.charAt(0).toUpperCase() : '?'}
+                              </div>
+                              <div className="flex flex-col overflow-hidden">
+                                <span className="text-xs font-bold text-slate-700 truncate">{promoterObj ? promoterObj.name : 'Promotor Removido'}</span>
+                                <span className="text-[9px] text-slate-400 font-medium truncate">{promoterObj ? promoterObj.role : ''}</span>
+                              </div>
+                            </div>
+                            
+                            <button
+                              onClick={() => togglePromoterAttendance(action, pUid)}
+                              className={cn(
+                                "text-[10px] px-2.5 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 shrink-0 transition-colors cursor-pointer",
+                                isPresent
+                                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                              )}
+                            >
+                              {isPresent ? <CheckSquare size={13} /> : <Square size={13} />}
+                              <span>{isPresent ? "Participou" : "Ausente"}</span>
+                            </button>
+                          </div>
+
+                          {isPresent && (
+                            <div className="mt-2 text-[11px] pt-2 border-t border-dashed border-slate-100 space-y-2">
+                              {/* Empresa Selector */}
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-slate-500">Pagas por:</span>
+                                <div className="flex space-x-1">
+                                  {(['GR15', 'RP7'] as const).map(emp => (
+                                    <button
+                                      type="button"
+                                      key={emp}
+                                      onClick={() => updatePromoterPresenceDetails(action, pUid, emp, details.horas)}
+                                      className={cn(
+                                        "px-2 py-0.5 rounded-md font-bold transition-all text-[10px] cursor-pointer",
+                                        details.empresa === emp
+                                          ? "bg-blue-600 text-white shadow-sm"
+                                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                      )}
+                                    >
+                                      {emp}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Horas de Atuação Selector */}
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-slate-500">Horas de atuação:</span>
+                                <div className="flex items-center space-x-1">
+                                  {([4, 6, 8, 10] as const).map(hr => (
+                                    <button
+                                      type="button"
+                                      key={hr}
+                                      onClick={() => updatePromoterPresenceDetails(action, pUid, details.empresa as 'GR15' | 'RP7', hr)}
+                                      className={cn(
+                                        "px-1.5 py-0.5 rounded-md font-bold transition-all text-[10px] cursor-pointer",
+                                        details.horas === hr
+                                          ? "bg-indigo-600 text-white shadow-sm"
+                                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                      )}
+                                    >
+                                      {hr}h
+                                    </button>
+                                  ))}
+                                  
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    value={details.horas || ''}
+                                    onChange={e => {
+                                      const val = e.target.value === '' ? 0 : Number(e.target.value);
+                                      updatePromoterPresenceDetails(action, pUid, details.empresa as 'GR15' | 'RP7', val);
+                                    }}
+                                    className="w-10 px-1 py-0.5 border border-slate-200 rounded-md text-[10px] text-center font-bold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                    placeholder="Outro"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {action.fotos && action.fotos.length > 0 && (
               <div className="grid grid-cols-3 gap-2 mb-4">
@@ -6736,15 +6967,15 @@ function CalendarioAcoesView({
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden"
+            className="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <h3 className="text-xl font-bold text-slate-900">{editingAction ? 'Editar Ação' : 'Nova Ação'}</h3>
               <button onClick={() => { setIsAdding(false); setEditingAction(null); }} className="text-slate-400 hover:bg-slate-50 p-2 rounded-lg">
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1">Nome da Ação *</label>
                 <input 
@@ -6795,6 +7026,120 @@ function CalendarioAcoesView({
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm min-h-[100px]"
                   placeholder="O que será feito?"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Meta de Boletos da Ação</label>
+                  <input 
+                    type="number"
+                    min="0"
+                    value={newAction.metaBoletos}
+                    onChange={e => setNewAction({...newAction, metaBoletos: e.target.value === '' ? '' : Number(e.target.value)})}
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    placeholder="Ex: 5"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Meta de Inscritos da Ação</label>
+                  <input 
+                    type="number"
+                    min="0"
+                    value={newAction.metaInscritos}
+                    onChange={e => setNewAction({...newAction, metaInscritos: e.target.value === '' ? '' : Number(e.target.value)})}
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    placeholder="Ex: 20"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Valor Diário do Promotor (R$)</label>
+                  <select 
+                    value={newAction.valorPromotor}
+                    onChange={e => setNewAction({...newAction, valorPromotor: e.target.value === '' ? '' : Number(e.target.value)})}
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                  >
+                    <option value="">Selecione...</option>
+                    {[60, 70, 80, 90, 100, 120, 150].map(val => (
+                      <option key={val} value={val}>R$ {val.toFixed(2).replace('.', ',')}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Valor Orçado Total (R$)</label>
+                  <input 
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={newAction.valorOrcado}
+                    onChange={e => setNewAction({...newAction, valorOrcado: e.target.value === '' ? '' : Number(e.target.value)})}
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                    placeholder="Ex: R$ 500,00"
+                  />
+                </div>
+              </div>
+
+              {/* Se vai precisar de Promotor */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox"
+                    checked={newAction.precisaPromotor}
+                    onChange={e => setNewAction({...newAction, precisaPromotor: e.target.checked})}
+                    className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-sm font-bold text-slate-800">Precisa de Promotores?</span>
+                    <span className="text-xs text-slate-400 block">Ative para atribuir promotores na ação</span>
+                  </div>
+                </label>
+
+                {newAction.precisaPromotor && (
+                  <div className="mt-4 border-t border-slate-200/60 pt-3 space-y-2">
+                    <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider mb-2">Selecione os Promotores Escalados:</span>
+                    {promotoresDisponiveis.length === 0 ? (
+                      <span className="text-xs text-slate-400 italic block">Nenhum promotor cadastrado neste servidor comercial ou principal.</span>
+                    ) : (
+                      <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                        {promotoresDisponiveis.map(promoter => {
+                          const isSelected = newAction.promotoresSelecionados.includes(promoter.uid);
+                          return (
+                            <button
+                              type="button"
+                              key={promoter.uid}
+                              onClick={() => {
+                                const isSel = newAction.promotoresSelecionados.includes(promoter.uid);
+                                const updated = isSel
+                                  ? newAction.promotoresSelecionados.filter(id => id !== promoter.uid)
+                                  : [...newAction.promotoresSelecionados, promoter.uid];
+                                setNewAction({ ...newAction, promotoresSelecionados: updated });
+                              }}
+                              className={cn(
+                                "w-full flex items-center justify-between p-2 rounded-lg text-xs font-semibold text-left transition-colors border",
+                                isSelected 
+                                  ? "bg-blue-50/80 border-blue-200 text-blue-700" 
+                                  : "bg-white border-slate-100 hover:bg-slate-50 text-slate-600"
+                              )}
+                            >
+                              <div className="flex items-center space-x-2">
+                                <div className={cn(
+                                  "w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px]",
+                                  isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
+                                )}>
+                                  {promoter.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span>{promoter.name}</span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 italic font-medium">{promoter.role}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -9403,6 +9748,443 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+// --- Controle de Pagamentos View ---
+interface ControlePagamentosViewProps {
+  calendarioAcoes: CalendarioAcao[];
+  users: UserProfile[];
+  onToast: (m: string, t?: 'success' | 'error') => void;
+}
+
+export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToast }: ControlePagamentosViewProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [empresaFilter, setEmpresaFilter] = useState<'all' | 'GR15' | 'RP7'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Agendada' | 'Recusada' | 'Realizada'>('all');
+  const [regionFilter, setRegionFilter] = useState('all');
+
+  const getDiarias = (startStr: string, endStr: string) => {
+    if (!startStr || !endStr) return 1;
+    const s = new Date(startStr + 'T00:00:00');
+    const e = new Date(endStr + 'T00:00:00');
+    const diffTime = Math.abs(e.getTime() - s.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return isNaN(diffDays) ? 1 : diffDays;
+  };
+
+  const paymentRows = useMemo(() => {
+    const result: any[] = [];
+    calendarioAcoes.forEach(action => {
+      if (!action.precisaPromotor || !action.promotoresSelecionados) return;
+      action.promotoresSelecionados.forEach(pUid => {
+        // Apenas promotores que compareceram (presenca === true)
+        if (!action.presencaPromotores?.[pUid]) return;
+
+        const promoterObj = users.find(u => u.uid === pUid);
+        const creatorObj = users.find(u => u.uid === action.creatorId);
+        
+        const details = action.dadosPresencaPromotores?.[pUid] || { empresa: 'GR15', horas: 4 };
+        const statusPgt = action.statusPagamentoPromotores?.[pUid] || 'Agendada';
+
+        const diarias = getDiarias(action.dataInicio, action.dataFim);
+        const valorPromotor = action.valorPromotor || 0;
+        const custoTotal = diarias * valorPromotor;
+
+        result.push({
+          actionId: action.id,
+          promoterUid: pUid,
+          empresa: details.empresa || 'GR15',
+          promoterName: promoterObj?.name || 'Não cadastrado',
+          promoterPhone: promoterObj?.phone || 'Sem celular',
+          promoterPix: promoterObj?.chavePix || 'Sem Pix cadastrado',
+          promoterUnit: promoterObj?.servidor ? (promoterObj.servidor.charAt(0).toUpperCase() + promoterObj.servidor.slice(1)) : 'Principal',
+          diarias,
+          horas: details.horas || 4,
+          solicitante: creatorObj?.name || 'Gestor Comercial',
+          tipoAcao: action.nome,
+          dataInicio: action.dataInicio,
+          dataFim: action.dataFim,
+          valorPromotor,
+          custoTotal,
+          valorOrcado: action.valorOrcado || 0,
+          statusPagamento: statusPgt
+        });
+      });
+    });
+    return result;
+  }, [calendarioAcoes, users]);
+
+  // Regiões disponíveis de atuação para o filtro
+  const uniqueRegions = useMemo(() => {
+    const set = new Set<string>();
+    paymentRows.forEach(r => {
+      if (r.promoterUnit) set.add(r.promoterUnit);
+    });
+    return Array.from(set);
+  }, [paymentRows]);
+
+  // Dados filtrados
+  const filteredRows = useMemo(() => {
+    return paymentRows.filter(row => {
+      const matchSearch = row.promoterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          row.tipoAcao.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          row.solicitante.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchEmpresa = empresaFilter === 'all' ? true : row.empresa === empresaFilter;
+      const matchStatus = statusFilter === 'all' ? true : row.statusPagamento === statusFilter;
+      const matchRegion = regionFilter === 'all' ? true : row.promoterUnit === regionFilter;
+
+      return matchSearch && matchEmpresa && matchStatus && matchRegion;
+    });
+  }, [paymentRows, searchTerm, empresaFilter, statusFilter, regionFilter]);
+
+  // Métricas acumuladas
+  const metrics = useMemo(() => {
+    let totalCusto = 0;
+    let totalRealizado = 0;
+    let totalAgendado = 0;
+    let totalRecusado = 0;
+
+    filteredRows.forEach(row => {
+      totalCusto += row.custoTotal;
+      if (row.statusPagamento === 'Realizada') {
+        totalRealizado += row.custoTotal;
+      } else if (row.statusPagamento === 'Agendada') {
+        totalAgendado += row.custoTotal;
+      } else {
+        totalRecusado += row.custoTotal;
+      }
+    });
+
+    return {
+      totalCusto,
+      totalRealizado,
+      totalAgendado,
+      totalRecusado,
+      count: filteredRows.length
+    };
+  }, [filteredRows]);
+
+  const updatePaymentStatus = async (actionId: string, promoterUid: string, status: 'Agendada' | 'Recusada' | 'Realizada') => {
+    try {
+      const action = calendarioAcoes.find(a => a.id === actionId);
+      if (!action) return;
+      const currentStatus = action.statusPagamentoPromotores || {};
+      const updatedStatus = {
+        ...currentStatus,
+        [promoterUid]: status
+      };
+      await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, actionId), {
+        statusPagamentoPromotores: updatedStatus
+      });
+      onToast("Status de pagamento atualizado com sucesso!", "success");
+    } catch (err) {
+      onToast("Erro ao atualizar status de pagamento.", "error");
+    }
+  };
+
+  const handleExportExcel = () => {
+    try {
+      const dataToExport = filteredRows.map(r => ({
+        'Empresa': r.empresa,
+        'Nome do Promotor': r.promoterName,
+        'Telefone': r.promoterPhone,
+        'PIX': r.promoterPix,
+        'Diárias': r.diarias,
+        'Horas de Atuação': `${r.horas} Horas`,
+        'Solicitante': r.solicitante,
+        'Região de Atuação': r.promoterUnit,
+        'Tipo de Ação': r.tipoAcao,
+        'Data de Início': r.dataInicio,
+        'Data Final': r.dataFim,
+        'Valor Promotor (R$)': r.valorPromotor,
+        'Custo Total (R$)': r.custoTotal,
+        'Valor Orçado (R$)': r.valorOrcado,
+        'Status de Pagamento': r.statusPagamento
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Controle de Pagamentos');
+      XLSX.writeFile(workbook, `Controle_Pagamentos_${new Date().toISOString().split('T')[0]}.xlsx`);
+      onToast("Relatório exportado para Excel com sucesso!", "success");
+    } catch (err) {
+      onToast("Erro ao exportar relatório.", "error");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Controle de Pagamentos</h2>
+          <p className="text-sm text-slate-500">Gestão e liquidação financeira diária de promotores de ações</p>
+        </div>
+        <button
+          onClick={handleExportExcel}
+          className="flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-3 rounded-2xl shadow-sm transition-all text-sm self-start md:self-auto"
+        >
+          <Download size={18} />
+          <span>Exportar Relatório Excel</span>
+        </button>
+      </div>
+
+      {/* Métricas / KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm space-y-2">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Registros Elegíveis</span>
+          <div className="flex items-baseline space-x-2">
+            <span className="text-3xl font-extrabold text-slate-800">{metrics.count}</span>
+            <span className="text-xs text-slate-400">atuações</span>
+          </div>
+        </div>
+
+        <div className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm space-y-2">
+          <span className="text-xs font-bold text-amber-500 uppercase tracking-wider block">Total Pendente / Agendado</span>
+          <div className="flex items-baseline space-x-2">
+            <span className="text-3xl font-extrabold text-amber-600">R$ {metrics.totalAgendado.toFixed(2).replace('.', ',')}</span>
+          </div>
+        </div>
+
+        <div className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm space-y-2">
+          <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider block">Total Realizado / Pago</span>
+          <div className="flex items-baseline space-x-2">
+            <span className="text-3xl font-extrabold text-emerald-600">R$ {metrics.totalRealizado.toFixed(2).replace('.', ',')}</span>
+          </div>
+        </div>
+
+        <div className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm space-y-2">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-bold">Custo de Diárias Total</span>
+          <div className="flex items-baseline space-x-2">
+            <span className="text-3xl font-extrabold text-slate-700">R$ {metrics.totalCusto.toFixed(2).replace('.', ',')}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4">
+        <span className="text-sm font-bold text-slate-700 block uppercase tracking-wider">Filtros de Pesquisa</span>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              placeholder="Buscar por Promotor, Ação ou Solicitante..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-slate-300 transition-all border-none outline-none"
+            />
+          </div>
+
+          <div>
+            <select
+              value={empresaFilter}
+              onChange={e => setEmpresaFilter(e.target.value as any)}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 appearance-none focus:bg-white focus:ring-2 focus:ring-slate-300 transition-all border-none outline-none cursor-pointer"
+            >
+              <option value="all">Todas as Empresas (GR15 / RP7)</option>
+              <option value="GR15">Empresa: GR15</option>
+              <option value="RP7">Empresa: RP7</option>
+            </select>
+          </div>
+
+          <div>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value as any)}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 appearance-none focus:bg-white focus:ring-2 focus:ring-slate-300 transition-all border-none outline-none cursor-pointer"
+            >
+              <option value="all">Todos os Status de Pagamento</option>
+              <option value="Agendada">Status: Agendada</option>
+              <option value="Recusada">Status: Recusada</option>
+              <option value="Realizada">Status: Realizada</option>
+            </select>
+          </div>
+
+          <div>
+            <select
+              value={regionFilter}
+              onChange={e => setRegionFilter(e.target.value)}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 appearance-none focus:bg-white focus:ring-2 focus:ring-slate-300 transition-all border-none outline-none cursor-pointer"
+            >
+              <option value="all">Todas as Regiões de Atuação</option>
+              {uniqueRegions.map(region => (
+                <option key={region} value={region}>{region}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabela de Pagamentos */}
+      <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden whitespace-normal">
+        {filteredRows.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <span className="text-slate-400 text-lg block">Nenhum registro de pagamento qualificado.</span>
+            <span className="text-slate-400 text-xs block max-w-md mx-auto">
+              Certifique-se de que os promotores estão escalados nas ações do Calendário de Ações e marque o comparecimento deles como confirmado ("Compareceu").
+            </span>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-xs">
+              <thead className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr>
+                  <th className="px-5 py-4">Empresa</th>
+                  <th className="px-5 py-4">Promotor</th>
+                  <th className="px-5 py-4">Telefone</th>
+                  <th className="px-5 py-4">Chave Pix</th>
+                  <th className="px-5 py-4 text-center">Diárias</th>
+                  <th className="px-5 py-4 text-center">Horas</th>
+                  <th className="px-5 py-4">Solicitante</th>
+                  <th className="px-5 py-4">Região</th>
+                  <th className="px-5 py-4">Ação</th>
+                  <th className="px-5 py-4">Datas</th>
+                  <th className="px-5 py-4 text-right">Valor Promotor</th>
+                  <th className="px-5 py-4 text-right bg-slate-50 font-bold text-slate-600">Custo Total</th>
+                  <th className="px-5 py-4 text-right">Valor Orçado</th>
+                  <th className="px-5 py-4 text-center min-w-[200px]">Status Pagamento</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-600 font-medium">
+                {filteredRows.map((row, idx) => {
+                  const d = new Date();
+                  const year = d.getFullYear();
+                  const month = String(d.getMonth() + 1).padStart(2, '0');
+                  const day = String(d.getDate()).padStart(2, '0');
+                  const todayStr = `${year}-${month}-${day}`;
+                  const isOverdue = row.dataFim < todayStr && row.statusPagamento === 'Agendada';
+
+                  return (
+                    <tr key={`${row.actionId}-${row.promoterUid}-${idx}`} className={cn(
+                      "hover:bg-slate-50/50 transition-colors",
+                      isOverdue && "bg-rose-50/25"
+                    )}>
+                      {/* Empresa */}
+                      <td className="px-5 py-4 font-bold">
+                        <span className={cn(
+                          "px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wide",
+                          row.empresa === 'GR15' 
+                            ? "bg-purple-100 text-purple-700" 
+                            : "bg-amber-100 text-amber-700"
+                        )}>
+                          {row.empresa}
+                        </span>
+                      </td>
+
+                      {/* Promotor */}
+                      <td className="px-5 py-4 font-semibold text-slate-800">{row.promoterName}</td>
+
+                      {/* Telefone */}
+                      <td className="px-5 py-4 font-mono">{row.promoterPhone}</td>
+
+                      {/* Chave Pix */}
+                      <td className="px-5 py-4 font-mono select-all truncate max-w-[120px]" title={row.promoterPix}>
+                        {row.promoterPix}
+                      </td>
+
+                      {/* Diárias */}
+                      <td className="px-5 py-4 text-center font-bold">{row.diarias}</td>
+
+                      {/* Horas */}
+                      <td className="px-5 py-4 text-center">{row.horas}h</td>
+
+                      {/* Solicitante */}
+                      <td className="px-5 py-4">{row.solicitante}</td>
+
+                      {/* Região */}
+                      <td className="px-5 py-4">
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md font-semibold">
+                          {row.promoterUnit}
+                        </span>
+                      </td>
+
+                      {/* Ação */}
+                      <td className="px-5 py-4 font-semibold text-slate-700 truncate max-w-[150px]" title={row.tipoAcao}>
+                        {row.tipoAcao}
+                      </td>
+
+                      {/* Datas */}
+                      <td className="px-5 py-4 font-mono text-[10px]">
+                        <div className="flex items-center space-x-1.5">
+                          <div className="flex-1">
+                            <div>{row.dataInicio.split('-').reverse().join('/')}</div>
+                            <div className={cn(
+                              "text-[9px]",
+                              isOverdue ? "text-rose-500 font-bold" : "text-slate-400"
+                            )}>
+                              até {row.dataFim.split('-').reverse().join('/')}
+                            </div>
+                          </div>
+                          {isOverdue && (
+                            <span className="text-rose-500 animate-pulse shrink-0" title="Período da ação finalizado">
+                              <AlertCircle size={15} />
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Valor Promotor */}
+                      <td className="px-5 py-4 text-right font-mono font-bold">
+                        R$ {row.valorPromotor.toFixed(2).replace('.', ',')}
+                      </td>
+
+                      {/* Custo Total */}
+                      <td className="px-5 py-4 text-right font-mono font-extrabold bg-slate-50 text-slate-800 text-sm">
+                        R$ {row.custoTotal.toFixed(2).replace('.', ',')}
+                      </td>
+
+                      {/* Valor Orçado */}
+                      <td className="px-5 py-4 text-right font-mono">
+                        R$ {row.valorOrcado.toFixed(2).replace('.', ',')}
+                      </td>
+
+                      {/* Status de Pagamento */}
+                      <td className="px-5 py-4 text-center">
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="flex items-center justify-center space-x-1.5 bg-slate-50/80 p-1.5 rounded-full border border-slate-100 w-fit">
+                            {(['Agendada', 'Recusada', 'Realizada'] as const).map(st => {
+                              const isSelected = row.statusPagamento === st;
+                              let btnClass = "px-2 py-1 rounded-full text-[9px] font-bold uppercase transition-all ";
+                              
+                              if (isSelected) {
+                                if (st === 'Realizada') btnClass += "bg-emerald-600 text-white shadow-sm";
+                                else if (st === 'Agendada') btnClass += "bg-amber-500 text-white shadow-sm";
+                                else btnClass += "bg-rose-500 text-white shadow-sm";
+                              } else {
+                                btnClass += "text-slate-400 hover:text-slate-600 hover:bg-slate-200/50";
+                              }
+
+                              return (
+                                <button
+                                  key={st}
+                                  onClick={() => updatePaymentStatus(row.actionId, row.promoterUid, st)}
+                                  className={btnClass}
+                                >
+                                  {st === 'Realizada' ? 'Paga' : st === 'Agendada' ? 'Agendada' : 'Recusada'}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {isOverdue && (
+                            <div className="flex items-center space-x-1 bg-rose-50 text-rose-700 px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase border border-rose-200 animate-pulse shrink-0" title="Alerta: Ação concluída, pagamento ainda pendente!">
+                              <AlertCircle size={12} className="shrink-0" />
+                              <span>Atrasado</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

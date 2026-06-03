@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type UserRole = 'Admin Master' | 'Promotor' | 'FDV' | 'Sala de Matrícula' | 'QG' | 'Líder/FDV' | 'SSA' | 'Gestor Unidade' | 'Gestor Comercial' | 'Acadêmico' | 'Promotor/rua' | 'Gerente Comercial (Comercial)' | 'FDV (Comercial)';
+export type UserRole = 'Admin Master' | 'Promotor' | 'FDV' | 'Sala de Matrícula' | 'QG' | 'Líder/FDV' | 'SSA' | 'Gestor Unidade' | 'Gestor Comercial' | 'Acadêmico' | 'Promotor/rua' | 'Gerente Comercial (Comercial)' | 'FDV (Comercial)' | 'Financeiro';
 
 export interface UserProfile {
   uid: string;
@@ -45,6 +45,15 @@ export interface CalendarioAcao {
   creatorId?: string;
   creatorRole?: string;
   createdAt: any;
+  metaBoletos?: number;
+  metaInscritos?: number;
+  precisaPromotor?: boolean;
+  promotoresSelecionados?: string[];
+  presencaPromotores?: { [promoterUid: string]: boolean };
+  dadosPresencaPromotores?: { [promoterUid: string]: { empresa?: 'GR15' | 'RP7'; horas?: number } };
+  valorPromotor?: number;
+  valorOrcado?: number;
+  statusPagamentoPromotores?: { [promoterUid: string]: 'Agendada' | 'Recusada' | 'Realizada' };
 }
 
 export interface Campanha {
