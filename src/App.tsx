@@ -115,6 +115,7 @@ import {
   SolicitacaoFolga
 } from './types';
 import { ProfileModal } from './components/ProfileModal';
+import { PublicRegistrationForm } from './components/PublicRegistrationForm';
 
 // --- Helpers ---
 const exportToExcel = (data: any[], fileName: string) => {
@@ -2576,6 +2577,17 @@ export default function App() {
           transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
           className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full"
         />
+      </div>
+    );
+  }
+
+  if (currentView === 'desconto') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
+        <AnimatePresence>
+          {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        </AnimatePresence>
+        <PublicRegistrationForm onToast={showToast} />
       </div>
     );
   }

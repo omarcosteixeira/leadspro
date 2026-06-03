@@ -30,11 +30,11 @@ service cloud.firestore {
     function isLider() { return hasAnyRole(['Líder/FDV']); }
     function isSalaMatricula() { return hasAnyRole(['Sala de Matrícula']); }
     function isQG() { return hasAnyRole(['QG']); }
-    function isFDV() { return hasAnyRole(['FDV']); }
-    function isPromotor() { return hasAnyRole(['Promotor']); }
+    function isFDV() { return hasAnyRole(['FDV', 'FDV (Comercial)']); }
+    function isPromotor() { return hasAnyRole(['Promotor', 'Promotor/rua']); }
     function isSSA() { return hasAnyRole(['SSA']); }
     function isGestorUnidade() { return hasAnyRole(['Gestor Unidade']); }
-    function isGestorComercial() { return hasAnyRole(['Gestor Comercial']); }
+    function isGestorComercial() { return hasAnyRole(['Gestor Comercial', 'Gerente Comercial (Comercial)']); }
     function isAcademico() { return hasAnyRole(['Acadêmico']); }
     
     function isOwner(userId) {
@@ -108,7 +108,8 @@ service cloud.firestore {
     // ===============================================================
 
     match /artifacts/gestaopro-761e1/public/data/users/{userId} {
-      allow read: if isAuthenticated();
+      allow get: if true;
+      allow list: if isAuthenticated();
       allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdminMaster() || isLider());
       allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isAdminMaster() || isLider() || (isOwner(userId) && request.resource.data.role == resource.data.role));
       allow delete: if isAdminMaster() || isLider();
@@ -119,7 +120,7 @@ service cloud.firestore {
                      (isFDV() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole == 'Promotor')) ||
                      (isGestorComercial() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole in ['Promotor', 'FDV'])) ||
                      (isPromotor() && resource.data.promotorId == request.auth.uid);
-      allow create: if isLider() || isSalaMatricula() || isQG() || isFDV() || isPromotor() || isGestorUnidade() || isGestorComercial();
+      allow create: if isLider() || isSalaMatricula() || isQG() || isFDV() || isPromotor() || isGestorUnidade() || isGestorComercial() || request.resource.data.acao == 'Ação ( formulario)';
       allow update: if isLider() || isSalaMatricula() || isQG() || isGestorUnidade() ||
                       (isFDV() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole == 'Promotor')) ||
                       (isGestorComercial() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole in ['Promotor', 'FDV'])) ||
