@@ -2464,17 +2464,6 @@ export default function App() {
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BASES_RENOVACAO));
     }
 
-    let unsubBotConfig = () => {};
-    unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), snap => {
-      if (snap.exists()) {
-        setBotConfig({ id: snap.id, ...snap.data() } as BotConfig);
-      } else {
-        setBotConfig({ url: '', active: false });
-      }
-    }, (err) => {
-      console.warn("Could not load botConfig publicly:", err);
-    });
-
     return () => {
       unsubUsers();
       unsubPlanner();
@@ -2494,9 +2483,21 @@ export default function App() {
       unsubMapao();
       unsubBasesDisparo();
       unsubBasesRenovacao();
-      unsubBotConfig();
     };
   }, [user, profile]);
+
+  useEffect(() => {
+    const unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), snap => {
+      if (snap.exists()) {
+        setBotConfig({ id: snap.id, ...snap.data() } as BotConfig);
+      } else {
+        setBotConfig({ url: '', active: false });
+      }
+    }, (err) => {
+      console.warn("Could not load botConfig publicly:", err);
+    });
+    return () => unsubBotConfig();
+  }, []);
 
   useEffect(() => {
     // Test connection to Firestore as per instructions
@@ -3205,7 +3206,7 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
             <img 
               src={botConfig.loginLogo} 
               alt="Logo Promocional" 
-              className="max-h-[80vh] max-w-[85%] rounded-3xl object-contain drop-shadow-[0_35px_60px_rgba(14,116,253,0.35)] border border-slate-700/40 p-6 bg-[#011a3c]/50"
+              className="w-full max-w-[560px] aspect-square rounded-3xl object-contain drop-shadow-[0_35px_60px_rgba(14,116,253,0.35)] border border-slate-700/40 p-12 bg-[#011a3c]/50 animate-fade-in"
               referrerPolicy="no-referrer"
             />
           ) : (
