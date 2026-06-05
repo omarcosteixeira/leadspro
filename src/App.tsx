@@ -3190,7 +3190,7 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
         </div>
       </div>
 
-      {/* RIGHT COLUMN: The majestic interactive Oeste Hunter logo artwork */}
+      {/* RIGHT COLUMN: The majestic interactive Oeste Hunter logo artwork or Custom Logo */}
       <div className="hidden md:flex flex-1 items-center justify-center bg-[#01112c] p-12 relative overflow-hidden z-0">
         {/* Subtle grid mesh backdrop */}
         <div className="absolute inset-0 bg-[radial-gradient(#082a5c_1px,transparent_1px)] [background-size:24px_24px] opacity-25" />
@@ -3201,220 +3201,229 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
 
         {/* SVG ART Container */}
         <div className="relative z-10 w-full flex justify-center">
-          {/* Oeste Hunter Badge SVG */}
-          <svg
-            viewBox="0 0 1000 1000"
-            className="w-full max-w-[560px] aspect-square drop-shadow-[0_25px_60px_rgba(14,116,253,0.35)] select-none"
-          >
-            <defs>
-              <linearGradient id="blueRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#0a397a" />
-                <stop offset="50%" stopColor="#125cb5" />
-                <stop offset="100%" stopColor="#082c5f" />
-              </linearGradient>
-              <linearGradient id="wolfEyeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#00f0ff" />
-                <stop offset="100%" stopColor="#00a8ff" />
-              </linearGradient>
-              <linearGradient id="muzzleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#ffffff" />
-                <stop offset="100%" stopColor="#cfd8dc" />
-              </linearGradient>
-              <linearGradient id="bannerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#010f24" />
-                <stop offset="50%" stopColor="#051c3d" />
-                <stop offset="100%" stopColor="#010d21" />
-              </linearGradient>
-              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="8" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-              </filter>
-              <filter id="eyeGlow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="6" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-              </filter>
-            </defs>
+          {botConfig?.loginLogo ? (
+            <img 
+              src={botConfig.loginLogo} 
+              alt="Logo Promocional" 
+              className="max-h-[80vh] max-w-[85%] rounded-3xl object-contain drop-shadow-[0_35px_60px_rgba(14,116,253,0.35)] border border-slate-700/40 p-6 bg-[#011a3c]/50"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            /* Oeste Hunter Badge SVG */
+            <svg
+              viewBox="0 0 1000 1000"
+              className="w-full max-w-[560px] aspect-square drop-shadow-[0_25px_60px_rgba(14,116,253,0.35)] select-none"
+            >
+              <defs>
+                <linearGradient id="blueRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#0a397a" />
+                  <stop offset="50%" stopColor="#125cb5" />
+                  <stop offset="100%" stopColor="#082c5f" />
+                </linearGradient>
+                <linearGradient id="wolfEyeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#00f0ff" />
+                  <stop offset="100%" stopColor="#00a8ff" />
+                </linearGradient>
+                <linearGradient id="muzzleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#ffffff" />
+                  <stop offset="100%" stopColor="#cfd8dc" />
+                </linearGradient>
+                <linearGradient id="bannerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#010f24" />
+                  <stop offset="50%" stopColor="#051c3d" />
+                  <stop offset="100%" stopColor="#010d21" />
+                </linearGradient>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="8" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+                <filter id="eyeGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="6" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+              </defs>
 
-            {/* Target Crosshairs Reticle */}
-            <g stroke="#ffffff" strokeWidth="2.5" opacity="0.3">
-              {/* Vertical Crosshair Line */}
-              <line x1="500" y1="20" x2="500" y2="980" />
-              {/* Horizontal Crosshair Line */}
-              <line x1="20" y1="500" x2="980" y2="500" />
+              {/* Target Crosshairs Reticle */}
+              <g stroke="#ffffff" strokeWidth="2.5" opacity="0.3">
+                {/* Vertical Crosshair Line */}
+                <line x1="500" y1="20" x2="500" y2="980" />
+                {/* Horizontal Crosshair Line */}
+                <line x1="20" y1="500" x2="980" y2="500" />
+                
+                {/* Target ticks (top, bottom, left, right) */}
+                <line x1="500" y1="80" x2="520" y2="80" />
+                <line x1="500" y1="140" x2="515" y2="140" />
+                <line x1="500" y1="200" x2="520" y2="200" />
+                
+                <line x1="500" y1="920" x2="520" y2="920" />
+                <line x1="500" y1="860" x2="515" y2="860" />
+                <line x1="500" y1="800" x2="520" y2="800" />
+
+                <line x1="80" y1="500" x2="80" y2="520" />
+                <line x1="140" y1="500" x2="140" y2="515" />
+                <line x1="200" y1="500" x2="200" y2="520" />
+
+                <line x1="920" y1="500" x2="920" y2="520" />
+                <line x1="860" y1="500" x2="860" y2="515" />
+                <line x1="800" y1="500" x2="800" y2="520" />
+              </g>
+
+              {/* Target Reticle Outer Box ticks */}
+              <rect x="480" y="40" width="40" height="20" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
+              <rect x="480" y="940" width="40" height="20" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
+              <rect x="40" y="480" width="20" height="40" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
+              <rect x="940" y="480" width="20" height="40" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
+
+              {/* 1. Outer target circle with dashes */}
+              <circle cx="500" cy="500" r="445" fill="none" stroke="#ffffff" strokeWidth="3" strokeDasharray="16 20" opacity="0.35" />
+
+              {/* 2. Concentric circle borders */}
+              <circle cx="500" cy="500" r="415" fill="none" stroke="#ffffff" strokeWidth="2.5" opacity="0.4" />
               
-              {/* Target ticks (top, bottom, left, right) */}
-              <line x1="500" y1="80" x2="520" y2="80" />
-              <line x1="500" y1="140" x2="515" y2="140" />
-              <line x1="500" y1="200" x2="520" y2="200" />
+              {/* 3. Main Thick Ring Outer Rim */}
+              <circle cx="500" cy="500" r="400" fill="none" stroke="#ffffff" strokeWidth="4" />
+
+              {/* 4. The Mighty Blue Ring Body */}
+              <circle cx="500" cy="500" r="348" fill="none" stroke="url(#blueRingGrad)" strokeWidth="100" />
+
+              {/* 5. Inner Rim of the Blue Ring */}
+              <circle cx="500" cy="500" r="298" fill="none" stroke="#ffffff" strokeWidth="4" />
+
+              {/* 6. Main Inner Graphic Backdrop (Turquoise circle) */}
+              <circle cx="500" cy="500" r="294" fill="#009be1" stroke="#ffffff" strokeWidth="2" />
+              <circle cx="500" cy="500" r="275" fill="#0388c7" />
+
+              {/* Curves for circular text alignment */}
+              {/* Path for 'OESTE' arched on top (left-to-right) */}
+              <path id="topArchPath" d="M 160,500 A 340,340 0 0,1 840,500" fill="none" />
               
-              <line x1="500" y1="920" x2="520" y2="920" />
-              <line x1="500" y1="860" x2="515" y2="860" />
-              <line x1="500" y1="800" x2="520" y2="800" />
+              {/* Path for 'OESTE HUNTER' arched on bottom (right-to-left) */}
+              <path id="bottomArchPath" d="M 840,500 A 340,340 0 0,1 160,500" fill="none" />
 
-              <line x1="80" y1="500" x2="80" y2="520" />
-              <line x1="140" y1="500" x2="140" y2="515" />
-              <line x1="200" y1="500" x2="200" y2="520" />
-
-              <line x1="920" y1="500" x2="920" y2="520" />
-              <line x1="860" y1="500" x2="860" y2="515" />
-              <line x1="800" y1="500" x2="800" y2="520" />
-            </g>
-
-            {/* Target Reticle Outer Box ticks */}
-            <rect x="480" y="40" width="40" height="20" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
-            <rect x="480" y="940" width="40" height="20" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
-            <rect x="40" y="480" width="20" height="40" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
-            <rect x="940" y="480" width="20" height="40" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
-
-            {/* 1. Outer target circle with dashes */}
-            <circle cx="500" cy="500" r="445" fill="none" stroke="#ffffff" strokeWidth="3" strokeDasharray="16 20" opacity="0.35" />
-
-            {/* 2. Concentric circle borders */}
-            <circle cx="500" cy="500" r="415" fill="none" stroke="#ffffff" strokeWidth="2.5" opacity="0.4" />
-            
-            {/* 3. Main Thick Ring Outer Rim */}
-            <circle cx="500" cy="500" r="400" fill="none" stroke="#ffffff" strokeWidth="4" />
-
-            {/* 4. The Mighty Blue Ring Body */}
-            <circle cx="500" cy="500" r="348" fill="none" stroke="url(#blueRingGrad)" strokeWidth="100" />
-
-            {/* 5. Inner Rim of the Blue Ring */}
-            <circle cx="500" cy="500" r="298" fill="none" stroke="#ffffff" strokeWidth="4" />
-
-            {/* 6. Main Inner Graphic Backdrop (Turquoise circle) */}
-            <circle cx="500" cy="500" r="294" fill="#009be1" stroke="#ffffff" strokeWidth="2" />
-            <circle cx="500" cy="500" r="275" fill="#0388c7" />
-
-            {/* Curves for circular text alignment */}
-            {/* Path for 'OESTE' arched on top (left-to-right) */}
-            <path id="topArchPath" d="M 160,500 A 340,340 0 0,1 840,500" fill="none" />
-            
-            {/* Path for 'OESTE HUNTER' arched on bottom (right-to-left) */}
-            <path id="bottomArchPath" d="M 840,500 A 340,340 0 0,1 160,500" fill="none" />
-
-            {/* Arched Texts */}
-            <text font-family="'Inter', sans-serif" font-weight="900" font-size="75" fill="#ffffff" letter-spacing="18">
-              <textPath href="#topArchPath" startOffset="50%" text-anchor="middle">OESTE</textPath>
-            </text>
-
-            <text font-family="'Inter', sans-serif" font-weight="900" font-size="44" fill="#ffffff" letter-spacing="14">
-              <textPath href="#bottomArchPath" startOffset="50%" text-anchor="middle">OESTE HUNTER</textPath>
-            </text>
-
-            {/* ======================================= */}
-            {/* WOLF HEAD INTERIOR ELEMENT MASCOT ART   */}
-            {/* ======================================= */}
-            <g id="wolfMascot" transform="translate(0, -35)">
-              
-              {/* Wolf Ears Behind */}
-              {/* Left ear dark back */}
-              <polygon points="350,330 435,420 380,480" fill="#020f2b" stroke="#ffffff" strokeWidth="3" />
-              {/* Left ear internal blue */}
-              <polygon points="365,345 425,415 385,465" fill="#0096e6" />
-              
-              {/* Right ear dark back */}
-              <polygon points="650,330 565,420 620,480" fill="#020f2b" stroke="#ffffff" strokeWidth="3" />
-              {/* Right ear internal blue */}
-              <polygon points="635,345 575,415 615,465" fill="#0096e6" />
-
-              {/* Wolf Forehead and Cheek structure */}
-              {/* Base Head polygon */}
-              <polygon points="500,380 340,500 370,625 500,680 630,625 660,500" fill="#03112b" />
-              
-              {/* White outer framing highlights (Cheek fur) */}
-              {/* Left cheek outer fluff */}
-              <polygon points="340,500 310,560 385,585" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
-              <polygon points="310,560 330,630 400,610" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
-              
-              {/* Right cheek outer fluff */}
-              <polygon points="660,500 690,560 615,585" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
-              <polygon points="690,560 670,630 600,610" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
-
-              {/* Intermediate Blue Shadows Cheeks */}
-              <polygon points="340,500 385,585 410,515" fill="#0a3c7c" />
-              <polygon points="660,500 615,585 590,515" fill="#0a3c7c" />
-
-              {/* Side Dark fur shades */}
-              <polygon points="410,515 385,585 440,590 460,530" fill="#00183b" />
-              <polygon points="590,515 615,585 560,590 540,530" fill="#00183b" />
-
-              {/* Center forehead wolf shield (cyan core) */}
-              <polygon points="500,380 460,470 500,510" fill="#00bdff" />
-              <polygon points="500,380 540,470 500,510" fill="#00bdff" />
-
-              <polygon points="500,395 470,470 500,500" fill="#ffffff" />
-              <polygon points="500,395 530,470 500,500" fill="#ffffff" />
-
-              {/* Wolf Eyes Areas (Black framing masks) */}
-              <polygon points="420,490 470,510 460,535 410,515" fill="#010614" />
-              <polygon points="580,490 530,510 540,535 590,515" fill="#010614" />
-
-              {/* Fierce Cyan Eyes */}
-              <polygon points="432,498 462,510 452,525 430,512" fill="url(#wolfEyeGrad)" filter="url(#eyeGlow)" />
-              <polygon points="568,498 538,510 548,525 570,512" fill="url(#wolfEyeGrad)" filter="url(#eyeGlow)" />
-              
-              {/* Wolf Nose Bridge */}
-              <polygon points="500,510 460,530 475,590 500,610" fill="#020f26" />
-              <polygon points="500,510 540,530 525,590 500,610" fill="#020f26" />
-              
-              <polygon points="500,510 480,530 485,585 500,600" fill="#0080cf" />
-              <polygon points="500,510 520,530 515,585 500,600" fill="#0080cf" />
-
-              {/* Muzzle (White muzzle side facets) */}
-              <polygon points="500,610 440,590 445,635 500,665" fill="url(#muzzleGrad)" stroke="#ffffff" strokeWidth="2.5" />
-              <polygon points="500,610 560,590 555,635 500,665" fill="url(#muzzleGrad)" stroke="#ffffff" strokeWidth="2.5" />
-
-              {/* Black Nose Tip */}
-              <polygon points="500,620 475,605 525,605" fill="#010614" />
-              <polygon points="500,620 485,635 515,635" fill="#010614" />
-              <polygon points="475,605 525,605 515,635 485,635" fill="#010614" />
-              {/* Nose shine */}
-              <circle cx="500" cy="612" r="3" fill="#ffffff" />
-            </g>
-
-            {/* Left and Right Side Banners - NPS and CAPTAÇÃO DE ALUNOS */}
-            {/* LEFT BANNER (NPS) */}
-            <g id="leftBanner">
-              <polygon points="6,505 130,505 110,615 6,615 30,560" fill="#07336e" stroke="#ffffff" strokeWidth="3" />
-              <polygon points="12,515 120,515 104,605 12,605" fill="#0b4594" />
-              
-              <text x="63" y="578" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="46" fill="#ffffff" letter-spacing="1">
-                NPS
+              {/* Arched Texts */}
+              <text font-family="'Inter', sans-serif" font-weight="900" font-size="75" fill="#ffffff" letter-spacing="18">
+                <textPath href="#topArchPath" startOffset="50%" text-anchor="middle">OESTE</textPath>
               </text>
-            </g>
 
-            {/* RIGHT BANNER (CAPTAÇÃO DE ALUNOS) */}
-            <g id="rightBanner">
-              <polygon points="994,505 870,505 890,615 994,615 970,560" fill="#07336e" stroke="#ffffff" strokeWidth="3" />
-              <polygon points="988,515 880,515 896,605 988,605" fill="#0b4594" />
-              
-              <text x="934" y="555" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="20" fill="#ffffff" letter-spacing="2">
-                CAPTAÇÃO
+              <text font-family="'Inter', sans-serif" font-weight="900" font-size="44" fill="#ffffff" letter-spacing="14">
+                <textPath href="#bottomArchPath" startOffset="50%" text-anchor="middle">OESTE HUNTER</textPath>
               </text>
-              <text x="934" y="583" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="18" fill="#ffffff" letter-spacing="1">
-                DE ALUNOS
-              </text>
-            </g>
 
-            {/* Giant Horizontal Bottom Ribbon - HUNTER */}
-            <g id="hunterBanner" transform="translate(0, 10)">
-              {/* Banner Ribbon shadow back folds */}
-              <polygon points="180,685 240,685 220,625" fill="#01050e" />
-              <polygon points="820,685 760,685 780,625" fill="#01050e" />
-              
-              {/* Front Main Banner Body */}
-              <polygon points="180,625 820,625 790,735 210,735" fill="url(#bannerGrad)" stroke="#ffffff" strokeWidth="6" />
-              
-              {/* Inner stroke accent */}
-              <polygon points="195,635 805,635 780,725 220,725" fill="none" stroke="#2575fc" strokeWidth="3.5" opacity="0.8" />
+              {/* ======================================= */}
+              {/* WOLF HEAD INTERIOR ELEMENT MASCOT ART   */}
+              {/* ======================================= */}
+              <g id="wolfMascot" transform="translate(0, -35)">
+                
+                {/* Wolf Ears Behind */}
+                {/* Left ear dark back */}
+                <polygon points="350,330 435,420 380,480" fill="#020f2b" stroke="#ffffff" strokeWidth="3" />
+                {/* Left ear internal blue */}
+                <polygon points="365,345 425,415 385,465" fill="#0096e6" />
+                
+                {/* Right ear dark back */}
+                <polygon points="650,330 565,420 620,480" fill="#020f2b" stroke="#ffffff" strokeWidth="3" />
+                {/* Right ear internal blue */}
+                <polygon points="635,345 575,415 615,465" fill="#0096e6" />
 
-              {/* Bold Athletics display text - HUNTER */}
-              <text x="500" y="702" text-anchor="middle" font-family="'Impact', 'Arial Black', 'Inter', sans-serif" font-weight="900" font-size="105" fill="#ffffff" letter-spacing="5" filter="url(#glow)">
-                HUNTER
-              </text>
-            </g>
+                {/* Wolf Forehead and Cheek structure */}
+                {/* Base Head polygon */}
+                <polygon points="500,380 340,500 370,625 500,680 630,625 660,500" fill="#03112b" />
+                
+                {/* White outer framing highlights (Cheek fur) */}
+                {/* Left cheek outer fluff */}
+                <polygon points="340,500 310,560 385,585" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
+                <polygon points="310,560 330,630 400,610" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
+                
+                {/* Right cheek outer fluff */}
+                <polygon points="660,500 690,560 615,585" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
+                <polygon points="690,560 670,630 600,610" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
 
-          </svg>
+                {/* Intermediate Blue Shadows Cheeks */}
+                <polygon points="340,500 385,585 410,515" fill="#0a3c7c" />
+                <polygon points="660,500 615,585 590,515" fill="#0a3c7c" />
+
+                {/* Side Dark fur shades */}
+                <polygon points="410,515 385,585 440,590 460,530" fill="#00183b" />
+                <polygon points="590,515 615,585 560,590 540,530" fill="#00183b" />
+
+                {/* Center forehead wolf shield (cyan core) */}
+                <polygon points="500,380 460,470 500,510" fill="#00bdff" />
+                <polygon points="500,380 540,470 500,510" fill="#00bdff" />
+
+                <polygon points="500,395 470,470 500,500" fill="#ffffff" />
+                <polygon points="500,395 530,470 500,500" fill="#ffffff" />
+
+                {/* Wolf Eyes Areas (Black framing masks) */}
+                <polygon points="420,490 470,510 460,535 410,515" fill="#010614" />
+                <polygon points="580,490 530,510 540,535 590,515" fill="#010614" />
+
+                {/* Fierce Cyan Eyes */}
+                <polygon points="432,498 462,510 452,525 430,512" fill="url(#wolfEyeGrad)" filter="url(#eyeGlow)" />
+                <polygon points="568,498 538,510 548,525 570,512" fill="url(#wolfEyeGrad)" filter="url(#eyeGlow)" />
+                
+                {/* Wolf Nose Bridge */}
+                <polygon points="500,510 460,530 475,590 500,610" fill="#020f26" />
+                <polygon points="500,510 540,530 525,590 500,610" fill="#020f26" />
+                
+                <polygon points="500,510 480,530 485,585 500,600" fill="#0080cf" />
+                <polygon points="500,510 520,530 515,585 500,600" fill="#0080cf" />
+
+                {/* Muzzle (White muzzle side facets) */}
+                <polygon points="500,610 440,590 445,635 500,665" fill="url(#muzzleGrad)" stroke="#ffffff" strokeWidth="2.5" />
+                <polygon points="500,610 560,590 555,635 500,665" fill="url(#muzzleGrad)" stroke="#ffffff" strokeWidth="2.5" />
+
+                {/* Black Nose Tip */}
+                <polygon points="500,620 475,605 525,605" fill="#010614" />
+                <polygon points="500,620 485,635 515,635" fill="#010614" />
+                <polygon points="475,605 525,605 515,635 485,635" fill="#010614" />
+                {/* Nose shine */}
+                <circle cx="500" cy="612" r="3" fill="#ffffff" />
+              </g>
+
+              {/* Left and Right Side Banners - NPS and CAPTAÇÃO DE ALUNOS */}
+              {/* LEFT BANNER (NPS) */}
+              <g id="leftBanner">
+                <polygon points="6,505 130,505 110,615 6,615 30,560" fill="#07336e" stroke="#ffffff" strokeWidth="3" />
+                <polygon points="12,515 120,515 104,605 12,605" fill="#0b4594" />
+                
+                <text x="63" y="578" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="46" fill="#ffffff" letter-spacing="1">
+                  NPS
+                </text>
+              </g>
+
+              {/* RIGHT BANNER (CAPTAÇÃO DE ALUNOS) */}
+              <g id="rightBanner">
+                <polygon points="994,505 870,505 890,615 994,615 970,560" fill="#07336e" stroke="#ffffff" strokeWidth="3" />
+                <polygon points="988,515 880,515 896,605 988,605" fill="#0b4594" />
+                
+                <text x="934" y="555" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="20" fill="#ffffff" letter-spacing="2">
+                  CAPTAÇÃO
+                </text>
+                <text x="934" y="583" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="18" fill="#ffffff" letter-spacing="1">
+                  DE ALUNOS
+                </text>
+              </g>
+
+              {/* Giant Horizontal Bottom Ribbon - HUNTER */}
+              <g id="hunterBanner" transform="translate(0, 10)">
+                {/* Banner Ribbon shadow back folds */}
+                <polygon points="180,685 240,685 220,625" fill="#01050e" />
+                <polygon points="820,685 760,685 780,625" fill="#01050e" />
+                
+                {/* Front Main Banner Body */}
+                <polygon points="180,625 820,625 790,735 210,735" fill="url(#bannerGrad)" stroke="#ffffff" strokeWidth="6" />
+                
+                {/* Inner stroke accent */}
+                <polygon points="195,635 805,635 780,725 220,725" fill="none" stroke="#2575fc" strokeWidth="3.5" opacity="0.8" />
+
+                {/* Bold Athletics display text - HUNTER */}
+                <text x="500" y="702" text-anchor="middle" font-family="'Impact', 'Arial Black', 'Inter', sans-serif" font-weight="900" font-size="105" fill="#ffffff" letter-spacing="5" filter="url(#glow)">
+                  HUNTER
+                </text>
+              </g>
+
+            </svg>
+          )}
         </div>
       </div>
     </div>
