@@ -2465,15 +2465,15 @@ export default function App() {
     }
 
     let unsubBotConfig = () => {};
-    if (user) {
-      unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), snap => {
-        if (snap.exists()) {
-          setBotConfig({ id: snap.id, ...snap.data() } as BotConfig);
-        } else {
-          setBotConfig({ url: '', active: false });
-        }
-      }, (err) => handleFirestoreError(err, OperationType.GET, COLLECTIONS.BOT_CONFIG));
-    }
+    unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), snap => {
+      if (snap.exists()) {
+        setBotConfig({ id: snap.id, ...snap.data() } as BotConfig);
+      } else {
+        setBotConfig({ url: '', active: false });
+      }
+    }, (err) => {
+      console.warn("Could not load botConfig publicly:", err);
+    });
 
     return () => {
       unsubUsers();
@@ -2622,7 +2622,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <AuthScreen onToast={showToast} />;
+    return <AuthScreen onToast={showToast} botConfig={botConfig} />;
   }
 
   if (profile?.blocked) {
@@ -2964,7 +2964,7 @@ function AvisosView() {
 }
 
 
-function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error') => void }) {
+function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success' | 'error') => void, botConfig?: BotConfig }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -3057,9 +3057,20 @@ function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error')
       <div className="w-full md:w-[42%] lg:w-[38%] xl:w-[34%] bg-[#011a3c] border-r border-[#092e5c] p-8 sm:p-12 md:p-16 flex flex-col justify-between relative z-10 shadow-2xl min-h-screen">
         <div className="my-auto space-y-8">
           <div>
-            <div className="w-16 h-16 bg-gradient-to-tr from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-500/20 mb-6">
-              <TrendingUp size={32} />
-            </div>
+            {botConfig?.loginLogo ? (
+              <div className="mb-6 flex">
+                <img 
+                  src={botConfig.loginLogo} 
+                  alt="Logo" 
+                  className="max-h-20 max-w-full rounded-2xl object-contain drop-shadow-md bg-[#011a3c]"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            ) : (
+              <div className="w-16 h-16 bg-gradient-to-tr from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-500/20 mb-6">
+                <TrendingUp size={32} />
+              </div>
+            )}
             <h2 className="text-3xl font-extrabold text-white tracking-tight">Gestão Oeste pro</h2>
             <p className="text-slate-400 mt-2 text-sm">
               {isLogin ? 'Bem-vindo de volta! Insira suas credenciais:' : 'Preencha os dados e crie sua conta agora:'}
@@ -6680,7 +6691,8 @@ function CalendarioAcoesView({
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'concluida' | 'pendente'>('all');
-  const [dateFilter, setDateFilter] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingAction, setEditingAction] = useState<CalendarioAcao | null>(null);
   
@@ -6729,8 +6741,14 @@ function CalendarioAcoesView({
                          item.local.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' ? true : 
                          statusFilter === 'concluida' ? item.concluida : !item.concluida;
-    const matchesDate = dateFilter === '' ? true : 
-                       (item.dataInicio <= dateFilter && item.dataFim >= dateFilter);
+    let matchesDate = true;
+    if (startDateFilter && endDateFilter) {
+      matchesDate = item.dataInicio <= endDateFilter && item.dataFim >= startDateFilter;
+    } else if (startDateFilter) {
+      matchesDate = item.dataFim >= startDateFilter;
+    } else if (endDateFilter) {
+      matchesDate = item.dataInicio <= endDateFilter;
+    }
     return matchesSearch && matchesStatus && matchesDate;
   });
 
@@ -6955,7 +6973,7 @@ function CalendarioAcoesView({
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Pesquisar</label>
           <div className="relative">
@@ -6982,11 +7000,30 @@ function CalendarioAcoesView({
           </select>
         </div>
         <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Data</label>
+          <div className="flex justify-between items-center mb-1 ml-1">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase">Data Início</label>
+            {(startDateFilter || endDateFilter) && (
+              <button 
+                onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }} 
+                className="text-[10px] text-red-500 font-bold hover:underline"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
           <input 
             type="date" 
-            value={dateFilter}
-            onChange={e => setDateFilter(e.target.value)}
+            value={startDateFilter}
+            onChange={e => setStartDateFilter(e.target.value)}
+            className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Data Fim</label>
+          <input 
+            type="date" 
+            value={endDateFilter}
+            onChange={e => setEndDateFilter(e.target.value)}
             className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
           />
         </div>
@@ -7826,7 +7863,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   callBotApi: (path: string, options?: { method?: 'GET'|'POST', body?: any }) => Promise<any>,
   metaDia: MetaDia[]
 }) {
-  const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento' | 'metaDia' | 'folgas'>('usuarios');
+  const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento' | 'metaDia' | 'folgas' | 'logo'>('usuarios');
   const [adminRequests, setAdminRequests] = useState<SolicitacaoFolga[]>([]);
   const [loadingAdminRequests, setLoadingAdminRequests] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'Pendente' | 'Aprovado' | 'Recusado'>('Todos');
@@ -7926,6 +7963,84 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
     } finally {
       setIsProcessingPdf(false);
       e.target.value = '';
+    }
+  };
+
+  const [logoPreview, setLogoPreview] = useState<string | null>(botConfig?.loginLogo || null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  useEffect(() => {
+    if (botConfig?.loginLogo) {
+      setLogoPreview(botConfig.loginLogo);
+    } else {
+      setLogoPreview(null);
+    }
+  }, [botConfig?.loginLogo]);
+
+  const handleLogoUploadProcess = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      onToast("Por favor, envie apenas arquivos de imagem.", 'error');
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      const compressImage = (f: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(f);
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 400;
+              const MAX_HEIGHT = 400;
+              let width = img.width;
+              let height = img.height;
+
+              if (width > height) {
+                if (width > MAX_WIDTH) {
+                  height *= MAX_WIDTH / width;
+                  width = MAX_WIDTH;
+                }
+              } else {
+                if (height > MAX_HEIGHT) {
+                  width *= MAX_HEIGHT / height;
+                  height = MAX_HEIGHT;
+                }
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+                const dataUrl = canvas.toDataURL('image/png', 0.85);
+                resolve(dataUrl);
+              } else {
+                resolve(event.target?.result as string);
+              }
+            };
+            img.onerror = (err) => reject(err);
+            img.src = event.target?.result as string;
+          };
+          reader.onerror = (err) => reject(err);
+        });
+      };
+
+      const base64Image = await compressImage(file);
+      setLogoPreview(base64Image);
+
+      await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), {
+        loginLogo: base64Image,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      onToast("Logotipo atualizado com sucesso!");
+    } catch (err: any) {
+      console.error(err);
+      onToast(`Erro ao enviar logotipo: ${err.message}`, 'error');
+    } finally {
+      setIsUploadingLogo(false);
     }
   };
 
@@ -8176,6 +8291,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
           { id: 'whatsapp', label: 'Gestão WhatsApp' },
           { id: 'treinamento', label: 'Treinamento Bot' },
           { id: 'links', label: 'Links Úteis' },
+          { id: 'logo', label: 'Logotipo do Login' },
           { id: 'backup', label: 'Backup e Segurança' }
         ].map(tab => (
           <button
@@ -9880,7 +9996,6 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider">{tipo.label}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {tipo.subLabels?.map((label, idx) => {
-                      // We'll use a specific identifier for GAP/FiesProuni subtypes
                       const subtypeId = `${tipo.id}_${idx}`;
                       const msg = whatsappMessages.find(m => m.tipo === subtypeId);
                       return (
@@ -9961,6 +10076,135 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                  {isProcessingPdf ? "Processando..." : "Selecionar PDF"}
                  <input type="file" accept=".pdf" className="hidden" onChange={handlePdfUpload} disabled={isProcessingPdf} />
                </label>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'logo' && (
+        <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden max-w-4xl mx-auto">
+          <div className="p-6 border-b border-slate-100">
+            <h3 className="text-xl font-bold text-slate-900">Customizar Logotipo de Login</h3>
+            <p className="text-slate-500 text-sm">Faça o upload da imagem ou marca que aparecerá na tela de login de todos os usuários.</p>
+          </div>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Upload do Novo Logotipo</label>
+                
+                <div 
+                  className={`border-2 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                    isUploadingLogo 
+                      ? 'border-blue-300 bg-blue-50/50' 
+                      : 'border-slate-200 hover:border-blue-400 hover:bg-slate-50'
+                  }`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      await handleLogoUploadProcess(file);
+                    }
+                  }}
+                  onClick={() => {
+                    document.getElementById('logo-file-input')?.click();
+                  }}
+                >
+                  <input 
+                    type="file" 
+                    id="logo-file-input" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        await handleLogoUploadProcess(file);
+                      }
+                    }}
+                  />
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
+                    {isUploadingLogo ? (
+                      <span className="animate-spin text-sm">...</span>
+                    ) : (
+                      <Upload size={24} />
+                    )}
+                  </div>
+                  <h4 className="font-bold text-slate-800 text-sm mb-1">
+                    {isUploadingLogo ? "Processando imagem..." : "Arraste e solte o arquivo aqui"}
+                  </h4>
+                  <p className="text-xs text-slate-400">ou clique para navegar no seu computador</p>
+                  <p className="text-[10px] text-slate-400 mt-2 font-mono">Arquivos recomendados: PNG, JPG ou SVG (Max. 5MB)</p>
+                </div>
+              </div>
+
+              {logoPreview && (
+                <div className="pt-2">
+                  <button
+                    onClick={async () => {
+                      if (window.confirm("Deseja realmente remover o logotipo personalizado e voltar ao ícone padrão?")) {
+                        setIsUploadingLogo(true);
+                        try {
+                          await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), {
+                            loginLogo: ""
+                          }, { merge: true });
+                          setLogoPreview(null);
+                          onToast("Logotipo removido com sucesso!");
+                        } catch (err: any) {
+                          onToast(`Erro ao remover logotipo: ${err.message}`, 'error');
+                        } finally {
+                          setIsUploadingLogo(false);
+                        }
+                      }
+                    }}
+                    className="w-full text-center text-sm font-bold text-rose-500 hover:text-rose-600 hover:bg-rose-50 border border-rose-100 py-3 rounded-2xl transition-all cursor-pointer"
+                  >
+                    Remover Marca Customizada
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-[#011430] rounded-3xl p-8 flex flex-col justify-between border border-slate-800 min-h-[300px] text-white relative overflow-hidden select-none">
+              <div className="absolute top-2 right-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-mono tracking-widest rounded-full">
+                SIMULAÇÃO DE LOGIN
+              </div>
+              <div className="absolute inset-0 bg-[radial-gradient(#1e3a8a_1px,transparent_1px)] [background-size:16px_16px] opacity-10 pointer-events-none" />
+
+              <div className="my-auto space-y-4">
+                <div>
+                  {logoPreview ? (
+                    <div className="mb-4 flex">
+                      <img 
+                        src={logoPreview} 
+                        alt="Preview Logo" 
+                        className="max-h-16 max-w-full rounded-xl object-contain drop-shadow-md border border-slate-700/50 p-1 bg-[#011a3c]"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 bg-gradient-to-tr from-sky-500 to-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg mb-4">
+                      <TrendingUp size={24} />
+                    </div>
+                  )}
+                  <h3 className="text-xl font-extrabold text-white tracking-tight">Gestão Oeste pro</h3>
+                  <p className="text-xs text-slate-400 mt-1">Bem-vindo de volta! Insira suas credenciais:</p>
+                </div>
+
+                <div className="space-y-2 pointer-events-none opacity-20">
+                  <div className="w-full h-8 bg-slate-800 rounded-lg border border-slate-700" />
+                  <div className="w-full h-8 bg-slate-800 rounded-lg border border-slate-700" />
+                </div>
+
+                <div className="w-full h-9 bg-slate-700 rounded-lg pointer-events-none opacity-25 mt-4" />
+              </div>
+
+              <div className="text-center text-[8px] text-slate-500 font-mono tracking-wider mt-4">
+                OESTE HUNTER © 2026
+              </div>
             </div>
           </div>
         </section>

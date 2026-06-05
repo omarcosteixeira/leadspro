@@ -286,6 +286,7 @@ export interface BotConfig {
   active: boolean;
   trainingContext?: string;
   botNames?: Record<string, string>;
+  loginLogo?: string;
   updatedAt?: any;
 }
 

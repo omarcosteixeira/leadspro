@@ -191,7 +191,7 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/bot_config/{id} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isAuthenticated();
     }
 
