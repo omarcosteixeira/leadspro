@@ -1079,7 +1079,8 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
   const [selectedCampanha, setSelectedCampanha] = useState<Campanha | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
 
   const getEffectiveStatus = (camp: Campanha) => {
     const today = new Date().toISOString().split('T')[0];
@@ -1093,10 +1094,18 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
       const effectiveStatus = getEffectiveStatus(camp);
       const matchesSearch = camp.nome.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = !statusFilter || effectiveStatus === statusFilter;
-      const matchesDate = !dateFilter || (dateFilter >= camp.dataInicio && dateFilter <= camp.dataFim);
+      
+      let matchesDate = true;
+      if (startDateFilter && endDateFilter) {
+        matchesDate = camp.dataInicio <= endDateFilter && camp.dataFim >= startDateFilter;
+      } else if (startDateFilter) {
+        matchesDate = camp.dataFim >= startDateFilter;
+      } else if (endDateFilter) {
+        matchesDate = camp.dataInicio <= endDateFilter;
+      }
       return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [campanhas, searchTerm, statusFilter, dateFilter]);
+  }, [campanhas, searchTerm, statusFilter, startDateFilter, endDateFilter]);
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1225,12 +1234,32 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
           <option value="Agendada">Agendada</option>
           <option value="Finalizada">Finalizada</option>
         </select>
-        <input 
-          type="date" 
-          value={dateFilter}
-          onChange={e => setDateFilter(e.target.value)}
-          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Período:</span>
+          <input 
+            type="date" 
+            value={startDateFilter}
+            onChange={e => setStartDateFilter(e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-semibold text-slate-600"
+            title="Data de Início"
+          />
+          <span className="text-slate-400 text-xs font-bold">até</span>
+          <input 
+            type="date" 
+            value={endDateFilter}
+            onChange={e => setEndDateFilter(e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-semibold text-slate-600"
+            title="Data de Fim"
+          />
+          {(startDateFilter || endDateFilter) && (
+            <button
+              onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }}
+              className="text-xs font-bold text-red-500 hover:text-red-700 hover:underline transition-all cursor-pointer px-2"
+            >
+              Limpar
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -2721,7 +2750,7 @@ export default function App() {
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
               <TrendingUp size={24} />
             </div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Leads Pro</h1>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Gestão Oeste pro</h1>
           </div>
 
           <nav className="flex-1 px-4 space-y-1">
@@ -3019,125 +3048,364 @@ function AuthScreen({ onToast }: { onToast: (m: string, t?: 'success' | 'error')
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <motion.div 
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100"
-      >
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200 mx-auto mb-4">
-            <TrendingUp size={32} />
+    <div className="min-h-screen bg-[#011430] flex flex-col md:flex-row relative overflow-hidden font-sans text-white">
+      {/* Absolute Ambient Background Lights */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-blue-500/15 blur-[120px] pointer-events-none z-0" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-[130px] pointer-events-none z-0" />
+
+      {/* LEFT COLUMN: Login panel container */}
+      <div className="w-full md:w-[42%] lg:w-[38%] xl:w-[34%] bg-[#011a3c] border-r border-[#092e5c] p-8 sm:p-12 md:p-16 flex flex-col justify-between relative z-10 shadow-2xl min-h-screen">
+        <div className="my-auto space-y-8">
+          <div>
+            <div className="w-16 h-16 bg-gradient-to-tr from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-500/20 mb-6">
+              <TrendingUp size={32} />
+            </div>
+            <h2 className="text-3xl font-extrabold text-white tracking-tight">Gestão Oeste pro</h2>
+            <p className="text-slate-400 mt-2 text-sm">
+              {isLogin ? 'Bem-vindo de volta! Insira suas credenciais:' : 'Preencha os dados e crie sua conta agora:'}
+            </p>
           </div>
-          <h2 className="text-2xl font-bold text-slate-900">Gestão de Leads Pro</h2>
-          <p className="text-slate-500 mt-2">{isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta agora'}</p>
-        </div>
 
-        <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
-          <button
-            type="button"
-            onClick={() => {
-              if (servidor !== 'principal') {
-                localStorage.setItem('servidor_selected', 'principal');
-                window.location.reload();
-              }
-            }}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${servidor === 'principal' ? 'bg-white shadow border border-slate-200 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Principal
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (servidor !== 'comercial') {
-                localStorage.setItem('servidor_selected', 'comercial');
-                window.location.reload();
-              }
-            }}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${servidor === 'comercial' ? 'bg-white shadow border border-slate-200 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Comercial
-          </button>
-        </div>
+          {/* Servidor Selector (Principal vs Comercial) */}
+          <div className="flex bg-[#032554] p-1.5 rounded-2xl border border-[#0b3c7c] shadow-inner">
+            <button
+              type="button"
+              onClick={() => {
+                if (servidor !== 'principal') {
+                  localStorage.setItem('servidor_selected', 'principal');
+                  window.location.reload();
+                }
+              }}
+              className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${servidor === 'principal' ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow shadow-sky-500/20' : 'text-slate-400 hover:text-white'}`}
+            >
+              Principal
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (servidor !== 'comercial') {
+                  localStorage.setItem('servidor_selected', 'comercial');
+                  window.location.reload();
+                }
+              }}
+              className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${servidor === 'comercial' ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow shadow-sky-500/20' : 'text-slate-400 hover:text-white'}`}
+            >
+              Comercial
+            </button>
+          </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
+          <form onSubmit={handleSubmit} className="space-y-4 font-sans">
+            {!isLogin && (
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Nome Completo</label>
+                <input 
+                  type="text" 
+                  value={name} 
+                  onChange={e => setName(e.target.value)} 
+                  required 
+                  className="w-full bg-[#032654] border border-[#0d4182] text-white px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none transition-all placeholder-slate-500 text-sm font-medium"
+                  placeholder="Seu nome"
+                />
+              </div>
+            )}
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Nome Completo</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Email</label>
               <input 
-                type="text" 
-                value={name} 
-                onChange={e => setName(e.target.value)} 
+                type="email" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
                 required 
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                placeholder="Seu nome"
+                className="w-full bg-[#032654] border border-[#0d4182] text-white px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none transition-all placeholder-slate-500 text-sm font-medium"
+                placeholder="seu@email.com"
               />
             </div>
-          )}
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1">Email</label>
-            <input 
-              type="email" 
-              value={email} 
-              onChange={e => setEmail(e.target.value)} 
-              required 
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              placeholder="seu@email.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1">Senha</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              required 
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              placeholder="••••••••"
-            />
-          </div>
-
-          {isLogin && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!email) {
-                    onToast("Por favor, digite seu e-mail primeiro.", 'error');
-                    return;
-                  }
-                  try {
-                    await sendPasswordResetEmail(auth, email);
-                    onToast("E-mail de redefinição enviado!");
-                  } catch (err: any) {
-                    onToast("Erro ao enviar e-mail.", 'error');
-                  }
-                }}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700"
-              >
-                Esqueci minha senha
-              </button>
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Senha</label>
+              <input 
+                type="password" 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                required 
+                className="w-full bg-[#032654] border border-[#0d4182] text-white px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none transition-all placeholder-slate-500 text-sm font-medium"
+                placeholder="••••••••"
+              />
             </div>
-          )}
 
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all disabled:opacity-50"
-          >
-            {loading ? 'Processando...' : (isLogin ? 'Entrar no Sistema' : 'Criar Minha Conta')}
-          </button>
-        </form>
+            {isLogin && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!email) {
+                      onToast("Por favor, digite seu e-mail primeiro.", 'error');
+                      return;
+                    }
+                    try {
+                      await sendPasswordResetEmail(auth, email);
+                      onToast("E-mail de redefinição enviado!");
+                    } catch (err: any) {
+                      onToast("Erro ao enviar e-mail.", 'error');
+                    }
+                  }}
+                  className="text-xs font-bold text-sky-400 hover:text-sky-300 hover:underline transition-colors cursor-pointer"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+            )}
 
-        <div className="mt-8 text-center">
-          <button 
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-sm font-semibold text-blue-600 hover:text-blue-800"
-          >
-            {isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça login'}
-          </button>
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full bg-gradient-to-tr from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] cursor-pointer"
+            >
+              {loading ? 'Processando...' : (isLogin ? 'Entrar no Sistema' : 'Criar Minha Conta')}
+            </button>
+          </form>
+
+          <div className="mt-8 text-center pt-2 border-t border-[#092e5c]">
+            <button 
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-sm font-semibold text-sky-400 hover:text-sky-300 hover:underline cursor-pointer"
+            >
+              {isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça login'}
+            </button>
+          </div>
         </div>
-      </motion.div>
+
+        {/* Humble system credits info */}
+        <div className="text-center text-[10px] text-slate-500 font-mono tracking-widest mt-6">
+          OESTE HUNTER © {new Date().getFullYear()}
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN: The majestic interactive Oeste Hunter logo artwork */}
+      <div className="hidden md:flex flex-1 items-center justify-center bg-[#01112c] p-12 relative overflow-hidden z-0">
+        {/* Subtle grid mesh backdrop */}
+        <div className="absolute inset-0 bg-[radial-gradient(#082a5c_1px,transparent_1px)] [background-size:24px_24px] opacity-25" />
+        
+        {/* Animated ambient outer halo circles */}
+        <div className="absolute w-[600px] h-[600px] border border-[#0d4182]/20 rounded-full animate-pulse" />
+        <div className="absolute w-[800px] h-[800px] border border-[#0d4182]/10 rounded-full opacity-60" />
+
+        {/* SVG ART Container */}
+        <div className="relative z-10 w-full flex justify-center">
+          {/* Oeste Hunter Badge SVG */}
+          <svg
+            viewBox="0 0 1000 1000"
+            className="w-full max-w-[560px] aspect-square drop-shadow-[0_25px_60px_rgba(14,116,253,0.35)] select-none"
+          >
+            <defs>
+              <linearGradient id="blueRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#0a397a" />
+                <stop offset="50%" stopColor="#125cb5" />
+                <stop offset="100%" stopColor="#082c5f" />
+              </linearGradient>
+              <linearGradient id="wolfEyeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#00f0ff" />
+                <stop offset="100%" stopColor="#00a8ff" />
+              </linearGradient>
+              <linearGradient id="muzzleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#ffffff" />
+                <stop offset="100%" stopColor="#cfd8dc" />
+              </linearGradient>
+              <linearGradient id="bannerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#010f24" />
+                <stop offset="50%" stopColor="#051c3d" />
+                <stop offset="100%" stopColor="#010d21" />
+              </linearGradient>
+              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="8" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+              <filter id="eyeGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+
+            {/* Target Crosshairs Reticle */}
+            <g stroke="#ffffff" strokeWidth="2.5" opacity="0.3">
+              {/* Vertical Crosshair Line */}
+              <line x1="500" y1="20" x2="500" y2="980" />
+              {/* Horizontal Crosshair Line */}
+              <line x1="20" y1="500" x2="980" y2="500" />
+              
+              {/* Target ticks (top, bottom, left, right) */}
+              <line x1="500" y1="80" x2="520" y2="80" />
+              <line x1="500" y1="140" x2="515" y2="140" />
+              <line x1="500" y1="200" x2="520" y2="200" />
+              
+              <line x1="500" y1="920" x2="520" y2="920" />
+              <line x1="500" y1="860" x2="515" y2="860" />
+              <line x1="500" y1="800" x2="520" y2="800" />
+
+              <line x1="80" y1="500" x2="80" y2="520" />
+              <line x1="140" y1="500" x2="140" y2="515" />
+              <line x1="200" y1="500" x2="200" y2="520" />
+
+              <line x1="920" y1="500" x2="920" y2="520" />
+              <line x1="860" y1="500" x2="860" y2="515" />
+              <line x1="800" y1="500" x2="800" y2="520" />
+            </g>
+
+            {/* Target Reticle Outer Box ticks */}
+            <rect x="480" y="40" width="40" height="20" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
+            <rect x="480" y="940" width="40" height="20" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
+            <rect x="40" y="480" width="20" height="40" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
+            <rect x="940" y="480" width="20" height="40" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
+
+            {/* 1. Outer target circle with dashes */}
+            <circle cx="500" cy="500" r="445" fill="none" stroke="#ffffff" strokeWidth="3" strokeDasharray="16 20" opacity="0.35" />
+
+            {/* 2. Concentric circle borders */}
+            <circle cx="500" cy="500" r="415" fill="none" stroke="#ffffff" strokeWidth="2.5" opacity="0.4" />
+            
+            {/* 3. Main Thick Ring Outer Rim */}
+            <circle cx="500" cy="500" r="400" fill="none" stroke="#ffffff" strokeWidth="4" />
+
+            {/* 4. The Mighty Blue Ring Body */}
+            <circle cx="500" cy="500" r="348" fill="none" stroke="url(#blueRingGrad)" strokeWidth="100" />
+
+            {/* 5. Inner Rim of the Blue Ring */}
+            <circle cx="500" cy="500" r="298" fill="none" stroke="#ffffff" strokeWidth="4" />
+
+            {/* 6. Main Inner Graphic Backdrop (Turquoise circle) */}
+            <circle cx="500" cy="500" r="294" fill="#009be1" stroke="#ffffff" strokeWidth="2" />
+            <circle cx="500" cy="500" r="275" fill="#0388c7" />
+
+            {/* Curves for circular text alignment */}
+            {/* Path for 'OESTE' arched on top (left-to-right) */}
+            <path id="topArchPath" d="M 160,500 A 340,340 0 0,1 840,500" fill="none" />
+            
+            {/* Path for 'OESTE HUNTER' arched on bottom (right-to-left) */}
+            <path id="bottomArchPath" d="M 840,500 A 340,340 0 0,1 160,500" fill="none" />
+
+            {/* Arched Texts */}
+            <text font-family="'Inter', sans-serif" font-weight="900" font-size="75" fill="#ffffff" letter-spacing="18">
+              <textPath href="#topArchPath" startOffset="50%" text-anchor="middle">OESTE</textPath>
+            </text>
+
+            <text font-family="'Inter', sans-serif" font-weight="900" font-size="44" fill="#ffffff" letter-spacing="14">
+              <textPath href="#bottomArchPath" startOffset="50%" text-anchor="middle">OESTE HUNTER</textPath>
+            </text>
+
+            {/* ======================================= */}
+            {/* WOLF HEAD INTERIOR ELEMENT MASCOT ART   */}
+            {/* ======================================= */}
+            <g id="wolfMascot" transform="translate(0, -35)">
+              
+              {/* Wolf Ears Behind */}
+              {/* Left ear dark back */}
+              <polygon points="350,330 435,420 380,480" fill="#020f2b" stroke="#ffffff" strokeWidth="3" />
+              {/* Left ear internal blue */}
+              <polygon points="365,345 425,415 385,465" fill="#0096e6" />
+              
+              {/* Right ear dark back */}
+              <polygon points="650,330 565,420 620,480" fill="#020f2b" stroke="#ffffff" strokeWidth="3" />
+              {/* Right ear internal blue */}
+              <polygon points="635,345 575,415 615,465" fill="#0096e6" />
+
+              {/* Wolf Forehead and Cheek structure */}
+              {/* Base Head polygon */}
+              <polygon points="500,380 340,500 370,625 500,680 630,625 660,500" fill="#03112b" />
+              
+              {/* White outer framing highlights (Cheek fur) */}
+              {/* Left cheek outer fluff */}
+              <polygon points="340,500 310,560 385,585" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
+              <polygon points="310,560 330,630 400,610" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
+              
+              {/* Right cheek outer fluff */}
+              <polygon points="660,500 690,560 615,585" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
+              <polygon points="690,560 670,630 600,610" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
+
+              {/* Intermediate Blue Shadows Cheeks */}
+              <polygon points="340,500 385,585 410,515" fill="#0a3c7c" />
+              <polygon points="660,500 615,585 590,515" fill="#0a3c7c" />
+
+              {/* Side Dark fur shades */}
+              <polygon points="410,515 385,585 440,590 460,530" fill="#00183b" />
+              <polygon points="590,515 615,585 560,590 540,530" fill="#00183b" />
+
+              {/* Center forehead wolf shield (cyan core) */}
+              <polygon points="500,380 460,470 500,510" fill="#00bdff" />
+              <polygon points="500,380 540,470 500,510" fill="#00bdff" />
+
+              <polygon points="500,395 470,470 500,500" fill="#ffffff" />
+              <polygon points="500,395 530,470 500,500" fill="#ffffff" />
+
+              {/* Wolf Eyes Areas (Black framing masks) */}
+              <polygon points="420,490 470,510 460,535 410,515" fill="#010614" />
+              <polygon points="580,490 530,510 540,535 590,515" fill="#010614" />
+
+              {/* Fierce Cyan Eyes */}
+              <polygon points="432,498 462,510 452,525 430,512" fill="url(#wolfEyeGrad)" filter="url(#eyeGlow)" />
+              <polygon points="568,498 538,510 548,525 570,512" fill="url(#wolfEyeGrad)" filter="url(#eyeGlow)" />
+              
+              {/* Wolf Nose Bridge */}
+              <polygon points="500,510 460,530 475,590 500,610" fill="#020f26" />
+              <polygon points="500,510 540,530 525,590 500,610" fill="#020f26" />
+              
+              <polygon points="500,510 480,530 485,585 500,600" fill="#0080cf" />
+              <polygon points="500,510 520,530 515,585 500,600" fill="#0080cf" />
+
+              {/* Muzzle (White muzzle side facets) */}
+              <polygon points="500,610 440,590 445,635 500,665" fill="url(#muzzleGrad)" stroke="#ffffff" strokeWidth="2.5" />
+              <polygon points="500,610 560,590 555,635 500,665" fill="url(#muzzleGrad)" stroke="#ffffff" strokeWidth="2.5" />
+
+              {/* Black Nose Tip */}
+              <polygon points="500,620 475,605 525,605" fill="#010614" />
+              <polygon points="500,620 485,635 515,635" fill="#010614" />
+              <polygon points="475,605 525,605 515,635 485,635" fill="#010614" />
+              {/* Nose shine */}
+              <circle cx="500" cy="612" r="3" fill="#ffffff" />
+            </g>
+
+            {/* Left and Right Side Banners - NPS and CAPTAÇÃO DE ALUNOS */}
+            {/* LEFT BANNER (NPS) */}
+            <g id="leftBanner">
+              <polygon points="6,505 130,505 110,615 6,615 30,560" fill="#07336e" stroke="#ffffff" strokeWidth="3" />
+              <polygon points="12,515 120,515 104,605 12,605" fill="#0b4594" />
+              
+              <text x="63" y="578" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="46" fill="#ffffff" letter-spacing="1">
+                NPS
+              </text>
+            </g>
+
+            {/* RIGHT BANNER (CAPTAÇÃO DE ALUNOS) */}
+            <g id="rightBanner">
+              <polygon points="994,505 870,505 890,615 994,615 970,560" fill="#07336e" stroke="#ffffff" strokeWidth="3" />
+              <polygon points="988,515 880,515 896,605 988,605" fill="#0b4594" />
+              
+              <text x="934" y="555" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="20" fill="#ffffff" letter-spacing="2">
+                CAPTAÇÃO
+              </text>
+              <text x="934" y="583" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="18" fill="#ffffff" letter-spacing="1">
+                DE ALUNOS
+              </text>
+            </g>
+
+            {/* Giant Horizontal Bottom Ribbon - HUNTER */}
+            <g id="hunterBanner" transform="translate(0, 10)">
+              {/* Banner Ribbon shadow back folds */}
+              <polygon points="180,685 240,685 220,625" fill="#01050e" />
+              <polygon points="820,685 760,685 780,625" fill="#01050e" />
+              
+              {/* Front Main Banner Body */}
+              <polygon points="180,625 820,625 790,735 210,735" fill="url(#bannerGrad)" stroke="#ffffff" strokeWidth="6" />
+              
+              {/* Inner stroke accent */}
+              <polygon points="195,635 805,635 780,725 220,725" fill="none" stroke="#2575fc" strokeWidth="3.5" opacity="0.8" />
+
+              {/* Bold Athletics display text - HUNTER */}
+              <text x="500" y="702" text-anchor="middle" font-family="'Impact', 'Arial Black', 'Inter', sans-serif" font-weight="900" font-size="105" fill="#ffffff" letter-spacing="5" filter="url(#glow)">
+                HUNTER
+              </text>
+            </g>
+
+          </svg>
+        </div>
+      </div>
     </div>
   );
 }
@@ -4930,8 +5198,9 @@ function BasesView({
                     <div className="flex flex-col">
                       <span className="font-bold text-slate-900">{entry.nome}</span>
                       <span className="text-xs text-slate-500">{entry.curso}</span>
-                      <div className="flex items-center space-x-2 mt-1">
+                      <div className="flex items-center space-x-2 mt-1 flex-wrap gap-y-1">
                         {entry.telefone && <span className="text-[10px] text-slate-400 font-bold">{entry.telefone}</span>}
+                        {entry.cpf && <span className="text-[10px] text-slate-500 font-bold px-2 py-0.5 bg-slate-100 rounded-full">CPF: {formatCPF(entry.cpf)}</span>}
                         {entry.semestre && <span className="text-[10px] text-blue-500 font-bold px-2 py-0.5 bg-blue-50 rounded-full">{entry.semestre}</span>}
                         {entry.periodo && <span className="text-[10px] text-purple-500 font-bold px-2 py-0.5 bg-purple-50 rounded-full">{entry.periodo}</span>}
                       </div>
@@ -8536,7 +8805,9 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
         const filteredRequests = adminRequests.filter(req => {
           if (!userProfile) return false;
           if (userProfile.role === 'Admin Master') return true;
-          if (userProfile.role === 'Líder/FDV') return req.solicitanteRole === 'Sala de Matrícula';
+          if (userProfile.role === 'Líder/FDV') {
+            return req.solicitanteRole === 'Sala de Matrícula' || (req.solicitanteRole === 'Líder/FDV' && req.solicitanteId !== userProfile.uid);
+          }
           if (userProfile.role === 'Gestor Comercial' || userProfile.role === 'Gerente Comercial (Comercial)') {
             return req.solicitanteRole === 'FDV' || req.solicitanteRole === 'FDV (Comercial)';
           }
@@ -8593,7 +8864,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">Solicitações de Folgas e Férias</h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Líder/FDV aprova para Sala de Matrícula | Gestores aprovam para FDV / FDV Comercial
+                    Líder/FDV aprova para Sala de Matrícula e outros Líderes/FDV | Gestores aprovam para FDV / FDV Comercial
                   </p>
                 </div>
 
