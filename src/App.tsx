@@ -1888,7 +1888,7 @@ function FiesProuniView({
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
-                    <input name="telefone" defaultValue={editingEntry?.telefone} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input name="telefone" defaultValue={editingEntry?.telefone} onChange={e => { e.target.value = formatPhone(e.target.value) }} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -4175,7 +4175,7 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
                 type="tel" 
                 required
                 value={formData.telefone}
-                onChange={e => setFormData({...formData, telefone: e.target.value})}
+                onChange={e => setFormData({...formData, telefone: formatPhone(e.target.value)})}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 placeholder="DDD + Número"
               />
@@ -4185,7 +4185,7 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
               <input 
                 type="text" 
                 value={formData.cpf}
-                onChange={e => setFormData({...formData, cpf: e.target.value})}
+                onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 placeholder="000.000.000-00"
               />
@@ -5061,7 +5061,7 @@ function BasesView({
                 placeholder="Telefone" 
                 required 
                 value={formData.telefone}
-                onChange={e => setFormData({...formData, telefone: e.target.value})}
+                onChange={e => setFormData({...formData, telefone: formatPhone(e.target.value)})}
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
@@ -5069,7 +5069,7 @@ function BasesView({
               <input 
                 placeholder="CPF" 
                 value={formData.cpf}
-                onChange={e => setFormData({...formData, cpf: e.target.value})}
+                onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
               <input 
@@ -5754,7 +5754,7 @@ function BasesRenovacaoView({
                 placeholder="Telefone" 
                 required 
                 value={formData.telefone}
-                onChange={e => setFormData({...formData, telefone: e.target.value})}
+                onChange={e => setFormData({...formData, telefone: formatPhone(e.target.value)})}
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
@@ -5762,7 +5762,7 @@ function BasesRenovacaoView({
               <input 
                 placeholder="CPF" 
                 value={formData.cpf}
-                onChange={e => setFormData({...formData, cpf: e.target.value})}
+                onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
               <input 
@@ -6654,11 +6654,11 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">CPF</label>
-                  <input required value={formData.cpf} onChange={e => setFormData({...formData, cpf: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  <input required value={formData.cpf} onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Telefone</label>
-                  <input required value={formData.telefone} onChange={e => setFormData({...formData, telefone: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  <input required value={formData.telefone} onChange={e => setFormData({...formData, telefone: formatPhone(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Produto</label>
@@ -7775,7 +7775,7 @@ function EmpresasParceirasView({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1">Telefone</label>
-                    <input name="telefone" defaultValue={editingEmpresa?.telefone} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <input name="telefone" defaultValue={editingEmpresa?.telefone} onChange={e => { e.target.value = formatPhone(e.target.value) }} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1">Email</label>
@@ -8492,6 +8492,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     <input 
                       name="cpf"
                       defaultValue={editingUser.cpf || ''}
+                      onChange={(e) => e.target.value = formatCPF(e.target.value)}
                       placeholder="000.000.000-00"
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                     />
@@ -8510,6 +8511,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     <input 
                       name="phone"
                       defaultValue={editingUser.phone}
+                      onChange={(e) => e.target.value = formatPhone(e.target.value)}
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                       placeholder="(00) 00000-0000"
                     />
@@ -8642,7 +8644,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">CPF (Opcional)</label>
-                    <input name="cpf" placeholder="000.000.000-00" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                    <input name="cpf" onChange={(e) => e.target.value = formatCPF(e.target.value)} placeholder="000.000.000-00" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">Data de Nascimento (Opcional)</label>
@@ -8675,7 +8677,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-500 mb-1">Telefone</label>
-                      <input name="phone" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" placeholder="(00) 00000-0000" />
+                      <input name="phone" onChange={(e) => e.target.value = formatPhone(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" placeholder="(00) 00000-0000" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-500 mb-1">Chave PIX</label>

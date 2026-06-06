@@ -1,11 +1,32 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { CursoDisponivel, UserProfile } from '../types';
 import { db, COLLECTIONS } from '../firebase';
-import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { Plus, Search, Trash2, Edit2, CheckCircle2, X, BookOpen } from 'lucide-react';
+import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { Plus, Search, Trash2, Edit2, CheckCircle2, X, BookOpen, Download, Upload } from 'lucide-react';
 import { cn } from '../lib/utils';
 // We should import ROLES from App.tsx or redefine. Since App.tsx has it:
 import { ROLES } from '../App';
+import * as XLSX from 'xlsx';
+
+export const exportToExcel = (data: any[], fileName: string) => {
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Dados");
+  XLSX.writeFile(workbook, `${fileName}.xlsx`);
+};
+
+export const importFromExcel = (file: File, callback: (data: any[]) => void) => {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const bstr = e.target?.result;
+    const workbook = XLSX.read(bstr, { type: 'binary' });
+    const worksheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[worksheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet);
+    callback(data);
+  };
+  reader.readAsBinaryString(file);
+};
 
 interface CursosDisponiveisViewProps {
   cursos: CursoDisponivel[];
@@ -18,6 +39,7 @@ const METODOLOGIAS = ['EAD', 'Presencial', 'Semipresencial', 'Flex', 'Híbrido',
 export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDisponiveisViewProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Filters
   const [filterUnidade, setFilterUnidade] = useState<string[]>([]);
@@ -32,6 +54,59 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
   const uniqueProdutos = useMemo(() => Array.from(new Set(cursos.map(c => c.produto))).sort(), [cursos]);
 
   const canEdit = profile.role === ROLES.ADMIN_MASTER || profile.role === ROLES.GESTOR_COMERCIAL || profile.role === ROLES.GESTOR_COMERCIAL_COMERCIAL;
+
+  const handleExport = () => {
+    const exportData = filteredCursos.map(c => ({
+      Unidade: c.nomeUnidade,
+      Produto: c.produto,
+      Curso: c.curso,
+      Metodologia: c.metodologia,
+      'Duração': c.duracao
+    }));
+    exportToExcel(exportData, 'Cursos_Disponiveis');
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    importFromExcel(file, async (importData) => {
+      try {
+        const batch = importData.map(item => ({
+          nomeUnidade: item.Unidade || item.nomeUnidade || '',
+          produto: item.Produto || item.produto || 'Graduação',
+          curso: item.Curso || item.curso || '',
+          metodologia: item.Metodologia || item.metodologia || 'EAD',
+          duracao: item['Duração'] || item.duracao || '',
+          createdAt: new Date().toISOString()
+        }));
+
+        const processBatch = async (items: any[]) => {
+          const chunk = items.slice(0, 500);
+          const rest = items.slice(500);
+          
+          const firestoreBatch = writeBatch(db);
+          chunk.forEach((item) => {
+            const docRef = doc(collection(db, COLLECTIONS.CURSOS));
+            firestoreBatch.set(docRef, item);
+          });
+          
+          await firestoreBatch.commit();
+          
+          if (rest.length > 0) {
+            await processBatch(rest);
+          }
+        };
+
+        await processBatch(batch);
+        onToast(`${batch.length} cursos importados com sucesso!`, 'success');
+      } catch (err: any) {
+        console.error("Import error:", err);
+        onToast(`Erro na importação: ${err.message}`, 'error');
+      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    });
+  };
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -94,15 +169,42 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Cursos Disponíveis</h2>
           <p className="text-slate-500 text-sm mt-1">Consulte os cursos e metologias disponíveis em cada unidade.</p>
         </div>
-        {canEdit && !isAdding && (
+        <div className="flex flex-wrap items-center gap-3">
+          {canEdit && (
+            <>
+              <input
+                type="file"
+                accept=".xlsx, .xls"
+                className="hidden"
+                ref={fileInputRef}
+                onChange={handleImport}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center space-x-2 shrink-0"
+              >
+                <Upload size={18} />
+                <span>Importar Planilha</span>
+              </button>
+            </>
+          )}
           <button
-            onClick={() => { setIsAdding(true); setEditingId(null); }}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center space-x-2 shrink-0"
+            onClick={handleExport}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center space-x-2 shrink-0"
           >
-            <Plus size={20} />
-            <span>Novo Curso</span>
+            <Download size={18} />
+            <span>Exportar Planilha</span>
           </button>
-        )}
+          {canEdit && !isAdding && (
+            <button
+              onClick={() => { setIsAdding(true); setEditingId(null); }}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center space-x-2 shrink-0"
+            >
+              <Plus size={20} />
+              <span>Novo Curso</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {isAdding && canEdit && (
