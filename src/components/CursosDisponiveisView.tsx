@@ -1,0 +1,339 @@
+import React, { useState, useMemo } from 'react';
+import { CursoDisponivel, UserProfile } from '../types';
+import { db, COLLECTIONS } from '../firebase';
+import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { Plus, Search, Trash2, Edit2, CheckCircle2, X, BookOpen } from 'lucide-react';
+import { cn } from '../lib/utils';
+// We should import ROLES from App.tsx or redefine. Since App.tsx has it:
+import { ROLES } from '../App';
+
+interface CursosDisponiveisViewProps {
+  cursos: CursoDisponivel[];
+  onToast: (m: string, t?: 'success' | 'error') => void;
+  profile: UserProfile;
+}
+
+const METODOLOGIAS = ['EAD', 'Presencial', 'Semipresencial', 'Flex', 'Híbrido', 'Digital'];
+
+export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDisponiveisViewProps) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Filters
+  const [filterUnidade, setFilterUnidade] = useState<string[]>([]);
+  const [filterMetodologia, setFilterMetodologia] = useState<string[]>([]);
+  const [filterCurso, setFilterCurso] = useState<string[]>([]);
+  const [filterProduto, setFilterProduto] = useState<string[]>([]);
+
+  // Unique values for filters (ignoring case/trimming could be nice, but we'll use exact values)
+  const uniqueUnidades = useMemo(() => Array.from(new Set(cursos.map(c => c.nomeUnidade))).sort(), [cursos]);
+  const uniqueMetodologias = useMemo(() => Array.from(new Set(cursos.map(c => c.metodologia))).sort(), [cursos]);
+  const uniqueCursos = useMemo(() => Array.from(new Set(cursos.map(c => c.curso))).sort(), [cursos]);
+  const uniqueProdutos = useMemo(() => Array.from(new Set(cursos.map(c => c.produto))).sort(), [cursos]);
+
+  const canEdit = profile.role === ROLES.ADMIN_MASTER || profile.role === ROLES.GESTOR_COMERCIAL || profile.role === ROLES.GESTOR_COMERCIAL_COMERCIAL;
+
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      nomeUnidade: formData.get('nomeUnidade') as string,
+      produto: formData.get('produto') as 'Graduação' | 'Técnico' | 'Pós-graduação',
+      curso: formData.get('curso') as string,
+      metodologia: formData.get('metodologia') as string,
+      duracao: formData.get('duracao') as string,
+    };
+
+    try {
+      if (editingId) {
+        await updateDoc(doc(db, COLLECTIONS.CURSOS, editingId), { ...data, updatedAt: new Date().toISOString() });
+        onToast('Curso atualizado com sucesso!', 'success');
+      } else {
+        await addDoc(collection(db, COLLECTIONS.CURSOS), { ...data, createdAt: new Date().toISOString() });
+        onToast('Curso adicionado com sucesso!', 'success');
+      }
+      setIsAdding(false);
+      setEditingId(null);
+    } catch (err) {
+      console.error(err);
+      onToast('Erro ao salvar curso', 'error');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir este curso?')) return;
+    try {
+      await deleteDoc(doc(db, COLLECTIONS.CURSOS, id));
+      onToast('Curso excluído com sucesso!', 'success');
+    } catch (err) {
+      console.error(err);
+      onToast('Erro ao excluir curso', 'error');
+    }
+  };
+
+  const filteredCursos = useMemo(() => {
+    return cursos.filter(c => {
+      const matchUnidade = filterUnidade.length === 0 || filterUnidade.includes(c.nomeUnidade);
+      const matchMetodologia = filterMetodologia.length === 0 || filterMetodologia.includes(c.metodologia);
+      const matchCurso = filterCurso.length === 0 || filterCurso.includes(c.curso);
+      const matchProduto = filterProduto.length === 0 || filterProduto.includes(c.produto);
+      return matchUnidade && matchMetodologia && matchCurso && matchProduto;
+    });
+  }, [cursos, filterUnidade, filterMetodologia, filterCurso, filterProduto]);
+
+  const toggleFilter = (setFilter: React.Dispatch<React.SetStateAction<string[]>>, val: string) => {
+    setFilter(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+
+  const editingCurso = editingId ? cursos.find(c => c.id === editingId) : null;
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto pb-20">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Cursos Disponíveis</h2>
+          <p className="text-slate-500 text-sm mt-1">Consulte os cursos e metologias disponíveis em cada unidade.</p>
+        </div>
+        {canEdit && !isAdding && (
+          <button
+            onClick={() => { setIsAdding(true); setEditingId(null); }}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center space-x-2 shrink-0"
+          >
+            <Plus size={20} />
+            <span>Novo Curso</span>
+          </button>
+        )}
+      </div>
+
+      {isAdding && canEdit && (
+        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative">
+          <button 
+            onClick={() => { setIsAdding(false); setEditingId(null); }} 
+            className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 hover:bg-slate-50 p-2 rounded-full transition-colors"
+          >
+            <X size={20} />
+          </button>
+          
+          <h3 className="text-xl font-bold text-slate-900 mb-6">{editingId ? 'Editar Curso' : 'Cadastrar Novo Curso'}</h3>
+          
+          <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Nome da Unidade <span className="text-red-500">*</span></label>
+              <input 
+                name="nomeUnidade" 
+                required 
+                defaultValue={editingCurso?.nomeUnidade}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+                placeholder="Ex: Polo São Pedro"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Produto <span className="text-red-500">*</span></label>
+              <select 
+                name="produto" 
+                required 
+                defaultValue={editingCurso?.produto || 'Graduação'}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="Graduação">Graduação</option>
+                <option value="Técnico">Técnico</option>
+                <option value="Pós-graduação">Pós-graduação</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Curso <span className="text-red-500">*</span></label>
+              <input 
+                name="curso" 
+                required 
+                defaultValue={editingCurso?.curso}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+                placeholder="Ex: Administração"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Metodologia <span className="text-red-500">*</span></label>
+              <select 
+                name="metodologia" 
+                required 
+                defaultValue={editingCurso?.metodologia || 'EAD'}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                {METODOLOGIAS.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Duração <span className="text-red-500">*</span></label>
+              <input 
+                name="duracao" 
+                required 
+                defaultValue={editingCurso?.duracao}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+                placeholder="Ex: 4 anos"
+              />
+            </div>
+            <div className="md:col-span-2 lg:col-span-3 flex justify-end">
+              <button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center"
+              >
+                <CheckCircle2 size={20} className="mr-2" />
+                {editingId ? 'Salvar Alterações' : 'Cadastrar Curso'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col space-y-4">
+        <h3 className="font-bold text-slate-900 flex items-center"><Search size={18} className="mr-2 text-slate-400" /> Filtros Multiseleção</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Unidade */}
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Unidade</span>
+            <div className="max-h-40 overflow-y-auto bg-slate-50 border border-slate-200 rounded-xl p-2 space-y-1">
+              {uniqueUnidades.map(u => (
+                <label key={u} className="flex items-center space-x-2 text-sm p-1 hover:bg-slate-200 rounded cursor-pointer">
+                  <input type="checkbox" checked={filterUnidade.includes(u)} onChange={() => toggleFilter(setFilterUnidade, u)} className="rounded text-blue-600 focus:ring-blue-500" />
+                  <span className="truncate">{u}</span>
+                </label>
+              ))}
+              {uniqueUnidades.length === 0 && <span className="text-xs text-slate-400">Nenhuma registrada</span>}
+            </div>
+          </div>
+
+          {/* Produto */}
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Produto</span>
+            <div className="max-h-40 overflow-y-auto bg-slate-50 border border-slate-200 rounded-xl p-2 space-y-1">
+              {uniqueProdutos.map(p => (
+                <label key={p} className="flex items-center space-x-2 text-sm p-1 hover:bg-slate-200 rounded cursor-pointer">
+                  <input type="checkbox" checked={filterProduto.includes(p)} onChange={() => toggleFilter(setFilterProduto, p)} className="rounded text-blue-600 focus:ring-blue-500" />
+                  <span className="truncate">{p}</span>
+                </label>
+              ))}
+              {uniqueProdutos.length === 0 && <span className="text-xs text-slate-400">Nenhum registrado</span>}
+            </div>
+          </div>
+
+          {/* Curso */}
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Curso</span>
+            <div className="max-h-40 overflow-y-auto bg-slate-50 border border-slate-200 rounded-xl p-2 space-y-1">
+              {uniqueCursos.map(c => (
+                <label key={c} className="flex items-center space-x-2 text-sm p-1 hover:bg-slate-200 rounded cursor-pointer">
+                  <input type="checkbox" checked={filterCurso.includes(c)} onChange={() => toggleFilter(setFilterCurso, c)} className="rounded text-blue-600 focus:ring-blue-500" />
+                  <span className="truncate">{c}</span>
+                </label>
+              ))}
+              {uniqueCursos.length === 0 && <span className="text-xs text-slate-400">Nenhum registrado</span>}
+            </div>
+          </div>
+
+          {/* Metodologia */}
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Metodologia</span>
+            <div className="max-h-40 overflow-y-auto bg-slate-50 border border-slate-200 rounded-xl p-2 space-y-1">
+              {uniqueMetodologias.map(m => (
+                <label key={m} className="flex items-center space-x-2 text-sm p-1 hover:bg-slate-200 rounded cursor-pointer">
+                  <input type="checkbox" checked={filterMetodologia.includes(m)} onChange={() => toggleFilter(setFilterMetodologia, m)} className="rounded text-blue-600 focus:ring-blue-500" />
+                  <span className="truncate">{m}</span>
+                </label>
+              ))}
+              {uniqueMetodologias.length === 0 && <span className="text-xs text-slate-400">Nenhuma registrada</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* Clear Filters */}
+        {(filterUnidade.length > 0 || filterProduto.length > 0 || filterCurso.length > 0 || filterMetodologia.length > 0) && (
+          <div className="flex justify-end mt-2">
+            <button 
+              onClick={() => { setFilterUnidade([]); setFilterProduto([]); setFilterCurso([]); setFilterMetodologia([]); }}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 uppercase"
+            >
+              Limpar Filtros
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Courses List */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <h3 className="font-bold text-slate-800">Resultados ({filteredCursos.length})</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              <tr>
+                <th className="px-5 py-4">Unidade</th>
+                <th className="px-5 py-4">Produto</th>
+                <th className="px-5 py-4">Curso</th>
+                <th className="px-5 py-4">Metodologia</th>
+                <th className="px-5 py-4">Duração</th>
+                {canEdit && <th className="px-5 py-4 text-right">Ações</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-600">
+              {filteredCursos.map((c) => (
+                <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-5 py-4 font-bold text-slate-800">{c.nomeUnidade}</td>
+                  <td className="px-5 py-4">
+                    <span className={cn(
+                      "px-2 py-1 rounded-md text-xs font-bold border",
+                      c.produto === 'Graduação' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                      c.produto === 'Técnico' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                      'bg-purple-50 text-purple-700 border-purple-200'
+                    )}>
+                      {c.produto}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 font-medium">{c.curso}</td>
+                  <td className="px-5 py-4">
+                    <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-[4px] text-xs font-bold">
+                      {c.metodologia}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">{c.duracao}</td>
+                  {canEdit && (
+                    <td className="px-5 py-4 text-right text-slate-400">
+                      <div className="flex items-center justify-end space-x-2">
+                        <button 
+                          onClick={() => { setIsAdding(true); setEditingId(c.id); }}
+                          className="p-1.5 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors"
+                          title="Editar"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(c.id)}
+                          className="p-1.5 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors"
+                          title="Excluir"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+              {filteredCursos.length === 0 && (
+                <tr>
+                  <td colSpan={canEdit ? 6 : 5} className="px-5 py-12 text-center text-slate-500">
+                    <BookOpen size={48} className="mx-auto text-slate-300 mb-4" />
+                    <p className="font-medium text-lg">Nenhum curso encontrado</p>
+                    <p className="text-sm mt-1">Ajuste os filtros ou cadastre um novo curso.</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

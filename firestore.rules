@@ -36,6 +36,7 @@ service cloud.firestore {
     function isGestorUnidade() { return hasAnyRole(['Gestor Unidade']); }
     function isGestorComercial() { return hasAnyRole(['Gestor Comercial', 'Gerente Comercial (Comercial)']); }
     function isAcademico() { return hasAnyRole(['Acadêmico']); }
+    function isFinanceiro() { return hasAnyRole(['Financeiro']); }
     
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
@@ -47,7 +48,7 @@ service cloud.firestore {
              data.uid is string &&
              data.email is string &&
              data.name is string &&
-             data.role in ['Admin Master', 'Promotor', 'FDV', 'Sala de Matrícula', 'QG', 'Líder/FDV', 'SSA', 'Gestor Unidade', 'Gestor Comercial', 'Acadêmico', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua'] &&
+             data.role in ['Admin Master', 'Promotor', 'FDV', 'Sala de Matrícula', 'QG', 'Líder/FDV', 'SSA', 'Gestor Unidade', 'Gestor Comercial', 'Acadêmico', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua', 'Financeiro'] &&
              (!('chavePix' in data) || data.chavePix is string) &&
              (!('blocked' in data) || data.blocked is bool) &&
              (!('mustChangePassword' in data) || data.mustChangePassword is bool) &&
@@ -117,9 +118,9 @@ service cloud.firestore {
 
     match /artifacts/gestaopro-761e1/public/data/leads/{leadId} {
       allow read: if isLider() || isSalaMatricula() || isQG() || isGestorUnidade() ||
-                     (isFDV() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole == 'Promotor')) ||
-                     (isGestorComercial() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole in ['Promotor', 'FDV'])) ||
-                     (isPromotor() && resource.data.promotorId == request.auth.uid);
+                     isFDV() ||
+                     isGestorComercial() ||
+                     isPromotor();
       allow create: if isLider() || isSalaMatricula() || isQG() || isFDV() || isPromotor() || isGestorUnidade() || isGestorComercial() || request.resource.data.acao == 'Ação ( formulario)';
       allow update: if isLider() || isSalaMatricula() || isQG() || isGestorUnidade() ||
                       (isFDV() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole == 'Promotor')) ||
@@ -217,6 +218,11 @@ service cloud.firestore {
 
     match /artifacts/gestaopro-761e1/public/data/solicitacoes_folga/{id} {
       allow read, write: if isAuthenticated();
+    }
+
+    match /artifacts/gestaopro-761e1/public/data/cursos/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdminMaster() || isGestorComercial();
     }
   }
 }

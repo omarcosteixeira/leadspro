@@ -50,6 +50,7 @@ export const COLLECTIONS = {
   BOT_CONFIG: `artifacts/${appId}/public/data/bot_config`,
   META_DIA: `artifacts/${appId}/public/data/meta_dia`,
   SOLICITACAO_FOLGA: `artifacts/${appId}/public/data/solicitacoes_folga`,
+  CURSOS: `artifacts/${appId}/public/data/cursos`,
 };
 
 export enum OperationType {

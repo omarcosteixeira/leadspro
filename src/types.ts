@@ -306,3 +306,13 @@ export interface SolicitacaoFolga {
   createdAt: any;
   updatedAt?: any;
 }
+
+export interface CursoDisponivel {
+  id: string;
+  nomeUnidade: string;
+  produto: 'Graduação' | 'Técnico' | 'Pós-graduação';
+  curso: string;
+  metodologia: string;
+  duracao: string;
+  createdAt: any;
+}

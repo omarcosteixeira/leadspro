@@ -84,7 +84,8 @@ import {
   Cake,
   CheckSquare,
   Square,
-  Coins
+  Coins,
+  BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, firebaseConfigPrincipal, firebaseConfigComercial } from './firebase';
@@ -112,10 +113,12 @@ import {
   BaseDisparoEntry,
   BotConfig,
   MetaDia,
-  SolicitacaoFolga
+  SolicitacaoFolga,
+  CursoDisponivel
 } from './types';
 import { ProfileModal } from './components/ProfileModal';
 import { PublicRegistrationForm } from './components/PublicRegistrationForm';
+import { CursosDisponiveisView } from './components/CursosDisponiveisView';
 
 // --- Helpers ---
 const exportToExcel = (data: any[], fileName: string) => {
@@ -304,7 +307,7 @@ const getWorkingDaysBetween = (startDateStr: string, endDateStr: string) => {
   return count;
 };
 
-const ROLES: Record<string, UserRole> = {
+export const ROLES: Record<string, UserRole> = {
   ADMIN_MASTER: 'Admin Master',
   PROMOTOR: 'Promotor',
   FDV: 'FDV',
@@ -338,7 +341,8 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.ACADEMICO],
   emailMarketing: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
   admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.GESTOR_COMERCIAL],
-  controlePagamentos: [ROLES.ADMIN_MASTER, ROLES.FINANCEIRO, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_UNIDADE]
+  controlePagamentos: [ROLES.ADMIN_MASTER, ROLES.FINANCEIRO, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_UNIDADE],
+  cursos: [ROLES.ADMIN_MASTER, ROLES.PROMOTOR, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.ACADEMICO, ROLES.PROMOTOR_RUA, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.FINANCEIRO]
 };
 
 // --- Components ---
@@ -2049,6 +2053,7 @@ export default function App() {
   const [mapao, setMapao] = useState<MapaoAcademicoEntry[]>([]);
   const [basesDisparo, setBasesDisparo] = useState<BaseDisparoEntry[]>([]);
   const [basesRenovacao, setBasesRenovacao] = useState<BaseEntry[]>([]);
+  const [cursos, setCursos] = useState<CursoDisponivel[]>([]);
   const [botConfig, setBotConfig] = useState<BotConfig>({ url: '', active: false });
   const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>({});
   const [initialActionData, setInitialActionData] = useState<Partial<CalendarioAcao> | null>(null);
@@ -2464,6 +2469,13 @@ export default function App() {
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BASES_RENOVACAO));
     }
 
+    let unsubCursos = () => {};
+    if (profile && VIEW_PERMISSIONS.cursos.includes(profile.role)) {
+      unsubCursos = onSnapshot(collection(db, COLLECTIONS.CURSOS), snap => {
+        setCursos(snap.docs.map(d => ({ id: d.id, ...d.data() } as CursoDisponivel)));
+      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.CURSOS));
+    }
+
     return () => {
       unsubUsers();
       unsubPlanner();
@@ -2483,6 +2495,7 @@ export default function App() {
       unsubMapao();
       unsubBasesDisparo();
       unsubBasesRenovacao();
+      unsubCursos();
     };
   }, [user, profile]);
 
@@ -2591,7 +2604,7 @@ export default function App() {
 
   useEffect(() => {
     if (profile && !canView(currentView)) {
-      const availableViews = ['dashboard', 'cadastro', 'historico', 'bases', 'gap', 'fiesProuni', 'mapao', 'basesDisparo', 'campanhas', 'calendario', 'empresas', 'calculo', 'emailMarketing', 'admin', 'controlePagamentos'];
+      const availableViews = ['dashboard', 'cadastro', 'historico', 'bases', 'gap', 'fiesProuni', 'mapao', 'cursos', 'basesDisparo', 'campanhas', 'calendario', 'empresas', 'calculo', 'emailMarketing', 'admin', 'controlePagamentos'];
       const firstAvailable = availableViews.find(v => canView(v));
       if (firstAvailable) {
         setCurrentView(firstAvailable);
@@ -2769,6 +2782,7 @@ export default function App() {
               { id: 'gap', label: 'GAP Acadêmico', icon: GraduationCap },
               { id: 'fiesProuni', label: 'Fies/Prouni', icon: FileText },
               { id: 'mapao', label: 'Mapão Acadêmico', icon: MapPin },
+              { id: 'cursos', label: 'Cursos Disponíveis', icon: BookOpen },
               { id: 'basesDisparo', label: 'Bases de Disparo', icon: Globe },
               { id: 'basesRenovacao', label: 'Bases Renovação', icon: Database },
               { id: 'campanhas', label: 'Campanhas', icon: Megaphone },
@@ -2885,6 +2899,7 @@ export default function App() {
               {currentView === 'gap' && <GapView gap={gap} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
               {currentView === 'fiesProuni' && <FiesProuniView data={fiesProuni} onToast={showToast} profile={profile!} whatsappMessages={whatsappMessages} periodos={periodos} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
               {currentView === 'mapao' && <MapaoAcademicoView mapao={mapao} onToast={showToast} profile={profile!} />}
+              {currentView === 'cursos' && <CursosDisponiveisView cursos={cursos} onToast={showToast} profile={profile!} />}
               {currentView === 'basesDisparo' && <BasesDisparoView bases={basesDisparo} onToast={showToast} />}
               {currentView === 'basesRenovacao' && (
                 <BasesRenovacaoView 
@@ -2899,7 +2914,7 @@ export default function App() {
               {currentView === 'campanhas' && <CampanhasView campanhas={campanhas} onToast={showToast} />}
               {currentView === 'calculo' && <CalculoRemuneracaoView />}
               {currentView === 'emailMarketing' && <EmailMarketingView onToast={showToast} />}
-              {currentView === 'controlePagamentos' && <ControlePagamentosView calendarioAcoes={calendarioAcoes} users={users} onToast={showToast} />}
+              {currentView === 'controlePagamentos' && <ControlePagamentosView calendarioAcoes={calendarioAcoes} users={users} onToast={showToast} profile={profile} />}
               {currentView === 'calendario' && <CalendarioAcoesView data={calendarioAcoes} onToast={showToast} profile={profile!} initialData={initialActionData} onClearInitialData={() => setInitialActionData(null)} users={users} />}
               {currentView === 'empresas' && (
                 <EmpresasParceirasView 
@@ -8444,8 +8459,9 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       dataNascimento: formData.get('dataNascimento') as string,
                       chavePix: formData.get('chavePix') as string,
                       botNumber: formData.get('botNumber') as string,
+                      role: formData.get('role') as string,
                     };
-                    if (editingUser.role === ROLES.PROMOTOR_RUA) {
+                    if (updateData.role === ROLES.PROMOTOR_RUA) {
                       updateData.linkadoA = formData.get('linkadoA') as string;
                     }
                     handleUpdateUser(editingUser.uid, updateData);
@@ -8508,17 +8524,30 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Este será o número de WhatsApp usado pelo sistema para enviar mensagens desta conta.</p>
                   </div>
-                  {(editingUser.role === ROLES.PROMOTOR_RUA) && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1">Linkado a (FDV do Comercial)</label>
-                      <select name="linkadoA" defaultValue={editingUser.linkadoA || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
-                        <option value="">Selecione um FDV...</option>
-                        {users.filter(u => u.role === ROLES.FDV_COMERCIAL || u.role === ROLES.FDV).map(fdv => (
-                          <option key={fdv.uid} value={fdv.uid}>{fdv.name} ({fdv.email})</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Cargo</label>
+                    <select name="role" defaultValue={editingUser.role} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                      {Object.values(ROLES)
+                        .filter(r => {
+                           const isComercial = localStorage.getItem('servidor_selected') === 'comercial';
+                           if (isComercial) {
+                             return ['Admin Master', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua', 'Financeiro'].includes(r);
+                           } else {
+                             return !['Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua'].includes(r);
+                           }
+                        })
+                        .map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Linkado a (FDV - Apenas para Promotor/rua)</label>
+                    <select name="linkadoA" defaultValue={editingUser.linkadoA || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                      <option value="">Nenhum/Não se aplica</option>
+                      {users.filter(u => u.role === ROLES.FDV_COMERCIAL || u.role === ROLES.FDV).map(fdv => (
+                        <option key={fdv.uid} value={fdv.uid}>{fdv.name} ({fdv.email})</option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">Chave PIX (Opcional)</label>
                     <input 
@@ -8626,7 +8655,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                         .filter(r => {
                            const isComercial = localStorage.getItem('servidor_selected') === 'comercial';
                            if (isComercial) {
-                             return ['Admin Master', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua'].includes(r);
+                             return ['Admin Master', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua', 'Financeiro'].includes(r);
                            } else {
                              return !['Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua'].includes(r);
                            }
@@ -10305,9 +10334,10 @@ interface ControlePagamentosViewProps {
   calendarioAcoes: CalendarioAcao[];
   users: UserProfile[];
   onToast: (m: string, t?: 'success' | 'error') => void;
+  profile?: UserProfile | null;
 }
 
-export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToast }: ControlePagamentosViewProps) {
+export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToast, profile }: ControlePagamentosViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [empresaFilter, setEmpresaFilter] = useState<'all' | 'GR15' | 'RP7'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Agendada' | 'Recusada' | 'Realizada'>('all');
@@ -10387,6 +10417,8 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
       return matchSearch && matchEmpresa && matchStatus && matchRegion;
     });
   }, [paymentRows, searchTerm, empresaFilter, statusFilter, regionFilter]);
+
+  const isReadOnly = profile?.role === ROLES.FDV_COMERCIAL || profile?.role === ROLES.SALA_MATRICULA;
 
   // Métricas acumuladas
   const metrics = useMemo(() => {
@@ -10705,11 +10737,16 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
                               } else {
                                 btnClass += "text-slate-400 hover:text-slate-600 hover:bg-slate-200/50";
                               }
+                              
+                              if (isReadOnly && !isSelected) {
+                                btnClass += " opacity-50 cursor-not-allowed";
+                              }
 
                               return (
                                 <button
                                   key={st}
-                                  onClick={() => updatePaymentStatus(row.actionId, row.promoterUid, st)}
+                                  onClick={() => !isReadOnly && updatePaymentStatus(row.actionId, row.promoterUid, st)}
+                                  disabled={isReadOnly}
                                   className={btnClass}
                                 >
                                   {st === 'Realizada' ? 'Paga' : st === 'Agendada' ? 'Agendada' : 'Recusada'}

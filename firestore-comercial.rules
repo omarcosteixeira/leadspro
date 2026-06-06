@@ -31,6 +31,7 @@ service cloud.firestore {
     function isGerenteComercial() { return hasAnyRole(['Gerente Comercial (Comercial)']); }
     function isFDVComercial() { return hasAnyRole(['FDV (Comercial)']); }
     function isPromotorRua() { return hasAnyRole(['Promotor/rua']); }
+    function isFinanceiro() { return hasAnyRole(['Financeiro']); }
     
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
@@ -42,7 +43,7 @@ service cloud.firestore {
              data.uid is string &&
              data.email is string &&
              data.name is string &&
-             data.role in ['Admin Master', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua'] &&
+             data.role in ['Admin Master', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua', 'Financeiro'] &&
              (!('chavePix' in data) || data.chavePix is string) &&
              (!('blocked' in data) || data.blocked is bool) &&
              (!('mustChangePassword' in data) || data.mustChangePassword is bool) &&
@@ -110,8 +111,8 @@ service cloud.firestore {
 
     match /artifacts/gestaodeleadspro-d4230/public/data/leads/{leadId} {
       allow read: if isGerenteComercial() || isAdminMaster() ||
-                     (isFDVComercial() && (resource.data.promotorId == request.auth.uid || resource.data.linkadoA == request.auth.uid)) ||
-                     (isPromotorRua() && resource.data.promotorId == request.auth.uid);
+                     isFDVComercial() ||
+                     isPromotorRua();
       allow create: if isGerenteComercial() || isAdminMaster() || isFDVComercial() || isPromotorRua();
       allow update: if isGerenteComercial() || isAdminMaster() ||
                      (isFDVComercial() && (resource.data.promotorId == request.auth.uid || resource.data.linkadoA == request.auth.uid)) ||
@@ -199,6 +200,11 @@ service cloud.firestore {
       allow read: if isGerenteComercial() || isAdminMaster();
       allow create, update: if isGerenteComercial() || isAdminMaster();
       allow delete: if isGerenteComercial() || isAdminMaster();
+    }
+
+    match /artifacts/gestaodeleadspro-d4230/public/data/cursos/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isGerenteComercial() || isAdminMaster();
     }
   }
 }
