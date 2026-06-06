@@ -46,6 +46,7 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
   const [filterMetodologia, setFilterMetodologia] = useState<string[]>([]);
   const [filterCurso, setFilterCurso] = useState<string[]>([]);
   const [filterProduto, setFilterProduto] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Unique values for filters (ignoring case/trimming could be nice, but we'll use exact values)
   const uniqueUnidades = useMemo(() => Array.from(new Set(cursos.map(c => c.nomeUnidade))).sort(), [cursos]);
@@ -149,6 +150,22 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Tem certeza que deseja excluir ${selectedIds.length} curso(s)?`)) return;
+    try {
+      const firestoreBatch = writeBatch(db);
+      selectedIds.forEach(id => {
+        firestoreBatch.delete(doc(db, COLLECTIONS.CURSOS, id));
+      });
+      await firestoreBatch.commit();
+      onToast(`${selectedIds.length} curso(s) excluído(s) com sucesso!`, 'success');
+      setSelectedIds([]);
+    } catch (err) {
+      console.error(err);
+      onToast('Erro ao excluir cursos.', 'error');
+    }
+  };
+
   const filteredCursos = useMemo(() => {
     return cursos.filter(c => {
       const matchUnidade = filterUnidade.length === 0 || filterUnidade.includes(c.nomeUnidade);
@@ -161,6 +178,22 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
 
   const toggleFilter = (setFilter: React.Dispatch<React.SetStateAction<string[]>>, val: string) => {
     setFilter(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+
+  const toggleSelect = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(s => s !== id));
+    }
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(filteredCursos.map(c => c.id));
+    } else {
+      setSelectedIds([]);
+    }
   };
 
   const editingCurso = editingId ? cursos.find(c => c.id === editingId) : null;
@@ -379,11 +412,25 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <h3 className="font-bold text-slate-800">Resultados ({filteredCursos.length})</h3>
+          {canEdit && selectedIds.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="bg-rose-50 text-rose-600 hover:bg-rose-100 px-4 py-2 rounded-lg font-bold flex items-center space-x-2 text-xs transition-colors"
+            >
+              <Trash2 size={16} />
+              <span>Excluir Selecionados ({selectedIds.length})</span>
+            </button>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               <tr>
+                {canEdit && (
+                  <th className="px-5 py-4 w-12">
+                    <input type="checkbox" checked={selectedIds.length === filteredCursos.length && filteredCursos.length > 0} onChange={e => toggleSelectAll(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500" />
+                  </th>
+                )}
                 <th className="px-5 py-4">Unidade</th>
                 <th className="px-5 py-4">Produto</th>
                 <th className="px-5 py-4">Curso</th>
@@ -396,6 +443,11 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
             <tbody className="divide-y divide-slate-100 text-slate-600">
               {filteredCursos.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                  {canEdit && (
+                    <td className="px-5 py-4">
+                      <input type="checkbox" checked={selectedIds.includes(c.id)} onChange={e => toggleSelect(c.id, e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500" />
+                    </td>
+                  )}
                   <td className="px-5 py-4 font-bold text-slate-800">{c.nomeUnidade}</td>
                   <td className="px-5 py-4">
                     <span className={cn(
@@ -439,7 +491,7 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
               ))}
               {filteredCursos.length === 0 && (
                 <tr>
-                  <td colSpan={canEdit ? 6 : 5} className="px-5 py-12 text-center text-slate-500">
+                  <td colSpan={canEdit ? 8 : 6} className="px-5 py-12 text-center text-slate-500">
                     <BookOpen size={48} className="mx-auto text-slate-300 mb-4" />
                     <p className="font-medium text-lg">Nenhum curso encontrado</p>
                     <p className="text-sm mt-1">Ajuste os filtros ou cadastre um novo curso.</p>

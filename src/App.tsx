@@ -4245,6 +4245,17 @@ function HistoricoView({
   const [isAddMsgModalOpen, setIsAddMsgModalOpen] = useState(false);
   const [newMsgData, setNewMsgData] = useState({ modelName: '', texto: '' });
   const [msgLoading, setMsgLoading] = useState(false);
+  
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  
+  const [editFormData, setEditFormData] = useState({
+    nome: '',
+    telefone: '',
+    cpf: '',
+    cursoInteresse: '',
+    acao: ''
+  });
 
   const uniqueCursos = useMemo(() => {
     return Array.from(new Set(leads.map(l => l.cursoInteresse).filter(Boolean))).sort();
@@ -4371,6 +4382,34 @@ function HistoricoView({
     }
   };
 
+  const handleDeleteLead = async (id: string) => {
+    if (!window.confirm("Tem certeza que deseja excluir este lead do histórico?")) return;
+    try {
+      await deleteDoc(doc(db, COLLECTIONS.LEADS, id));
+      onToast("Lead excluído com sucesso!", 'success');
+      setSelectedEntries(prev => prev.filter(s => s !== id));
+    } catch (err: any) {
+      console.error(err);
+      onToast("Erro ao excluir lead.", 'error');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Tem certeza que deseja excluir ${selectedEntries.length} lead(s) do histórico?`)) return;
+    try {
+      const firestoreBatch = writeBatch(db);
+      selectedEntries.forEach(id => {
+        firestoreBatch.delete(doc(db, COLLECTIONS.LEADS, id));
+      });
+      await firestoreBatch.commit();
+      onToast(`${selectedEntries.length} lead(s) excluído(s) com sucesso!`, 'success');
+      setSelectedEntries([]);
+    } catch (err) {
+      console.error(err);
+      onToast('Erro ao excluir leads em massa.', 'error');
+    }
+  };
+
   const handleExport = () => {
     const data = filteredLeads.map(l => ({
       Nome: l.nome,
@@ -4383,6 +4422,38 @@ function HistoricoView({
       Data: l.createdAt?.seconds ? new Date(l.createdAt.seconds * 1000).toLocaleDateString() : ''
     }));
     exportToExcel(data, 'Historico_Leads');
+  };
+
+  const handleEditClick = (lead: Lead) => {
+    setEditingLead(lead);
+    setEditFormData({
+      nome: lead.nome,
+      telefone: lead.telefone,
+      cpf: lead.cpf || '',
+      cursoInteresse: lead.cursoInteresse || '',
+      acao: lead.acao
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLead) return;
+    try {
+      await updateDoc(doc(db, COLLECTIONS.LEADS, editingLead.id), {
+        nome: editFormData.nome,
+        telefone: editFormData.telefone,
+        cpf: editFormData.cpf,
+        cursoInteresse: editFormData.cursoInteresse,
+        acao: editFormData.acao
+      });
+      onToast("Lead atualizado com sucesso!", 'success');
+      setEditModalOpen(false);
+      setEditingLead(null);
+    } catch (err: any) {
+      console.error(err);
+      onToast("Erro ao editar lead.", 'error');
+    }
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -4521,13 +4592,21 @@ function HistoricoView({
                 <th className="px-6 py-4">Ação / Origem</th>
                 <th className="px-6 py-4">Promotor</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">
+                <th className="px-6 py-4 flex flex-col gap-2">
                   {selectedEntries.length > 0 && botConfig.url && (
                       <button 
                          onClick={() => setMassSelectorOpen(true)} 
                          className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
                       >
                          <Bot size={14} /> Em Massa
+                      </button>
+                  )}
+                  {selectedEntries.length > 0 && (
+                      <button 
+                         onClick={handleBulkDelete} 
+                         className="text-rose-600 font-bold hover:underline py-1 px-2 bg-rose-50 rounded-lg flex items-center gap-1"
+                      >
+                         <Trash2 size={14} /> Excluir ({selectedEntries.length})
                       </button>
                   )}
                 </th>
@@ -4595,9 +4674,22 @@ function HistoricoView({
                           title="Mover para GAP Acadêmico"
                         >
                           <GraduationCap size={14} />
-                          <span>GAP</span>
                         </button>
                       )}
+                      <button
+                        onClick={() => handleEditClick(lead)}
+                        className="text-slate-400 hover:text-blue-600 transition-colors"
+                        title="Editar Lead"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteLead(lead.id)}
+                        className="text-slate-400 hover:text-rose-600 transition-colors"
+                        title="Excluir Lead"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -4699,6 +4791,57 @@ function HistoricoView({
                 ) : (
                   <span>Salvar Mensagem</span>
                 )}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {editModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+          >
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-xl font-bold text-slate-900">Editar Lead</h3>
+              <button 
+                onClick={() => { setEditModalOpen(false); setEditingLead(null); }} 
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Nome</label>
+                  <input required value={editFormData.nome} onChange={e => setEditFormData({...editFormData, nome: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Telefone</label>
+                  <input required value={editFormData.telefone} onChange={e => { e.target.value = formatPhone(e.target.value); setEditFormData({...editFormData, telefone: e.target.value}); }} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">CPF</label>
+                  <input value={editFormData.cpf} onChange={e => { e.target.value = formatCPF(e.target.value); setEditFormData({...editFormData, cpf: e.target.value}); }} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Curso</label>
+                  <input value={editFormData.cursoInteresse} onChange={e => setEditFormData({...editFormData, cursoInteresse: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Origem / Ação</label>
+                  <input value={editFormData.acao} onChange={e => setEditFormData({...editFormData, acao: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+              </div>
+              <button 
+                type="submit" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition flex items-center justify-center space-x-2"
+              >
+                <span>Salvar Alterações</span>
               </button>
             </form>
           </motion.div>
