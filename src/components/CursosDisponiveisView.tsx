@@ -61,7 +61,8 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
       Produto: c.produto,
       Curso: c.curso,
       Metodologia: c.metodologia,
-      'Duração': c.duracao
+      'Duração': c.duracao,
+      Turno: c.turno || ''
     }));
     exportToExcel(exportData, 'Cursos_Disponiveis');
   };
@@ -78,6 +79,7 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
           curso: item.Curso || item.curso || '',
           metodologia: item.Metodologia || item.metodologia || 'EAD',
           duracao: item['Duração'] || item.duracao || '',
+          turno: item.Turno || item.turno || '',
           createdAt: new Date().toISOString()
         }));
 
@@ -117,6 +119,7 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
       curso: formData.get('curso') as string,
       metodologia: formData.get('metodologia') as string,
       duracao: formData.get('duracao') as string,
+      turno: formData.get('turno') as string,
     };
 
     try {
@@ -275,6 +278,15 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
                 placeholder="Ex: 4 anos"
               />
             </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Turno</label>
+              <input 
+                name="turno" 
+                defaultValue={editingCurso?.turno || ''}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+                placeholder="Ex: Manhã, Noite, Integral..."
+              />
+            </div>
             <div className="md:col-span-2 lg:col-span-3 flex justify-end">
               <button
                 type="submit"
@@ -377,6 +389,7 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
                 <th className="px-5 py-4">Curso</th>
                 <th className="px-5 py-4">Metodologia</th>
                 <th className="px-5 py-4">Duração</th>
+                <th className="px-5 py-4">Turno</th>
                 {canEdit && <th className="px-5 py-4 text-right">Ações</th>}
               </tr>
             </thead>
@@ -401,6 +414,7 @@ export function CursosDisponiveisView({ cursos, onToast, profile }: CursosDispon
                     </span>
                   </td>
                   <td className="px-5 py-4">{c.duracao}</td>
+                  <td className="px-5 py-4 text-sm">{c.turno || '-'}</td>
                   {canEdit && (
                     <td className="px-5 py-4 text-right text-slate-400">
                       <div className="flex items-center justify-end space-x-2">

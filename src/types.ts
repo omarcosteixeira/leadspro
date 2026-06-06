@@ -314,5 +314,6 @@ export interface CursoDisponivel {
   curso: string;
   metodologia: string;
   duracao: string;
+  turno?: string;
   createdAt: any;
 }
