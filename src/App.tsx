@@ -2601,7 +2601,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#01112c] flex items-center justify-center">
         <motion.div 
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
@@ -2613,7 +2613,7 @@ export default function App() {
 
   if (currentView === 'desconto') {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
+      <div className="min-h-screen bg-[#01112c] flex flex-col justify-between">
         <AnimatePresence>
           {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         </AnimatePresence>
@@ -2628,7 +2628,7 @@ export default function App() {
 
   if (profile?.blocked) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#01112c] flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-rose-100 text-center max-w-md">
           <XCircle size={64} className="text-rose-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h2>
@@ -2645,7 +2645,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-[#01112c] flex">
       <AnimatePresence>
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       </AnimatePresence>
@@ -2743,15 +2743,21 @@ export default function App() {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+        "fixed inset-y-0 left-0 z-40 w-64 bg-[#011a3c] border-r border-[#092e5c] transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="h-full flex flex-col">
           <div className="p-6 flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
-              <TrendingUp size={24} />
-            </div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Gestão Oeste pro</h1>
+            {botConfig?.loginLogo ? (
+              <img src={botConfig.loginLogo} alt="Logo" className="w-full max-h-12 object-contain drop-shadow-md" referrerPolicy="no-referrer" />
+            ) : (
+              <>
+                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                  <TrendingUp size={24} />
+                </div>
+                <h1 className="text-xl font-bold text-white tracking-tight">Gestão Oeste pro</h1>
+              </>
+            )}
           </div>
 
           <nav className="flex-1 px-4 space-y-1">
@@ -2782,8 +2788,8 @@ export default function App() {
                 className={cn(
                   "w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all",
                   currentView === item.id 
-                    ? "bg-blue-50 text-blue-600" 
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-blue-500/10 text-white" 
+                    : "text-slate-400 hover:bg-[#082a5c] hover:text-white"
                 )}
               >
                 <item.icon size={20} />
@@ -2792,11 +2798,11 @@ export default function App() {
             ))}
           </nav>
 
-          <div className="p-4 border-t border-slate-100">
-            <div className="bg-slate-50 p-4 rounded-2xl mb-4">
+          <div className="p-4 border-t border-[#092e5c]">
+            <div className="bg-[#082a5c]/50 p-4 rounded-2xl mb-4">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Usuário</p>
-              <p className="text-sm font-bold text-slate-900 truncate">{profile?.name}</p>
-              <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-600 text-[10px] font-bold rounded-full">
+              <p className="text-sm font-bold text-white truncate">{profile?.name}</p>
+              <span className="inline-block mt-1 px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded-full">
                 {profile?.role}
               </span>
             </div>
@@ -2813,7 +2819,7 @@ export default function App() {
                     }
                   }
                 }}
-                className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all"
+                className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-400 hover:bg-[#082a5c] hover:text-white transition-all"
               >
                 <KeyRound size={20} />
                 <span>Trocar Senha</span>
@@ -2821,7 +2827,7 @@ export default function App() {
 
               <button 
                 onClick={() => signOut(auth)}
-                className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-all"
+                className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold text-rose-400 hover:bg-rose-500/10 transition-all"
               >
                 <LogOut size={20} />
                 <span>Sair do Sistema</span>
@@ -2833,28 +2839,31 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-8">
+        <header className="h-16 bg-[#011a3c] border-b border-[#092e5c] flex items-center justify-between px-4 lg:px-8 shrink-0">
           <button 
             onClick={() => setIsSidebarOpen(true)}
-            className="lg:hidden p-2 text-slate-500 hover:bg-slate-50 rounded-lg"
+            className="lg:hidden p-2 text-slate-400 hover:bg-[#082a5c] rounded-lg"
           >
             <Menu size={24} />
           </button>
-          <div className="flex-1 lg:flex-none">
-            <h2 className="text-lg font-bold text-slate-900 capitalize ml-2 lg:ml-0">
+          <div className="flex-1 lg:flex-none flex items-center space-x-3">
+            <h2 className="text-lg font-bold text-white capitalize ml-2 lg:ml-0">
               {currentView.replace('-', ' ')}
             </h2>
+            <span className="px-2.5 py-1 bg-gradient-to-r from-blue-600 to-sky-500 text-white text-[10px] font-extrabold rounded-md shadow-sm uppercase tracking-wider">
+              Servidor: {localStorage.getItem('servidor_selected') === 'comercial' ? 'Comercial' : 'SM'}
+            </span>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="hidden md:flex items-center space-x-2 text-sm text-slate-500">
+            <div className="hidden md:flex items-center space-x-2 text-sm text-slate-400">
               <Calendar size={16} />
               <span>{new Date().toLocaleDateString('pt-BR')}</span>
             </div>
             <button
               onClick={() => setIsProfileModalOpen(true)}
-              className="flex items-center space-x-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 text-sm font-semibold transition-all active:scale-95 cursor-pointer"
+              className="flex items-center space-x-1.5 bg-[#082a5c]/50 hover:bg-[#082a5c] text-white px-3 py-1.5 rounded-xl border border-[#092e5c] text-sm font-semibold transition-all active:scale-95 cursor-pointer"
             >
-              <UserIcon size={15} className="text-slate-500" />
+              <UserIcon size={15} className="text-slate-300" />
               <span>Perfil</span>
             </button>
           </div>
@@ -3063,16 +3072,18 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                 <img 
                   src={botConfig.loginLogo} 
                   alt="Logo" 
-                  className="max-h-20 max-w-full rounded-2xl object-contain drop-shadow-md bg-[#011a3c]"
+                  className="max-h-32 w-full object-contain drop-shadow-lg"
                   referrerPolicy="no-referrer"
                 />
               </div>
             ) : (
-              <div className="w-16 h-16 bg-gradient-to-tr from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-500/20 mb-6">
-                <TrendingUp size={32} />
-              </div>
+              <>
+                <div className="w-16 h-16 bg-gradient-to-tr from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-500/20 mb-6">
+                  <TrendingUp size={32} />
+                </div>
+                <h2 className="text-3xl font-extrabold text-white tracking-tight">Gestão Oeste pro</h2>
+              </>
             )}
-            <h2 className="text-3xl font-extrabold text-white tracking-tight">Gestão Oeste pro</h2>
             <p className="text-slate-400 mt-2 text-sm">
               {isLogin ? 'Bem-vindo de volta! Insira suas credenciais:' : 'Preencha os dados e crie sua conta agora:'}
             </p>
@@ -3302,12 +3313,12 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
               <path id="bottomArchPath" d="M 840,500 A 340,340 0 0,1 160,500" fill="none" />
 
               {/* Arched Texts */}
-              <text font-family="'Inter', sans-serif" font-weight="900" font-size="75" fill="#ffffff" letter-spacing="18">
-                <textPath href="#topArchPath" startOffset="50%" text-anchor="middle">OESTE</textPath>
+              <text fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="75" fill="#ffffff" letterSpacing="18">
+                <textPath href="#topArchPath" startOffset="50%" textAnchor="middle">OESTE</textPath>
               </text>
 
-              <text font-family="'Inter', sans-serif" font-weight="900" font-size="44" fill="#ffffff" letter-spacing="14">
-                <textPath href="#bottomArchPath" startOffset="50%" text-anchor="middle">OESTE HUNTER</textPath>
+              <text fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="44" fill="#ffffff" letterSpacing="14">
+                <textPath href="#bottomArchPath" startOffset="50%" textAnchor="middle">OESTE HUNTER</textPath>
               </text>
 
               {/* ======================================= */}
@@ -3387,7 +3398,7 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                 <polygon points="6,505 130,505 110,615 6,615 30,560" fill="#07336e" stroke="#ffffff" strokeWidth="3" />
                 <polygon points="12,515 120,515 104,605 12,605" fill="#0b4594" />
                 
-                <text x="63" y="578" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="46" fill="#ffffff" letter-spacing="1">
+                <text x="63" y="578" textAnchor="middle" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="46" fill="#ffffff" letterSpacing="1">
                   NPS
                 </text>
               </g>
@@ -3397,10 +3408,10 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                 <polygon points="994,505 870,505 890,615 994,615 970,560" fill="#07336e" stroke="#ffffff" strokeWidth="3" />
                 <polygon points="988,515 880,515 896,605 988,605" fill="#0b4594" />
                 
-                <text x="934" y="555" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="20" fill="#ffffff" letter-spacing="2">
+                <text x="934" y="555" textAnchor="middle" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="20" fill="#ffffff" letterSpacing="2">
                   CAPTAÇÃO
                 </text>
-                <text x="934" y="583" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="18" fill="#ffffff" letter-spacing="1">
+                <text x="934" y="583" textAnchor="middle" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="18" fill="#ffffff" letterSpacing="1">
                   DE ALUNOS
                 </text>
               </g>
@@ -3418,7 +3429,7 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                 <polygon points="195,635 805,635 780,725 220,725" fill="none" stroke="#2575fc" strokeWidth="3.5" opacity="0.8" />
 
                 {/* Bold Athletics display text - HUNTER */}
-                <text x="500" y="702" text-anchor="middle" font-family="'Impact', 'Arial Black', 'Inter', sans-serif" font-weight="900" font-size="105" fill="#ffffff" letter-spacing="5" filter="url(#glow)">
+                <text x="500" y="702" textAnchor="middle" fontFamily="'Impact', 'Arial Black', 'Inter', sans-serif" fontWeight="900" fontSize="105" fill="#ffffff" letterSpacing="5" filter="url(#glow)">
                   HUNTER
                 </text>
               </g>
