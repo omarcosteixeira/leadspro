@@ -118,9 +118,33 @@ import {
 } from './types';
 import { ProfileModal } from './components/ProfileModal';
 import { PublicRegistrationForm } from './components/PublicRegistrationForm';
+import { MessageTemplateModal } from './components/MessageTemplateModal';
 import { CursosDisponiveisView } from './components/CursosDisponiveisView';
+import { WhatsAppMessageEditor } from './components/WhatsAppMessageEditor';
 
 // --- Helpers ---
+export const replaceMessageVariables = (template: string, lead: any): string => {
+  if (!template) return '';
+  let text = template;
+  text = text.replace(/\[nome\]/gi, lead.nome || '');
+  text = text.replace(/\[curso\]/gi, lead.curso || lead.cursoInteresse || '');
+  text = text.replace(/\[matr[ií]cula\]/gi, lead.numeroMatricula || '');
+  
+  // Novas variáveis
+  text = text.replace(/\[unidade\]/gi, lead.unidade || lead.nome_unidade || 'nossa unidade');
+  text = text.replace(/\[data_contato\]/gi, new Date().toLocaleDateString('pt-BR'));
+  
+  const hour = new Date().getHours();
+  const saudacao = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  text = text.replace(/\[saudacao\]/gi, saudacao);
+  
+  if (lead.missingDocs) {
+    text = text.replace(/\[pendencias\]/gi, Array.isArray(lead.missingDocs) ? lead.missingDocs.join(', ') : lead.missingDocs);
+  }
+
+  return text;
+};
+
 const exportToExcel = (data: any[], fileName: string) => {
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
@@ -1721,7 +1745,7 @@ function FiesProuniView({
                                const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
                                const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
                                const msgTemplate = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                               const text = msgTemplate ? msgTemplate.texto.replace(/\[nome\]/gi, item.nome).replace(/\[curso\]/gi, item.curso || '').replace(/\[matr[ií]cula\]/gi, item.numeroMatricula || '') : `Olá ${item.nome}, tudo bem?`;
+                               const text = msgTemplate ? replaceMessageVariables(msgTemplate.texto, item) : `Olá ${item.nome}, tudo bem?`;
                                return {
                                    telefone: item.telefone,
                                    message: text
@@ -1809,7 +1833,7 @@ function FiesProuniView({
                                 const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
                                 const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
                                 const msgObj = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                                const msg = (msgObj ? msgObj.texto : `Olá [nome], tudo bem?`).replace(/\[nome\]/gi, item.nome).replace(/\[curso\]/gi, item.curso || '').replace(/\[matr[ií]cula\]/gi, item.numeroMatricula || '');
+                              const msg = replaceMessageVariables(msgObj ? msgObj.texto : `Olá [nome], tudo bem?`, item);
                                 onSendBot(item.telefone, msg);
                               }}
                               className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-all"
@@ -1823,7 +1847,7 @@ function FiesProuniView({
                               const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
                               const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
                               const msg = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                              if (msg) return msg.texto.replace(/\[nome\]/gi, item.nome).replace(/\[curso\]/gi, item.curso || '').replace(/\[matr[ií]cula\]/gi, item.numeroMatricula || '');
+                              if (msg) return replaceMessageVariables(msg.texto, item);
                               return `Olá ${item.nome}, tudo bem?`;
                             })())}
                             target="_blank"
@@ -2784,7 +2808,7 @@ export default function App() {
               { id: 'mapao', label: 'Mapão Acadêmico', icon: MapPin },
               { id: 'cursos', label: 'Cursos Disponíveis', icon: BookOpen },
               { id: 'basesDisparo', label: 'Bases de Disparo', icon: Globe },
-              { id: 'basesRenovacao', label: 'Bases Renovação', icon: Database },
+              { id: 'basesRenovacao', label: 'Base Líquida', icon: Database },
               { id: 'campanhas', label: 'Campanhas', icon: Megaphone },
               { id: 'calendario', label: 'Calendário de Ações', icon: Calendar },
               { id: 'empresas', label: 'Empresas Parceiras', icon: Building2 },
@@ -4238,6 +4262,7 @@ function HistoricoView({
   const [courseFilter, setCourseFilter] = useState('');
   const [baseFilter, setBaseFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [promotorFilter, setPromotorFilter] = useState('');
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
@@ -4266,6 +4291,12 @@ function HistoricoView({
   }, [leads]);
 
   const uniqueStatuses = ['Pendente', 'Sem retorno', 'Interessado', 'Não Interessado', 'Convertido'];
+
+  const uniquePromotores = useMemo(() => {
+    return Array.from(new Set(leads.map(l => l.promotorName).filter(Boolean))).sort();
+  }, [leads]);
+  
+  const isAdmin = [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL].includes(profile.role);
 
   const handleAddCustomMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -4327,10 +4358,11 @@ function HistoricoView({
         const matchesCourse = !courseFilter || l.cursoInteresse === courseFilter;
         const matchesBase = !baseFilter || l.acao === baseFilter;
         const matchesStatus = !statusFilter || l.status === statusFilter;
-        return matchesSearch && matchesCourse && matchesBase && matchesStatus;
+        const matchesPromotor = !promotorFilter || l.promotorName === promotorFilter;
+        return matchesSearch && matchesCourse && matchesBase && matchesStatus && matchesPromotor;
       })
       .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-  }, [leads, searchTerm, courseFilter, baseFilter, statusFilter]);
+  }, [leads, searchTerm, courseFilter, baseFilter, statusFilter, promotorFilter]);
 
   const stats = useMemo(() => {
     const total = filteredLeads.length;
@@ -4577,6 +4609,16 @@ function HistoricoView({
               <option value="">Todos os Status</option>
               {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
+            {isAdmin && (
+              <select 
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 max-w-[150px] lg:max-w-[200px] truncate"
+                value={promotorFilter}
+                onChange={e => setPromotorFilter(e.target.value)}
+              >
+                <option value="">Todos os Promotores</option>
+                {uniquePromotores.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            )}
           </div>
         </div>
 
@@ -4736,7 +4778,7 @@ function HistoricoView({
           const selectedLeadObjs = leads.filter(l => selectedEntries.includes(l.id));
           const messagesPayload = selectedLeadObjs.map(l => ({
             telefone: l.telefone,
-            message: msgTemplate.replace(/\[nome\]/gi, l.nome).replace(/\[curso\]/gi, l.cursoInteresse || '')
+            message: replaceMessageVariables(msgTemplate, l)
           }));
           onMassSendBot(messagesPayload);
           setMassSelectorOpen(false);
@@ -4745,57 +4787,19 @@ function HistoricoView({
         forceBotOnly={true}
       />
 
-      {isAddMsgModalOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
-          >
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-xl font-bold text-slate-900">Nova Mensagem de Histórico</h3>
-              <button onClick={() => setIsAddMsgModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={24} />
-              </button>
-            </div>
-            <form onSubmit={handleAddCustomMessage} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Nome do Modelo (Opcional)</label>
-                <input 
-                  type="text" 
-                  placeholder="Ex: WhatsApp Histórico 1"
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
-                  value={newMsgData.modelName}
-                  onChange={e => setNewMsgData({ ...newMsgData, modelName: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Texto da Mensagem</label>
-                <textarea 
-                  rows={4}
-                  placeholder="Insira o texto da mensagem. Use [nome] para o nome do lead e [curso] para o curso de interesse."
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  value={newMsgData.texto}
-                  onChange={e => setNewMsgData({ ...newMsgData, texto: e.target.value })}
-                  required
-                />
-              </div>
-              <button 
-                type="submit" 
-                disabled={msgLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white py-3 rounded-xl font-bold transition flex items-center justify-center space-x-2 shadow-lg shadow-blue-100"
-              >
-                {msgLoading ? (
-                  <RefreshCw className="animate-spin" size={18} />
-                ) : (
-                  <span>Salvar Mensagem</span>
-                )}
-              </button>
-            </form>
-          </motion.div>
-        </div>
-      )}
+      <MessageTemplateModal
+        isOpen={isAddMsgModalOpen}
+        onClose={() => setIsAddMsgModalOpen(false)}
+        tipo="historico"
+        onToast={onToast}
+        availableVariables={[
+          { key: '[nome]', label: 'Nome do Lead', previewValue: 'João Silva' },
+          { key: '[curso]', label: 'Curso', previewValue: 'Engenharia de Software' },
+          { key: '[unidade]', label: 'Unidade', previewValue: 'Unidade Central' },
+          { key: '[data_contato]', label: 'Data', previewValue: new Date().toLocaleDateString('pt-BR') },
+          { key: '[saudacao]', label: 'Saudação', previewValue: 'Bom dia' }
+        ]}
+      />
 
       {editModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -5478,7 +5482,7 @@ function BasesView({
           const selectedLeadObjs = bases.filter(b => selectedEntries.includes(b.id));
           const messagesPayload = selectedLeadObjs.map(l => ({
             telefone: l.telefone,
-            message: msgTemplate.replace(/\[nome\]/gi, l.nome).replace(/\[curso\]/gi, l.curso || '').replace(/\[matr[ií]cula\]/gi, l.numeroMatricula || '')
+            message: replaceMessageVariables(msgTemplate, l)
           }));
           onMassSendBot(messagesPayload);
           setMassSelectorOpen(false);
@@ -5488,53 +5492,19 @@ function BasesView({
       />
 
       <AnimatePresence>
-        {isAddMsgModalOpen && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
-            >
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="text-xl font-bold text-slate-900">Nova Mensagem de Base</h3>
-                <button onClick={() => setIsAddMsgModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                  <X size={24} />
-                </button>
-              </div>
-              <form onSubmit={handleAddCustomMessage} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Nome do Modelo (Opcional)</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ex: WhatsApp Boas Vindas"
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
-                    value={newMsgData.modelName}
-                    onChange={e => setNewMsgData({...newMsgData, modelName: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Texto da Mensagem</label>
-                  <textarea 
-                    placeholder="Use [nome] para o nome do aluno e [curso] para o curso."
-                    rows={6}
-                    required
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    value={newMsgData.texto}
-                    onChange={e => setNewMsgData({...newMsgData, texto: e.target.value})}
-                  />
-                </div>
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 shadow-lg shadow-blue-100"
-                >
-                  {loading ? 'Salvando...' : 'Salvar e Ir para Histórico'}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
+        <MessageTemplateModal
+          isOpen={isAddMsgModalOpen}
+          onClose={() => setIsAddMsgModalOpen(false)}
+          tipo="bases"
+          onToast={onToast}
+          availableVariables={[
+            { key: '[nome]', label: 'Nome do Lead', previewValue: 'Maria Souza' },
+            { key: '[curso]', label: 'Curso', previewValue: 'Administração' },
+            { key: '[unidade]', label: 'Unidade', previewValue: 'Unidade Central' },
+            { key: '[data_contato]', label: 'Data', previewValue: new Date().toLocaleDateString('pt-BR') },
+            { key: '[saudacao]', label: 'Saudação', previewValue: 'Olá' }
+          ]}
+        />
       </AnimatePresence>
     </div>
   );
@@ -5818,7 +5788,7 @@ function BasesRenovacaoView({
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-center max-w-xl mx-auto gap-4">
-        <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap">Bases Renovação</h3>
+        <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap">Base Líquida</h3>
         <div className="flex flex-wrap justify-center gap-2">
           <button 
              onClick={() => setIsAddMsgModalOpen(true)}
@@ -5961,7 +5931,7 @@ function BasesRenovacaoView({
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h3 className="text-xl font-bold text-slate-900">Bases a Trabalhar (Renovação)</h3>
+          <h3 className="text-xl font-bold text-slate-900">Bases a Trabalhar (Líquida)</h3>
           <div className="flex flex-wrap gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -6149,7 +6119,7 @@ function BasesRenovacaoView({
           const selectedLeadObjs = bases.filter(b => selectedEntries.includes(b.id));
           const messagesPayload = selectedLeadObjs.map(l => ({
             telefone: l.telefone,
-            message: msgTemplate.replace(/\[nome\]/gi, l.nome).replace(/\[curso\]/gi, l.curso || '').replace(/\[matr[ií]cula\]/gi, l.numeroMatricula || '')
+            message: replaceMessageVariables(msgTemplate, l)
           }));
           onMassSendBot(messagesPayload);
           setMassSelectorOpen(false);
@@ -6159,53 +6129,19 @@ function BasesRenovacaoView({
       />
 
       <AnimatePresence>
-        {isAddMsgModalOpen && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
-            >
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="text-xl font-bold text-slate-900">Nova Mensagem de Renovação</h3>
-                <button onClick={() => setIsAddMsgModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                  <X size={24} />
-                </button>
-              </div>
-              <form onSubmit={handleAddCustomMessage} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Nome do Modelo (Opcional)</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ex: WhatsApp Renovação 1"
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
-                    value={newMsgData.modelName}
-                    onChange={e => setNewMsgData({...newMsgData, modelName: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Texto da Mensagem</label>
-                  <textarea 
-                    placeholder="Use [nome] para o nome do aluno e [curso] para o curso."
-                    rows={6}
-                    required
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    value={newMsgData.texto}
-                    onChange={e => setNewMsgData({...newMsgData, texto: e.target.value})}
-                  />
-                </div>
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 shadow-lg shadow-blue-100"
-                >
-                  {loading ? 'Salvando...' : 'Salvar e Ir para Histórico'}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
+        <MessageTemplateModal
+          isOpen={isAddMsgModalOpen}
+          onClose={() => setIsAddMsgModalOpen(false)}
+          tipo="bases_renovacao"
+          onToast={onToast}
+          availableVariables={[
+            { key: '[nome]', label: 'Nome do Aluno', previewValue: 'Maria Souza' },
+            { key: '[curso]', label: 'Curso', previewValue: 'Administração' },
+            { key: '[unidade]', label: 'Unidade', previewValue: 'Unidade Central' },
+            { key: '[data_contato]', label: 'Data', previewValue: new Date().toLocaleDateString('pt-BR') },
+            { key: '[saudacao]', label: 'Saudação', previewValue: 'Olá' }
+          ]}
+        />
       </AnimatePresence>
     </div>
   );
@@ -6359,11 +6295,7 @@ function GapView({
       .map(([_, label]) => label);
       
     const applyReplacements = (text: string) => {
-       return text
-         .replace(/\[nome\]/gi, entry.nome || '')
-         .replace(/\[curso\]/gi, entry.curso || '')
-         .replace(/\[matr[ií]cula\]/gi, entry.numeroMatricula || '')
-         .replace(/\[pendencias\]/gi, missingDocs.join(', '));
+       return replaceMessageVariables(text, { ...entry, missingDocs });
     };
 
     // se ok e tiver matricula
@@ -10122,15 +10054,18 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
               { id: 'bases', label: 'Bases', multi: true },
               { id: 'gap', label: 'GAP Acadêmico', multi: false, subLabels: ['Padrão', 'Matrícula Acadêmica OK'] },
               { id: 'fiesProuni', label: 'Fies/Prouni', multi: false, subLabels: ['Padrão', 'Matrícula Acadêmica OK'] },
-              { id: 'bases_renovacao', label: 'Bases Renovação', multi: true }
+              { id: 'bases_renovacao', label: 'Base Líquida', multi: true }
             ].map(tipo => {
               const messages = whatsappMessages.filter(m => m.tipo === tipo.id);
               
               if (tipo.multi) {
                 return (
-                  <div key={tipo.id} className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider">{tipo.label}</h4>
+                  <div key={tipo.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
+                    <div className="flex justify-between items-center bg-slate-50 p-5 border-b border-slate-200">
+                      <div>
+                        <h4 className="text-base font-bold text-slate-800 uppercase tracking-wider">{tipo.label}</h4>
+                        <p className="text-xs text-slate-500 mt-1">Modelos de mensagens para {tipo.label.toLowerCase()}</p>
+                      </div>
                       <button 
                         onClick={async () => {
                           try {
@@ -10144,84 +10079,84 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                             onToast("Erro ao adicionar modelo.", 'error');
                           }
                         }}
-                        className="text-blue-600 hover:text-blue-700 text-xs font-bold flex items-center space-x-1"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center space-x-2 shadow-sm transition-all"
                       >
-                        <Plus size={14} />
+                        <Plus size={16} />
                         <span>Novo Modelo</span>
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="p-6 grid grid-cols-1 gap-6 bg-slate-50/50">
                       {messages.map((msg, idx) => (
-                        <div key={msg.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 relative group">
-                          <label className="block text-[10px] font-bold text-slate-400 mb-1">MODELO {idx + 1}</label>
-                          <textarea 
-                            defaultValue={msg.texto}
-                            onBlur={async (e) => {
-                              const novoTexto = e.target.value;
-                              if (novoTexto === msg.texto) return;
-                              try {
-                                await updateDoc(doc(db, COLLECTIONS.WHATSAPP_MESSAGES, msg.id), { texto: novoTexto, updatedAt: serverTimestamp() });
-                                onToast("Modelo atualizado!");
-                              } catch (err: any) {
-                                onToast("Erro ao salvar.", 'error');
-                              }
-                            }}
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm min-h-[100px]"
-                          />
-                          <button 
-                            onClick={async () => {
-                              if (window.confirm('Excluir este modelo?')) {
-                                await deleteDoc(doc(db, COLLECTIONS.WHATSAPP_MESSAGES, msg.id));
-                                onToast("Modelo removido.");
-                              }
-                            }}
-                            className="absolute top-4 right-4 text-rose-400 opacity-0 group-hover:opacity-100 transition-all hover:text-rose-600"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
+                        <WhatsAppMessageEditor
+                          key={msg.id}
+                          msgId={msg.id}
+                          initialText={msg.texto}
+                          label={`MODELO ${idx + 1} - ${tipo.label}`}
+                          onUpdate={async (novoTexto) => {
+                            if (novoTexto === msg.texto) return;
+                            try {
+                              await updateDoc(doc(db, COLLECTIONS.WHATSAPP_MESSAGES, msg.id), { texto: novoTexto, updatedAt: serverTimestamp() });
+                              onToast("Modelo atualizado!");
+                            } catch (err: any) {
+                              onToast("Erro ao salvar.", 'error');
+                            }
+                          }}
+                          onDelete={async () => {
+                            if (window.confirm('Excluir este modelo?')) {
+                              await deleteDoc(doc(db, COLLECTIONS.WHATSAPP_MESSAGES, msg.id));
+                              onToast("Modelo removido.");
+                            }
+                          }}
+                        />
                       ))}
+                      {messages.length === 0 && (
+                        <div className="text-center py-8 text-slate-400 text-sm border-2 border-dashed border-slate-200 rounded-xl">
+                          Nenhum modelo cadastrado. Clique em "Novo Modelo" para adicionar.
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
               }
 
               return (
-                <div key={tipo.id} className="space-y-4">
-                  <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider">{tipo.label}</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div key={tipo.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
+                  <div className="bg-slate-50 p-5 border-b border-slate-200 flex justify-between items-center">
+                    <div>
+                      <h4 className="text-base font-bold text-slate-800 uppercase tracking-wider">{tipo.label}</h4>
+                      <p className="text-xs text-slate-500 mt-1">Modelos de mensagens para {tipo.label.toLowerCase()}</p>
+                    </div>
+                  </div>
+                  <div className="p-6 grid grid-cols-1 gap-6 bg-slate-50/50">
                     {tipo.subLabels?.map((label, idx) => {
                       const subtypeId = `${tipo.id}_${idx}`;
                       const msg = whatsappMessages.find(m => m.tipo === subtypeId);
                       return (
-                        <div key={subtypeId} className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                          <label className="block text-xs font-bold text-slate-500 mb-2">{label}</label>
-                          <textarea 
-                            defaultValue={msg?.texto || ''}
-                            onBlur={async (e) => {
-                              const novoTexto = e.target.value;
-                              if (novoTexto === (msg?.texto || '')) return;
-                              try {
-                                if (msg) {
-                                  await updateDoc(doc(db, COLLECTIONS.WHATSAPP_MESSAGES, msg.id), { texto: novoTexto, updatedAt: serverTimestamp() });
-                                } else {
-                                  await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), { tipo: subtypeId, texto: novoTexto, createdAt: serverTimestamp() });
-                                }
-                                onToast("Mensagem atualizada!");
-                              } catch (err: any) {
-                                onToast("Erro ao salvar.", 'error');
+                        <WhatsAppMessageEditor
+                          key={subtypeId}
+                          msgId={msg?.id || subtypeId}
+                          initialText={msg?.texto || ''}
+                          label={`${tipo.label} - ${label}`}
+                          onUpdate={async (novoTexto) => {
+                            if (novoTexto === (msg?.texto || '')) return;
+                            try {
+                              if (msg) {
+                                await updateDoc(doc(db, COLLECTIONS.WHATSAPP_MESSAGES, msg.id), { texto: novoTexto, updatedAt: serverTimestamp() });
+                              } else {
+                                await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), { tipo: subtypeId, texto: novoTexto, createdAt: serverTimestamp() });
                               }
-                            }}
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm min-h-[120px]"
-                          />
-                        </div>
+                              onToast("Mensagem atualizada!");
+                            } catch (err: any) {
+                              onToast("Erro ao salvar.", 'error');
+                            }
+                          }}
+                        />
                       );
                     })}
                   </div>
                 </div>
               );
             })}
-            <p className="text-[10px] text-slate-400 mt-2 italic text-center">Dica: Use [nome] para inserir o nome do lead automaticamente.</p>
           </div>
         </section>
         </div>
