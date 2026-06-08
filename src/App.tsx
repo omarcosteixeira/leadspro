@@ -2918,8 +2918,8 @@ export default function App() {
             >
               {currentView === 'dashboard' && <DashboardView leads={leads} planner={planner} links={links} profile={profile!} onToast={showToast} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} metaDia={metaDia} users={users} />}
               {currentView === 'cadastro' && <CadastroView onToast={showToast} profile={profile!} />}
-              {currentView === 'historico' && <HistoricoView leads={leads} profile={profile!} onToast={showToast} users={users} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
-              {currentView === 'bases' && <BasesView bases={bases} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
+              {currentView === 'historico' && <HistoricoView leads={leads} profile={profile!} onToast={showToast} users={users} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} gap={gap} basesRenovacao={basesRenovacao} />}
+              {currentView === 'bases' && <BasesView bases={bases} profile={profile!} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} gap={gap} basesRenovacao={basesRenovacao} />}
               {currentView === 'gap' && <GapView gap={gap} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
               {currentView === 'fiesProuni' && <FiesProuniView data={fiesProuni} onToast={showToast} profile={profile!} whatsappMessages={whatsappMessages} periodos={periodos} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
               {currentView === 'mapao' && <MapaoAcademicoView mapao={mapao} onToast={showToast} profile={profile!} />}
@@ -4247,7 +4247,9 @@ function HistoricoView({
   whatsappMessages,
   botConfig,
   onSendBot,
-  onMassSendBot
+  onMassSendBot,
+  gap,
+  basesRenovacao
 }: { 
   leads: Lead[]; 
   profile: UserProfile; 
@@ -4257,6 +4259,8 @@ function HistoricoView({
   botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
   onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
+  gap: GapEntry[];
+  basesRenovacao: BaseEntry[];
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
@@ -4270,6 +4274,7 @@ function HistoricoView({
   const [isAddMsgModalOpen, setIsAddMsgModalOpen] = useState(false);
   const [newMsgData, setNewMsgData] = useState({ modelName: '', texto: '' });
   const [msgLoading, setMsgLoading] = useState(false);
+  const [invalidLeadIds, setInvalidLeadIds] = useState<Set<string>>(new Set());
   
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -4281,6 +4286,31 @@ function HistoricoView({
     cursoInteresse: '',
     acao: ''
   });
+
+  const handleVerificacao = () => {
+      const invalidIds = new Set<string>();
+      leads.forEach(lead => {
+          let match = false;
+          
+          if (gap.some(g => (g.cpf && lead.cpf && g.cpf.replace(/\D/g, '') === lead.cpf.replace(/\D/g, '')) || 
+                            (g.telefone && lead.telefone && g.telefone.replace(/\D/g, '') === lead.telefone.replace(/\D/g, '')) || 
+                            (g.nome.toLowerCase().trim() === lead.nome.toLowerCase().trim()))) {
+              match = true;
+          }
+          
+          if (!match && basesRenovacao.some(b => (b.cpf && lead.cpf && b.cpf.replace(/\D/g, '') === lead.cpf.replace(/\D/g, '')) || 
+                                                 (b.telefone && lead.telefone && b.telefone.replace(/\D/g, '') === lead.telefone.replace(/\D/g, '')) || 
+                                                 (b.nome.toLowerCase().trim() === lead.nome.toLowerCase().trim()))) {
+              match = true;
+          }
+  
+          if (match) {
+              invalidIds.add(lead.id);
+          }
+      });
+      setInvalidLeadIds(invalidIds);
+      onToast(`Verificação concluída: ${invalidIds.size} leads já estão cadastrados em GAP/Base Líquida.`, "info");
+  };
 
   const uniqueCursos = useMemo(() => {
     return Array.from(new Set(leads.map(l => l.cursoInteresse).filter(Boolean))).sort();
@@ -4381,7 +4411,7 @@ function HistoricoView({
 
   const toggleSelectAll = (checked: boolean) => {
       if (checked) {
-          setSelectedEntries(filteredLeads.map(l => l.id));
+          setSelectedEntries(filteredLeads.filter(l => !invalidLeadIds.has(l.id)).map(l => l.id));
       } else {
           setSelectedEntries([]);
       }
@@ -4536,6 +4566,16 @@ function HistoricoView({
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-800">Histórico de Leads</h2>
         <div className="flex space-x-2">
+          {[ROLES.ADMIN_MASTER, ROLES.LIDER_FDV].includes(profile.role) && (
+            <button 
+              onClick={handleVerificacao}
+              className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold"
+              title="Verificar se leads existem no GAP ou Base Líquida"
+            >
+              <Search size={18} />
+              <span>Verificação</span>
+            </button>
+          )}
           <button 
              onClick={() => setIsAddMsgModalOpen(true)}
              className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
@@ -4656,9 +4696,14 @@ function HistoricoView({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredLeads.map((lead, index) => (
-                <tr key={lead.id} className="hover:bg-slate-50/50 transition-all">
+                <tr key={lead.id} className={cn("hover:bg-slate-50/50 transition-all", invalidLeadIds.has(lead.id) && "bg-rose-50/50")}>
                   <td className="px-6 py-4">
-                      <input type="checkbox" checked={selectedEntries.includes(lead.id)} onChange={e => toggleSelect(lead.id, e.target.checked)} />
+                      <input 
+                        type="checkbox" 
+                        disabled={invalidLeadIds.has(lead.id)}
+                        checked={selectedEntries.includes(lead.id)} 
+                        onChange={e => !invalidLeadIds.has(lead.id) && toggleSelect(lead.id, e.target.checked)} 
+                      />
                   </td>
                   <td className="px-3 py-4 text-xs font-bold text-slate-400 font-mono">
                       {index + 1}
@@ -4704,7 +4749,8 @@ function HistoricoView({
                           setSelectedLead(lead);
                           setSelectorOpen(true);
                         }}
-                        className="inline-flex items-center space-x-1 text-emerald-600 hover:text-emerald-700 font-bold text-sm"
+                        disabled={invalidLeadIds.has(lead.id)}
+                        className={cn("inline-flex items-center space-x-1 text-emerald-600 font-bold text-sm", invalidLeadIds.has(lead.id) ? "opacity-30 cursor-not-allowed" : "hover:text-emerald-700")}
                       >
                         <MessageSquare size={14} />
                         <span>WhatsApp</span>
@@ -4861,7 +4907,10 @@ function BasesView({
   whatsappMessages,
   botConfig,
   onSendBot,
-  onMassSendBot
+  onMassSendBot,
+  gap,
+  basesRenovacao,
+  profile
 }: { 
   bases: BaseEntry[]; 
   onToast: (m: string, t?: 'success' | 'error') => void; 
@@ -4869,6 +4918,9 @@ function BasesView({
   botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
   onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
+  gap: GapEntry[];
+  basesRenovacao: BaseEntry[];
+  profile: UserProfile;
 }) {
   const [formData, setFormData] = useState({
     nomeBase: '',
@@ -4896,6 +4948,32 @@ function BasesView({
   const [massSelectorOpen, setMassSelectorOpen] = useState(false);
   const [isAddMsgModalOpen, setIsAddMsgModalOpen] = useState(false);
   const [newMsgData, setNewMsgData] = useState({ modelName: '', texto: '' });
+  const [invalidBaseIds, setInvalidBaseIds] = useState<Set<string>>(new Set());
+
+  const handleVerificacao = () => {
+      const invalidIds = new Set<string>();
+      bases.forEach(base => {
+          let match = false;
+          
+          if (gap.some(g => (g.cpf && base.cpf && g.cpf.replace(/\D/g, '') === base.cpf.replace(/\D/g, '')) || 
+                            (g.telefone && base.telefone && g.telefone.replace(/\D/g, '') === base.telefone.replace(/\D/g, '')) || 
+                            (g.nome.toLowerCase().trim() === base.nome.toLowerCase().trim()))) {
+              match = true;
+          }
+          
+          if (!match && basesRenovacao.some(b => (b.cpf && base.cpf && b.cpf.replace(/\D/g, '') === base.cpf.replace(/\D/g, '')) || 
+                                                 (b.telefone && base.telefone && b.telefone.replace(/\D/g, '') === base.telefone.replace(/\D/g, '')) || 
+                                                 (b.nome.toLowerCase().trim() === base.nome.toLowerCase().trim()))) {
+              match = true;
+          }
+  
+          if (match) {
+              invalidIds.add(base.id);
+          }
+      });
+      setInvalidBaseIds(invalidIds);
+      onToast(`Verificação concluída: ${invalidIds.size} contatos já estão cadastrados em GAP/Base Líquida.`, "info");
+  };
 
   const filteredBases = bases.filter(b => {
     const matchesSearch = b.nome.toLowerCase().includes(searchTerm.toLowerCase());
@@ -5033,7 +5111,7 @@ function BasesView({
 
   const toggleSelectAll = (checked: boolean) => {
       if (checked) {
-          setSelectedEntries(filteredBases.map(b => b.id));
+          setSelectedEntries(filteredBases.filter(b => !invalidBaseIds.has(b.id)).map(b => b.id));
       } else {
           setSelectedEntries([]);
       }
@@ -5157,6 +5235,16 @@ function BasesView({
       <div className="flex flex-col md:flex-row justify-between items-center max-w-xl mx-auto gap-4">
         <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap">Bases</h3>
         <div className="flex flex-wrap justify-center gap-2">
+          {[ROLES.ADMIN_MASTER, ROLES.LIDER_FDV].includes(profile.role) && (
+            <button 
+              onClick={handleVerificacao}
+              className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold"
+              title="Verificar se contatos existem no GAP ou Base Líquida"
+            >
+              <Search size={18} />
+              <span>Verificação</span>
+            </button>
+          )}
           <button 
              onClick={() => setIsAddMsgModalOpen(true)}
              className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
@@ -5381,12 +5469,17 @@ function BasesView({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredBases.map((entry, index) => (
-                <tr key={entry.id} className="hover:bg-slate-50/50 transition-all">
+                <tr key={entry.id} className={cn("hover:bg-slate-50/50 transition-all", invalidBaseIds.has(entry.id) && "bg-rose-50/50")}>
                   <td className="px-6 py-4 text-center font-bold text-slate-400 text-xs">
                     {index + 1}
                   </td>
                   <td className="px-6 py-4">
-                    <input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={e => toggleSelect(entry.id, e.target.checked)} />
+                    <input 
+                      type="checkbox" 
+                      disabled={invalidBaseIds.has(entry.id)}
+                      checked={selectedEntries.includes(entry.id)} 
+                      onChange={e => !invalidBaseIds.has(entry.id) && toggleSelect(entry.id, e.target.checked)} 
+                    />
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
@@ -5427,7 +5520,8 @@ function BasesView({
                         setSelectedEntry(entry);
                         setSelectorOpen(true);
                       }}
-                      className="text-emerald-600 hover:text-emerald-700 font-bold text-sm flex items-center space-x-1"
+                      disabled={invalidBaseIds.has(entry.id)}
+                      className={cn("text-emerald-600 font-bold text-sm flex items-center space-x-1", invalidBaseIds.has(entry.id) ? "opacity-30 cursor-not-allowed" : "hover:text-emerald-700")}
                     >
                       <MessageSquare size={14} />
                       <span>WhatsApp</span>
