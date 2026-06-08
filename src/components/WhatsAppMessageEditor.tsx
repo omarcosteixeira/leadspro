@@ -2,9 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { Trash2, Variable } from 'lucide-react';
 
 interface Props {
+  key?: any;
   msgId: string;
   initialText: string;
-  onUpdate: (novoTexto: string) => void;
+  onUpdate: (novoTexto: string) => void | Promise<void>;
   onDelete?: () => void;
   label?: string;
 }

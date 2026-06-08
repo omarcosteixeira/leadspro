@@ -54,6 +54,8 @@ export interface CalendarioAcao {
   valorPromotor?: number;
   valorOrcado?: number;
   statusPagamentoPromotores?: { [promoterUid: string]: 'Agendada' | 'Recusada' | 'Realizada' };
+  colaboradorId?: string;
+  colaboradorNome?: string;
 }
 
 export interface Campanha {

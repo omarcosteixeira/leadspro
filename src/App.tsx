@@ -20,12 +20,13 @@ import {
   doc, 
   deleteDoc, 
   serverTimestamp, 
-  where,
-  or,
-  limit,
-  getDoc,
-  setDoc,
-  getDocs
+  where, 
+  or, 
+  limit, 
+  getDoc, 
+  setDoc, 
+  getDocs,
+  writeBatch
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -2446,10 +2447,17 @@ export default function App() {
     let unsubCalendario = () => {};
     if (profile && (VIEW_PERMISSIONS.calendario.includes(profile.role) || VIEW_PERMISSIONS.controlePagamentos.includes(profile.role))) {
       let calendarioQuery;
-      if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.FINANCEIRO].includes(profile.role)) {
+      if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.FINANCEIRO, ROLES.GESTOR_COMERCIAL_COMERCIAL].includes(profile.role)) {
         calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES));
-      } else if (profile.role === ROLES.FDV) {
-        calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), or(where("creatorId", "==", user!.uid), where("creatorRole", "==", ROLES.PROMOTOR)));
+      } else if (profile.role === ROLES.FDV || profile.role === ROLES.FDV_COMERCIAL) {
+        calendarioQuery = query(
+          collection(db, COLLECTIONS.CALENDARIO_ACOES), 
+          or(
+            where("creatorId", "==", user!.uid), 
+            where("creatorRole", "==", ROLES.PROMOTOR), 
+            where("colaboradorId", "==", user!.uid)
+          )
+        );
       } else {
         calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), where("creatorId", "==", "none"));
       }
@@ -4275,6 +4283,7 @@ function HistoricoView({
   const [newMsgData, setNewMsgData] = useState({ modelName: '', texto: '' });
   const [msgLoading, setMsgLoading] = useState(false);
   const [invalidLeadIds, setInvalidLeadIds] = useState<Set<string>>(new Set());
+  const [blockedFilter, setBlockedFilter] = useState<'all' | 'blocked' | 'unblocked'>('all');
   
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -4309,7 +4318,7 @@ function HistoricoView({
           }
       });
       setInvalidLeadIds(invalidIds);
-      onToast(`Verificação concluída: ${invalidIds.size} leads já estão cadastrados em GAP/Base Líquida.`, "info");
+      onToast(`Verificação concluída: ${invalidIds.size} leads já estão cadastrados em GAP/Base Líquida.`, "success");
   };
 
   const uniqueCursos = useMemo(() => {
@@ -4389,10 +4398,14 @@ function HistoricoView({
         const matchesBase = !baseFilter || l.acao === baseFilter;
         const matchesStatus = !statusFilter || l.status === statusFilter;
         const matchesPromotor = !promotorFilter || l.promotorName === promotorFilter;
-        return matchesSearch && matchesCourse && matchesBase && matchesStatus && matchesPromotor;
+        const isBlocked = invalidLeadIds.has(l.id);
+        const matchesBlocked = blockedFilter === 'all' ||
+          (blockedFilter === 'blocked' && isBlocked) ||
+          (blockedFilter === 'unblocked' && !isBlocked);
+        return matchesSearch && matchesCourse && matchesBase && matchesStatus && matchesPromotor && matchesBlocked;
       })
       .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-  }, [leads, searchTerm, courseFilter, baseFilter, statusFilter, promotorFilter]);
+  }, [leads, searchTerm, courseFilter, baseFilter, statusFilter, promotorFilter, blockedFilter, invalidLeadIds]);
 
   const stats = useMemo(() => {
     const total = filteredLeads.length;
@@ -4648,6 +4661,15 @@ function HistoricoView({
             >
               <option value="">Todos os Status</option>
               {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select 
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              value={blockedFilter}
+              onChange={e => setBlockedFilter(e.target.value as any)}
+            >
+              <option value="all">Verificação: Todos</option>
+              <option value="blocked">Verificação: Bloqueados</option>
+              <option value="unblocked">Verificação: Ativos</option>
             </select>
             {isAdmin && (
               <select 
@@ -4949,6 +4971,7 @@ function BasesView({
   const [isAddMsgModalOpen, setIsAddMsgModalOpen] = useState(false);
   const [newMsgData, setNewMsgData] = useState({ modelName: '', texto: '' });
   const [invalidBaseIds, setInvalidBaseIds] = useState<Set<string>>(new Set());
+  const [blockedFilter, setBlockedFilter] = useState<'all' | 'blocked' | 'unblocked'>('all');
 
   const handleVerificacao = () => {
       const invalidIds = new Set<string>();
@@ -4972,7 +4995,7 @@ function BasesView({
           }
       });
       setInvalidBaseIds(invalidIds);
-      onToast(`Verificação concluída: ${invalidIds.size} contatos já estão cadastrados em GAP/Base Líquida.`, "info");
+      onToast(`Verificação concluída: ${invalidIds.size} contatos já estão cadastrados em GAP/Base Líquida.`, "success");
   };
 
   const filteredBases = bases.filter(b => {
@@ -4982,7 +5005,13 @@ function BasesView({
     const matchesProduto = !produtoFilter || b.produto === produtoFilter;
     const matchesCurso = !cursoFilter || b.curso.toLowerCase().includes(cursoFilter.toLowerCase());
     const matchesSemestre = !semestreFilter || (b.semestre && b.semestre.toLowerCase().includes(semestreFilter.toLowerCase()));
-    return matchesSearch && matchesBase && matchesStatus && matchesProduto && matchesCurso && matchesSemestre;
+    
+    const isBlocked = invalidBaseIds.has(b.id);
+    const matchesBlocked = blockedFilter === 'all' ||
+      (blockedFilter === 'blocked' && isBlocked) ||
+      (blockedFilter === 'unblocked' && !isBlocked);
+
+    return matchesSearch && matchesBase && matchesStatus && matchesProduto && matchesCurso && matchesSemestre && matchesBlocked;
   });
 
   const uniqueBases = Array.from(new Set(bases.map(b => b.nomeBase))).sort();
@@ -5436,6 +5465,15 @@ function BasesView({
               <option value="Convertido">Convertido</option>
               <option value="Não tem interesse">Não tem interesse</option>
               <option value="Sem retorno">Sem retorno</option>
+            </select>
+            <select 
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              value={blockedFilter}
+              onChange={e => setBlockedFilter(e.target.value as any)}
+            >
+              <option value="all">Verificação: Todos</option>
+              <option value="blocked">Verificação: Bloqueados</option>
+              <option value="unblocked">Verificação: Ativos</option>
             </select>
           </div>
         </div>
@@ -6914,10 +6952,13 @@ function CalendarioAcoesView({
     precisaPromotor: false,
     promotoresSelecionados: [] as string[],
     valorPromotor: '' as number | '',
-    valorOrcado: '' as number | ''
+    valorOrcado: '' as number | '',
+    colaboradorId: '',
+    colaboradorNome: ''
   });
 
   const promotoresDisponiveis = (users || []).filter(u => u.role === ROLES.PROMOTOR || u.role === ROLES.PROMOTOR_RUA);
+  const colaboradoresDisponiveis = (users || []).filter(u => u.role === ROLES.FDV_COMERCIAL || u.role === ROLES.FDV);
 
   useEffect(() => {
     if (initialData) {
@@ -6934,7 +6975,9 @@ function CalendarioAcoesView({
         precisaPromotor: !!(initialData as any).precisaPromotor,
         promotoresSelecionados: (initialData as any).promotoresSelecionados || [],
         valorPromotor: (initialData as any).valorPromotor !== undefined ? (initialData as any).valorPromotor : '',
-        valorOrcado: (initialData as any).valorOrcado !== undefined ? (initialData as any).valorOrcado : ''
+        valorOrcado: (initialData as any).valorOrcado !== undefined ? (initialData as any).valorOrcado : '',
+        colaboradorId: (initialData as any).colaboradorId || '',
+        colaboradorNome: (initialData as any).colaboradorNome || ''
       });
       setIsAdding(true);
       if (onClearInitialData) onClearInitialData();
@@ -7003,7 +7046,9 @@ function CalendarioAcoesView({
         precisaPromotor: false,
         promotoresSelecionados: [],
         valorPromotor: '',
-        valorOrcado: ''
+        valorOrcado: '',
+        colaboradorId: '',
+        colaboradorNome: ''
       });
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, COLLECTIONS.CALENDARIO_ACOES);
@@ -7268,7 +7313,9 @@ function CalendarioAcoesView({
                       precisaPromotor: !!action.precisaPromotor,
                       promotoresSelecionados: action.promotoresSelecionados || [],
                       valorPromotor: action.valorPromotor !== undefined ? action.valorPromotor : '',
-                      valorOrcado: action.valorOrcado !== undefined ? action.valorOrcado : ''
+                      valorOrcado: action.valorOrcado !== undefined ? action.valorOrcado : '',
+                      colaboradorId: action.colaboradorId || '',
+                      colaboradorNome: action.colaboradorNome || ''
                     });
                     setIsAdding(true);
                   }}
@@ -7286,6 +7333,12 @@ function CalendarioAcoesView({
             </div>
 
             <h3 className="text-lg font-bold text-slate-900 mb-1">{action.nome}</h3>
+            {action.colaboradorNome && (
+              <div className="flex items-center space-x-1.5 text-slate-600 text-xs mb-2 bg-blue-50/55 p-1 px-2 rounded-lg inline-flex">
+                <span className="font-bold text-blue-700">Colaborador:</span>
+                <span>{action.colaboradorNome}</span>
+              </div>
+            )}
             <div className="flex items-center space-x-2 text-slate-500 text-xs mb-4">
               <MapPin size={14} />
               <span>{action.local}</span>
@@ -7549,6 +7602,28 @@ function CalendarioAcoesView({
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm min-h-[100px]"
                   placeholder="O que será feito?"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Colaborador / FDV Responsável</label>
+                <select
+                  value={newAction.colaboradorId}
+                  onChange={e => {
+                    const selectedId = e.target.value;
+                    const selectedUser = colaboradoresDisponiveis.find(u => u.uid === selectedId);
+                    setNewAction({
+                      ...newAction,
+                      colaboradorId: selectedId,
+                      colaboradorNome: selectedUser ? selectedUser.name : ''
+                    });
+                  }}
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                >
+                  <option value="">Nenhum (Sem colaborador designado)</option>
+                  {colaboradoresDisponiveis.map(u => (
+                    <option key={u.uid} value={u.uid}>{u.name} ({u.role})</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
