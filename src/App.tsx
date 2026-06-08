@@ -3877,7 +3877,7 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                         <div className="flex justify-between items-start mb-4">
                            <div>
                               <h4 className="font-bold text-slate-900">{f.nome}</h4>
-                              <p className="text-[10px] text-slate-500 font-medium">Até {new Date(f.dataFim).toLocaleDateString('pt-BR')}</p>
+                              <p className="text-[10px] text-slate-500 font-medium">Até {f.dataFim.split('T')[0].split('-').reverse().join('/')}</p>
                            </div>
                            <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${Number(percFech) >= 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
                               {percFech}%
@@ -6938,6 +6938,18 @@ function CalendarioAcoesView({
   const [endDateFilter, setEndDateFilter] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingAction, setEditingAction] = useState<CalendarioAcao | null>(null);
+
+  const formatLocalDateString = (dateStr: string) => {
+    if (!dateStr) return '';
+    const dateOnly = dateStr.split('T')[0];
+    if (dateOnly.includes('-')) {
+      const parts = dateOnly.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+    }
+    return dateStr;
+  };
   
   const [newAction, setNewAction] = useState({
     nome: '',
@@ -7349,7 +7361,7 @@ function CalendarioAcoesView({
                 <span>Período</span>
               </div>
               <p className="text-xs font-bold text-slate-700">
-                {new Date(action.dataInicio).toLocaleDateString('pt-BR')} {action.dataFim !== action.dataInicio && `- ${new Date(action.dataFim).toLocaleDateString('pt-BR')}`}
+                {formatLocalDateString(action.dataInicio)} {action.dataFim !== action.dataInicio && `- ${formatLocalDateString(action.dataFim)}`}
               </p>
             </div>
 
@@ -9698,7 +9710,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       <tr key={f.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-4 font-bold text-slate-900">{f.nome}</td>
                         <td className="px-4 py-4 text-slate-500">
-                          {new Date(f.dataInicio).toLocaleDateString('pt-BR')} - {new Date(f.dataFim).toLocaleDateString('pt-BR')}
+                          {f.dataInicio.split('T')[0].split('-').reverse().join('/')} - {f.dataFim.split('T')[0].split('-').reverse().join('/')}
                         </td>
                         <td className="px-4 py-4 font-bold text-blue-600">{f.metaDiaYTD}</td>
                         <td className="px-4 py-4 font-bold text-emerald-600">{f.realizado}</td>
