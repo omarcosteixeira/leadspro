@@ -2108,63 +2108,38 @@ export default function App() {
   };
 
   const callBotApi = async (path: string, options: { method?: 'GET'|'POST', body?: any } = {}) => {
-    if (!botConfig.url) {
-      throw new Error("URL do bot não configurada.");
-    }
-    const cleanUrl = botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url;
-    const targetUrl = `${cleanUrl}${path}`;
-    
-    let response;
-    let proxyFailed = false;
-    
-    try {
-      response = await fetch('/api/bot-proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetUrl,
-          method: options.method || 'GET',
-          body: options.body
-        })
-      });
-      if (response.status === 404) {
-        proxyFailed = true;
+    // Determine the exact URL to fetch from, using the requested Railway API directly for send actions
+    const directUrl = path === '/api/send' 
+      ? 'https://argoscliente-production-170b.up.railway.app/api/send' 
+      : (botConfig.url ? `${botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url}${path}` : `https://argoscliente-production-170b.up.railway.app${path}`);
+
+    const fetchOptions: RequestInit = {
+      method: options.method || 'GET',
+      headers: {
+        'Content-Type': 'application/json'
       }
-    } catch (e) {
-      proxyFailed = true;
+    };
+    if (options.method === 'POST' && options.body) {
+      fetchOptions.body = JSON.stringify(options.body);
     }
 
-    if (proxyFailed) {
-      console.warn("Proxy /api/bot-proxy offline ou retornou 404 (ambientes estáticos como Vercel). Tentando conexão direta com o bot...");
-      const fetchOptions: RequestInit = {
-        method: options.method || 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      };
-      if (options.method === 'POST' && options.body) {
-        fetchOptions.body = JSON.stringify(options.body);
-      }
-      
-      const directResponse = await fetch(targetUrl, fetchOptions);
-      if (!directResponse.ok) {
-        throw new Error(`Erro ao conectar diretamente ao Bot (${directResponse.status})`);
-      }
-      const directData = await directResponse.json();
-      return directData;
-    }
-    
+    const response = await fetch(directUrl, fetchOptions);
     if (!response.ok) {
       const json = await response.json().catch(() => ({}));
-      throw new Error(json.error || `Erro ao chamar o proxy (${response.status})`);
+      throw new Error(json.error || json.message || `Erro ao conectar ao Bot (${response.status})`);
     }
-    
+
     const resData = await response.json();
-    if (!resData.success) {
-      throw new Error(resData.data?.error || resData.error || `Falha no bot (status ${resData.status})`);
+    
+    // Support either direct raw JSON responses or wrapper structures with { success: boolean, data?: any }
+    if (resData !== null && typeof resData === 'object' && 'success' in resData) {
+      if (!resData.success) {
+        throw new Error(resData.data?.error || resData.error || `Falha no bot`);
+      }
+      return 'data' in resData ? resData.data : resData;
     }
     
-    return resData.data;
+    return resData;
   };
 
   const handleSendBotMessage = async (telefone: string, message: string) => {
