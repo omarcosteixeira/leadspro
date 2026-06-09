@@ -2194,56 +2194,31 @@ export default function App() {
      if (messages.length === 0) return;
      if (!window.confirm(`Deseja iniciar o envio em massa via bot para ${messages.length} contatos?`)) return;
      
-     setMassSendProgress({ total: messages.length, sent: 0, active: true, info: 'Iniciando envio para a fila...' });
+     setMassSendProgress({ total: messages.length, sent: 0, active: true, info: 'Iniciando...' });
      
-     const currentBotNumber = profile?.botNumber;
-     let safeBotNumber = currentBotNumber ? currentBotNumber.replace(/\D/g, '') : '';
-     const isUserBotOnline = safeBotNumber && (botStatuses as any)[safeBotNumber]?.status === 'online';
-     if (!isUserBotOnline) {
-       const firstOnlineBot = Object.entries(botStatuses).find(([_, info]) => (info as any)?.status === 'online')?.[0];
-       if (firstOnlineBot) {
-         safeBotNumber = firstOnlineBot;
-       } else {
-         const botNumbers = Object.keys(botStatuses || {});
-         safeBotNumber = botNumbers.find(num => botStatuses[num]?.status === 'connected') || botNumbers[0] || '';
-       }
-     }
-
-
      let sentCount = 0;
-     
-     const sendPromises = messages.map(async (msg) => {
-        let rawPhone = msg.telefone.replace(/\D/g, '');
-        if (rawPhone.startsWith('0')) rawPhone = rawPhone.substring(1);
-        if (rawPhone.length === 10 || rawPhone.length === 11) {
-          rawPhone = `55${rawPhone}`;
+     for (let i = 0; i < messages.length; i++) {
+        if (i > 0) {
+           if (sentCount % 5 === 0) {
+              setMassSendProgress(prev => ({ ...prev, info: `Pausa de 2 min... (${sentCount}/${messages.length})` }));
+              await new Promise(resolve => setTimeout(resolve, 120000));
+           } else {
+              setMassSendProgress(prev => ({ ...prev, info: `Aguardando 30s... (${sentCount}/${messages.length})` }));
+              await new Promise(resolve => setTimeout(resolve, 30000));
+           }
         }
 
+        setMassSendProgress(prev => ({ ...prev, info: `Enviando... (${sentCount + 1}/${messages.length})` }));
         try {
-           await callBotApi('/api/send', {
-              method: 'POST',
-              body: { botNumber: safeBotNumber, number: rawPhone, message: msg.message, force: true, manual: true }
-           });
+           await handleSendBotMessage(messages[i].telefone, messages[i].message);
         } catch(e) {
-           console.error("Erro ao enfileirar mensagem para o bot:", e);
-        } finally {
-           sentCount++;
-           setMassSendProgress(prev => ({
-              ...prev,
-              sent: sentCount,
-              info: `Enfileirando... (${sentCount}/${messages.length})`
-           }));
+           console.error("Error sending bot message in mass: ", e);
         }
-     });
-
-     await Promise.all(sendPromises);
+        sentCount++;
+     }
      
-     setMassSendProgress(prev => ({ ...prev, info: 'Concluído!' }));
-     setTimeout(() => {
-        setMassSendProgress({ total: 0, sent: 0, active: false, info: '' });
-     }, 2000);
-
-     showToast("Envio em massa adicionado com sucesso à fila do Bot Railway!", "success");
+     setMassSendProgress({ total: 0, sent: 0, active: false, info: '' });
+     showToast("Envio em massa concluído!", "success");
   };
 
   useEffect(() => {
@@ -4891,7 +4866,7 @@ function HistoricoView({
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
                 <th className="px-6 py-4 w-12">
-                  <input type="checkbox" checked={selectedEntries.length === filteredLeads.length && filteredLeads.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
+                  <input type="checkbox" checked={filteredLeads.filter(l => !invalidLeadIds.has(l.id)).length > 0 && selectedEntries.length === filteredLeads.filter(l => !invalidLeadIds.has(l.id)).length} onChange={e => toggleSelectAll(e.target.checked)} />
                 </th>
                 <th className="px-3 py-4 w-12 text-slate-400">#</th>
                 <th className="px-6 py-4">Candidato</th>
@@ -4968,17 +4943,18 @@ function HistoricoView({
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-3">
-                      <button 
-                        onClick={() => {
-                          setSelectedLead(lead);
-                          setSelectorOpen(true);
-                        }}
-                        disabled={invalidLeadIds.has(lead.id)}
-                        className={cn("inline-flex items-center space-x-1 text-emerald-600 font-bold text-sm", invalidLeadIds.has(lead.id) ? "opacity-30 cursor-not-allowed" : "hover:text-emerald-700")}
-                      >
-                        <MessageSquare size={14} />
-                        <span>WhatsApp</span>
-                      </button>
+                      {!invalidLeadIds.has(lead.id) && (
+                        <button 
+                          onClick={() => {
+                            setSelectedLead(lead);
+                            setSelectorOpen(true);
+                          }}
+                          className="inline-flex items-center space-x-1 text-emerald-600 font-bold text-sm hover:text-emerald-700"
+                        >
+                          <MessageSquare size={14} />
+                          <span>WhatsApp</span>
+                        </button>
+                      )}
                       {lead.status === 'Convertido' && (
                         <button 
                           onClick={() => handleMoveToGap(lead)}
@@ -5045,7 +5021,7 @@ function HistoricoView({
         }}
         botConfig={botConfig}
         onSendBot={(msgTemplate) => {
-          const selectedLeadObjs = leads.filter(l => selectedEntries.includes(l.id));
+          const selectedLeadObjs = leads.filter(l => selectedEntries.includes(l.id) && !invalidLeadIds.has(l.id));
           const messagesPayload = selectedLeadObjs.map(l => ({
             telefone: l.telefone,
             message: replaceMessageVariables(msgTemplate, l)
@@ -5687,7 +5663,7 @@ function BasesView({
                   #
                 </th>
                 <th className="px-6 py-4 w-12">
-                  <input type="checkbox" checked={selectedEntries.length === filteredBases.length && filteredBases.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
+                  <input type="checkbox" checked={filteredBases.filter(b => !invalidBaseIds.has(b.id)).length > 0 && selectedEntries.length === filteredBases.filter(b => !invalidBaseIds.has(b.id)).length} onChange={e => toggleSelectAll(e.target.checked)} />
                 </th>
                 <th className="px-6 py-4">Nome</th>
                 <th className="px-6 py-4">Base</th>
@@ -5755,17 +5731,18 @@ function BasesView({
                     </select>
                   </td>
                   <td className="px-6 py-4 flex items-center space-x-2">
-                    <button 
-                      onClick={() => {
-                        setSelectedEntry(entry);
-                        setSelectorOpen(true);
-                      }}
-                      disabled={invalidBaseIds.has(entry.id)}
-                      className={cn("text-emerald-600 font-bold text-sm flex items-center space-x-1", invalidBaseIds.has(entry.id) ? "opacity-30 cursor-not-allowed" : "hover:text-emerald-700")}
-                    >
-                      <MessageSquare size={14} />
-                      <span>WhatsApp</span>
-                    </button>
+                    {!invalidBaseIds.has(entry.id) && (
+                      <button 
+                        onClick={() => {
+                          setSelectedEntry(entry);
+                          setSelectorOpen(true);
+                        }}
+                        className="text-emerald-600 font-bold text-sm flex items-center space-x-1 hover:text-emerald-700"
+                      >
+                        <MessageSquare size={14} />
+                        <span>WhatsApp</span>
+                      </button>
+                    )}
                     <button 
                       onClick={() => handleDeleteBase(entry.id)}
                       className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
@@ -5813,7 +5790,7 @@ function BasesView({
         onSelect={(msg) => {}}
         botConfig={botConfig}
         onSendBot={(msgTemplate) => {
-          const selectedLeadObjs = bases.filter(b => selectedEntries.includes(b.id));
+          const selectedLeadObjs = bases.filter(b => selectedEntries.includes(b.id) && !invalidBaseIds.has(b.id));
           const messagesPayload = selectedLeadObjs.map(l => ({
             telefone: l.telefone,
             message: replaceMessageVariables(msgTemplate, l)
