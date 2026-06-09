@@ -56,6 +56,9 @@ export interface CalendarioAcao {
   statusPagamentoPromotores?: { [promoterUid: string]: 'Agendada' | 'Recusada' | 'Realizada' };
   colaboradorId?: string;
   colaboradorNome?: string;
+  tipoAtividade?: 'Ação' | 'Visita';
+  empresaParceiraId?: string;
+  empresaParceiraNome?: string;
 }
 
 export interface Campanha {
@@ -74,6 +77,7 @@ export interface Lead {
   telefone: string;
   cpf?: string;
   cursoInteresse?: string;
+  empresa?: string;
   status: 'Pendente' | 'Sem retorno' | 'Interessado' | 'Não Interessado' | 'Convertido';
   createdAt: any;
   promotorId: string;
@@ -216,6 +220,7 @@ export interface EmpresaParceira {
   endereco: string;
   linkMaps: string;
   createdAt: any;
+  unidadesVinculadas?: string[];
 }
 
 export interface WhatsAppMessage {

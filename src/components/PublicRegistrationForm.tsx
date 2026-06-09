@@ -7,7 +7,8 @@ import {
   GraduationCap, 
   CheckCircle2, 
   AlertCircle,
-  BookOpen
+  BookOpen,
+  Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, COLLECTIONS, handleFirestoreError, OperationType } from '../firebase';
@@ -25,17 +26,37 @@ export function PublicRegistrationForm({ onToast }: PublicRegistrationFormProps)
     cpf: '',
     email: '',
     tipoCurso: 'Graduação' as 'Graduação' | 'Técnico' | 'Pós graduação',
-    cursoInteresse: ''
+    cursoInteresse: '',
+    empresa: '',
+    outraEmpresa: ''
   });
 
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [referrerProfile, setReferrerProfile] = useState<UserProfile | null>(null);
   const [referrerLoading, setReferrerLoading] = useState(true);
+  const [empresas, setEmpresas] = useState<{ id: string; nome: string }[]>([]);
 
   // Get ref parameter from search URL
   const params = new URLSearchParams(window.location.search);
   const referrerId = params.get('ref') || '';
+
+  // Load empresas parceiras
+  useEffect(() => {
+    const fetchEmpresas = async () => {
+      try {
+        const snap = await getDocs(collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS));
+        const list = snap.docs.map(doc => ({
+          id: doc.id,
+          nome: doc.data().nome || ''
+        })).filter(e => e.nome);
+        setEmpresas(list);
+      } catch (err) {
+        console.error("Error fetching partner companies for public form:", err);
+      }
+    };
+    fetchEmpresas();
+  }, []);
 
   // Load promoter/referrer info
   useEffect(() => {
@@ -159,6 +180,8 @@ export function PublicRegistrationForm({ onToast }: PublicRegistrationFormProps)
       }
 
       // 3. Assemble document payload complying exactly with schema
+      const empresaParaSalvar = formData.empresa === 'Outros' ? formData.outraEmpresa.trim() : formData.empresa;
+
       const leadPayload: any = {
         acao: 'Ação ( formulario)',
         nome: formData.nome.trim(),
@@ -175,6 +198,10 @@ export function PublicRegistrationForm({ onToast }: PublicRegistrationFormProps)
         promotorRole,
         servidor
       };
+
+      if (empresaParaSalvar) {
+        leadPayload.empresa = empresaParaSalvar;
+      }
 
       if (linkadoA) {
         leadPayload.linkadoA = linkadoA;
@@ -375,6 +402,47 @@ export function PublicRegistrationForm({ onToast }: PublicRegistrationFormProps)
                       />
                     </div>
                   </div>
+
+                  {/* Empresa */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Empresa / Convênio / Escola</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <Briefcase size={16} />
+                      </div>
+                      <select
+                        name="empresa"
+                        value={formData.empresa}
+                        onChange={handleInputChange}
+                        className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all font-bold text-slate-800 appearance-none bg-no-repeat bg-[right_1rem_center] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%20%22%20fill%3D%22%23475569%22%3E%3Cpath%20d%3D%22M7%2010l5%205%205-5H7z%22%2F%3E%3C%2Fsvg%3E')]"
+                      >
+                        <option value="">Selecione uma Empresa Parceira (opcional)</option>
+                        {empresas.map(emp => (
+                          <option key={emp.id} value={emp.nome}>{emp.nome}</option>
+                        ))}
+                        <option value="Outros">Outros (Digitar nome)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {formData.empresa === 'Outros' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="space-y-1"
+                    >
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nome da Empresa</label>
+                      <input
+                        type="text"
+                        name="outraEmpresa"
+                        required
+                        value={formData.outraEmpresa}
+                        onChange={handleInputChange}
+                        placeholder="Nome da sua empresa ou escola"
+                        className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all font-medium text-slate-800"
+                      />
+                    </motion.div>
+                  )}
 
                   <button
                     type="submit"

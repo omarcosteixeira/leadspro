@@ -179,7 +179,7 @@ service cloud.firestore {
       allow write: if isAdminMaster() || isLider() || isGestorUnidade() || isGestorComercial();
     }
     match /artifacts/gestaopro-761e1/public/data/empresas_parceiras/{id} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create, update: if (isAdminMaster() || isLider()) && isValidEmpresa(request.resource.data);
       allow delete: if isAdminMaster() || isLider();
     }

@@ -2805,7 +2805,7 @@ export default function App() {
               { id: 'basesDisparo', label: 'Bases de Disparo', icon: Globe },
               { id: 'basesRenovacao', label: 'Base Líquida', icon: Database },
               { id: 'campanhas', label: 'Campanhas', icon: Megaphone },
-              { id: 'calendario', label: 'Calendário de Ações', icon: Calendar },
+              { id: 'calendario', label: 'Plano de Ação', icon: Calendar },
               { id: 'empresas', label: 'Empresas Parceiras', icon: Building2 },
               { id: 'calculo', label: 'Cálculo de Remuneração', icon: Calculator },
               { id: 'controlePagamentos', label: 'Controle de Pagamentos', icon: Coins },
@@ -2939,6 +2939,7 @@ export default function App() {
                 <EmpresasParceirasView 
                   data={empresasParceiras} 
                   onToast={showToast} 
+                  cursos={cursos}
                   onGenerateAction={(empresa) => {
                     setInitialActionData({
                       nome: `Ação na empresa ${empresa.nome}`,
@@ -4913,6 +4914,9 @@ function HistoricoView({
                       <span className="text-xs text-slate-500">{formatPhone(lead.telefone)}</span>
                       {lead.cursoInteresse && (
                         <span className="text-xs text-slate-600 font-medium">Curso: {lead.cursoInteresse}</span>
+                      )}
+                      {lead.empresa && (
+                        <span className="text-[11px] text-indigo-600 font-bold mt-0.5 bg-indigo-50/60 border border-indigo-100/40 px-2 py-0.5 rounded-md self-start">Empresa: {lead.empresa}</span>
                       )}
                       {lead.cpf && (
                         <span className="text-xs text-slate-400">CPF: {formatCPF(lead.cpf)}</span>
@@ -7102,14 +7106,16 @@ function CalendarioAcoesView({
   profile,
   initialData,
   onClearInitialData,
-  users
+  users,
+  empresasParceiras = []
 }: { 
   data: CalendarioAcao[], 
   onToast: (m: string, t?: 'success' | 'error') => void, 
   profile: UserProfile,
   initialData?: Partial<CalendarioAcao> | null,
   onClearInitialData?: () => void,
-  users: UserProfile[]
+  users: UserProfile[],
+  empresasParceiras?: EmpresaParceira[]
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'concluida' | 'pendente'>('all');
@@ -7133,7 +7139,10 @@ function CalendarioAcoesView({
     valorPromotor: '' as number | '',
     valorOrcado: '' as number | '',
     colaboradorId: '',
-    colaboradorNome: ''
+    colaboradorNome: '',
+    tipoAtividade: 'Ação' as 'Ação' | 'Visita',
+    empresaParceiraId: '',
+    empresaParceiraNome: ''
   });
 
   const promotoresDisponiveis = (users || []).filter(u => u.role === ROLES.PROMOTOR || u.role === ROLES.PROMOTOR_RUA);
@@ -7156,7 +7165,10 @@ function CalendarioAcoesView({
         valorPromotor: (initialData as any).valorPromotor !== undefined ? (initialData as any).valorPromotor : '',
         valorOrcado: (initialData as any).valorOrcado !== undefined ? (initialData as any).valorOrcado : '',
         colaboradorId: (initialData as any).colaboradorId || '',
-        colaboradorNome: (initialData as any).colaboradorNome || ''
+        colaboradorNome: (initialData as any).colaboradorNome || '',
+        tipoAtividade: (initialData as any).tipoAtividade || 'Ação',
+        empresaParceiraId: (initialData as any).empresaParceiraId || '',
+        empresaParceiraNome: (initialData as any).empresaParceiraNome || ''
       });
       setIsAdding(true);
       if (onClearInitialData) onClearInitialData();
@@ -7227,7 +7239,10 @@ function CalendarioAcoesView({
         valorPromotor: '',
         valorOrcado: '',
         colaboradorId: '',
-        colaboradorNome: ''
+        colaboradorNome: '',
+        tipoAtividade: 'Ação',
+        empresaParceiraId: '',
+        empresaParceiraNome: ''
       });
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, COLLECTIONS.CALENDARIO_ACOES);
@@ -7375,7 +7390,7 @@ function CalendarioAcoesView({
             <Calendar size={24} />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Calendário de Ações</h2>
+            <h2 className="text-2xl font-bold text-slate-900">Plano de Ação</h2>
             <p className="text-slate-500 text-sm">Gerencie as ações e eventos da equipe</p>
           </div>
         </div>
@@ -7494,7 +7509,10 @@ function CalendarioAcoesView({
                       valorPromotor: action.valorPromotor !== undefined ? action.valorPromotor : '',
                       valorOrcado: action.valorOrcado !== undefined ? action.valorOrcado : '',
                       colaboradorId: action.colaboradorId || '',
-                      colaboradorNome: action.colaboradorNome || ''
+                      colaboradorNome: action.colaboradorNome || '',
+                      tipoAtividade: action.tipoAtividade || 'Ação',
+                      empresaParceiraId: action.empresaParceiraId || '',
+                      empresaParceiraNome: action.empresaParceiraNome || ''
                     });
                     setIsAdding(true);
                   }}
@@ -7509,6 +7527,23 @@ function CalendarioAcoesView({
                   <Trash2 size={16} />
                 </button>
               </div>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 mb-2 shrink-0">
+              <span className={cn(
+                "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border",
+                action.tipoAtividade === 'Visita'
+                  ? "bg-amber-50 text-amber-600 border-amber-200/60"
+                  : "bg-indigo-50 text-indigo-600 border-indigo-200/60"
+              )}>
+                {action.tipoAtividade || 'Ação'}
+              </span>
+              {action.empresaParceiraNome && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200/60 flex items-center gap-1">
+                  <Building2 size={10} />
+                  {action.empresaParceiraNome}
+                </span>
+              )}
             </div>
 
             <h3 className="text-lg font-bold text-slate-900 mb-1">{action.nome}</h3>
@@ -7732,14 +7767,50 @@ function CalendarioAcoesView({
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Nome da Ação *</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Nome da Ação / Visita *</label>
                 <input 
                   required
                   value={newAction.nome}
                   onChange={e => setNewAction({...newAction, nome: e.target.value})}
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  placeholder="Ex: Blitz no Centro"
+                  placeholder="Ex: Blitz no Centro ou Visita Institucional"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Tipo de Atividade *</label>
+                  <select
+                    value={newAction.tipoAtividade}
+                    onChange={e => setNewAction({...newAction, tipoAtividade: e.target.value as 'Ação' | 'Visita'})}
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white font-semibold text-slate-700"
+                  >
+                    <option value="Ação">Ação</option>
+                    <option value="Visita">Visita</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Empresa Vinculada (Opcional)</label>
+                  <select
+                    value={newAction.empresaParceiraId}
+                    onChange={e => {
+                      const selId = e.target.value;
+                      const selEmp = empresasParceiras.find(emp => emp.id === selId);
+                      setNewAction({
+                        ...newAction,
+                        empresaParceiraId: selId,
+                        empresaParceiraNome: selEmp ? selEmp.nome : '',
+                        local: selEmp ? (selEmp.endereco || newAction.local) : newAction.local
+                      });
+                    }}
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white text-slate-700 font-medium"
+                  >
+                    <option value="">Nenhuma (Não vincular)</option>
+                    {empresasParceiras.map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.nome}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -7951,15 +8022,30 @@ function CalendarioAcoesView({
 function EmpresasParceirasView({ 
   data, 
   onToast, 
-  onGenerateAction 
+  onGenerateAction,
+  cursos = []
 }: { 
   data: EmpresaParceira[], 
   onToast: (m: string, t?: 'success' | 'error') => void,
-  onGenerateAction: (empresa: EmpresaParceira) => void
+  onGenerateAction: (empresa: EmpresaParceira) => void,
+  cursos?: CursoDisponivel[]
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmpresa, setEditingEmpresa] = useState<EmpresaParceira | null>(null);
+  const [selectedUnidades, setSelectedUnidades] = useState<string[]>([]);
+
+  const uniqueUnidades = useMemo(() => {
+    return Array.from(new Set((cursos || []).map(c => c.nomeUnidade).filter(Boolean)));
+  }, [cursos]);
+
+  useEffect(() => {
+    if (editingEmpresa) {
+      setSelectedUnidades(editingEmpresa.unidadesVinculadas || []);
+    } else {
+      setSelectedUnidades([]);
+    }
+  }, [editingEmpresa, isModalOpen]);
 
   const filteredData = data.filter(emp => 
     emp.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -7977,6 +8063,7 @@ function EmpresasParceirasView({
       email: formData.get('email') as string,
       endereco: formData.get('endereco') as string,
       linkMaps: formData.get('linkMaps') as string,
+      unidadesVinculadas: selectedUnidades,
       updatedAt: serverTimestamp(),
     };
 
@@ -8143,6 +8230,19 @@ function EmpresasParceirasView({
                   <span className="truncate">{emp.endereco}</span>
                 </div>
               </div>
+
+              {emp.unidadesVinculadas && emp.unidadesVinculadas.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-slate-100 mb-4">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">Unidades Vinculadas</span>
+                  <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
+                    {emp.unidadesVinculadas.map(uni => (
+                      <span key={uni} className="text-[9px] font-bold bg-indigo-50/60 text-indigo-600 border border-indigo-100/40 p-1 px-2 rounded-md truncate max-w-[150px]" title={uni}>
+                        {uni}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col space-y-2">
@@ -8213,6 +8313,51 @@ function EmpresasParceirasView({
                   <label className="block text-sm font-bold text-slate-700 mb-1">Link no Maps</label>
                   <input name="linkMaps" defaultValue={editingEmpresa?.linkMaps} placeholder="https://goo.gl/maps/..." className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
                 </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Unidades Vinculadas</label>
+                  {uniqueUnidades.length === 0 ? (
+                    <span className="text-xs text-slate-400 italic block">Nenhuma unidade cadastrada em Cursos Disponíveis.</span>
+                  ) : (
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50">
+                      <label className="flex items-center space-x-2 pb-1.5 mb-1.5 border-b border-slate-200 cursor-pointer text-xs font-bold text-blue-600">
+                        <input
+                          type="checkbox"
+                          checked={selectedUnidades.length === uniqueUnidades.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedUnidades(uniqueUnidades);
+                            } else {
+                              setSelectedUnidades([]);
+                            }
+                          }}
+                          className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                        />
+                        <span>Selecionar Todas ({uniqueUnidades.length})</span>
+                      </label>
+                      {uniqueUnidades.map(unidade => {
+                        const isChecked = selectedUnidades.includes(unidade);
+                        return (
+                          <label key={unidade} className="flex items-center space-x-2 text-xs font-medium text-slate-700 cursor-pointer py-0.5 hover:text-slate-900">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                const next = isChecked 
+                                  ? selectedUnidades.filter(u => u !== unidade)
+                                  : [...selectedUnidades, unidade];
+                                setSelectedUnidades(next);
+                              }}
+                              className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                            />
+                            <span>{unidade}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">
                   {editingEmpresa ? 'Salvar Alterações' : 'Cadastrar Empresa'}
                 </button>
@@ -11033,7 +11178,7 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
           <div className="p-12 text-center space-y-3">
             <span className="text-slate-400 text-lg block">Nenhum registro de pagamento qualificado.</span>
             <span className="text-slate-400 text-xs block max-w-md mx-auto">
-              Certifique-se de que os promotores estão escalados nas ações do Calendário de Ações e marque o comparecimento deles como confirmado ("Compareceu").
+              Certifique-se de que os promotores estão escalados nas ações do Plano de Ação e marque o comparecimento deles como confirmado ("Compareceu").
             </span>
           </div>
         ) : (
