@@ -332,6 +332,18 @@ const getWorkingDaysBetween = (startDateStr: string, endDateStr: string) => {
   return count;
 };
 
+const formatLocalDateString = (dateStr: string) => {
+  if (!dateStr) return '';
+  const dateOnly = dateStr.split('T')[0];
+  if (dateOnly.includes('-')) {
+    const parts = dateOnly.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+  }
+  return dateStr;
+};
+
 export const ROLES: Record<string, UserRole> = {
   ADMIN_MASTER: 'Admin Master',
   PROMOTOR: 'Promotor',
@@ -3954,7 +3966,7 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                       <div>
                         <p className="text-[10px] font-bold text-slate-400 uppercase">Inscrição</p>
                         <p className="text-xs font-bold text-slate-700">
-                          {new Date(p.inicioInscricao).toLocaleDateString('pt-BR')} - {new Date(p.fimInscricao).toLocaleDateString('pt-BR')}
+                          {formatLocalDateString(p.inicioInscricao)} - {formatLocalDateString(p.fimInscricao)}
                         </p>
                       </div>
                       <span className="text-xs font-bold text-blue-600">{getWorkingDaysBetween(p.inicioInscricao, p.fimInscricao)} dias</span>
@@ -3963,7 +3975,7 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                       <div>
                         <p className="text-[10px] font-bold text-slate-400 uppercase">Mat Fin</p>
                         <p className="text-xs font-bold text-slate-700">
-                          {new Date(p.inicioMatFin).toLocaleDateString('pt-BR')} - {new Date(p.fimMatFin).toLocaleDateString('pt-BR')}
+                          {formatLocalDateString(p.inicioMatFin)} - {formatLocalDateString(p.fimMatFin)}
                         </p>
                       </div>
                       <div className="text-right">
@@ -3975,7 +3987,7 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                       <div>
                         <p className="text-[10px] font-bold text-slate-400 uppercase">Mat Acad</p>
                         <p className="text-xs font-bold text-slate-700">
-                          {new Date(p.inicioMatAcad).toLocaleDateString('pt-BR')} - {new Date(p.fimMatAcad).toLocaleDateString('pt-BR')}
+                          {formatLocalDateString(p.inicioMatAcad)} - {formatLocalDateString(p.fimMatAcad)}
                         </p>
                       </div>
                       <span className="text-xs font-bold text-blue-600">{getWorkingDaysBetween(p.inicioMatAcad, p.fimMatAcad)} dias</span>
@@ -4121,6 +4133,15 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
     cursoInteresse: ''
   });
   const [loading, setLoading] = useState(false);
+  const [activeForm, setActiveForm] = useState<'lead' | 'promotor'>('lead');
+  const [promotorData, setPromotorData] = useState({
+    nome: '',
+    email: '',
+    cpf: '',
+    dataNascimento: '',
+    phone: '',
+    chavePix: ''
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -4173,75 +4194,256 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
     }
   };
 
+  const handlePromotorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const cleanCpf = promotorData.cpf.replace(/\D/g, '');
+    const cleanPhone = promotorData.phone.replace(/\D/g, '');
+    const cleanEmail = promotorData.email.trim();
+
+    if (!promotorData.nome || !cleanEmail || !cleanPhone) {
+      onToast("Por favor, preencha todos os campos obrigatórios (Nome, Email e Telefone).", "error");
+      return;
+    }
+
+    if (!cleanEmail.includes('@')) {
+      onToast("Formato de email inválido.", "error");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 1. Create promoter in Auth with standard base password using secondaryAuth
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, cleanEmail, '123456');
+      await updateProfile(userCredential.user, { displayName: `${promotorData.nome}|comercial` });
+      const newUid = userCredential.user.uid;
+
+      // 2. Create profile matching promoter/rua rules
+      const profileData: any = {
+        uid: newUid,
+        name: promotorData.nome,
+        email: cleanEmail,
+        cpf: cleanCpf,
+        dataNascimento: promotorData.dataNascimento,
+        role: ROLES.PROMOTOR_RUA, // 'Promotor/rua'
+        servidor: 'comercial',    // specified for commercial
+        phone: cleanPhone,
+        chavePix: promotorData.chavePix,
+        blocked: false,
+        mustChangePassword: true,
+        linkadoA: profile.uid,     // linked to the creator FDV
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      // 3. Save profile document
+      await setDoc(doc(db, COLLECTIONS.USERS, newUid), profileData);
+
+      // 4. Sign out from secondary auth to avoid trace
+      await signOut(secondaryAuth);
+
+      onToast("Promotor/rua cadastrado com sucesso! Senha padrão: 123456", "success");
+      setPromotorData({ nome: '', email: '', cpf: '', dataNascimento: '', phone: '', chavePix: '' });
+      setActiveForm('lead');
+    } catch (err: any) {
+      console.error("Auth error details (Promoter Registration):", err);
+      let errorMsg = err.message;
+      if (err.code === 'auth/email-already-in-use' || err.message?.includes('email-already-in-use')) {
+        errorMsg = "Este email já está em uso.";
+      } else if (err.code === 'auth/weak-password' || err.message?.includes('weak-password')) {
+        errorMsg = "A senha de cadastro padrão deve conter pelo menos 6 caracteres.";
+      } else if (err.code === 'auth/invalid-email' || err.message?.includes('invalid-email')) {
+        errorMsg = "Endereço de email inválido.";
+      }
+      onToast(`Erro ao criar promotor: ${errorMsg}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-        <h3 className="text-2xl font-bold text-slate-900 mb-6">Cadastrar Novo Lead</h3>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-bold text-slate-700 mb-1">Ação / Origem</label>
-              <input 
-                type="text" 
-                required
-                value={formData.acao}
-                onChange={e => setFormData({...formData, acao: e.target.value})}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                placeholder="Ex: Evento Junino, Facebook, etc."
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-bold text-slate-700 mb-1">Nome do Candidato</label>
-              <input 
-                type="text" 
-                required
-                value={formData.nome}
-                onChange={e => setFormData({...formData, nome: e.target.value})}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                placeholder="Nome completo"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Telefone (WhatsApp)</label>
-              <input 
-                type="tel" 
-                required
-                value={formData.telefone}
-                onChange={e => setFormData({...formData, telefone: formatPhone(e.target.value)})}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                placeholder="DDD + Número"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">CPF (Opcional)</label>
-              <input 
-                type="text" 
-                value={formData.cpf}
-                onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                placeholder="000.000.000-00"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-bold text-slate-700 mb-1">Curso de Interesse</label>
-              <input 
-                type="text" 
-                value={formData.cursoInteresse}
-                onChange={e => setFormData({...formData, cursoInteresse: e.target.value})}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                placeholder="Ex: Administração, Direito..."
-              />
-            </div>
+        
+        {profile?.role === ROLES.FDV_COMERCIAL && (
+          <div className="flex space-x-2 bg-slate-50 p-1.5 rounded-2xl mb-6 border border-slate-100">
+            <button
+              type="button"
+              onClick={() => setActiveForm('lead')}
+              className={`flex-1 py-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-2 ${
+                activeForm === 'lead'
+                  ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow shadow-sky-500/20'
+                  : 'text-slate-400 hover:text-slate-700'
+              }`}
+            >
+              <UserPlus size={16} />
+              <span>Cadastrar Novo Lead</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveForm('promotor')}
+              className={`flex-1 py-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-2 ${
+                activeForm === 'promotor'
+                  ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow shadow-sky-500/20'
+                  : 'text-slate-400 hover:text-slate-700'
+              }`}
+            >
+              <Users size={16} />
+              <span>Cadastrar Promotor de Rua</span>
+            </button>
           </div>
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
-          >
-            <Plus size={20} />
-            <span>{loading ? 'Salvando...' : 'Salvar Lead'}</span>
-          </button>
-        </form>
+        )}
+
+        {activeForm === 'lead' ? (
+          <>
+            <h3 className="text-2xl font-bold text-slate-900 mb-6">Cadastrar Novo Lead</h3>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Ação / Origem</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.acao}
+                    onChange={e => setFormData({...formData, acao: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="Ex: Evento Junino, Facebook, etc."
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Nome do Candidato</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.nome}
+                    onChange={e => setFormData({...formData, nome: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="Nome completo"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Telefone (WhatsApp)</label>
+                  <input 
+                    type="tel" 
+                    required
+                    value={formData.telefone}
+                    onChange={e => setFormData({...formData, telefone: formatPhone(e.target.value)})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="DDD + Número"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">CPF (Opcional)</label>
+                  <input 
+                    type="text" 
+                    value={formData.cpf}
+                    onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="000.000.000-00"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Curso de Interesse</label>
+                  <input 
+                    type="text" 
+                    value={formData.cursoInteresse}
+                    onChange={e => setFormData({...formData, cursoInteresse: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="Ex: Administração, Direito..."
+                  />
+                </div>
+              </div>
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
+              >
+                <Plus size={20} />
+                <span>{loading ? 'Salvando...' : 'Salvar Lead'}</span>
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <h3 className="text-2xl font-bold text-slate-900 mb-2">Cadastrar Promotor de Rua</h3>
+            <p className="text-xs text-slate-500 mb-6 font-medium">Os promotores cadastrados por você ficarão automaticamente vinculados ao seu perfil de FDV e herdarão todas as regras de visualização do sistema.</p>
+            
+            <form onSubmit={handlePromotorSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Nome Completo *</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={promotorData.nome}
+                    onChange={e => setPromotorData({...promotorData, nome: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="Nome completo do promotor"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Email (Google institucional ou pessoal) *</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={promotorData.email}
+                    onChange={e => setPromotorData({...promotorData, email: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="exemplo@gmail.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Telefone / WhatsApp *</label>
+                  <input 
+                    type="tel" 
+                    required
+                    value={promotorData.phone}
+                    onChange={e => setPromotorData({...promotorData, phone: formatPhone(e.target.value)})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">CPF (Opcional)</label>
+                  <input 
+                    type="text" 
+                    value={promotorData.cpf}
+                    onChange={e => setPromotorData({...promotorData, cpf: formatCPF(e.target.value)})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="000.000.000-00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Data de Nascimento (Opcional)</label>
+                  <input 
+                    type="date" 
+                    value={promotorData.dataNascimento}
+                    onChange={e => setPromotorData({...promotorData, dataNascimento: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Chave PIX (Opcional)</label>
+                  <input 
+                    type="text" 
+                    value={promotorData.chavePix}
+                    onChange={e => setPromotorData({...promotorData, chavePix: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="CPF, E-mail, Telefone ou Aleatória"
+                  />
+                </div>
+              </div>
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
+              >
+                <Plus size={20} />
+                <span>{loading ? 'Cadastrando...' : 'Cadastrar Promotor de Rua'}</span>
+              </button>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );
@@ -6938,18 +7140,6 @@ function CalendarioAcoesView({
   const [endDateFilter, setEndDateFilter] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingAction, setEditingAction] = useState<CalendarioAcao | null>(null);
-
-  const formatLocalDateString = (dateStr: string) => {
-    if (!dateStr) return '';
-    const dateOnly = dateStr.split('T')[0];
-    if (dateOnly.includes('-')) {
-      const parts = dateOnly.split('-');
-      if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-      }
-    }
-    return dateStr;
-  };
   
   const [newAction, setNewAction] = useState({
     nome: '',
@@ -9543,7 +9733,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 <div key={card.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
                   <div>
                     <p className="font-bold text-slate-900">{card.titulo}</p>
-                    <p className="text-[10px] text-slate-500">{new Date(card.data).toLocaleDateString()}</p>
+                    <p className="text-[10px] text-slate-500">{formatLocalDateString(card.data)}</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button 
@@ -9937,15 +10127,15 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-4 font-bold text-slate-900">{p.nome}</td>
                       <td className="px-4 py-4">
-                        <p className="text-slate-700">{new Date(p.inicioInscricao).toLocaleDateString('pt-BR')} - {new Date(p.fimInscricao).toLocaleDateString('pt-BR')}</p>
+                        <p className="text-slate-700">{formatLocalDateString(p.inicioInscricao)} - {formatLocalDateString(p.fimInscricao)}</p>
                         <p className="text-blue-600 font-bold">{getWorkingDaysBetween(p.inicioInscricao, p.fimInscricao)} dias úteis</p>
                       </td>
                       <td className="px-4 py-4">
-                        <p className="text-slate-700">{new Date(p.inicioMatFin).toLocaleDateString('pt-BR')} - {new Date(p.fimMatFin).toLocaleDateString('pt-BR')}</p>
+                        <p className="text-slate-700">{formatLocalDateString(p.inicioMatFin)} - {formatLocalDateString(p.fimMatFin)}</p>
                         <p className="text-blue-600 font-bold">{getWorkingDaysBetween(p.inicioMatFin, p.fimMatFin)} dias úteis</p>
                       </td>
                       <td className="px-4 py-4">
-                        <p className="text-slate-700">{new Date(p.inicioMatAcad).toLocaleDateString('pt-BR')} - {new Date(p.fimMatAcad).toLocaleDateString('pt-BR')}</p>
+                        <p className="text-slate-700">{formatLocalDateString(p.inicioMatAcad)} - {formatLocalDateString(p.fimMatAcad)}</p>
                         <p className="text-blue-600 font-bold">{getWorkingDaysBetween(p.inicioMatAcad, p.fimMatAcad)} dias úteis</p>
                       </td>
                       <td className="px-4 py-4">
