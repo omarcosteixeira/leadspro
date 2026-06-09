@@ -2194,31 +2194,56 @@ export default function App() {
      if (messages.length === 0) return;
      if (!window.confirm(`Deseja iniciar o envio em massa via bot para ${messages.length} contatos?`)) return;
      
-     setMassSendProgress({ total: messages.length, sent: 0, active: true, info: 'Iniciando...' });
+     setMassSendProgress({ total: messages.length, sent: 0, active: true, info: 'Iniciando envio para a fila...' });
      
+     const currentBotNumber = profile?.botNumber;
+     let safeBotNumber = currentBotNumber ? currentBotNumber.replace(/\D/g, '') : '';
+     const isUserBotOnline = safeBotNumber && (botStatuses as any)[safeBotNumber]?.status === 'online';
+     if (!isUserBotOnline) {
+       const firstOnlineBot = Object.entries(botStatuses).find(([_, info]) => (info as any)?.status === 'online')?.[0];
+       if (firstOnlineBot) {
+         safeBotNumber = firstOnlineBot;
+       } else {
+         const botNumbers = Object.keys(botStatuses || {});
+         safeBotNumber = botNumbers.find(num => botStatuses[num]?.status === 'connected') || botNumbers[0] || '';
+       }
+     }
+
+
      let sentCount = 0;
-     for (let i = 0; i < messages.length; i++) {
-        if (i > 0) {
-           if (sentCount % 5 === 0) {
-              setMassSendProgress(prev => ({ ...prev, info: `Pausa de 2 min... (${sentCount}/${messages.length})` }));
-              await new Promise(resolve => setTimeout(resolve, 120000));
-           } else {
-              setMassSendProgress(prev => ({ ...prev, info: `Aguardando 30s... (${sentCount}/${messages.length})` }));
-              await new Promise(resolve => setTimeout(resolve, 30000));
-           }
+     
+     const sendPromises = messages.map(async (msg) => {
+        let rawPhone = msg.telefone.replace(/\D/g, '');
+        if (rawPhone.startsWith('0')) rawPhone = rawPhone.substring(1);
+        if (rawPhone.length === 10 || rawPhone.length === 11) {
+          rawPhone = `55${rawPhone}`;
         }
 
-        setMassSendProgress(prev => ({ ...prev, info: `Enviando... (${sentCount + 1}/${messages.length})` }));
         try {
-           await handleSendBotMessage(messages[i].telefone, messages[i].message);
+           await callBotApi('/api/send', {
+              method: 'POST',
+              body: { botNumber: safeBotNumber, number: rawPhone, message: msg.message, force: true, manual: true }
+           });
         } catch(e) {
-           console.error("Error sending bot message in mass: ", e);
+           console.error("Erro ao enfileirar mensagem para o bot:", e);
+        } finally {
+           sentCount++;
+           setMassSendProgress(prev => ({
+              ...prev,
+              sent: sentCount,
+              info: `Enfileirando... (${sentCount}/${messages.length})`
+           }));
         }
-        sentCount++;
-     }
+     });
+
+     await Promise.all(sendPromises);
      
-     setMassSendProgress({ total: 0, sent: 0, active: false, info: '' });
-     showToast("Envio em massa concluído!", "success");
+     setMassSendProgress(prev => ({ ...prev, info: 'Concluído!' }));
+     setTimeout(() => {
+        setMassSendProgress({ total: 0, sent: 0, active: false, info: '' });
+     }, 2000);
+
+     showToast("Envio em massa adicionado com sucesso à fila do Bot Railway!", "success");
   };
 
   useEffect(() => {
