@@ -2143,11 +2143,6 @@ export default function App() {
   };
 
   const handleSendBotMessage = async (telefone: string, message: string) => {
-    if (!botConfig.url) {
-      showToast('O Bot ARGO\'S não está configurado na URL principal.', 'error');
-      return;
-    }
-
     const currentBotNumber = profile?.botNumber;
     let safeBotNumber = currentBotNumber ? currentBotNumber.replace(/\D/g, '') : '';
     
@@ -2545,26 +2540,24 @@ export default function App() {
     testConnection();
   }, []);
 
-  useEffect(() => {
-    if (!botConfig.url) return;
-    
-    let intervalId: NodeJS.Timeout;
-    
-    const checkBotStatus = async () => {
-      try {
-        const data = await callBotApi('/api/status');
-        if (data && data.bots) {
-          setBotStatuses(data.bots);
-        }
-      } catch (e: any) {
-        console.debug("Bot check fail via proxy:", e.message);
-      }
-    };
-    
-    checkBotStatus();
-    intervalId = setInterval(checkBotStatus, 3000);
-    return () => clearInterval(intervalId);
-  }, [botConfig.url]);
+   useEffect(() => {
+     let intervalId: NodeJS.Timeout;
+     
+     const checkBotStatus = async () => {
+       try {
+         const data = await callBotApi('/api/status');
+         if (data && data.bots) {
+           setBotStatuses(data.bots);
+         }
+       } catch (e: any) {
+         console.debug("Bot check fail via proxy:", e.message);
+       }
+     };
+     
+     checkBotStatus();
+     intervalId = setInterval(checkBotStatus, 3000);
+     return () => clearInterval(intervalId);
+   }, [botConfig.url]);
 
   const knownLeadsRef = React.useRef<Set<string> | null>(null);
   const knownCampanhasRef = React.useRef<Set<string> | null>(null);
