@@ -86,7 +86,8 @@ import {
   CheckSquare,
   Square,
   Coins,
-  BookOpen
+  BookOpen,
+  Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, firebaseConfigPrincipal, firebaseConfigComercial } from './firebase';
@@ -8024,6 +8025,11 @@ function EmpresasParceirasView({
   cursos?: CursoDisponivel[]
 }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('Todas');
+  const [unidadeFilter, setUnidadeFilter] = useState<string>('Todas');
+  const [seguimentoFilter, setSeguimentoFilter] = useState<string>('Todos');
+  const [classificacaoFilter, setClassificacaoFilter] = useState<string>('Todas');
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmpresa, setEditingEmpresa] = useState<EmpresaParceira | null>(null);
   const [selectedUnidades, setSelectedUnidades] = useState<string[]>([]);
@@ -8031,6 +8037,10 @@ function EmpresasParceirasView({
   const uniqueUnidades = useMemo(() => {
     return Array.from(new Set((cursos || []).map(c => c.nomeUnidade).filter(Boolean)));
   }, [cursos]);
+
+  const uniqueSeguimentos = useMemo(() => {
+    return Array.from(new Set(data.map(d => d.seguimento).filter(Boolean) as string[])).sort();
+  }, [data]);
 
   useEffect(() => {
     if (editingEmpresa) {
@@ -8040,11 +8050,26 @@ function EmpresasParceirasView({
     }
   }, [editingEmpresa, isModalOpen]);
 
-  const filteredData = data.filter(emp => 
-    emp.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.responsavel.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredData = data.filter(emp => {
+    const term = searchTerm.toLowerCase();
+    const matchBusca = emp.nome.toLowerCase().includes(term) || (emp.cnpj || '').toLowerCase().includes(term);
+    const matchStatus = statusFilter === 'Todas' || emp.statusEmpresa === statusFilter;
+    const matchUnidade = unidadeFilter === 'Todas' || (emp.unidadesVinculadas || []).includes(unidadeFilter);
+    const matchSeguimento = seguimentoFilter === 'Todos' || emp.seguimento === seguimentoFilter;
+    const matchClassificacao = classificacaoFilter === 'Todas' || emp.classificacao === classificacaoFilter;
+
+    return matchBusca && matchStatus && matchUnidade && matchSeguimento && matchClassificacao;
+  });
+
+  // Calculate Dashboard metrics based on filtered output
+  const kpiTotais = filteredData.length;
+  const statConveniada = filteredData.filter(e => e.statusEmpresa === 'Conveniada').length;
+  const statEmTratativa = filteredData.filter(e => e.statusEmpresa === 'Em tratativa').length;
+  const statCancelada = filteredData.filter(e => e.statusEmpresa === 'Cancelada').length;
+  const statNaoVisitada = filteredData.filter(e => e.statusEmpresa === 'Não visitada').length;
+  const classOuro = filteredData.filter(e => e.classificacao === 'Ouro').length;
+  const classPrata = filteredData.filter(e => e.classificacao === 'Prata').length;
+  const classBronze = filteredData.filter(e => e.classificacao === 'Bronze').length;
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -8053,9 +8078,15 @@ function EmpresasParceirasView({
       nome: formData.get('nome') as string,
       responsavel: formData.get('responsavel') as string,
       telefone: formData.get('telefone') as string,
+      telefoneResponsavel: formData.get('telefoneResponsavel') as string,
       email: formData.get('email') as string,
       endereco: formData.get('endereco') as string,
       linkMaps: formData.get('linkMaps') as string,
+      classificacao: formData.get('classificacao') as string,
+      seguimento: formData.get('seguimento') as string,
+      cnpj: formData.get('cnpj') as string,
+      statusEmpresa: formData.get('statusEmpresa') as string,
+      linkSales: formData.get('linkSales') as string,
       unidadesVinculadas: selectedUnidades,
       updatedAt: serverTimestamp(),
     };
@@ -8096,11 +8127,17 @@ function EmpresasParceirasView({
   const handleExport = () => {
     const exportData = filteredData.map(emp => ({
       Nome: emp.nome,
+      CNPJ: emp.cnpj || '',
       Responsável: emp.responsavel,
       Telefone: emp.telefone,
+      'Telefone Responsável': emp.telefoneResponsavel || '',
       Email: emp.email,
       Endereço: emp.endereco,
-      'Link Maps': emp.linkMaps
+      Seguimento: emp.seguimento || '',
+      Classificação: emp.classificacao || '',
+      Status: emp.statusEmpresa || '',
+      'Link Maps': emp.linkMaps,
+      'Link Sales': emp.linkSales || ''
     }));
     exportToExcel(exportData, 'Empresas_Parceiras');
   };
@@ -8113,11 +8150,17 @@ function EmpresasParceirasView({
       try {
         const batch = importData.map(item => ({
           nome: item.Nome || item.nome || '',
+          cnpj: item.CNPJ || item.cnpj || '',
           responsavel: item.Responsável || item.responsavel || '',
           telefone: String(item.Telefone || item.telefone || ''),
+          telefoneResponsavel: String(item['Telefone Responsável'] || item.telefoneResponsavel || ''),
           email: item.Email || item.email || '',
           endereco: item.Endereço || item.endereco || '',
+          seguimento: item.Seguimento || item.seguimento || '',
+          classificacao: item.Classificação || item.classificacao || '',
+          statusEmpresa: item.Status || item.statusEmpresa || '',
           linkMaps: item['Link Maps'] || item.linkMaps || '',
+          linkSales: item['Link Sales'] || item.linkSales || '',
           createdAt: serverTimestamp()
         }));
 
@@ -8176,26 +8219,113 @@ function EmpresasParceirasView({
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 col-span-2 flex items-center space-x-4">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+            <Building2 size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-slate-500 font-medium">Total Empresas</p>
+            <p className="text-2xl font-black text-slate-900">{kpiTotais}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 col-span-2 lg:col-span-3 space-y-2">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Por Status</p>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="flex justify-between items-center"><span className="text-emerald-600 font-medium text-xs">Conveniada</span><span className="font-bold text-slate-700">{statConveniada}</span></div>
+            <div className="flex justify-between items-center"><span className="text-amber-600 font-medium text-xs">Em Tratativa</span><span className="font-bold text-slate-700">{statEmTratativa}</span></div>
+            <div className="flex justify-between items-center"><span className="text-rose-600 font-medium text-xs">Cancelada</span><span className="font-bold text-slate-700">{statCancelada}</span></div>
+            <div className="flex justify-between items-center"><span className="text-slate-500 font-medium text-xs">Não Visitada</span><span className="font-bold text-slate-700">{statNaoVisitada}</span></div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 col-span-2 lg:col-span-3 space-y-2">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Por Classificação</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+            <div className="bg-amber-100/50 p-2 rounded-lg flex flex-col items-center">
+              <span className="text-amber-700 font-bold text-xs uppercase">Ouro</span>
+              <span className="text-lg font-black text-amber-900">{classOuro}</span>
+            </div>
+            <div className="bg-slate-100/80 p-2 rounded-lg flex flex-col items-center">
+              <span className="text-slate-600 font-bold text-xs uppercase">Prata</span>
+              <span className="text-lg font-black text-slate-800">{classPrata}</span>
+            </div>
+            <div className="bg-orange-100/50 p-2 rounded-lg flex flex-col items-center">
+              <span className="text-orange-800 font-bold text-xs uppercase">Bronze</span>
+              <span className="text-lg font-black text-orange-900">{classBronze}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
             type="text" 
-            placeholder="Buscar por nome, responsável ou email..." 
+            placeholder="Buscar por nome da empresa ou CNPJ..." 
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
           />
         </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+              <option value="Todas">Todos</option>
+              <option value="Conveniada">Conveniada</option>
+              <option value="Em tratativa">Em Tratativa</option>
+              <option value="Cancelada">Cancelada</option>
+              <option value="Não visitada">Não Visitada</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Classificação</label>
+            <select value={classificacaoFilter} onChange={e => setClassificacaoFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+              <option value="Todas">Todas</option>
+              <option value="Ouro">Ouro</option>
+              <option value="Prata">Prata</option>
+              <option value="Bronze">Bronze</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Unidade Vinculada</label>
+            <select value={unidadeFilter} onChange={e => setUnidadeFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+              <option value="Todas">Todas</option>
+              {uniqueUnidades.map(u => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Seguimento</label>
+            <select value={seguimentoFilter} onChange={e => setSeguimentoFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+              <option value="Todos">Todos</option>
+              {uniqueSeguimentos.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredData.map(emp => (
-          <div key={emp.id} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between hover:border-blue-200 transition-all group">
+          <div key={emp.id} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between hover:border-blue-200 transition-all group relative">
+            
+            {emp.classificacao && (
+              <div className={cn("absolute -top-3 -right-3 text-[10px] font-black uppercase tracking-wider py-1 px-3 rounded-full shadow-sm border", 
+                emp.classificacao === 'Ouro' ? 'bg-amber-100 text-amber-800 border-amber-200' : 
+                emp.classificacao === 'Prata' ? 'bg-slate-100 text-slate-700 border-slate-300' : 
+                'bg-orange-100 text-orange-800 border-orange-200')}
+              >
+                {emp.classificacao}
+              </div>
+            )}
+            
             <div>
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{emp.nome}</h3>
-                <div className="flex space-x-1">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors pr-8">{emp.nome}</h3>
+                <div className="flex space-x-1 shrink-0">
                   <button onClick={() => { setEditingEmpresa(emp); setIsModalOpen(true); }} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all">
                     <Edit2 size={16} />
                   </button>
@@ -8205,14 +8335,53 @@ function EmpresasParceirasView({
                 </div>
               </div>
               
+              <div className="flex space-x-2 mb-4">
+                {emp.statusEmpresa && (
+                  <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", 
+                    emp.statusEmpresa === 'Conveniada' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                    emp.statusEmpresa === 'Em tratativa' ? 'bg-amber-50 text-amber-600 border-amber-200' :
+                    emp.statusEmpresa === 'Cancelada' ? 'bg-rose-50 text-rose-600 border-rose-200' :
+                    'bg-slate-50 text-slate-500 border-slate-200')}
+                  >
+                    {emp.statusEmpresa}
+                  </span>
+                )}
+                {emp.seguimento && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-indigo-50 text-indigo-600 border-indigo-200">
+                    {emp.seguimento}
+                  </span>
+                )}
+              </div>
+              
               <div className="space-y-3 mb-6">
+                {emp.cnpj && (
+                   <div className="flex items-center space-x-3 text-sm text-slate-600">
+                    <Briefcase size={16} className="text-slate-400" />
+                    <span className="font-mono text-xs">{emp.cnpj}</span>
+                  </div>
+                )}
+                <div className="flex flex-col space-y-1">
+                  <div className="flex items-center justify-between text-sm text-slate-600 pr-1">
+                    <div className="flex items-center space-x-3">
+                      <Phone size={16} className="text-slate-400" />
+                      <span>{formatPhone(emp.telefone)}</span>
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">Empresa</span>
+                  </div>
+                  {emp.telefoneResponsavel && (
+                    <div className="flex items-center justify-between text-sm text-slate-600 pr-1">
+                      <div className="flex items-center space-x-3">
+                        <Phone size={16} className="text-slate-400 opacity-50" />
+                        <span>{formatPhone(emp.telefoneResponsavel)}</span>
+                      </div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">Resp.</span>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="flex items-center space-x-3 text-sm text-slate-600">
                   <Users size={16} className="text-slate-400" />
                   <span>{emp.responsavel}</span>
-                </div>
-                <div className="flex items-center space-x-3 text-sm text-slate-600">
-                  <Phone size={16} className="text-slate-400" />
-                  <span>{formatPhone(emp.telefone)}</span>
                 </div>
                 <div className="flex items-center space-x-3 text-sm text-slate-600">
                   <Mail size={16} className="text-slate-400" />
@@ -8239,17 +8408,30 @@ function EmpresasParceirasView({
             </div>
 
             <div className="flex flex-col space-y-2">
-              {emp.linkMaps && (
-                <a 
-                  href={emp.linkMaps} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center space-x-2 w-full py-2 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-100 transition-all"
-                >
-                  <Globe size={14} />
-                  <span>Ver no Maps</span>
-                </a>
-              )}
+              <div className="grid grid-cols-2 gap-2">
+                {emp.linkMaps && (
+                  <a 
+                    href={emp.linkMaps} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center space-x-2 w-full py-2 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-100 transition-all border border-slate-200"
+                  >
+                    <Globe size={14} />
+                    <span>Maps</span>
+                  </a>
+                )}
+                {emp.linkSales && (
+                  <a 
+                    href={emp.linkSales} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center space-x-2 w-full py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-all border border-blue-200"
+                  >
+                    <ExternalLink size={14} />
+                    <span>Sales</span>
+                  </a>
+                )}
+              </div>
               <button 
                 onClick={() => onGenerateAction(emp)}
                 className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center space-x-2"
@@ -8269,92 +8451,142 @@ function EmpresasParceirasView({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden"
+              className="bg-white rounded-3xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col"
             >
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
                 <h3 className="text-xl font-bold text-slate-900">
                   {editingEmpresa ? 'Editar Empresa' : 'Nova Empresa Parceira'}
                 </h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                   <X size={24} />
                 </button>
               </div>
-              <form onSubmit={handleSave} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Nome da Empresa</label>
-                  <input name="nome" defaultValue={editingEmpresa?.nome} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Responsável</label>
-                  <input name="responsavel" defaultValue={editingEmpresa?.responsavel} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1">Telefone</label>
-                    <input name="telefone" defaultValue={editingEmpresa?.telefone} onChange={e => { e.target.value = formatPhone(e.target.value) }} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1">Email</label>
-                    <input name="email" type="email" defaultValue={editingEmpresa?.email} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Endereço</label>
-                  <input name="endereco" defaultValue={editingEmpresa?.endereco} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Link no Maps</label>
-                  <input name="linkMaps" defaultValue={editingEmpresa?.linkMaps} placeholder="https://goo.gl/maps/..." className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Unidades Vinculadas</label>
-                  {uniqueUnidades.length === 0 ? (
-                    <span className="text-xs text-slate-400 italic block">Nenhuma unidade cadastrada em Cursos Disponíveis.</span>
-                  ) : (
-                    <div className="space-y-1.5 max-h-36 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50">
-                      <label className="flex items-center space-x-2 pb-1.5 mb-1.5 border-b border-slate-200 cursor-pointer text-xs font-bold text-blue-600">
-                        <input
-                          type="checkbox"
-                          checked={selectedUnidades.length === uniqueUnidades.length}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedUnidades(uniqueUnidades);
-                            } else {
-                              setSelectedUnidades([]);
-                            }
-                          }}
-                          className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                        />
-                        <span>Selecionar Todas ({uniqueUnidades.length})</span>
-                      </label>
-                      {uniqueUnidades.map(unidade => {
-                        const isChecked = selectedUnidades.includes(unidade);
-                        return (
-                          <label key={unidade} className="flex items-center space-x-2 text-xs font-medium text-slate-700 cursor-pointer py-0.5 hover:text-slate-900">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {
-                                const next = isChecked 
-                                  ? selectedUnidades.filter(u => u !== unidade)
-                                  : [...selectedUnidades, unidade];
-                                setSelectedUnidades(next);
-                              }}
-                              className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                            />
-                            <span>{unidade}</span>
-                          </label>
-                        );
-                      })}
+              
+              <div className="overflow-y-auto flex-1">
+                <form id="empresaForm" onSubmit={handleSave} className="p-6 space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Nome da Empresa</label>
+                      <input name="nome" defaultValue={editingEmpresa?.nome} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
                     </div>
-                  )}
-                </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">CNPJ</label>
+                      <input name="cnpj" defaultValue={editingEmpresa?.cnpj} placeholder="00.000.000/0000-00" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                  </div>
 
-                <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Status</label>
+                      <select name="statusEmpresa" defaultValue={editingEmpresa?.statusEmpresa || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">Selecione...</option>
+                        <option value="Conveniada">Conveniada</option>
+                        <option value="Em tratativa">Em Tratativa</option>
+                        <option value="Cancelada">Cancelada</option>
+                        <option value="Não visitada">Não Visitada</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Classificação</label>
+                      <select name="classificacao" defaultValue={editingEmpresa?.classificacao || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">Nenhuma</option>
+                        <option value="Ouro">Ouro</option>
+                        <option value="Prata">Prata</option>
+                        <option value="Bronze">Bronze</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Seguimento</label>
+                      <input name="seguimento" defaultValue={editingEmpresa?.seguimento} placeholder="Ex: Educação, Varejo" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Responsável pela Parceria</label>
+                      <input name="responsavel" defaultValue={editingEmpresa?.responsavel} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Email</label>
+                      <input name="email" type="email" defaultValue={editingEmpresa?.email} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Telefone Principal (Empresa)</label>
+                      <input name="telefone" defaultValue={editingEmpresa?.telefone} onChange={e => { e.target.value = formatPhone(e.target.value) }} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Telefone do Responsável</label>
+                      <input name="telefoneResponsavel" defaultValue={editingEmpresa?.telefoneResponsavel} onChange={e => { e.target.value = formatPhone(e.target.value) }} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Endereço</label>
+                    <input name="endereco" defaultValue={editingEmpresa?.endereco} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Link no Maps</label>
+                      <input name="linkMaps" defaultValue={editingEmpresa?.linkMaps} placeholder="https://goo.gl/maps/..." className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Link do Sales de Vínculo</label>
+                      <input name="linkSales" defaultValue={editingEmpresa?.linkSales} placeholder="https://sales..." className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Unidades Vinculadas</label>
+                    {uniqueUnidades.length === 0 ? (
+                      <span className="text-xs text-slate-400 italic block">Nenhuma unidade cadastrada em Cursos Disponíveis.</span>
+                    ) : (
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50">
+                        <label className="flex items-center space-x-2 pb-1.5 mb-1.5 border-b border-slate-200 cursor-pointer text-xs font-bold text-blue-600">
+                          <input
+                            type="checkbox"
+                            checked={selectedUnidades.length === uniqueUnidades.length}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedUnidades(uniqueUnidades);
+                              } else {
+                                setSelectedUnidades([]);
+                              }
+                            }}
+                            className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                          />
+                          <span>Selecionar Todas ({uniqueUnidades.length})</span>
+                        </label>
+                        {uniqueUnidades.map(unidade => {
+                          const isChecked = selectedUnidades.includes(unidade);
+                          return (
+                            <label key={unidade} className="flex items-center space-x-2 text-xs font-medium text-slate-700 cursor-pointer py-0.5 hover:text-slate-900">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  const next = isChecked 
+                                    ? selectedUnidades.filter(u => u !== unidade)
+                                    : [...selectedUnidades, unidade];
+                                  setSelectedUnidades(next);
+                                }}
+                                className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                              />
+                              <span>{unidade}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </form>
+              </div>
+
+              <div className="p-6 border-t border-slate-100 shrink-0 bg-slate-50">
+                <button type="submit" form="empresaForm" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">
                   {editingEmpresa ? 'Salvar Alterações' : 'Cadastrar Empresa'}
                 </button>
-              </form>
+              </div>
             </motion.div>
           </div>
         )}

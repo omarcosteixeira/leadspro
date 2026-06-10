@@ -215,10 +215,16 @@ export interface EmpresaParceira {
   id: string;
   nome: string;
   responsavel: string;
-  telefone: string;
+  telefone: string; // company phone
   email: string;
   endereco: string;
   linkMaps: string;
+  telefoneResponsavel?: string;
+  classificacao?: 'Bronze' | 'Prata' | 'Ouro' | '';
+  seguimento?: string;
+  cnpj?: string;
+  statusEmpresa?: 'Conveniada' | 'Em tratativa' | 'Cancelada' | 'Não visitada' | '';
+  linkSales?: string;
   createdAt: any;
   unidadesVinculadas?: string[];
 }
