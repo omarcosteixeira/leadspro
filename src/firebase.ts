@@ -51,6 +51,8 @@ export const COLLECTIONS = {
   META_DIA: `artifacts/${appId}/public/data/meta_dia`,
   SOLICITACAO_FOLGA: `artifacts/${appId}/public/data/solicitacoes_folga`,
   CURSOS: `artifacts/${appId}/public/data/cursos`,
+  INSUMOS_PEDIDOS: `artifacts/${appId}/public/data/insumos_pedidos`,
+  INSUMOS_ESTOQUE: `artifacts/${appId}/public/data/insumos_estoque`,
 };
 
 export enum OperationType {

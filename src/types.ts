@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type UserRole = 'Admin Master' | 'Promotor' | 'FDV' | 'Sala de Matrícula' | 'QG' | 'Líder/FDV' | 'SSA' | 'Gestor Unidade' | 'Gestor Comercial' | 'Acadêmico' | 'Promotor/rua' | 'Gerente Comercial (Comercial)' | 'FDV (Comercial)' | 'Financeiro';
+export type UserRole = 'Admin Master' | 'Promotor' | 'FDV' | 'Sala de Matrícula' | 'QG' | 'Líder/FDV' | 'SSA' | 'Gestor Unidade' | 'Gestor Comercial' | 'Acadêmico' | 'Promotor/rua' | 'Gerente Comercial (Comercial)' | 'FDV (Comercial)' | 'Financeiro' | 'Técnico';
 
 export interface UserProfile {
   uid: string;
@@ -218,6 +218,7 @@ export interface EmpresaParceira {
   telefone: string; // company phone
   email: string;
   endereco: string;
+  bairro?: string;
   linkMaps: string;
   telefoneResponsavel?: string;
   classificacao?: 'Bronze' | 'Prata' | 'Ouro' | '';
@@ -330,3 +331,33 @@ export interface CursoDisponivel {
   turno?: string;
   createdAt: any;
 }
+
+export interface InsumoItem {
+  material: string;
+  quantidade: number;
+}
+
+export interface InsumoPedido {
+  id: string;
+  professorNome: string;
+  cursoNome: string;
+  disciplinaNome: string;
+  motivoUso: string;
+  itens: InsumoItem[];
+  status: 'Pendente' | 'Aprovado' | 'Rejeitado' | 'Em Andamento' | 'Entregue';
+  solicitanteId: string;
+  solicitanteNome: string;
+  createdAt: any;
+  updatedAt?: any;
+}
+
+export interface InsumoEstoque {
+  id: string;
+  material: string;
+  quantidade: number;
+  unidadeMedida?: string;
+  estoqueMinimo?: number;
+  descricao?: string;
+  updatedAt: any;
+}
+

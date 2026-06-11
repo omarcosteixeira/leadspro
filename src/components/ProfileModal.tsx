@@ -379,34 +379,48 @@ export function ProfileModal({
 
                   {/* Link de Cadastro Público */}
                   <div className="mt-4 pt-4 border-t border-slate-200">
-                    <div className="flex items-center space-x-2 text-blue-600 mb-2">
-                      <Link size={16} className="font-bold shrink-0" />
-                      <span className="text-xs font-bold uppercase tracking-wider">Link de Cadastro Exclusivo (Desconto)</span>
-                    </div>
-                    <p className="text-xs text-slate-500 mb-3 leading-relaxed">
-                      Preencha seus dados e ganhe um desconto especial. Compartilhe este link com novos alunos; todos os cadastros gerados por ele serão marcados sob sua autoria.
-                    </p>
-                    <div className="flex items-center space-x-2 bg-slate-150 p-1.5 rounded-xl border border-slate-200 bg-white">
-                      <input
-                        type="text"
-                        readOnly
-                        value={`${window.location.origin}?view=desconto&ref=${profile?.uid}`}
-                        className="flex-1 bg-transparent text-xs text-slate-600 outline-none px-2 select-all font-mono"
-                      />
-                      <button
-                        onClick={() => {
-                          const url = `${window.location.origin}?view=desconto&ref=${profile?.uid}`;
-                          navigator.clipboard.writeText(url);
-                          setCopied(true);
-                          setTimeout(() => setCopied(false), 2000);
-                          onToast("Link copiado de acordo com o seu perfil!", "success");
-                        }}
-                        className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
-                      >
-                        {copied ? <Check size={12} /> : <Copy size={12} />}
-                        {copied ? "Copiado!" : "Copiar"}
-                      </button>
-                    </div>
+                    {(() => {
+                      const isInsumoRole = profile?.role === 'Técnico' || profile?.role === 'Financeiro' || profile?.role === 'Acadêmico';
+                      const linkLabel = isInsumoRole ? "Link de Solicitação de Insumos (Público)" : "Link de Cadastro Exclusivo (Desconto)";
+                      const linkDescription = isInsumoRole 
+                        ? "Compartilhe este link com professores ou colaboradores para solicitar novos materiais de apoio livremente, sem precisar de login."
+                        : "Preencha seus dados e ganhe um desconto especial. Compartilhe este link com novos alunos; todos os cadastros gerados por ele serão marcados sob sua autoria.";
+                      const linkValue = isInsumoRole 
+                        ? `${window.location.origin}?view=pedido-insumos&ref=${profile?.uid}`
+                        : `${window.location.origin}?view=desconto&ref=${profile?.uid}`;
+
+                      return (
+                        <>
+                          <div className="flex items-center space-x-2 text-blue-600 mb-2">
+                            <Link size={16} className="font-bold shrink-0" />
+                            <span className="text-xs font-bold uppercase tracking-wider">{linkLabel}</span>
+                          </div>
+                          <p className="text-xs text-slate-500 mb-3 leading-relaxed">
+                            {linkDescription}
+                          </p>
+                          <div className="flex items-center space-x-2 bg-slate-150 p-1.5 rounded-xl border border-slate-200 bg-white">
+                            <input
+                              type="text"
+                              readOnly
+                              value={linkValue}
+                              className="flex-1 bg-transparent text-xs text-slate-600 outline-none px-2 select-all font-mono"
+                            />
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(linkValue);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 2000);
+                                onToast("Link copiado de acordo com o seu perfil!", "success");
+                              }}
+                              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                            >
+                              {copied ? <Check size={12} /> : <Copy size={12} />}
+                              {copied ? "Copiado!" : "Copiar"}
+                            </button>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

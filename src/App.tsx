@@ -87,7 +87,8 @@ import {
   Square,
   Coins,
   BookOpen,
-  Briefcase
+  Briefcase,
+  Boxes
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, firebaseConfigPrincipal, firebaseConfigComercial } from './firebase';
@@ -116,12 +117,16 @@ import {
   BotConfig,
   MetaDia,
   SolicitacaoFolga,
-  CursoDisponivel
+  CursoDisponivel,
+  InsumoPedido,
+  InsumoEstoque
 } from './types';
 import { ProfileModal } from './components/ProfileModal';
 import { PublicRegistrationForm } from './components/PublicRegistrationForm';
+import { PublicInsumoForm } from './components/PublicInsumoForm';
 import { MessageTemplateModal } from './components/MessageTemplateModal';
 import { CursosDisponiveisView } from './components/CursosDisponiveisView';
+import { ControleInsumosView } from './components/ControleInsumosView';
 import { WhatsAppMessageEditor } from './components/WhatsAppMessageEditor';
 
 // --- Helpers ---
@@ -359,7 +364,8 @@ export const ROLES: Record<string, UserRole> = {
   PROMOTOR_RUA: 'Promotor/rua',
   GESTOR_COMERCIAL_COMERCIAL: 'Gerente Comercial (Comercial)',
   FDV_COMERCIAL: 'FDV (Comercial)',
-  FINANCEIRO: 'Financeiro'
+  FINANCEIRO: 'Financeiro',
+  TECNICO: 'Técnico'
 };
 
 const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
@@ -379,8 +385,9 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.ACADEMICO],
   emailMarketing: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
   admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.GESTOR_COMERCIAL],
-  controlePagamentos: [ROLES.ADMIN_MASTER, ROLES.FINANCEIRO, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_UNIDADE],
-  cursos: [ROLES.ADMIN_MASTER, ROLES.PROMOTOR, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.ACADEMICO, ROLES.PROMOTOR_RUA, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.FINANCEIRO]
+  controlePagamentos: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_UNIDADE],
+  cursos: [ROLES.ADMIN_MASTER, ROLES.PROMOTOR, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.ACADEMICO, ROLES.PROMOTOR_RUA, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL],
+  controleInsumos: [ROLES.ADMIN_MASTER, ROLES.ACADEMICO, ROLES.FINANCEIRO, ROLES.TECNICO]
 };
 
 // --- Components ---
@@ -2092,6 +2099,8 @@ export default function App() {
   const [basesDisparo, setBasesDisparo] = useState<BaseDisparoEntry[]>([]);
   const [basesRenovacao, setBasesRenovacao] = useState<BaseEntry[]>([]);
   const [cursos, setCursos] = useState<CursoDisponivel[]>([]);
+  const [insumosPedidos, setInsumosPedidos] = useState<InsumoPedido[]>([]);
+  const [insumosEstoque, setInsumosEstoque] = useState<InsumoEstoque[]>([]);
   const [botConfig, setBotConfig] = useState<BotConfig>({ url: '', active: false });
   const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>({});
   const [initialActionData, setInitialActionData] = useState<Partial<CalendarioAcao> | null>(null);
@@ -2491,6 +2500,18 @@ export default function App() {
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.CURSOS));
     }
 
+    let unsubInsumosPedidos = () => {};
+    let unsubInsumosEstoque = () => {};
+    if (profile && VIEW_PERMISSIONS.controleInsumos.includes(profile.role)) {
+      unsubInsumosPedidos = onSnapshot(collection(db, COLLECTIONS.INSUMOS_PEDIDOS), snap => {
+        setInsumosPedidos(snap.docs.map(d => ({ id: d.id, ...d.data() } as InsumoPedido)));
+      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.INSUMOS_PEDIDOS));
+
+      unsubInsumosEstoque = onSnapshot(collection(db, COLLECTIONS.INSUMOS_ESTOQUE), snap => {
+        setInsumosEstoque(snap.docs.map(d => ({ id: d.id, ...d.data() } as InsumoEstoque)));
+      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.INSUMOS_ESTOQUE));
+    }
+
     return () => {
       unsubUsers();
       unsubPlanner();
@@ -2511,6 +2532,8 @@ export default function App() {
       unsubBasesDisparo();
       unsubBasesRenovacao();
       unsubCursos();
+      unsubInsumosPedidos();
+      unsubInsumosEstoque();
     };
   }, [user, profile]);
 
@@ -2633,6 +2656,17 @@ export default function App() {
           transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
           className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full"
         />
+      </div>
+    );
+  }
+
+  if (currentView === 'pedido-insumos') {
+    return (
+      <div className="min-h-screen bg-[#01112c] flex flex-col justify-between">
+        <AnimatePresence>
+          {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        </AnimatePresence>
+        <PublicInsumoForm onToast={showToast} />
       </div>
     );
   }
@@ -2803,6 +2837,7 @@ export default function App() {
               { id: 'empresas', label: 'Empresas Parceiras', icon: Building2 },
               { id: 'calculo', label: 'Cálculo de Remuneração', icon: Calculator },
               { id: 'controlePagamentos', label: 'Controle de Pagamentos', icon: Coins },
+              { id: 'controleInsumos', label: 'Controle de Insumos', icon: Boxes },
               { id: 'emailMarketing', label: 'Envio de e-mail Marketing', icon: Mail },
               { id: 'admin', label: 'Administração', icon: Settings },
             ].map((item) => canView(item.id) && (
@@ -2928,6 +2963,7 @@ export default function App() {
               {currentView === 'calculo' && <CalculoRemuneracaoView />}
               {currentView === 'emailMarketing' && <EmailMarketingView onToast={showToast} />}
               {currentView === 'controlePagamentos' && <ControlePagamentosView calendarioAcoes={calendarioAcoes} users={users} onToast={showToast} profile={profile} />}
+              {currentView === 'controleInsumos' && <ControleInsumosView pedidos={insumosPedidos} estoque={insumosEstoque} profile={profile!} onToast={showToast} />}
               {currentView === 'calendario' && <CalendarioAcoesView data={calendarioAcoes} onToast={showToast} profile={profile!} initialData={initialActionData} onClearInitialData={() => setInitialActionData(null)} users={users} />}
               {currentView === 'empresas' && (
                 <EmpresasParceirasView 
@@ -8081,6 +8117,7 @@ function EmpresasParceirasView({
       telefoneResponsavel: formData.get('telefoneResponsavel') as string,
       email: formData.get('email') as string,
       endereco: formData.get('endereco') as string,
+      bairro: formData.get('bairro') as string,
       linkMaps: formData.get('linkMaps') as string,
       classificacao: formData.get('classificacao') as string,
       seguimento: formData.get('seguimento') as string,
@@ -8133,6 +8170,7 @@ function EmpresasParceirasView({
       'Telefone Responsável': emp.telefoneResponsavel || '',
       Email: emp.email,
       Endereço: emp.endereco,
+      Bairro: emp.bairro || '',
       Seguimento: emp.seguimento || '',
       Classificação: emp.classificacao || '',
       Status: emp.statusEmpresa || '',
@@ -8156,6 +8194,7 @@ function EmpresasParceirasView({
           telefoneResponsavel: String(item['Telefone Responsável'] || item.telefoneResponsavel || ''),
           email: item.Email || item.email || '',
           endereco: item.Endereço || item.endereco || '',
+          bairro: item.Bairro || item.bairro || '',
           seguimento: item.Seguimento || item.seguimento || '',
           classificacao: item.Classificação || item.classificacao || '',
           statusEmpresa: item.Status || item.statusEmpresa || '',
@@ -8391,6 +8430,12 @@ function EmpresasParceirasView({
                   <MapPin size={16} className="text-slate-400" />
                   <span className="truncate">{emp.endereco}</span>
                 </div>
+                {emp.bairro && (
+                  <div className="flex items-center space-x-3 text-sm text-slate-600">
+                    <MapPin size={16} className="text-slate-400 opacity-50" />
+                    <span className="truncate">Bairro: {emp.bairro}</span>
+                  </div>
+                )}
               </div>
 
               {emp.unidadesVinculadas && emp.unidadesVinculadas.length > 0 && (
@@ -8520,9 +8565,15 @@ function EmpresasParceirasView({
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1">Endereço</label>
-                    <input name="endereco" defaultValue={editingEmpresa?.endereco} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Endereço</label>
+                      <input name="endereco" defaultValue={editingEmpresa?.endereco} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Bairro</label>
+                      <input name="bairro" defaultValue={editingEmpresa?.bairro} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

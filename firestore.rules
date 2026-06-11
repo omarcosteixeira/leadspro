@@ -15,10 +15,24 @@ service cloud.firestore {
       return get(path).data;
     }
     
-    function hasAnyRole(roles) {
+    function isMasterUser() {
       return isAuthenticated() && (
         request.auth.token.email == "canaldonutri@gmail.com" || 
         request.auth.token.email == "marcos.teixeira@estacio.br" ||
+        (
+          exists(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)) &&
+          (
+            get(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)).data.email == "canaldonutri@gmail.com" ||
+            get(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)).data.email == "marcos.teixeira@estacio.br" ||
+            get(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)).data.role == "Admin Master"
+          )
+        )
+      );
+    }
+    
+    function hasAnyRole(roles) {
+      return isAuthenticated() && (
+        isMasterUser() ||
         (
           exists(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)) &&
           get(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)).data.role in roles
@@ -37,6 +51,7 @@ service cloud.firestore {
     function isGestorComercial() { return hasAnyRole(['Gestor Comercial', 'Gerente Comercial (Comercial)']); }
     function isAcademico() { return hasAnyRole(['Acadêmico']); }
     function isFinanceiro() { return hasAnyRole(['Financeiro']); }
+    function isTecnico() { return hasAnyRole(['Técnico']); }
     
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
@@ -48,7 +63,7 @@ service cloud.firestore {
              data.uid is string &&
              data.email is string &&
              data.name is string &&
-             data.role in ['Admin Master', 'Promotor', 'FDV', 'Sala de Matrícula', 'QG', 'Líder/FDV', 'SSA', 'Gestor Unidade', 'Gestor Comercial', 'Acadêmico', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua', 'Financeiro'] &&
+             data.role in ['Admin Master', 'Promotor', 'FDV', 'Sala de Matrícula', 'QG', 'Líder/FDV', 'SSA', 'Gestor Unidade', 'Gestor Comercial', 'Acadêmico', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua', 'Financeiro', 'Técnico'] &&
              (!('chavePix' in data) || data.chavePix is string) &&
              (!('blocked' in data) || data.blocked is bool) &&
              (!('mustChangePassword' in data) || data.mustChangePassword is bool) &&
@@ -223,6 +238,15 @@ service cloud.firestore {
     match /artifacts/gestaopro-761e1/public/data/cursos/{id} {
       allow read: if isAuthenticated();
       allow write: if isAdminMaster() || isGestorComercial();
+    }
+
+    match /artifacts/gestaopro-761e1/public/data/insumos_pedidos/{id} {
+      allow create: if true;
+      allow read, update, delete: if isAuthenticated() && (isAdminMaster() || isAcademico() || isFinanceiro() || isTecnico());
+    }
+
+    match /artifacts/gestaopro-761e1/public/data/insumos_estoque/{id} {
+      allow read, write: if isAuthenticated() && (isAdminMaster() || isAcademico() || isFinanceiro() || isTecnico());
     }
   }
 }
