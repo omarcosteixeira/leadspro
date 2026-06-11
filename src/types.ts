@@ -361,3 +361,31 @@ export interface InsumoEstoque {
   updatedAt: any;
 }
 
+export interface InsumoItemComercial {
+  material: string;
+  quantidade: number;
+}
+
+export interface InsumoPedidoComercial {
+  id: string;
+  motivoUso: string;
+  itens: InsumoItemComercial[];
+  status: 'Pendente' | 'Aprovado' | 'Rejeitado' | 'Em Andamento' | 'Entregue';
+  solicitanteId: string;
+  solicitanteNome: string;
+  createdAt: any;
+  updatedAt?: any;
+}
+
+export interface InsumoEstoqueComercial {
+  id: string;
+  material: string;
+  quantidade: number;
+  unidadeMedida?: string;
+  estoqueMinimo?: number;
+  descricao?: string;
+  ownerId: string;
+  ownerName: string;
+  updatedAt: any;
+}
+

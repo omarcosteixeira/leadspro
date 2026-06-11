@@ -248,5 +248,13 @@ service cloud.firestore {
     match /artifacts/gestaopro-761e1/public/data/insumos_estoque/{id} {
       allow read, write: if isAuthenticated() && (isAdminMaster() || isAcademico() || isFinanceiro() || isTecnico());
     }
+
+    match /artifacts/gestaopro-761e1/public/data/insumos_pedidos_comercial/{id} {
+      allow read, write: if isAuthenticated() && (isAdminMaster() || isGestorComercial() || isFDV());
+    }
+
+    match /artifacts/gestaopro-761e1/public/data/insumos_estoque_comercial/{id} {
+      allow read, write: if isAuthenticated() && (isAdminMaster() || isGestorComercial() || isFDV());
+    }
   }
 }

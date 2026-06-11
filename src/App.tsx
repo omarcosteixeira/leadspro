@@ -119,7 +119,9 @@ import {
   SolicitacaoFolga,
   CursoDisponivel,
   InsumoPedido,
-  InsumoEstoque
+  InsumoEstoque,
+  InsumoPedidoComercial,
+  InsumoEstoqueComercial
 } from './types';
 import { ProfileModal } from './components/ProfileModal';
 import { PublicRegistrationForm } from './components/PublicRegistrationForm';
@@ -127,6 +129,7 @@ import { PublicInsumoForm } from './components/PublicInsumoForm';
 import { MessageTemplateModal } from './components/MessageTemplateModal';
 import { CursosDisponiveisView } from './components/CursosDisponiveisView';
 import { ControleInsumosView } from './components/ControleInsumosView';
+import { ControleInsumosComercialView } from './components/ControleInsumosComercialView';
 import { WhatsAppMessageEditor } from './components/WhatsAppMessageEditor';
 
 // --- Helpers ---
@@ -387,7 +390,8 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.GESTOR_COMERCIAL],
   controlePagamentos: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_UNIDADE],
   cursos: [ROLES.ADMIN_MASTER, ROLES.PROMOTOR, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.ACADEMICO, ROLES.PROMOTOR_RUA, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL],
-  controleInsumos: [ROLES.ADMIN_MASTER, ROLES.ACADEMICO, ROLES.FINANCEIRO, ROLES.TECNICO]
+  controleInsumos: [ROLES.ADMIN_MASTER, ROLES.ACADEMICO, ROLES.FINANCEIRO, ROLES.TECNICO],
+  controleInsumosComercial: [ROLES.ADMIN_MASTER, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL]
 };
 
 // --- Components ---
@@ -2101,6 +2105,8 @@ export default function App() {
   const [cursos, setCursos] = useState<CursoDisponivel[]>([]);
   const [insumosPedidos, setInsumosPedidos] = useState<InsumoPedido[]>([]);
   const [insumosEstoque, setInsumosEstoque] = useState<InsumoEstoque[]>([]);
+  const [insumosPedidosComercial, setInsumosPedidosComercial] = useState<InsumoPedidoComercial[]>([]);
+  const [insumosEstoqueComercial, setInsumosEstoqueComercial] = useState<InsumoEstoqueComercial[]>([]);
   const [botConfig, setBotConfig] = useState<BotConfig>({ url: '', active: false });
   const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>({});
   const [initialActionData, setInitialActionData] = useState<Partial<CalendarioAcao> | null>(null);
@@ -2512,6 +2518,28 @@ export default function App() {
       }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.INSUMOS_ESTOQUE));
     }
 
+    let unsubInsumosPedidosComercial = () => {};
+    let unsubInsumosEstoqueComercial = () => {};
+    if (profile && VIEW_PERMISSIONS.controleInsumosComercial.includes(profile.role)) {
+      const isGerenteOrAdmin = profile.role === ROLES.ADMIN_MASTER || profile.role === 'Admin Master' || profile.role === 'Gerente Comercial (Comercial)' || profile.role === 'Gestor Comercial';
+      
+      const qPedidosComercial = isGerenteOrAdmin 
+        ? collection(db, COLLECTIONS.INSUMOS_PEDIDOS_COMERCIAL)
+        : query(collection(db, COLLECTIONS.INSUMOS_PEDIDOS_COMERCIAL), where('solicitanteId', '==', profile.uid));
+
+      const qEstoqueComercial = isGerenteOrAdmin
+        ? collection(db, COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL)
+        : query(collection(db, COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL), where('ownerId', '==', profile.uid));
+
+      unsubInsumosPedidosComercial = onSnapshot(qPedidosComercial, snap => {
+        setInsumosPedidosComercial(snap.docs.map(d => ({ id: d.id, ...d.data() } as InsumoPedidoComercial)));
+      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.INSUMOS_PEDIDOS_COMERCIAL));
+
+      unsubInsumosEstoqueComercial = onSnapshot(qEstoqueComercial, snap => {
+        setInsumosEstoqueComercial(snap.docs.map(d => ({ id: d.id, ...d.data() } as InsumoEstoqueComercial)));
+      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL));
+    }
+
     return () => {
       unsubUsers();
       unsubPlanner();
@@ -2534,6 +2562,8 @@ export default function App() {
       unsubCursos();
       unsubInsumosPedidos();
       unsubInsumosEstoque();
+      unsubInsumosPedidosComercial();
+      unsubInsumosEstoqueComercial();
     };
   }, [user, profile]);
 
@@ -2838,6 +2868,7 @@ export default function App() {
               { id: 'calculo', label: 'Cálculo de Remuneração', icon: Calculator },
               { id: 'controlePagamentos', label: 'Controle de Pagamentos', icon: Coins },
               { id: 'controleInsumos', label: 'Controle de Insumos', icon: Boxes },
+              { id: 'controleInsumosComercial', label: 'Controle de Insumos (Comercial)', icon: Boxes },
               { id: 'emailMarketing', label: 'Envio de e-mail Marketing', icon: Mail },
               { id: 'admin', label: 'Administração', icon: Settings },
             ].map((item) => canView(item.id) && (
@@ -2964,6 +2995,7 @@ export default function App() {
               {currentView === 'emailMarketing' && <EmailMarketingView onToast={showToast} />}
               {currentView === 'controlePagamentos' && <ControlePagamentosView calendarioAcoes={calendarioAcoes} users={users} onToast={showToast} profile={profile} />}
               {currentView === 'controleInsumos' && <ControleInsumosView pedidos={insumosPedidos} estoque={insumosEstoque} profile={profile!} onToast={showToast} />}
+              {currentView === 'controleInsumosComercial' && <ControleInsumosComercialView pedidos={insumosPedidosComercial} estoque={insumosEstoqueComercial} profile={profile!} onToast={showToast} />}
               {currentView === 'calendario' && <CalendarioAcoesView data={calendarioAcoes} onToast={showToast} profile={profile!} initialData={initialActionData} onClearInitialData={() => setInitialActionData(null)} users={users} />}
               {currentView === 'empresas' && (
                 <EmpresasParceirasView 

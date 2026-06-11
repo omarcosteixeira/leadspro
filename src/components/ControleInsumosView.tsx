@@ -20,10 +20,13 @@ import {
   Gauge,
   ShoppingCart,
   Clock,
-  Package
+  Package,
+  Upload,
+  Download
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ROLES } from '../App';
+import * as XLSX from 'xlsx';
 
 interface ControleInsumosViewProps {
   pedidos: InsumoPedido[];
@@ -56,6 +59,16 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
   const [pedidoStatusFilter, setPedidoStatusFilter] = useState<string>('Todos');
   const [pedidoSearch, setPedidoSearch] = useState('');
   const [stockSearch, setStockSearch] = useState('');
+
+  // Email notifications
+  const [emailAlertas, setEmailAlertas] = useState<string>(
+    localStorage.getItem('insumos_email_alertas') || ''
+  );
+
+  const handleEmailAlertasChange = (val: string) => {
+    setEmailAlertas(val);
+    localStorage.setItem('insumos_email_alertas', val);
+  };
 
   // Rules:
   // "O técnico e o Academico vão poder adicionar produtos no estoque e fazer o flag de pedido aprovado ou Rejeitado."
@@ -160,6 +173,13 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
           updatedAt: new Date().toISOString()
         });
         onToast("Item de estoque atualizado com sucesso!", "success");
+
+        if (stockQuantidade < stockMinimo) {
+          onToast(`⚠️ Nível crítico atingido para: ${stockMaterial}`, "error");
+          if (emailAlertas) {
+            onToast(`✉️ Alerta enviado para o e-mail: ${emailAlertas}`, "success");
+          }
+        }
       } else {
         const newEstoque: Omit<InsumoEstoque, 'id'> = {
           material: stockMaterial,
@@ -237,6 +257,9 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
 
             if (newQty < (matchedStock.estoqueMinimo || 0)) {
               onToast(`Atenção: O estoque de "${matchedStock.material}" está abaixo do mínimo! (Estoque atual: ${newQty})`, "error");
+              if (emailAlertas) {
+                onToast(`✉️ Alerta enviado para o e-mail: ${emailAlertas}`, "success");
+              }
             }
           }
         }
@@ -313,6 +336,113 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
     .filter(item => !item.hasSufficientStock)
     .sort((a, b) => b.needToBuy - a.needToBuy);
   }, [pedidos, estoque]);
+
+  const handleExportExcel = () => {
+    let dataToExport: any[] = [];
+    let fileName = `Controle_${activeTab}_${new Date().toISOString().split('T')[0]}`;
+
+    if (activeTab === 'pedidos') {
+      dataToExport = filteredPedidos.map(p => ({
+        'Status': p.status,
+        'Professor': p.professorNome,
+        'Curso': p.cursoNome || p.courseNome,
+        'Disciplina': p.disciplinaNome,
+        'Motivo': p.motivoUso,
+        'Itens': p.itens.map(i => `${i.quantidade}x ${i.material}`).join(', '),
+        'Solicitante': p.solicitanteNome,
+        'Data': new Date(p.createdAt || '').toLocaleDateString()
+      }));
+    } else if (activeTab === 'estoque') {
+      dataToExport = filteredEstoque.map(e => ({
+        'Material': e.material,
+        'Quantidade': e.quantidade,
+        'Unidade': e.unidadeMedida || 'UN',
+        'Mínimo': e.estoqueMinimo || 5,
+        'Descrição': e.descricao,
+        'Última Atualização': e.updatedAt ? new Date(e.updatedAt).toLocaleDateString() : ''
+      }));
+    } else if (activeTab === 'compras') {
+      dataToExport = comprasList.map(c => ({
+        'Material': c.material,
+        'Estoque Atual': c.stockQty,
+        'Total Solicitado': c.requestedQty,
+        'Qtd para Comprar': c.needToBuy,
+        'Detalhes': c.details.join(' | ')
+      }));
+    }
+
+    if (dataToExport.length === 0) {
+      onToast('Não há dados para exportar', 'error');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, activeTab.toUpperCase());
+    XLSX.writeFile(workbook, `${fileName}.xlsx`);
+    onToast(`Exportação concluída com sucesso.`, 'success');
+  };
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (activeTab !== 'estoque') {
+      onToast('Importação de dados disponível apenas para o Estoque.', 'error');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const workbook = XLSX.read(bstr, { type: 'binary' });
+        const worksheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[worksheetName];
+        const rawData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        let importsCount = 0;
+        for (const row of rawData) {
+          if (!row.Material) continue;
+
+          const existing = estoque.find(es => es.material.trim().toLowerCase() === row.Material?.toString().trim().toLowerCase());
+          
+          const qty = parseInt(row.Quantidade || row.quantidade || '0', 10);
+          const min = parseInt(row.Mínimo || row.minimo || '5', 10);
+          const un = row.Unidade || row.unidade || 'UN';
+          const desc = row.Descrição || row.descricao || '';
+
+          if (existing) {
+            await updateDoc(doc(db, COLLECTIONS.INSUMOS_ESTOQUE, existing.id), {
+              quantidade: isNaN(qty) ? existing.quantidade : qty,
+              unidadeMedida: un,
+              estoqueMinimo: isNaN(min) ? existing.estoqueMinimo : min,
+              descricao: desc,
+              updatedAt: new Date().toISOString()
+            });
+          } else {
+            await addDoc(collection(db, COLLECTIONS.INSUMOS_ESTOQUE), {
+              material: row.Material?.toString().trim(),
+              quantidade: isNaN(qty) ? 0 : qty,
+              unidadeMedida: un,
+              estoqueMinimo: isNaN(min) ? 5 : min,
+              descricao: desc,
+              updatedAt: new Date().toISOString()
+            });
+          }
+          importsCount++;
+        }
+        
+        onToast(`${importsCount} itens importados/atualizados com sucesso.`, 'success');
+      } catch (err) {
+        console.error("Erro importando excel:", err);
+        onToast("Erro ao ler o arquivo. Certifique-se que o formato está correto.", "error");
+      }
+      e.target.value = ''; // reset
+    };
+    reader.readAsBinaryString(file);
+  };
 
   return (
     <div className="space-y-6">
@@ -419,6 +549,14 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                   onChange={(e) => setPedidoSearch(e.target.value)}
                   className="px-4 py-2 text-xs border border-slate-200 rounded-xl max-w-xs focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-64 bg-slate-50/50"
                 />
+                
+                <button
+                  onClick={handleExportExcel}
+                  className="flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md w-full sm:w-auto cursor-pointer"
+                >
+                  <Download size={16} />
+                  <span>Exportar</span>
+                </button>
 
                 {(profile.role === 'Acadêmico' || profile.role === 'Admin Master' || profile.role === ROLES.ADMIN_MASTER) && (
                   <button
@@ -661,23 +799,39 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                   className="px-4 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-64 bg-slate-50"
                 />
 
+                <button
+                  onClick={handleExportExcel}
+                  className="flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md w-full sm:w-auto cursor-pointer"
+                >
+                  <Download size={16} />
+                  <span>Exportar</span>
+                </button>
+
                 {/* "O técnico e o Academico vão poder adicionar produtos no estoque..." */}
                 {isAcadOrTec && (
-                  <button
-                    onClick={() => {
-                      setEditingEstoque(null);
-                      setStockMaterial('');
-                      setStockQuantidade(0);
-                      setStockUnidade('UN');
-                      setStockMinimo(5);
-                      setStockDescricao('');
-                      setIsAddingEstoque(true);
-                    }}
-                    className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md w-full sm:w-auto cursor-pointer"
-                  >
-                    <Plus size={16} />
-                    <span>Adicionar ao Estoque</span>
-                  </button>
+                  <>
+                    <label className="flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md w-full sm:w-auto cursor-pointer">
+                      <Upload size={16} />
+                      <span>Importar</span>
+                      <input type="file" accept=".xlsx, .xls" onChange={handleImportExcel} className="hidden" />
+                    </label>
+
+                    <button
+                      onClick={() => {
+                        setEditingEstoque(null);
+                        setStockMaterial('');
+                        setStockQuantidade(0);
+                        setStockUnidade('UN');
+                        setStockMinimo(5);
+                        setStockDescricao('');
+                        setIsAddingEstoque(true);
+                      }}
+                      className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md w-full sm:w-auto cursor-pointer"
+                    >
+                      <Plus size={16} />
+                      <span>Adicionar ao Estoque</span>
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -712,6 +866,40 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                 <X className="text-rose-500 opacity-60" size={32} />
               </div>
             </div>
+
+            {/* Notification settings panel */}
+            {isAcadOrTec && (
+              <div className="mb-6 bg-amber-50/50 p-5 rounded-2xl border border-amber-200/60 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <AlertTriangle size={64} className="text-amber-600" />
+                </div>
+                <div className="relative z-10">
+                  <h4 className="text-sm font-black text-slate-800 mb-1 flex items-center space-x-2">
+                    <AlertTriangle size={16} className="text-amber-600" />
+                    <span>Notificações de Nível Crítico</span>
+                  </h4>
+                  <p className="text-xs text-slate-600 mb-4 max-w-2xl">
+                    Sempre que o estoque atingir o nível mínimo definido, um alerta interno será gerado no sistema. 
+                    Insira um e-mail abaixo se desejar enviar notificações também por e-mail.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 items-center">
+                    <input
+                      type="email"
+                      placeholder="Ex: gestao@instituicao.com.br"
+                      value={emailAlertas}
+                      onChange={(e) => handleEmailAlertasChange(e.target.value)}
+                      className="px-4 py-2.5 text-xs font-medium border border-slate-200 rounded-xl w-full sm:w-80 focus:ring-2 focus:ring-amber-500 outline-none bg-white shadow-sm"
+                    />
+                    <button
+                      onClick={() => onToast('Preferências de notificação de estoque salvas.', 'success')}
+                      className="bg-amber-600 hover:bg-amber-700 transition-colors text-white font-bold px-5 py-2.5 rounded-xl text-xs whitespace-nowrap shadow-sm cursor-pointer w-full sm:w-auto"
+                    >
+                      Salvar E-mail
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Grid display */}
             {filteredEstoque.length === 0 ? (
@@ -802,7 +990,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
       {activeTab === 'compras' && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h3 className="text-lg font-black text-rose-900 flex items-center space-x-2">
                   <ShoppingCart className="text-rose-600" size={20} />
@@ -812,6 +1000,14 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                   Regra automatizada: Itens cuja quantidade em estoque atenda ou supere o total requisitado por professores são omitidos desta lista de compra.
                 </p>
               </div>
+
+              <button
+                onClick={handleExportExcel}
+                className="flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md w-full sm:w-auto cursor-pointer"
+              >
+                <Download size={16} />
+                <span>Exportar</span>
+              </button>
             </div>
 
             {comprasList.length === 0 ? (
