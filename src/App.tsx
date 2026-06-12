@@ -2123,6 +2123,22 @@ export default function App() {
     setActivePopup({ title, message });
   };
 
+  const canView = (view: string) => {
+    if (!profile) return false;
+    if (profile.email === "canaldonutri@gmail.com" || profile.email === "marcos.teixeira@estacio.br" || profile.role === 'Admin Master') {
+      return true;
+    }
+    const isComercial = localStorage.getItem('servidor_selected') === 'comercial';
+    if (profile.role === ROLES.FINANCEIRO) {
+      if (isComercial) {
+        return view === 'controlePagamentos';
+      } else {
+        return VIEW_PERMISSIONS[view]?.includes(profile.role) || false;
+      }
+    }
+    return VIEW_PERMISSIONS[view]?.includes(profile.role) || false;
+  };
+
   const callBotApi = async (path: string, options: { method?: 'GET'|'POST', body?: any } = {}) => {
     // Determine the exact URL to fetch from, using the requested Railway API directly for send actions
     const directUrl = path === '/api/send' 
@@ -2443,7 +2459,7 @@ export default function App() {
     }
 
     let unsubCalendario = () => {};
-    if (profile && (VIEW_PERMISSIONS.calendario.includes(profile.role) || VIEW_PERMISSIONS.controlePagamentos.includes(profile.role))) {
+    if (profile && (VIEW_PERMISSIONS.calendario.includes(profile.role) || VIEW_PERMISSIONS.controlePagamentos.includes(profile.role) || canView('controlePagamentos'))) {
       let calendarioQuery;
       if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.FINANCEIRO, ROLES.GESTOR_COMERCIAL_COMERCIAL].includes(profile.role)) {
         calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES));
@@ -2660,13 +2676,7 @@ export default function App() {
     }
   }, [campanhas, profile]);
 
-  const canView = (view: string) => {
-    if (!profile) return false;
-    if (profile.email === "canaldonutri@gmail.com" || profile.email === "marcos.teixeira@estacio.br" || profile.role === 'Admin Master') {
-      return true;
-    }
-    return VIEW_PERMISSIONS[view]?.includes(profile.role);
-  };
+
 
   useEffect(() => {
     if (profile && !canView(currentView)) {
@@ -4779,7 +4789,7 @@ function HistoricoView({
       try {
         const batch = data.map(item => ({
           nome: item.Nome || item.nome || '',
-          telefone: String(item.Telefone || item.telefone || ''),
+          telefone: String(item.Telefone || item.telefone || '').replace(/\D/g, ''),
           cpf: String(item.CPF || item.cpf || '').replace(/\D/g, ''),
           cursoInteresse: item.Curso || item.cursoInteresse || '',
           acao: item.Acao || item.acao || 'Importação',
@@ -5463,7 +5473,7 @@ function BasesView({
       try {
         const batch = data.map(item => ({
           nome: item.Nome || item.nome || '',
-          telefone: String(item.Telefone || item.telefone || ''),
+          telefone: String(item.Telefone || item.telefone || '').replace(/\D/g, ''),
           cpf: String(item.CPF || item.cpf || '').replace(/\D/g, ''),
           curso: item.Curso || item.curso || '',
           produto: item.Produto || item.produto || 'Graduação',
@@ -6068,7 +6078,7 @@ function BasesRenovacaoView({
       try {
         const batch = data.map(item => ({
           nome: item.Nome || item.nome || '',
-          telefone: String(item.Telefone || item.telefone || ''),
+          telefone: String(item.Telefone || item.telefone || '').replace(/\D/g, ''),
           cpf: String(item.CPF || item.cpf || '').replace(/\D/g, ''),
           curso: item.Curso || item.curso || '',
           produto: item.Produto || item.produto || 'Graduação',
@@ -6799,7 +6809,7 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
         const batch = data.map(item => ({
           nome: item.Nome || item.nome || '',
           cpf: String(item.CPF || item.cpf || '').replace(/\D/g, ''),
-          telefone: String(item.Telefone || item.telefone || ''),
+          telefone: String(item.Telefone || item.telefone || '').replace(/\D/g, ''),
           produto: item.Produto || item.produto || '',
           curso: item.Curso || item.curso || '',
           semestre: item.Semestre || item.semestre || '',
@@ -8222,8 +8232,8 @@ function EmpresasParceirasView({
           nome: item.Nome || item.nome || '',
           cnpj: item.CNPJ || item.cnpj || '',
           responsavel: item.Responsável || item.responsavel || '',
-          telefone: String(item.Telefone || item.telefone || ''),
-          telefoneResponsavel: String(item['Telefone Responsável'] || item.telefoneResponsavel || ''),
+          telefone: String(item.Telefone || item.telefone || '').replace(/\D/g, ''),
+          telefoneResponsavel: String(item['Telefone Responsável'] || item.telefoneResponsavel || '').replace(/\D/g, ''),
           email: item.Email || item.email || '',
           endereco: item.Endereço || item.endereco || '',
           bairro: item.Bairro || item.bairro || '',
