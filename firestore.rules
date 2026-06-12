@@ -162,9 +162,9 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaopro-761e1/public/data/calendario_acoes/{acaoId} {
-      allow read: if isLider() || isSalaMatricula() || isGestorUnidade() || isGestorComercial() ||
+      allow read: if isLider() || isSalaMatricula() || isGestorUnidade() || isGestorComercial() || isFinanceiro() ||
                      (isFDV() && (resource.data.creatorId == request.auth.uid || resource.data.creatorRole == 'Promotor'));
-      allow create, update: if isLider() || isSalaMatricula() || isFDV() || isGestorUnidade() || isGestorComercial();
+      allow create, update: if isLider() || isSalaMatricula() || isFDV() || isGestorUnidade() || isGestorComercial() || isFinanceiro();
       allow delete: if isLider();
     }
 

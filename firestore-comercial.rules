@@ -138,9 +138,9 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/calendario_acoes/{acaoId} {
-      allow read: if isGerenteComercial() || isAdminMaster() ||
+      allow read: if isGerenteComercial() || isAdminMaster() || isFinanceiro() ||
                      (isFDVComercial() && (resource.data.creatorId == request.auth.uid || resource.data.creatorRole == 'Promotor/rua'));
-      allow create, update: if isGerenteComercial() || isAdminMaster() || isFDVComercial();
+      allow create, update: if isGerenteComercial() || isAdminMaster() || isFDVComercial() || isFinanceiro();
       allow delete: if isGerenteComercial() || isAdminMaster();
     }
 
@@ -205,6 +205,14 @@ service cloud.firestore {
     match /artifacts/gestaodeleadspro-d4230/public/data/cursos/{id} {
       allow read: if isAuthenticated();
       allow write: if isGerenteComercial() || isAdminMaster();
+    }
+
+    match /artifacts/gestaodeleadspro-d4230/public/data/insumos_pedidos_comercial/{id} {
+      allow read, write: if isAuthenticated() && (isAdminMaster() || isGerenteComercial() || isFDVComercial());
+    }
+
+    match /artifacts/gestaodeleadspro-d4230/public/data/insumos_estoque_comercial/{id} {
+      allow read, write: if isAuthenticated() && (isAdminMaster() || isGerenteComercial() || isFDVComercial());
     }
   }
 }
