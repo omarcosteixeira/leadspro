@@ -14,7 +14,9 @@ export const firebaseConfigComercial = {
   appId: "1:964003766645:web:75aea7b1a825ddfe44333c"
 };
 
-const savedServidor = localStorage.getItem('servidor_selected') || 'principal';
+const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+const urlServidor = params ? params.get('servidor') : null;
+const savedServidor = urlServidor || localStorage.getItem('servidor_selected') || 'principal';
 const activeConfig = savedServidor === 'comercial' ? firebaseConfigComercial : firebaseConfigPrincipal;
 
 const app = initializeApp(activeConfig);

@@ -385,9 +385,10 @@ export function ProfileModal({
                       const linkDescription = isInsumoRole 
                         ? "Compartilhe este link com professores ou colaboradores para solicitar novos materiais de apoio livremente, sem precisar de login."
                         : "Preencha seus dados e ganhe um desconto especial. Compartilhe este link com novos alunos; todos os cadastros gerados por ele serão marcados sob sua autoria.";
+                      const currentServidor = localStorage.getItem('servidor_selected') || 'principal';
                       const linkValue = isInsumoRole 
-                        ? `${window.location.origin}?view=pedido-insumos&ref=${profile?.uid}`
-                        : `${window.location.origin}?view=desconto&ref=${profile?.uid}`;
+                        ? `${window.location.origin}?view=pedido-insumos&ref=${profile?.uid}&servidor=${currentServidor}`
+                        : `${window.location.origin}?view=desconto&ref=${profile?.uid}&servidor=${currentServidor}`;
 
                       return (
                         <>

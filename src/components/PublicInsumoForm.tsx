@@ -75,7 +75,12 @@ export function PublicInsumoForm({ onToast }: PublicInsumoFormProps) {
         createdAt: new Date().toISOString()
       };
 
-      await addDoc(collection(db, COLLECTIONS.INSUMOS_PEDIDOS), newPedido);
+      const isComercial = db.app.options.projectId === 'gestaodeleadspro-d4230' || 
+                          localStorage.getItem('servidor_selected') === 'comercial' || 
+                          new URLSearchParams(window.location.search).get('servidor') === 'comercial';
+      const targetCollection = isComercial ? COLLECTIONS.INSUMOS_PEDIDOS_COMERCIAL : COLLECTIONS.INSUMOS_PEDIDOS;
+
+      await addDoc(collection(db, targetCollection), newPedido);
       setSubmitted(true);
       onToast("Solicitação de insumos enviada para avaliação!", "success");
     } catch (err) {

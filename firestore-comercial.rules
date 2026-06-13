@@ -113,7 +113,7 @@ service cloud.firestore {
       allow read: if isGerenteComercial() || isAdminMaster() ||
                      isFDVComercial() ||
                      isPromotorRua();
-      allow create: if isGerenteComercial() || isAdminMaster() || isFDVComercial() || isPromotorRua();
+      allow create: if isGerenteComercial() || isAdminMaster() || isFDVComercial() || isPromotorRua() || request.resource.data.acao == 'Ação ( formulario)';
       allow update: if isGerenteComercial() || isAdminMaster() ||
                      (isFDVComercial() && (resource.data.promotorId == request.auth.uid || resource.data.linkadoA == request.auth.uid)) ||
                      (isPromotorRua() && resource.data.promotorId == request.auth.uid);
@@ -208,7 +208,13 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/insumos_pedidos_comercial/{id} {
-      allow read, write: if isAuthenticated() && (isAdminMaster() || isGerenteComercial() || isFDVComercial());
+      allow create: if true;
+      allow read, update, delete: if isAuthenticated() && (isAdminMaster() || isGerenteComercial() || isFDVComercial());
+    }
+
+    match /artifacts/gestaodeleadspro-d4230/public/data/insumos_pedidos/{id} {
+      allow create: if true;
+      allow read, update, delete: if isAuthenticated() && (isAdminMaster() || isGerenteComercial() || isFDVComercial());
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/insumos_estoque_comercial/{id} {
