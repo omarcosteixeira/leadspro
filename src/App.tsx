@@ -2469,7 +2469,18 @@ export default function App() {
           or(
             where("creatorId", "==", user!.uid), 
             where("creatorRole", "==", ROLES.PROMOTOR), 
-            where("colaboradorId", "==", user!.uid)
+            where("creatorRole", "==", ROLES.PROMOTOR_RUA), 
+            where("colaboradorId", "==", user!.uid),
+            where("promotoresSelecionados", "array-contains", user!.uid)
+          )
+        );
+      } else if (profile.role === ROLES.PROMOTOR || profile.role === ROLES.PROMOTOR_RUA) {
+        calendarioQuery = query(
+          collection(db, COLLECTIONS.CALENDARIO_ACOES),
+          or(
+            where("creatorId", "==", user!.uid),
+            where("colaboradorId", "==", user!.uid),
+            where("promotoresSelecionados", "array-contains", user!.uid)
           )
         );
       } else {
@@ -11271,7 +11282,7 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
           promoterUnit: promoterObj?.servidor ? (promoterObj.servidor.charAt(0).toUpperCase() + promoterObj.servidor.slice(1)) : 'Principal',
           diarias,
           horas: details.horas || 4,
-          solicitante: creatorObj?.name || 'Gestor Comercial',
+          solicitante: action.colaboradorNome || creatorObj?.name || 'Gestor Comercial',
           tipoAcao: action.nome,
           dataInicio: action.dataInicio,
           dataFim: action.dataFim,

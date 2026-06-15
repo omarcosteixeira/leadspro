@@ -135,11 +135,12 @@ service cloud.firestore {
       allow read: if isLider() || isSalaMatricula() || isQG() || isGestorUnidade() ||
                      isFDV() ||
                      isGestorComercial() ||
-                     isPromotor();
-      allow create: if isLider() || isSalaMatricula() || isQG() || isFDV() || isPromotor() || isGestorUnidade() || isGestorComercial() || request.resource.data.acao == 'Ação ( formulario)';
+                     isPromotor() ||
+                     request.auth == null;
+      allow create: if isLider() || isSalaMatricula() || isQG() || isFDV() || isPromotor() || isGestorUnidade() || isGestorComercial() || request.auth == null || request.resource.data.acao == 'Ação ( formulario)';
       allow update: if isLider() || isSalaMatricula() || isQG() || isGestorUnidade() ||
-                      (isFDV() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole == 'Promotor')) ||
-                      (isGestorComercial() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole in ['Promotor', 'FDV'])) ||
+                      (isFDV() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole == 'Promotor' || resource.data.linkadoA == request.auth.uid)) ||
+                      (isGestorComercial() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole in ['Promotor', 'FDV'] || resource.data.linkadoA == request.auth.uid)) ||
                       (isPromotor() && resource.data.promotorId == request.auth.uid);
       allow delete: if isLider();
     }
@@ -162,10 +163,21 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaopro-761e1/public/data/calendario_acoes/{acaoId} {
-      allow read: if isLider() || isSalaMatricula() || isGestorUnidade() || isGestorComercial() || isFinanceiro() ||
-                     (isFDV() && (resource.data.creatorId == request.auth.uid || resource.data.creatorRole == 'Promotor'));
-      allow create, update: if isLider() || isSalaMatricula() || isFDV() || isGestorUnidade() || isGestorComercial() || isFinanceiro();
-      allow delete: if isLider();
+      allow read: if isLider() || isSalaMatricula() || isGestorUnidade() || isGestorComercial() || isFinanceiro() || isAdminMaster() ||
+                     (isFDV() && (
+                       resource.data.creatorId == request.auth.uid || 
+                       resource.data.creatorRole == 'Promotor' ||
+                       resource.data.creatorRole == 'Promotor/rua' ||
+                       resource.data.colaboradorId == request.auth.uid ||
+                       ('promotoresSelecionados' in resource.data && request.auth.uid in resource.data.promotoresSelecionados)
+                     )) ||
+                     (isPromotor() && (
+                       resource.data.creatorId == request.auth.uid ||
+                       resource.data.colaboradorId == request.auth.uid ||
+                       ('promotoresSelecionados' in resource.data && request.auth.uid in resource.data.promotoresSelecionados)
+                     ));
+      allow create, update: if isLider() || isSalaMatricula() || isFDV() || isGestorUnidade() || isGestorComercial() || isFinanceiro() || isAdminMaster() || isPromotor();
+      allow delete: if isLider() || isAdminMaster();
     }
 
     // Dashboard & Config Collections
@@ -250,7 +262,8 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaopro-761e1/public/data/insumos_pedidos_comercial/{id} {
-      allow read, write: if isAuthenticated() && (isAdminMaster() || isGestorComercial() || isFDV());
+      allow create: if true;
+      allow read, update, delete: if isAuthenticated() && (isAdminMaster() || isGestorComercial() || isFDV());
     }
 
     match /artifacts/gestaopro-761e1/public/data/insumos_estoque_comercial/{id} {
