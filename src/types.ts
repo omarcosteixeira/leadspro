@@ -347,6 +347,7 @@ export interface InsumoPedido {
   status: 'Pendente' | 'Aprovado' | 'Rejeitado' | 'Em Andamento' | 'Entregue';
   solicitanteId: string;
   solicitanteNome: string;
+  tipoFicha?: 'docente' | 'administrativo';
   createdAt: any;
   updatedAt?: any;
 }

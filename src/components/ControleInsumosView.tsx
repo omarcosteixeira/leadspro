@@ -122,6 +122,32 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
     );
   }, [profile.role]);
 
+  // "O perfil financeiro também tem acesso a sub aba fisico/estoque para adicionar itens e dar baixa também, assim como academico e tecnico."
+  const canManageStock = useMemo(() => {
+    return (
+      profile.role === ROLES.ADMIN_MASTER ||
+      profile.role === 'Admin Master' ||
+      profile.role === 'Acadêmico' ||
+      profile.role === 'Técnico' ||
+      profile.role === 'Financeiro'
+    );
+  }, [profile.role]);
+
+  // "A aprovação das requisições do docente e feita pelo perfil Academico ou tecnico, mais a aprovação das requisições dos administrativos e feita pelo perfil Financeiro."
+  const canApprovePedido = (pedido: InsumoPedido) => {
+    const isSuper = profile.role === ROLES.ADMIN_MASTER || profile.role === 'Admin Master';
+    if (isSuper) return true;
+
+    const tipo = pedido.tipoFicha || (pedido.disciplinaNome === 'Administrativo' ? 'administrativo' : 'docente');
+
+    if (tipo === 'docente') {
+      return profile.role === 'Acadêmico' || profile.role === 'Técnico';
+    } else if (tipo === 'administrativo') {
+      return profile.role === 'Financeiro';
+    }
+    return false;
+  };
+
   // "A opção de Entrega do Pedido será acionada pelo perfil Financeiro quando realizar a entrega, se ele já fez a compra e não chegou ele vai por a opção de em andamento."
   const isFin = useMemo(() => {
     return (
@@ -818,7 +844,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                         {/* Workflow action buttons */}
                         <div className="flex items-center space-x-2">
                           {/* "O técnico e o Academico vão poder... fazer o flag de pedido aprovado ou Rejeitado." */}
-                          {pedido.status === 'Pendente' && isAcadOrTec && (
+                          {pedido.status === 'Pendente' && canApprovePedido(pedido) && (
                             <>
                               <button
                                 onClick={() => handleUpdateStatus(pedido, 'Rejeitado')}
@@ -889,7 +915,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                             </span>
                           )}
 
-                          {pedido.status === 'Rejeitado' && isAcadOrTec && (
+                          {pedido.status === 'Rejeitado' && canApprovePedido(pedido) && (
                             <button
                               onClick={() => handleUpdateStatus(pedido, 'Pendente')}
                               className="flex items-center space-x-1 bg-slate-50 hover:bg-slate-100 text-slate-650 font-bold px-3.5 py-1.5 rounded-xl text-xs transition-all border border-slate-200 cursor-pointer"
@@ -937,7 +963,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                 </button>
 
                 {/* "O técnico e o Academico vão poder adicionar produtos no estoque..." */}
-                {isAcadOrTec && (
+                {canManageStock && (
                   <>
                     <label className="flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md w-full sm:w-auto cursor-pointer">
                       <Upload size={16} />
@@ -997,7 +1023,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
             </div>
 
             {/* Notification settings panel */}
-            {isAcadOrTec && (
+            {canManageStock && (
               <div className="mb-6 bg-amber-50/50 p-5 rounded-2xl border border-amber-200/60 shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                   <AlertTriangle size={64} className="text-amber-600" />
@@ -1077,7 +1103,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                             {item.descricao || <span className="text-slate-350 italic text-[11px]">Sem anotações</span>}
                           </td>
                           <td className="p-4 text-right">
-                            {isAcadOrTec ? (
+                            {canManageStock ? (
                               <div className="flex items-center justify-end space-x-2">
                                 <button
                                   onClick={() => {
@@ -1435,14 +1461,21 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Setor *</label>
                         <div className="relative">
                           <Building2 className="absolute left-3.5 top-3.5 text-slate-400" size={14} />
-                          <input
-                            type="text"
+                          <select
                             required
-                            placeholder="Ex: Comercial, Apoio"
                             value={courseName}
                             onChange={(e) => setCourseName(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          />
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                          >
+                            <option value="">Selecione o Setor</option>
+                            <option value="Gestão">Gestão</option>
+                            <option value="Secretaria">Secretaria</option>
+                            <option value="Sala de Matrícula">Sala de Matrícula</option>
+                            <option value="Acadêmico">Acadêmico</option>
+                            <option value="Vigia">Vigia</option>
+                            <option value="Manutenção">Manutenção</option>
+                            <option value="Gavea">Gavea</option>
+                          </select>
                         </div>
                       </div>
 

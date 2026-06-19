@@ -424,14 +424,21 @@ export function PublicInsumoForm({ onToast }: PublicInsumoFormProps) {
                         </label>
                         <div className="relative">
                           <Building2 className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
-                          <input
-                            type="text"
+                          <select
                             required
-                            placeholder="Ex: Comercial, Financeiro, RH"
                             value={courseName}
                             onChange={(e) => setCourseName(e.target.value)}
                             className="w-full pl-11 pr-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all bg-white"
-                          />
+                          >
+                            <option value="">Selecione o Setor</option>
+                            <option value="Gestão">Gestão</option>
+                            <option value="Secretaria">Secretaria</option>
+                            <option value="Sala de Matrícula">Sala de Matrícula</option>
+                            <option value="Acadêmico">Acadêmico</option>
+                            <option value="Vigia">Vigia</option>
+                            <option value="Manutenção">Manutenção</option>
+                            <option value="Gavea">Gavea</option>
+                          </select>
                         </div>
                       </div>
 

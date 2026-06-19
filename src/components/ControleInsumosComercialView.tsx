@@ -1343,14 +1343,21 @@ export function ControleInsumosComercialView({
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Setor *</label>
                         <div className="relative">
                           <Building2 className="absolute left-3.5 top-3.5 text-slate-400" size={14} />
-                          <input
-                            type="text"
+                          <select
                             required
-                            placeholder="Ex: Comercial, Apoio"
                             value={courseName}
                             onChange={(e) => setCourseName(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                          />
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white"
+                          >
+                            <option value="">Selecione o Setor</option>
+                            <option value="Gestão">Gestão</option>
+                            <option value="Secretaria">Secretaria</option>
+                            <option value="Sala de Matrícula">Sala de Matrícula</option>
+                            <option value="Acadêmico">Acadêmico</option>
+                            <option value="Vigia">Vigia</option>
+                            <option value="Manutenção">Manutenção</option>
+                            <option value="Gavea">Gavea</option>
+                          </select>
                         </div>
                       </div>
 
