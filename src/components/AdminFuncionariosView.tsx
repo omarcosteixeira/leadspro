@@ -22,6 +22,9 @@ export function AdminFuncionariosView({ onToast }: Props) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Selection States
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   // Form State
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -49,6 +52,12 @@ export function AdminFuncionariosView({ onToast }: Props) {
 
     return () => unsubscribe();
   }, []);
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
 
   const handleAddFuncionario = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,10 +91,30 @@ export function AdminFuncionariosView({ onToast }: Props) {
     }
     try {
       await deleteDoc(doc(db, COLLECTIONS.FUNCIONARIOS, id));
+      setSelectedIds(prev => prev.filter(item => item !== id));
       onToast("Funcionário removido com sucesso!", "success");
     } catch (error) {
       console.error(error);
       onToast("Erro ao remover funcionário.", "error");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Tem certeza que deseja remover os ${selectedIds.length} funcionários selecionados?`)) {
+      return;
+    }
+    try {
+      const batch = writeBatch(db);
+      selectedIds.forEach((id) => {
+        batch.delete(doc(db, COLLECTIONS.FUNCIONARIOS, id));
+      });
+      await batch.commit();
+      onToast(`${selectedIds.length} funcionários removidos com sucesso!`, "success");
+      setSelectedIds([]);
+    } catch (error) {
+      console.error("Erro ao remover múltiplos funcionários:", error);
+      onToast("Erro ao remover funcionários selecionados.", "error");
     }
   };
 
@@ -194,6 +223,8 @@ export function AdminFuncionariosView({ onToast }: Props) {
         }
 
         let importedCount = 0;
+        let updatedCount = 0;
+        let noChangeCount = 0;
         const batch = writeBatch(db);
 
         for (const row of rawData) {
@@ -212,23 +243,64 @@ export function AdminFuncionariosView({ onToast }: Props) {
               ? 'administrativo' 
               : 'docente';
 
-          const docRef = doc(collection(db, COLLECTIONS.FUNCIONARIOS));
-          batch.set(docRef, {
-            nome: rawNome,
-            email: rawEmail,
-            tipo: finalTipo,
-            matricula: rawMatricula,
-            createdAt: serverTimestamp()
-          });
+          // Check if employee with same matricula level is already registered
+          const existing = funcionarios.find(f => String(f.matricula).trim().toLowerCase() === rawMatricula.toLowerCase());
 
-          importedCount++;
+          if (existing) {
+            const updates: any = {};
+            
+            // Only assign if currently blank / empty but Excel contains data
+            if ((!existing.nome || existing.nome.trim() === '') && rawNome) {
+              updates.nome = rawNome;
+            }
+            if ((!existing.email || existing.email.trim() === '') && rawEmail) {
+              updates.email = rawEmail;
+            }
+            if (!existing.tipo && finalTipo) {
+              updates.tipo = finalTipo;
+            }
+
+            if (Object.keys(updates).length > 0) {
+              const docRef = doc(db, COLLECTIONS.FUNCIONARIOS, existing.id);
+              batch.update(docRef, updates);
+              updatedCount++;
+            } else {
+              noChangeCount++;
+            }
+          } else {
+            // New employee creation
+            const docRef = doc(collection(db, COLLECTIONS.FUNCIONARIOS));
+            batch.set(docRef, {
+              nome: rawNome,
+              email: rawEmail,
+              tipo: finalTipo,
+              matricula: rawMatricula,
+              createdAt: serverTimestamp()
+            });
+            importedCount++;
+          }
         }
 
-        if (importedCount > 0) {
+        if (importedCount > 0 || updatedCount > 0) {
           await batch.commit();
-          onToast(`${importedCount} funcionários importados com sucesso!`, "success");
+          let msg = "";
+          if (importedCount > 0 && updatedCount > 0) {
+            msg = `${importedCount} novos funcionários importados e ${updatedCount} atualizados com dados preenchidos!`;
+          } else if (importedCount > 0) {
+            msg = `${importedCount} novos funcionários importados com sucesso!`;
+          } else {
+            msg = `${updatedCount} funcionários atualizados com novos dados preenchidos!`;
+          }
+          if (noChangeCount > 0) {
+            msg += ` (${noChangeCount} já cadastrados e inalterados)`;
+          }
+          onToast(msg, "success");
         } else {
-          onToast("Nenhum funcionário elegível para importação foi encontrado.", "error");
+          if (noChangeCount > 0) {
+            onToast(`${noChangeCount} funcionários avaliados: todos já estavam cadastrados com campos preenchidos.`, "success");
+          } else {
+            onToast("Nenhum funcionário elegível para importação foi encontrado.", "error");
+          }
         }
 
       } catch (err: any) {
@@ -251,6 +323,25 @@ export function AdminFuncionariosView({ onToast }: Props) {
       (f.tipo === 'administrativo' ? 'administrativo' : 'docente').includes(search)
     );
   });
+
+  const allFilteredIds = filteredFuncionarios.map(f => f.id);
+  const isAllSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedIds.includes(id));
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(prev => prev.filter(id => !allFilteredIds.includes(id)));
+    } else {
+      setSelectedIds(prev => {
+        const next = [...prev];
+        allFilteredIds.forEach(id => {
+          if (!next.includes(id)) {
+            next.push(id);
+          }
+        });
+        return next;
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -357,16 +448,31 @@ export function AdminFuncionariosView({ onToast }: Props) {
       {/* Listing and search */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-slate-50">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar por nome, matrícula, tipo..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 text-xs rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+              <input
+                type="text"
+                placeholder="Buscar por nome, matrícula, tipo..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-1.5 text-xs rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              />
+            </div>
+            
+            {selectedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={handleBulkDelete}
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-sm animate-in fade-in zoom-in-95 duration-150 self-start sm:self-auto"
+                title="Excluir todos os funcionários selecionados"
+              >
+                <Trash2 size={13} />
+                <span>Excluir Selecionados ({selectedIds.length})</span>
+              </button>
+            )}
           </div>
+          
           <span className="text-xs font-bold text-slate-400 self-center">
             {filteredFuncionarios.length} funcionário(s) encontrado(s)
           </span>
@@ -381,6 +487,15 @@ export function AdminFuncionariosView({ onToast }: Props) {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider border-b border-slate-100">
+                  <th className="px-6 py-3 w-12 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={handleSelectAll}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+                      title="Selecionar todos os filtrados"
+                    />
+                  </th>
                   <th className="px-6 py-3">Nome</th>
                   <th className="px-6 py-3">E-mail</th>
                   <th className="px-6 py-3">Tipo</th>
@@ -389,31 +504,42 @@ export function AdminFuncionariosView({ onToast }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 text-xs">
-                {filteredFuncionarios.map(f => (
-                  <tr key={f.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-3.5 font-bold text-slate-800">{f.nome}</td>
-                    <td className="px-6 py-3.5 text-slate-500">{f.email || '—'}</td>
-                    <td className="px-6 py-3.5">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        f.tipo === 'administrativo' 
-                          ? 'bg-amber-50 text-amber-700 border border-amber-100' 
-                          : 'bg-blue-50 text-blue-700 border border-blue-100'
-                      }`}>
-                        {f.tipo === 'administrativo' ? 'Administrativo' : 'Docente'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3.5 font-mono text-slate-600 font-medium">{f.matricula}</td>
-                    <td className="px-6 py-3.5 text-right">
-                      <button
-                        onClick={() => handleDeleteFuncionario(f.id, f.nome)}
-                        className="text-rose-500 hover:bg-rose-50 p-1.5 rounded-lg transition-all"
-                        title="Remover Funcionário"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredFuncionarios.map(f => {
+                  const isSelected = selectedIds.includes(f.id);
+                  return (
+                    <tr key={f.id} className={`hover:bg-slate-50/50 transition-colors ${isSelected ? 'bg-blue-50/20' : ''}`}>
+                      <td className="px-6 py-3.5 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(f.id)}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-6 py-3.5 font-bold text-slate-800">{f.nome}</td>
+                      <td className="px-6 py-3.5 text-slate-500">{f.email || '—'}</td>
+                      <td className="px-6 py-3.5">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          f.tipo === 'administrativo' 
+                            ? 'bg-amber-50 text-amber-700 border border-amber-100' 
+                            : 'bg-blue-50 text-blue-700 border border-blue-100'
+                        }`}>
+                          {f.tipo === 'administrativo' ? 'Administrativo' : 'Docente'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3.5 font-mono text-slate-600 font-medium">{f.matricula}</td>
+                      <td className="px-6 py-3.5 text-right">
+                        <button
+                          onClick={() => handleDeleteFuncionario(f.id, f.nome)}
+                          className="text-rose-500 hover:bg-rose-50 p-1.5 rounded-lg transition-all cursor-pointer"
+                          title="Remover Funcionário"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
