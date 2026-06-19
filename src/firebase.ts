@@ -57,6 +57,9 @@ export const COLLECTIONS = {
   INSUMOS_ESTOQUE: `artifacts/${appId}/public/data/insumos_estoque`,
   INSUMOS_PEDIDOS_COMERCIAL: `artifacts/${appId}/public/data/insumos_pedidos_comercial`,
   INSUMOS_ESTOQUE_COMERCIAL: `artifacts/${appId}/public/data/insumos_estoque_comercial`,
+  INSUMOS_BAIXAS: `artifacts/${appId}/public/data/insumos_baixas`,
+  INSUMOS_BAIXAS_COMERCIAL: `artifacts/${appId}/public/data/insumos_baixas_comercial`,
+  FUNCIONARIOS: `artifacts/${appId}/public/data/funcionarios`,
 };
 
 export enum OperationType {

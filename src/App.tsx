@@ -131,6 +131,7 @@ import { CursosDisponiveisView } from './components/CursosDisponiveisView';
 import { ControleInsumosView } from './components/ControleInsumosView';
 import { ControleInsumosComercialView } from './components/ControleInsumosComercialView';
 import { WhatsAppMessageEditor } from './components/WhatsAppMessageEditor';
+import { AdminFuncionariosView } from './components/AdminFuncionariosView';
 
 // --- Helpers ---
 export const replaceMessageVariables = (template: string, lead: any): string => {
@@ -8796,7 +8797,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   callBotApi: (path: string, options?: { method?: 'GET'|'POST', body?: any }) => Promise<any>,
   metaDia: MetaDia[]
 }) {
-  const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento' | 'metaDia' | 'folgas' | 'logo'>('usuarios');
+  const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento' | 'metaDia' | 'folgas' | 'logo' | 'funcionarios'>('usuarios');
   const [adminRequests, setAdminRequests] = useState<SolicitacaoFolga[]>([]);
   const [loadingAdminRequests, setLoadingAdminRequests] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'Pendente' | 'Aprovado' | 'Recusado'>('Todos');
@@ -9215,6 +9216,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
       <div className="flex overflow-x-auto space-x-2 border-b border-slate-200 pb-4 mb-6 scrollbar-hide">
         {[
           { id: 'usuarios', label: 'Usuários' },
+          { id: 'funcionarios', label: 'Funcionários (Insumos)' },
           { id: 'folgas', label: 'Folgas e Férias' },
           { id: 'bomDia', label: 'Bom Dia Captação' },
           { id: 'forecast', label: 'Forecast' },
@@ -11204,6 +11206,11 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
       )}
 
 
+      {activeTab === 'funcionarios' && (
+        <AdminFuncionariosView onToast={onToast} />
+      )}
+
+
       {activeTab === 'backup' && (
         <section className="bg-rose-50 p-6 rounded-3xl border border-rose-100 max-w-2xl mx-auto">
           <h3 className="text-xl font-bold text-rose-900 mb-4">Backup e Segurança</h3>
@@ -11282,7 +11289,7 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
           promoterUnit: promoterObj?.servidor ? (promoterObj.servidor.charAt(0).toUpperCase() + promoterObj.servidor.slice(1)) : 'Principal',
           diarias,
           horas: details.horas || 4,
-          solicitante: action.colaboradorNome || creatorObj?.name || 'Gestor Comercial',
+          solicitante: action.colaboradorNome || (action.colaboradorId ? (users.find(u => u.uid === action.colaboradorId)?.name) : null) || creatorObj?.name || 'Gestor Comercial',
           tipoAcao: action.nome,
           dataInicio: action.dataInicio,
           dataFim: action.dataFim,

@@ -375,6 +375,11 @@ export interface InsumoPedidoComercial {
   solicitanteNome: string;
   createdAt: any;
   updatedAt?: any;
+  professorNome?: string;
+  cursoNome?: string;
+  disciplinaNome?: string;
+  tipoFicha?: 'docente' | 'administrativo';
+  matricula?: string;
 }
 
 export interface InsumoEstoqueComercial {
@@ -388,4 +393,25 @@ export interface InsumoEstoqueComercial {
   ownerName: string;
   updatedAt: any;
 }
+
+export interface Funcionario {
+  id: string;
+  nome: string;
+  email: string;
+  tipo: 'docente' | 'administrativo';
+  matricula: string;
+  createdAt: any;
+}
+
+export interface InsumoBaixa {
+  id: string;
+  materialId: string;
+  materialNome: string;
+  quantidade: number;
+  motivo: 'Uso em aula' | 'Uso no setor' | 'Material vencido(lixo)';
+  realizadoPor: string;
+  createdAt: any;
+}
+
+
 

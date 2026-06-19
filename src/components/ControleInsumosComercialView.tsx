@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   InsumoPedidoComercial,
   InsumoEstoqueComercial,
   InsumoItemComercial,
   UserProfile,
+  InsumoBaixa,
 } from "../types";
 import {
   db,
@@ -11,6 +12,7 @@ import {
   handleFirestoreError,
   OperationType,
 } from "../firebase";
+import { InsumosDashboard } from "./InsumosDashboard";
 import {
   collection,
   addDoc,
@@ -18,6 +20,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  onSnapshot,
 } from "firebase/firestore";
 import {
   Plus,
@@ -36,6 +39,12 @@ import {
   Clock,
   Upload,
   Download,
+  ChevronLeft,
+  Building2,
+  Users,
+  Book,
+  FileText,
+  Send,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ROLES } from "../App";
@@ -54,17 +63,59 @@ export function ControleInsumosComercialView({
   profile,
   onToast,
 }: ControleInsumosComercialViewProps) {
-  const [activeTab, setActiveTab] = useState<"pedidos" | "estoque">("pedidos");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "pedidos" | "estoque">("dashboard");
   const [isAddingPedido, setIsAddingPedido] = useState(false);
   const [isAddingEstoque, setIsAddingEstoque] = useState(false);
   const [editingEstoque, setEditingEstoque] =
     useState<InsumoEstoqueComercial | null>(null);
+
+  // Commercial Material Discard / Baixa States
+  const [baixaModalOpen, setBaixaModalOpen] = useState(false);
+  const [selectedStockItem, setSelectedStockItem] = useState<InsumoEstoqueComercial | null>(null);
+  const [baixaQuantidade, setBaixaQuantidade] = useState<number>(1);
+  const [baixaMotivo, setBaixaMotivo] = useState<'Uso em aula' | 'Uso no setor' | 'Material vencido(lixo)'>('Uso em aula');
+  const [baixas, setBaixas] = useState<InsumoBaixa[]>([]);
 
   // New Request Form State
   const [motivoUso, setMotivoUso] = useState("");
   const [pedidoItens, setPedidoItens] = useState<InsumoItemComercial[]>([
     { material: "", quantidade: 1 },
   ]);
+
+  // Type qualification & fields
+  const [tipoSolicitante, setTipoSolicitante] = useState<'docente' | 'administrativo' | null>(null);
+  const [professorName, setProfessorName] = useState("");
+  const [courseName, setCourseName] = useState("");
+  const [subjectName, setSubjectName] = useState("");
+  const [matricula, setMatricula] = useState("");
+  const [funcionarios, setFuncionarios] = useState<any[]>([]);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+
+  // Sync employees
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, COLLECTIONS.FUNCIONARIOS), (snap) => {
+      const list: any[] = [];
+      snap.forEach(d => {
+        list.push({ id: d.id, ...d.data() });
+      });
+      setFuncionarios(list);
+    });
+    return () => unsub();
+  }, []);
+
+  // Sync commercial write-offs (baixas)
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, COLLECTIONS.INSUMOS_BAIXAS_COMERCIAL), (snap) => {
+      const list: InsumoBaixa[] = [];
+      snap.forEach(d => {
+        list.push({ id: d.id, ...d.data() } as InsumoBaixa);
+      });
+      setBaixas(list);
+    }, (error) => {
+      console.error("Erro ao sincronizar baixas comerciais: ", error);
+    });
+    return () => unsub();
+  }, []);
 
   // New Stock Form State
   const [stockMaterial, setStockMaterial] = useState("");
@@ -115,7 +166,12 @@ export function ControleInsumosComercialView({
   ) => {
     const updated = [...pedidoItens];
     if (field === "quantidade") {
-      updated[index].quantidade = Math.max(1, parseInt(value) || 1);
+      let qty = Math.max(1, parseInt(value) || 1);
+      if (tipoSolicitante === 'administrativo' && qty > 10) {
+        qty = 10;
+        onToast("O limite máximo para solicitação administrativa é de 10 unidades por item.", "error");
+      }
+      updated[index].quantidade = qty;
     } else {
       updated[index].material = value;
     }
@@ -125,9 +181,17 @@ export function ControleInsumosComercialView({
   // Submit supply request (Pedido de Insumos)
   const handleSubmitPedido = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!motivoUso) {
-      onToast("Por favor, preencha o motivo de uso.", "error");
-      return;
+
+    if (tipoSolicitante === 'docente') {
+      if (!professorName || !courseName || !subjectName || !motivoUso) {
+        onToast("Por favor, preencha todos os campos obrigatórios.", "error");
+        return;
+      }
+    } else {
+      if (!professorName || !courseName || !matricula || !motivoUso) {
+        onToast("Por favor, preencha todos os campos obrigatórios.", "error");
+        return;
+      }
     }
 
     const filteredItens = pedidoItens.filter((it) => it.material.trim() !== "");
@@ -139,13 +203,26 @@ export function ControleInsumosComercialView({
       return;
     }
 
+    if (tipoSolicitante === 'administrativo') {
+      const overLimit = filteredItens.some(it => it.quantidade > 10);
+      if (overLimit) {
+        onToast("Um ou mais materiais ultrapassam o limite de 10 unidades para solicitar como administrativo.", "error");
+        return;
+      }
+    }
+
     try {
-      const newPedido: Omit<InsumoPedidoComercial, "id"> = {
+      const newPedido: any = {
         motivoUso: motivoUso,
         itens: filteredItens,
         status: "Pendente",
         solicitanteId: profile.uid,
         solicitanteNome: profile.name,
+        professorNome: professorName,
+        cursoNome: courseName,
+        disciplinaNome: tipoSolicitante === 'docente' ? subjectName : 'Administrativo',
+        tipoFicha: tipoSolicitante,
+        matricula: matricula || '',
         createdAt: new Date().toISOString(),
       };
 
@@ -157,6 +234,11 @@ export function ControleInsumosComercialView({
 
       // Reset form
       setMotivoUso("");
+      setProfessorName("");
+      setCourseName("");
+      setSubjectName("");
+      setMatricula("");
+      setTipoSolicitante(null);
       setPedidoItens([{ material: "", quantidade: 1 }]);
       setIsAddingPedido(false);
     } catch (err) {
@@ -253,6 +335,51 @@ export function ControleInsumosComercialView({
         COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL,
       );
       onToast("Erro ao remover item.", "error");
+    }
+  };
+
+  // Confirm Physical Stock Discard / Baixa (Comercial)
+  const handleConfirmBaixa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStockItem) return;
+    if (baixaQuantidade <= 0) {
+      onToast("A quantidade a baixar deve ser maior que zero.", "error");
+      return;
+    }
+    if (baixaQuantidade > selectedStockItem.quantidade) {
+      onToast(`A quantidade a baixar (${baixaQuantidade}) excede o estoque disponível (${selectedStockItem.quantidade}).`, "error");
+      return;
+    }
+
+    try {
+      const itemRef = doc(db, COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL, selectedStockItem.id);
+      const newQty = selectedStockItem.quantidade - baixaQuantidade;
+      await updateDoc(itemRef, {
+        quantidade: newQty,
+        updatedAt: new Date().toISOString()
+      });
+
+      const newBaixa: any = {
+        materialId: selectedStockItem.id,
+        materialNome: selectedStockItem.material,
+        quantidade: baixaQuantidade,
+        motivo: baixaMotivo,
+        realizadoPor: profile.name,
+        createdAt: new Date().toISOString()
+      };
+      await addDoc(collection(db, COLLECTIONS.INSUMOS_BAIXAS_COMERCIAL), newBaixa);
+
+      onToast(`Baixa de ${baixaQuantidade} ${selectedStockItem.unidadeMedida || 'UN'} de "${selectedStockItem.material}" registrada com sucesso!`, "success");
+      
+      if (newQty < (selectedStockItem.estoqueMinimo ?? 5)) {
+        onToast(`Atenção: O estoque de "${selectedStockItem.material}" está abaixo do mínimo! (Estoque atual: ${newQty})`, "error");
+      }
+
+      setBaixaModalOpen(false);
+      setSelectedStockItem(null);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL);
+      onToast("Erro ao registrar a baixa do material.", "error");
     }
   };
 
@@ -505,6 +632,19 @@ export function ControleInsumosComercialView({
       {/* Tabs */}
       <div className="flex flex-wrap gap-1.5 p-1 bg-slate-150 rounded-2xl w-full sm:w-fit">
         <button
+          onClick={() => setActiveTab("dashboard")}
+          className={cn(
+            "flex items-center space-x-2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all w-full sm:w-auto justify-center cursor-pointer",
+            activeTab === "dashboard"
+              ? "bg-white text-emerald-800 shadow-sm border border-slate-200/50"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
+          )}
+        >
+          <Gauge size={16} className="text-emerald-650 animate-pulse" />
+          <span>Dashboard</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab("pedidos")}
           className={cn(
             "flex items-center space-x-2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all w-full sm:w-auto justify-center cursor-pointer",
@@ -530,6 +670,11 @@ export function ControleInsumosComercialView({
           <span>Físico / Estoque ({filteredEstoque.length})</span>
         </button>
       </div>
+
+      {/* Tab: DASHBOARD */}
+      {activeTab === "dashboard" && (
+        <InsumosDashboard pedidos={pedidos} baixas={baixas} title="Indicadores de Insumos - Comercial" />
+      )}
 
       {/* Tab: PEDIDOS */}
       {activeTab === "pedidos" && (
@@ -936,6 +1081,17 @@ export function ControleInsumosComercialView({
                               <div className="flex items-center justify-end space-x-2">
                                 <button
                                   onClick={() => {
+                                    setSelectedStockItem(item);
+                                    setBaixaQuantidade(1);
+                                    setBaixaMotivo('Uso em aula');
+                                    setBaixaModalOpen(true);
+                                  }}
+                                  className="text-amber-700 hover:text-amber-850 font-bold text-xs uppercase px-2 py-1 bg-amber-50 rounded mr-1"
+                                >
+                                  Baixar
+                                </button>
+                                <button
+                                  onClick={() => {
                                     setEditingEstoque(item);
                                     setStockMaterial(item.material);
                                     setStockQuantidade(item.quantidade);
@@ -971,113 +1127,336 @@ export function ControleInsumosComercialView({
       {/* Modals for Adding */}
       {isAddingPedido && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden scale-in">
-            <div className="bg-emerald-600 p-6 text-white flex justify-between items-center">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-5 text-white flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-black">Adicionar Pedido</h3>
-                <p className="text-emerald-100 text-sm mt-1">
-                  Preencha os dados da requisição.
+                <h3 className="text-xl font-black">Nova Solicitação de Insumos</h3>
+                <p className="text-emerald-100 text-xs mt-1">
+                  Preencha os dados da requisição conforme o perfil.
                 </p>
               </div>
               <button
-                onClick={() => setIsAddingPedido(false)}
+                onClick={() => {
+                  setIsAddingPedido(false);
+                  setTipoSolicitante(null);
+                  setProfessorName("");
+                  setCourseName("");
+                  setSubjectName("");
+                  setMatricula("");
+                  setPedidoItens([{ material: "", quantidade: 1 }]);
+                }}
                 className="text-white hover:bg-emerald-500 p-2 rounded-full transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitPedido} className="p-6 space-y-5">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Motivo do Uso *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={motivoUso}
-                  onChange={(e) => setMotivoUso(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                  placeholder="Ex: Campanha externa, material de escritório..."
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Materiais Requisitados *
-                  </label>
+            {tipoSolicitante === null ? (
+              <div className="p-8 space-y-6">
+                <h3 className="text-center font-bold text-slate-700 text-base mb-2">
+                  Qual é o perfil do solicitante?
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* DOCENTE CARD */}
                   <button
                     type="button"
-                    onClick={handleAddRequestItem}
-                    className="text-[10px] bg-slate-100 hover:bg-slate-200 text-emerald-700 font-black px-2 py-1 rounded-md uppercase cursor-pointer flex items-center space-x-1"
+                    onClick={() => setTipoSolicitante('docente')}
+                    className="flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-emerald-55 hover:border-emerald-300 hover:shadow-lg transition-all text-center group cursor-pointer"
                   >
-                    <Plus size={12} /> <span>Novo Item</span>
+                    <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <Users size={24} />
+                    </div>
+                    <h4 className="font-bold text-slate-800 text-sm mb-1">Docente / Professor</h4>
+                    <p className="text-xs text-slate-500 max-w-xs">
+                      Materiais de apoio para disciplinas acadêmicas, aulas práticas ou laboratórios.
+                    </p>
+                  </button>
+
+                  {/* ADMINISTRATIVO CARD */}
+                  <button
+                    type="button"
+                    onClick={() => setTipoSolicitante('administrativo')}
+                    className="flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-amber-50 hover:border-amber-300 hover:shadow-lg transition-all text-center group cursor-pointer"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <Building2 size={24} />
+                    </div>
+                    <h4 className="font-bold text-slate-800 text-sm mb-1">Administrativo</h4>
+                    <p className="text-xs text-slate-500 max-w-xs">
+                      Corporativo, escritórios ou backoffice. <span className="font-bold text-amber-700">(Máximo de 10 unidades por item)</span>
+                    </p>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitPedido} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTipoSolicitante(null);
+                      setProfessorName("");
+                      setCourseName("");
+                      setSubjectName("");
+                      setMatricula("");
+                    }}
+                    className="inline-flex items-center space-x-1 text-xs text-slate-500 hover:text-slate-800 font-bold transition-all"
+                  >
+                    <ChevronLeft size={16} />
+                    <span>Mudar Perfil ({tipoSolicitante === 'docente' ? 'Docente' : 'Administrativo'})</span>
                   </button>
                 </div>
 
-                <div className="space-y-3">
-                  {pedidoItens.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center space-x-3 bg-slate-50 p-2 border border-slate-200 rounded-xl"
-                    >
-                      <input
-                        type="text"
-                        value={item.material}
-                        onChange={(e) =>
-                          handleRequestItemChange(
-                            index,
-                            "material",
-                            e.target.value,
-                          )
-                        }
-                        placeholder={`Nome do material ${index + 1}`}
-                        className="flex-1 bg-white border border-slate-200 text-slate-800 px-3 py-2 text-sm rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                      />
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantidade}
-                        onChange={(e) =>
-                          handleRequestItemChange(
-                            index,
-                            "quantidade",
-                            e.target.value,
-                          )
-                        }
-                        className="w-20 bg-white border border-slate-200 text-slate-800 px-3 py-2 text-sm rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-mono text-center"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveRequestItem(index)}
-                        disabled={pedidoItens.length === 1}
-                        className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                {tipoSolicitante === 'docente' ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome do Professor *</label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ex: Dr. Paulo Silva"
+                            value={professorName}
+                            onChange={(e) => setProfessorName(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          />
+                        </div>
+                      </div>
 
-              <div className="flex justify-end pt-4 border-t border-slate-100 space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setIsAddingPedido(false)}
-                  className="px-6 py-2.5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md transition-colors flex items-center space-x-2 cursor-pointer"
-                >
-                  <Check size={18} />
-                  <span>Salvar Solicitação</span>
-                </button>
-              </div>
-            </form>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome do Curso *</label>
+                        <div className="relative">
+                          <Book className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ex: Administração"
+                            value={courseName}
+                            onChange={(e) => setCourseName(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome da Disciplina *</label>
+                        <div className="relative">
+                          <Book className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ex: Logística Geral"
+                            value={subjectName}
+                            onChange={(e) => setSubjectName(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Motivo do Uso / Justificativa *</label>
+                        <div className="relative">
+                          <FileText className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ex: Aula prática de estoque e armazenagem"
+                            value={motivoUso}
+                            onChange={(e) => setMotivoUso(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="relative">
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome do Funcionário *</label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <input
+                            type="text"
+                            required
+                            placeholder="Comece a digitar seu nome..."
+                            value={professorName}
+                            onFocus={() => setShowAutocomplete(true)}
+                            onChange={(e) => {
+                              setProfessorName(e.target.value);
+                              setMatricula('');
+                              setShowAutocomplete(true);
+                            }}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          />
+                        </div>
+
+                        {/* Autocomplete list */}
+                        {showAutocomplete && professorName.trim().length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-[150px] overflow-y-auto divide-y divide-slate-50">
+                            {funcionarios
+                              .filter(f => f.tipo === 'administrativo' && (f.nome || '').toLowerCase().includes(professorName.toLowerCase()))
+                              .map(f => (
+                                <button
+                                  type="button"
+                                  key={f.id}
+                                  onClick={() => {
+                                    setProfessorName(f.nome);
+                                    setMatricula(f.matricula);
+                                    setShowAutocomplete(false);
+                                  }}
+                                  className="w-full p-2.5 text-left text-xs text-slate-700 hover:bg-slate-50 font-bold transition-all flex justify-between items-center"
+                                >
+                                  <span>{f.nome}</span>
+                                  <span className="text-[10px] font-mono font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                                    Matrícula: {f.matricula}
+                                  </span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Matrícula (Automática) *</label>
+                        <div className="relative">
+                          <FileText className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <input
+                            type="text"
+                            required
+                            readOnly
+                            placeholder="Selecione seu nome acima"
+                            value={matricula}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl bg-slate-50 text-slate-600 outline-none text-sm font-mono font-bold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Setor *</label>
+                        <div className="relative">
+                          <Building2 className="absolute left-3.5 top-3.5 text-slate-400" size={14} />
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ex: Comercial, Apoio"
+                            value={courseName}
+                            onChange={(e) => setCourseName(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Motivo / Justificativa *</label>
+                        <div className="relative">
+                          <FileText className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ex: Utilização no setor de atendimento"
+                            value={motivoUso}
+                            onChange={(e) => setMotivoUso(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="border-t border-slate-100 pt-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center space-x-1.5">
+                      <Boxes size={14} className="text-emerald-600" />
+                      <span>Materiais a Requisitar</span>
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={handleAddRequestItem}
+                      className="flex items-center space-x-1 text-xs text-emerald-600 hover:text-emerald-700 font-bold hover:bg-emerald-50 px-2 py-1 rounded-lg cursor-pointer"
+                    >
+                      <Plus size={14} />
+                      <span>Adicionar Linha</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {pedidoItens.map((it, index) => (
+                      <div key={index} className="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            placeholder="Nome do material/item (Ex: Caneta azul)"
+                            value={it.material}
+                            onChange={(e) => handleRequestItemChange(index, 'material', e.target.value)}
+                            className="w-full px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 text-xs bg-white text-slate-750 font-bold"
+                            required
+                          />
+                        </div>
+                        <div className="w-28 relative">
+                          <input
+                            type="number"
+                            min="1"
+                            max={tipoSolicitante === 'administrativo' ? 10 : undefined}
+                            placeholder="Qtd"
+                            value={it.quantidade}
+                            onChange={(e) => handleRequestItemChange(index, 'quantidade', e.target.value)}
+                            className="w-full pl-3 pr-8 py-1.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 text-xs text-center font-mono bg-white font-bold"
+                            required
+                          />
+                          {tipoSolicitante === 'administrativo' && (
+                            <span className="absolute right-1 top-2 text-[9px] font-bold text-amber-600 select-none bg-amber-50 px-1 border border-amber-100 rounded">
+                              Max 10
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRequestItem(index)}
+                          disabled={pedidoItens.length === 1}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-all cursor-pointer"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-6 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingPedido(false);
+                      setTipoSolicitante(null);
+                      setProfessorName("");
+                      setCourseName("");
+                      setSubjectName("");
+                      setMatricula("");
+                      setPedidoItens([{ material: "", quantidade: 1 }]);
+                    }}
+                    className="px-5 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition-all cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex items-center space-x-2 bg-emerald-650 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all shadow-md cursor-pointer"
+                  >
+                    <Send size={16} />
+                    <span>Enviar Solicitação</span>
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
@@ -1183,6 +1562,104 @@ export function ControleInsumosComercialView({
                   <span>
                     {editingEstoque ? "Salvar Alterações" : "Salvar no Estoque"}
                   </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Baixa de Material */}
+      {baixaModalOpen && selectedStockItem && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <h4 className="text-lg font-black text-slate-800">Registrar Baixa</h4>
+                <p className="text-xs text-slate-500">Deduzir quantidade do estoque comercial</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleConfirmBaixa} className="space-y-4">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Material</span>
+                <span className="font-bold text-slate-800 text-sm mt-0.5 block">{selectedStockItem.material}</span>
+                <span className="text-xs font-mono font-bold text-slate-500 mt-1 block">
+                  Disponível em Estoque: <span className="text-emerald-600">{selectedStockItem.quantidade} {selectedStockItem.unidadeMedida || 'UN'}</span>
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Quantidade a Baixar
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max={selectedStockItem.quantidade}
+                    required
+                    value={baixaQuantidade}
+                    onChange={(e) => setBaixaQuantidade(Math.min(selectedStockItem.quantidade, Math.max(1, parseInt(e.target.value) || 1)))}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-sm font-mono font-bold text-center"
+                  />
+                  <span className="absolute right-4 top-2 text-xs font-bold text-slate-400 font-mono">
+                    {selectedStockItem.unidadeMedida || 'UN'}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Motivo da Baixa
+                </label>
+                <div className="space-y-2">
+                  {[
+                    { id: 'Uso em aula', label: 'Uso em aula' },
+                    { id: 'Uso no setor', label: 'Uso no setor' },
+                    { id: 'Material vencido(lixo)', label: 'Material vencido / Descartado (lixo)' }
+                  ].map((option) => (
+                    <label
+                      key={option.id}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer text-xs font-black",
+                        baixaMotivo === option.id
+                          ? "bg-amber-50/50 border-amber-200 text-amber-800"
+                          : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="motivoBaixa"
+                        checked={baixaMotivo === option.id}
+                        onChange={() => setBaixaMotivo(option.id as any)}
+                        className="text-amber-600 focus:ring-amber-500"
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBaixaModalOpen(false);
+                    setSelectedStockItem(null);
+                  }}
+                  className="px-5 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-black px-6 py-2.5 rounded-xl text-sm transition-all shadow-md cursor-pointer"
+                >
+                  Confirmar Baixa
                 </button>
               </div>
             </form>
