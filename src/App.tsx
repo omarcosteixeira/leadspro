@@ -13922,6 +13922,22 @@ function AdminView({
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
                         <button
+                          onClick={async () => {
+                            if (window.confirm(`Deseja enviar um e-mail de redefinição de senha para ${u.name} (${u.email})?`)) {
+                              try {
+                                await sendPasswordResetEmail(auth, u.email);
+                                onToast("E-mail de redefinição enviado com sucesso!", "success");
+                              } catch (err) {
+                                onToast("Erro ao enviar e-mail de redefinição.", "error");
+                              }
+                            }
+                          }}
+                          className="p-2 text-sky-500 hover:bg-sky-50 rounded-lg transition-all"
+                          title="Redefinir Senha"
+                        >
+                          <KeyRound size={16} />
+                        </button>
+                        <button
                           onClick={() => setEditingUser(u)}
                           className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all"
                           title="Editar Perfil"
