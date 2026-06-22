@@ -606,7 +606,7 @@ export function ControleInsumosView({
         }
         sums[key].requestedQty += it.quantidade;
         sums[key].details.push(
-          `Prof. ${p.professorNome} (${it.quantidade} UN)`,
+          `${p.tipoSolicitante === "administrativo" ? p.professorNome : "Prof. " + p.professorNome} (${it.quantidade} UN)`,
         );
       });
     });
@@ -642,7 +642,7 @@ export function ControleInsumosView({
     if (activeTab === "pedidos") {
       dataToExport = filteredPedidos.map((p) => ({
         Status: p.status,
-        Professor: p.professorNome,
+        "Prof./Func.": p.professorNome,
         Curso: p.cursoNome || p.courseNome,
         Disciplina: p.disciplinaNome,
         Motivo: p.motivoUso,
@@ -940,7 +940,7 @@ export function ControleInsumosView({
                         <div>
                           <div className="flex flex-wrap items-center gap-2 mb-1.5">
                             <span className="text-sm font-bold text-slate-800 block">
-                              Prof. {pedido.professorNome}
+                              {pedido.tipoSolicitante === "administrativo" ? pedido.professorNome : `Prof. ${pedido.professorNome}`}
                             </span>
                             <span
                               className={cn(

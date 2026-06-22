@@ -5037,18 +5037,17 @@ function AuthScreen({
                 <button
                   type="button"
                   onClick={async () => {
-                    if (!email) {
-                      onToast(
-                        "Por favor, digite seu e-mail primeiro.",
-                        "error",
-                      );
-                      return;
+                    let resetEmail = email;
+                    if (!resetEmail) {
+                      const inputEmail = window.prompt("Por favor, digite seu e-mail para receber o link de redefinição de senha:");
+                      if (!inputEmail) return;
+                      resetEmail = inputEmail;
                     }
                     try {
-                      await sendPasswordResetEmail(auth, email);
-                      onToast("E-mail de redefinição enviado!");
+                      await sendPasswordResetEmail(auth, resetEmail);
+                      onToast("E-mail de redefinição enviado com sucesso! Verifique sua caixa de entrada.", "success");
                     } catch (err: any) {
-                      onToast("Erro ao enviar e-mail.", "error");
+                      onToast("Erro ao enviar e-mail. Verifique se o endereço é válido.", "error");
                     }
                   }}
                   className="text-xs font-bold text-sky-400 hover:text-sky-300 hover:underline transition-colors cursor-pointer"
@@ -5114,15 +5113,9 @@ function AuthScreen({
                   </button>
                   <button
                     onClick={() => setShowInstallGuide(!showInstallGuide)}
-                    className="px-3 py-2.5 bg-white/10 hover:bg-white/15 text-slate-100 font-bold text-xs rounded-lg transition-all cursor-pointer"
+                    className="px-3 py-2.5 bg-white/10 hover:bg-white/15 text-slate-100 font-bold text-xs rounded-lg transition-all cursor-pointer flex-1"
                   >
                     Instruções
-                  </button>
-                  <button
-                    onClick={() => setShowApkModal(true)}
-                    className="px-3 py-2.5 bg-white/10 hover:bg-white/15 text-slate-100 font-bold text-xs rounded-lg transition-all cursor-pointer"
-                  >
-                    Arquivo .APK
                   </button>
                 </div>
 
