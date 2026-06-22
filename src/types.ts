@@ -114,7 +114,7 @@ export interface GapEntry {
   curso: string;
   metodologia: string;
   formaIngresso: string;
-  matAcad: boolean;
+  matAcad: boolean | string;
   numeroMatricula?: string;
   periodo?: string;
   documentos: {
@@ -412,6 +412,17 @@ export interface InsumoBaixa {
   motivo: 'Uso em aula' | 'Uso no setor' | 'Material vencido(lixo)';
   realizadoPor: string;
   createdAt: any;
+}
+
+export interface BotReport {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  telefone: string;
+  tipoContato: 'leads' | 'bases' | 'bases_renovacao' | 'fies_prouni' | 'gap' | 'outro';
+  baseName?: string;
+  sentAt: any;
 }
 
 

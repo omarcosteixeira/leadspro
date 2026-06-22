@@ -1,47 +1,47 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { initializeApp, getApp } from 'firebase/app';
-import { 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
+import React, { useState, useEffect, useMemo } from "react";
+import { initializeApp, getApp } from "firebase/app";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
   updatePassword,
   updateProfile,
   getAuth,
-  User
-} from 'firebase/auth';
-import { 
-  collection, 
-  query, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  doc, 
-  deleteDoc, 
-  serverTimestamp, 
-  where, 
-  or, 
-  limit, 
-  getDoc, 
-  setDoc, 
+  User,
+} from "firebase/auth";
+import {
+  collection,
+  query,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  doc,
+  deleteDoc,
+  serverTimestamp,
+  where,
+  or,
+  limit,
+  getDoc,
+  setDoc,
   getDocs,
-  writeBatch
-} from 'firebase/firestore';
-import { 
-  LayoutDashboard, 
-  UserPlus, 
-  History, 
-  Database, 
-  GraduationCap, 
-  Settings, 
-  LogOut, 
-  Plus, 
-  Trash2, 
-  ExternalLink, 
-  CheckCircle2, 
-  XCircle, 
-  Phone, 
+  writeBatch,
+} from "firebase/firestore";
+import {
+  LayoutDashboard,
+  UserPlus,
+  History,
+  Database,
+  GraduationCap,
+  Settings,
+  LogOut,
+  Plus,
+  Trash2,
+  ExternalLink,
+  CheckCircle2,
+  XCircle,
+  Phone,
   Search,
   Users,
   User as UserIcon,
@@ -90,20 +90,35 @@ import {
   Briefcase,
   Boxes,
   Smartphone,
-  Chrome
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, firebaseConfigPrincipal, firebaseConfigComercial } from './firebase';
-import { cn, formatPhone, getWhatsAppUrl, validateCPF, formatCPF } from './lib/utils';
-import * as XLSX from 'xlsx';
-import { EmailMarketingView } from './components/EmailMarketingView';
-import { 
-  UserProfile, 
-  Lead, 
-  BaseEntry, 
-  GapEntry, 
-  PlannerTask, 
-  LinkUtil, 
+  Chrome,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  auth,
+  db,
+  COLLECTIONS,
+  handleFirestoreError,
+  OperationType,
+  secondaryAuth,
+  firebaseConfigPrincipal,
+  firebaseConfigComercial,
+} from "./firebase";
+import {
+  cn,
+  formatPhone,
+  getWhatsAppUrl,
+  validateCPF,
+  formatCPF,
+} from "./lib/utils";
+import * as XLSX from "xlsx";
+import { EmailMarketingView } from "./components/EmailMarketingView";
+import {
+  UserProfile,
+  Lead,
+  BaseEntry,
+  GapEntry,
+  PlannerTask,
+  LinkUtil,
   UserRole,
   FiesProuniEntry,
   Campanha,
@@ -123,36 +138,53 @@ import {
   InsumoPedido,
   InsumoEstoque,
   InsumoPedidoComercial,
-  InsumoEstoqueComercial
-} from './types';
-import { ProfileModal } from './components/ProfileModal';
-import { PublicRegistrationForm } from './components/PublicRegistrationForm';
-import { PublicInsumoForm } from './components/PublicInsumoForm';
-import { MessageTemplateModal } from './components/MessageTemplateModal';
-import { CursosDisponiveisView } from './components/CursosDisponiveisView';
-import { ControleInsumosView } from './components/ControleInsumosView';
-import { ControleInsumosComercialView } from './components/ControleInsumosComercialView';
-import { WhatsAppMessageEditor } from './components/WhatsAppMessageEditor';
-import { AdminFuncionariosView } from './components/AdminFuncionariosView';
+  InsumoEstoqueComercial,
+} from "./types";
+import { ProfileModal } from "./components/ProfileModal";
+import { PublicRegistrationForm } from "./components/PublicRegistrationForm";
+import { PublicInsumoForm } from "./components/PublicInsumoForm";
+import { MessageTemplateModal } from "./components/MessageTemplateModal";
+import { CursosDisponiveisView } from "./components/CursosDisponiveisView";
+import { ControleInsumosView } from "./components/ControleInsumosView";
+import { ControleInsumosComercialView } from "./components/ControleInsumosComercialView";
+import { WhatsAppMessageEditor } from "./components/WhatsAppMessageEditor";
+import { AdminFuncionariosView } from "./components/AdminFuncionariosView";
+import { RelatoriosView } from "./components/RelatoriosView";
+import { WhatsAppMessageSelector } from "./components/WhatsAppMessageSelector";
 
 // --- Helpers ---
-export const replaceMessageVariables = (template: string, lead: any): string => {
-  if (!template) return '';
+export const replaceMessageVariables = (
+  template: string,
+  lead: any,
+): string => {
+  if (!template) return "";
   let text = template;
-  text = text.replace(/\[nome\]/gi, lead.nome || '');
-  text = text.replace(/\[curso\]/gi, lead.curso || lead.cursoInteresse || '');
-  text = text.replace(/\[matr[ií]cula\]/gi, lead.numeroMatricula || '');
-  
+  text = text.replace(/\[nome\]/gi, lead.nome || "");
+  text = text.replace(/\[curso\]/gi, lead.curso || lead.cursoInteresse || "");
+  text = text.replace(/\[matr[ií]cula\]/gi, lead.numeroMatricula || "");
+
   // Novas variáveis
-  text = text.replace(/\[unidade\]/gi, lead.unidade || lead.nome_unidade || 'nossa unidade');
-  text = text.replace(/\[data_contato\]/gi, new Date().toLocaleDateString('pt-BR'));
-  
+  text = text.replace(
+    /\[unidade\]/gi,
+    lead.unidade || lead.nome_unidade || "nossa unidade",
+  );
+  text = text.replace(
+    /\[data_contato\]/gi,
+    new Date().toLocaleDateString("pt-BR"),
+  );
+
   const hour = new Date().getHours();
-  const saudacao = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  const saudacao =
+    hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   text = text.replace(/\[saudacao\]/gi, saudacao);
-  
+
   if (lead.missingDocs) {
-    text = text.replace(/\[pendencias\]/gi, Array.isArray(lead.missingDocs) ? lead.missingDocs.join(', ') : lead.missingDocs);
+    text = text.replace(
+      /\[pendencias\]/gi,
+      Array.isArray(lead.missingDocs)
+        ? lead.missingDocs.join(", ")
+        : lead.missingDocs,
+    );
   }
 
   return text;
@@ -169,7 +201,7 @@ const importFromExcel = (file: File, callback: (data: any[]) => void) => {
   const reader = new FileReader();
   reader.onload = (e) => {
     const bstr = e.target?.result;
-    const workbook = XLSX.read(bstr, { type: 'binary' });
+    const workbook = XLSX.read(bstr, { type: "binary" });
     const worksheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[worksheetName];
     const data = XLSX.utils.sheet_to_json(worksheet);
@@ -178,121 +210,44 @@ const importFromExcel = (file: File, callback: (data: any[]) => void) => {
   reader.readAsBinaryString(file);
 };
 
-function WhatsAppMessageSelector({ 
-  isOpen, 
-  onClose, 
-  messages, 
-  onSelect, 
-  leadName,
-  leadCurso,
-  botConfig,
-  onSendBot,
-  forceBotOnly,
-  leadMatricula
-}: { 
-  isOpen: boolean;
-  onClose: () => void;
-  messages: WhatsAppMessage[];
-  onSelect: (msg: string) => void;
-  leadName: string;
-  leadCurso?: string;
-  botConfig?: BotConfig;
-  onSendBot?: (msg: string) => void;
-  forceBotOnly?: boolean;
-  leadMatricula?: string;
-}) {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]"
-      >
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">{forceBotOnly ? 'Disparo em Massa' : 'Selecionar Mensagem'}</h3>
-            <p className="text-xs text-slate-500 font-medium mt-1">
-              {forceBotOnly ? 'Escolha o modelo para enviar a todos.' : `Escolha como enviar para ${leadName}`}
-            </p>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-full transition-all">
-            <X size={20} />
-          </button>
-        </div>
-        <div className="p-4 overflow-y-auto space-y-3 flex-1">
-          {messages.length > 0 ? messages.map((msg, idx) => {
-            let preview = msg.texto;
-            if (!forceBotOnly) {
-               preview = preview.replace(/\[nome\]/gi, leadName || '');
-               if (leadCurso) preview = preview.replace(/\[curso\]/gi, leadCurso);
-               if (leadMatricula) preview = preview.replace(/\[matr[ií]cula\]/gi, leadMatricula);
-            }
-            
-            const canUseBot = botConfig?.url && onSendBot;
-            
-            return (
-              <div
-                key={msg.id}
-                className="w-full text-left p-4 rounded-2xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all flex flex-col space-y-3"
-              >
-                <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">
-                    {msg.nome ? msg.nome : `Modelo ${idx + 1}`}
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                    <MessageSquare size={16} />
-                  </div>
-                </div>
-                <p className="text-sm text-slate-600 line-clamp-3 leading-relaxed whitespace-pre-wrap">{preview || <span className="italic opacity-50">Mensagem vazia</span>}</p>
-                
-                <div className="flex space-x-2 pt-2 border-t border-slate-100">
-                  {canUseBot && (
-                    <button 
-                      onClick={() => {
-                        // Pass the raw template if mass sending, else the formatted preview
-                        onSendBot(forceBotOnly ? msg.texto : preview);
-                        onClose();
-                      }}
-                      className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-xs font-bold hover:bg-blue-700 transition flex items-center justify-center space-x-1"
-                    >
-                      <Bot size={14} />
-                      <span>{forceBotOnly ? 'Iniciar Disparo em Massa' : 'Bot ARGO\'S'}</span>
-                    </button>
-                  )}
-                  {!forceBotOnly && (
-                    <button 
-                      onClick={() => {
-                        onSelect(preview);
-                        onClose();
-                      }}
-                      className={`flex-1 ${canUseBot ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100' : 'bg-emerald-500 text-white hover:bg-emerald-600'} py-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1`}
-                    >
-                      <Send size={14} />
-                      <span>{canUseBot ? 'WhatsApp Web' : 'Enviar WhatsApp'}</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          }) : (
-            <div className="text-center py-12">
-              <p className="text-slate-400 italic">Nenhum modelo cadastrado.</p>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </div>
-  );
-}
+// Component WhatsAppMessageSelector moved to src/components/WhatsAppMessageSelector.tsx
 
 // --- Constants ---
 const HOLIDAYS = [
-  '2024-01-01', '2024-03-29', '2024-04-21', '2024-05-01', '2024-05-30', '2024-07-09', '2024-09-07', '2024-10-12', '2024-11-02', '2024-11-15', '2024-11-20', '2024-12-25',
-  '2025-01-01', '2025-04-18', '2025-04-21', '2025-05-01', '2025-06-19', '2025-09-07', '2025-10-12', '2025-11-02', '2025-11-15', '2025-11-20', '2025-12-25',
-  '2026-01-01', '2026-04-03', '2026-04-21', '2026-05-01', '2026-06-04', '2026-09-07', '2026-10-12', '2026-11-02', '2026-11-15', '2026-11-20', '2026-12-25',
+  "2024-01-01",
+  "2024-03-29",
+  "2024-04-21",
+  "2024-05-01",
+  "2024-05-30",
+  "2024-07-09",
+  "2024-09-07",
+  "2024-10-12",
+  "2024-11-02",
+  "2024-11-15",
+  "2024-11-20",
+  "2024-12-25",
+  "2025-01-01",
+  "2025-04-18",
+  "2025-04-21",
+  "2025-05-01",
+  "2025-06-19",
+  "2025-09-07",
+  "2025-10-12",
+  "2025-11-02",
+  "2025-11-15",
+  "2025-11-20",
+  "2025-12-25",
+  "2026-01-01",
+  "2026-04-03",
+  "2026-04-21",
+  "2026-05-01",
+  "2026-06-04",
+  "2026-09-07",
+  "2026-10-12",
+  "2026-11-02",
+  "2026-11-15",
+  "2026-11-20",
+  "2026-12-25",
 ];
 
 const getWorkingDaysRemaining = (endDateStr: string) => {
@@ -300,7 +255,7 @@ const getWorkingDaysRemaining = (endDateStr: string) => {
   hoje.setHours(0, 0, 0, 0);
   const dataFim = new Date(endDateStr);
   dataFim.setHours(0, 0, 0, 0);
-  
+
   if (dataFim < hoje) return 0;
 
   let count = 0;
@@ -308,7 +263,7 @@ const getWorkingDaysRemaining = (endDateStr: string) => {
   // Start counting from today if it's a working day
   while (curDate <= dataFim) {
     const dayOfWeek = curDate.getDay(); // 0 = Sunday
-    const dateString = curDate.toISOString().split('T')[0];
+    const dateString = curDate.toISOString().split("T")[0];
     const isSunday = dayOfWeek === 0;
     const isHoliday = HOLIDAYS.includes(dateString);
 
@@ -325,14 +280,14 @@ const getWorkingDaysBetween = (startDateStr: string, endDateStr: string) => {
   start.setHours(0, 0, 0, 0);
   const end = new Date(endDateStr);
   end.setHours(0, 0, 0, 0);
-  
+
   if (end < start) return 0;
 
   let count = 0;
   let curDate = new Date(start.getTime());
   while (curDate <= end) {
     const dayOfWeek = curDate.getDay();
-    const dateString = curDate.toISOString().split('T')[0];
+    const dateString = curDate.toISOString().split("T")[0];
     const isSunday = dayOfWeek === 0;
     const isHoliday = HOLIDAYS.includes(dateString);
 
@@ -345,10 +300,10 @@ const getWorkingDaysBetween = (startDateStr: string, endDateStr: string) => {
 };
 
 const formatLocalDateString = (dateStr: string) => {
-  if (!dateStr) return '';
-  const dateOnly = dateStr.split('T')[0];
-  if (dateOnly.includes('-')) {
-    const parts = dateOnly.split('-');
+  if (!dateStr) return "";
+  const dateOnly = dateStr.split("T")[0];
+  if (dateOnly.includes("-")) {
+    const parts = dateOnly.split("-");
     if (parts.length === 3) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
@@ -357,52 +312,197 @@ const formatLocalDateString = (dateStr: string) => {
 };
 
 export const ROLES: Record<string, UserRole> = {
-  ADMIN_MASTER: 'Admin Master',
-  PROMOTOR: 'Promotor',
-  FDV: 'FDV',
-  SALA_MATRICULA: 'Sala de Matrícula',
-  QG: 'QG',
-  LIDER_FDV: 'Líder/FDV',
-  SSA: 'SSA',
-  GESTOR_UNIDADE: 'Gestor Unidade',
-  GESTOR_COMERCIAL: 'Gestor Comercial',
-  ACADEMICO: 'Acadêmico',
-  PROMOTOR_RUA: 'Promotor/rua',
-  GESTOR_COMERCIAL_COMERCIAL: 'Gerente Comercial (Comercial)',
-  FDV_COMERCIAL: 'FDV (Comercial)',
-  FINANCEIRO: 'Financeiro',
-  TECNICO: 'Técnico'
+  ADMIN_MASTER: "Admin Master",
+  PROMOTOR: "Promotor",
+  FDV: "FDV",
+  SALA_MATRICULA: "Sala de Matrícula",
+  QG: "QG",
+  LIDER_FDV: "Líder/FDV",
+  SSA: "SSA",
+  GESTOR_UNIDADE: "Gestor Unidade",
+  GESTOR_COMERCIAL: "Gestor Comercial",
+  ACADEMICO: "Acadêmico",
+  PROMOTOR_RUA: "Promotor/rua",
+  GESTOR_COMERCIAL_COMERCIAL: "Gerente Comercial (Comercial)",
+  FDV_COMERCIAL: "FDV (Comercial)",
+  FINANCEIRO: "Financeiro",
+  TECNICO: "Técnico",
 };
 
 const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
-  dashboard: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL],
-  cadastro: [ROLES.ADMIN_MASTER, ROLES.PROMOTOR, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR_RUA, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
-  historico: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
+  dashboard: [
+    ROLES.ADMIN_MASTER,
+    ROLES.FDV,
+    ROLES.SALA_MATRICULA,
+    ROLES.QG,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+    ROLES.FDV_COMERCIAL,
+  ],
+  cadastro: [
+    ROLES.ADMIN_MASTER,
+    ROLES.PROMOTOR,
+    ROLES.FDV,
+    ROLES.SALA_MATRICULA,
+    ROLES.QG,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.PROMOTOR_RUA,
+    ROLES.FDV_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ],
+  historico: [
+    ROLES.ADMIN_MASTER,
+    ROLES.FDV,
+    ROLES.SALA_MATRICULA,
+    ROLES.QG,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.FDV_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ],
   bases: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV],
   gap: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV],
-  fiesProuni: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.SSA],
-  campanhas: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
-  calendario: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
-  empresas: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
-  calculo: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.SSA, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
-  mapao: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.ACADEMICO],
-  basesDisparo: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.FDV, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL],
+  fiesProuni: [
+    ROLES.ADMIN_MASTER,
+    ROLES.SALA_MATRICULA,
+    ROLES.LIDER_FDV,
+    ROLES.SSA,
+  ],
+  campanhas: [
+    ROLES.ADMIN_MASTER,
+    ROLES.LIDER_FDV,
+    ROLES.SALA_MATRICULA,
+    ROLES.QG,
+    ROLES.FDV,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.FDV_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ],
+  calendario: [
+    ROLES.ADMIN_MASTER,
+    ROLES.FDV,
+    ROLES.SALA_MATRICULA,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.FDV_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ],
+  empresas: [
+    ROLES.ADMIN_MASTER,
+    ROLES.FDV,
+    ROLES.SALA_MATRICULA,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.FDV_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ],
+  calculo: [
+    ROLES.ADMIN_MASTER,
+    ROLES.FDV,
+    ROLES.SALA_MATRICULA,
+    ROLES.QG,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.PROMOTOR,
+    ROLES.SSA,
+    ROLES.FDV_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ],
+  relatorios: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV],
+  mapao: [
+    ROLES.ADMIN_MASTER,
+    ROLES.FDV,
+    ROLES.SALA_MATRICULA,
+    ROLES.LIDER_FDV,
+    ROLES.SSA,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.ACADEMICO,
+  ],
+  basesDisparo: [
+    ROLES.ADMIN_MASTER,
+    ROLES.LIDER_FDV,
+    ROLES.SALA_MATRICULA,
+    ROLES.QG,
+    ROLES.FDV,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+  ],
   basesRenovacao: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SSA],
-  avisos: [ROLES.ADMIN_MASTER, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.PROMOTOR, ROLES.ACADEMICO],
-  emailMarketing: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL],
-  admin: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.GESTOR_COMERCIAL],
-  controlePagamentos: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL, ROLES.GESTOR_UNIDADE],
-  cursos: [ROLES.ADMIN_MASTER, ROLES.PROMOTOR, ROLES.FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV, ROLES.SSA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.ACADEMICO, ROLES.PROMOTOR_RUA, ROLES.GESTOR_COMERCIAL_COMERCIAL, ROLES.FDV_COMERCIAL],
-  controleInsumos: [ROLES.ADMIN_MASTER, ROLES.ACADEMICO, ROLES.FINANCEIRO, ROLES.TECNICO],
-  controleInsumosComercial: [ROLES.ADMIN_MASTER, ROLES.FDV_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL]
+  avisos: [
+    ROLES.ADMIN_MASTER,
+    ROLES.FDV,
+    ROLES.SALA_MATRICULA,
+    ROLES.QG,
+    ROLES.LIDER_FDV,
+    ROLES.SSA,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.PROMOTOR,
+    ROLES.ACADEMICO,
+  ],
+  emailMarketing: [
+    ROLES.ADMIN_MASTER,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ],
+  admin: [
+    ROLES.ADMIN_MASTER,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL,
+  ],
+  controlePagamentos: [
+    ROLES.ADMIN_MASTER,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+    ROLES.FDV_COMERCIAL,
+    ROLES.GESTOR_UNIDADE,
+  ],
+  cursos: [
+    ROLES.ADMIN_MASTER,
+    ROLES.PROMOTOR,
+    ROLES.FDV,
+    ROLES.SALA_MATRICULA,
+    ROLES.QG,
+    ROLES.LIDER_FDV,
+    ROLES.SSA,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.ACADEMICO,
+    ROLES.PROMOTOR_RUA,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+    ROLES.FDV_COMERCIAL,
+  ],
+  controleInsumos: [
+    ROLES.ADMIN_MASTER,
+    ROLES.ACADEMICO,
+    ROLES.FINANCEIRO,
+    ROLES.TECNICO,
+  ],
+  controleInsumosComercial: [
+    ROLES.ADMIN_MASTER,
+    ROLES.FDV_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ],
 };
 
 // --- Components ---
 function PasswordChangeModal({ onComplete }: { onComplete: () => void }) {
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -416,7 +516,7 @@ function PasswordChangeModal({ onComplete }: { onComplete: () => void }) {
     }
 
     setLoading(true);
-    setError('');
+    setError("");
     try {
       if (auth.currentUser) {
         await updatePassword(auth.currentUser, newPassword);
@@ -431,7 +531,7 @@ function PasswordChangeModal({ onComplete }: { onComplete: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white p-8 rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full"
@@ -439,30 +539,37 @@ function PasswordChangeModal({ onComplete }: { onComplete: () => void }) {
         <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
           <KeyRound size={32} />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Troca de Senha Obrigatória</h2>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">
+          Troca de Senha Obrigatória
+        </h2>
         <p className="text-slate-500 mb-6">
-          Para sua segurança, você deve alterar sua senha padrão antes de continuar.
+          Para sua segurança, você deve alterar sua senha padrão antes de
+          continuar.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">Nova Senha</label>
-            <input 
-              type="password" 
-              required 
+            <label className="block text-xs font-bold text-slate-500 mb-1">
+              Nova Senha
+            </label>
+            <input
+              type="password"
+              required
               value={newPassword}
-              onChange={e => setNewPassword(e.target.value)}
+              onChange={(e) => setNewPassword(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder="Mínimo 6 caracteres"
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">Confirmar Nova Senha</label>
-            <input 
-              type="password" 
-              required 
+            <label className="block text-xs font-bold text-slate-500 mb-1">
+              Confirmar Nova Senha
+            </label>
+            <input
+              type="password"
+              required
               value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
@@ -474,12 +581,12 @@ function PasswordChangeModal({ onComplete }: { onComplete: () => void }) {
             </div>
           )}
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:opacity-50"
           >
-            {loading ? 'Atualizando...' : 'Atualizar Senha'}
+            {loading ? "Atualizando..." : "Atualizar Senha"}
           </button>
         </form>
       </motion.div>
@@ -487,77 +594,112 @@ function PasswordChangeModal({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 'error', onClose: () => void }) => (
-  <motion.div 
+const Toast = ({
+  message,
+  type,
+  onClose,
+}: {
+  message: string;
+  type: "success" | "error";
+  onClose: () => void;
+}) => (
+  <motion.div
     initial={{ x: 100, opacity: 0 }}
     animate={{ x: 0, opacity: 1 }}
     exit={{ x: 100, opacity: 0 }}
     className={cn(
       "fixed top-5 right-5 z-50 p-4 rounded-lg shadow-lg flex items-center space-x-2 text-white",
-      type === 'success' ? "bg-emerald-600" : "bg-rose-600"
+      type === "success" ? "bg-emerald-600" : "bg-rose-600",
     )}
   >
-    {type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+    {type === "success" ? (
+      <CheckCircle2 size={20} />
+    ) : (
+      <AlertCircle size={20} />
+    )}
     <span className="font-medium">{message}</span>
-    <button onClick={onClose} className="ml-2 hover:opacity-80"><X size={16} /></button>
+    <button onClick={onClose} className="ml-2 hover:opacity-80">
+      <X size={16} />
+    </button>
   </motion.div>
 );
 
-function MapaoAcademicoView({ 
-  mapao, 
-  onToast, 
-  profile 
-}: { 
-  mapao: MapaoAcademicoEntry[], 
-  onToast: (m: string, t?: 'success' | 'error') => void,
-  profile: UserProfile 
+function MapaoAcademicoView({
+  mapao,
+  onToast,
+  profile,
+}: {
+  mapao: MapaoAcademicoEntry[];
+  onToast: (m: string, t?: "success" | "error") => void;
+  profile: UserProfile;
 }) {
   const [showModal, setShowModal] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<MapaoAcademicoEntry | null>(null);
-  
-  const defaultDisciplina = { codDisc: '', disciplina: '', dia: 'Segunda-feira', horario: '', turma: '', tipoDisciplina: 'PRESENCIAL', professor: '', matricula: '', observacao: '', linkAula: '' };
-  
+  const [editingEntry, setEditingEntry] = useState<MapaoAcademicoEntry | null>(
+    null,
+  );
+
+  const defaultDisciplina = {
+    codDisc: "",
+    disciplina: "",
+    dia: "Segunda-feira",
+    horario: "",
+    turma: "",
+    tipoDisciplina: "PRESENCIAL",
+    professor: "",
+    matricula: "",
+    observacao: "",
+    linkAula: "",
+  };
+
   const [formData, setFormData] = useState<Partial<MapaoAcademicoEntry>>({
-    modalidade: 'Presencial',
-    tipoCurso: 'GRADUACAO',
-    periodo: '',
-    disciplinas: [{ ...defaultDisciplina }]
+    modalidade: "Presencial",
+    tipoCurso: "GRADUACAO",
+    periodo: "",
+    disciplinas: [{ ...defaultDisciplina }],
   });
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const isDuplicate = mapao.some(m => 
-      m.curso?.toLowerCase() === formData.curso?.toLowerCase() && 
-      m.modalidade === formData.modalidade &&
-      m.periodo === formData.periodo && 
-      m.id !== editingEntry?.id
+
+    const isDuplicate = mapao.some(
+      (m) =>
+        m.curso?.toLowerCase() === formData.curso?.toLowerCase() &&
+        m.modalidade === formData.modalidade &&
+        m.periodo === formData.periodo &&
+        m.id !== editingEntry?.id,
     );
 
     if (isDuplicate) {
-       onToast("Este curso/modalidade/período já está cadastrado no Mapão.", "error");
-       return;
+      onToast(
+        "Este curso/modalidade/período já está cadastrado no Mapão.",
+        "error",
+      );
+      return;
     }
 
     try {
       if (editingEntry) {
         await updateDoc(doc(db, COLLECTIONS.MAPAO_ACADEMICO, editingEntry.id), {
           ...formData,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         });
         onToast("Registro atualizado!");
       } else {
         await addDoc(collection(db, COLLECTIONS.MAPAO_ACADEMICO), {
           ...formData,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         });
         onToast("Registro cadastrado!");
       }
       setShowModal(false);
       setEditingEntry(null);
-      setFormData({ modalidade: 'Presencial', tipoCurso: 'GRADUACAO', disciplinas: [{ ...defaultDisciplina }] });
+      setFormData({
+        modalidade: "Presencial",
+        tipoCurso: "GRADUACAO",
+        disciplinas: [{ ...defaultDisciplina }],
+      });
     } catch (err: any) {
-      onToast("Erro ao salvar.", 'error');
+      onToast("Erro ao salvar.", "error");
     }
   };
 
@@ -566,19 +708,19 @@ function MapaoAcademicoView({
       const { id, ...data } = entry;
       await addDoc(collection(db, COLLECTIONS.MAPAO_ACADEMICO), {
         ...data,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
       onToast("Registro duplicado!");
     } catch (err: any) {
-      onToast("Erro ao duplicar.", 'error');
+      onToast("Erro ao duplicar.", "error");
     }
   };
 
   const handleAddDisciplina = () => {
     if (formData.disciplinas && formData.disciplinas.length < 7) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        disciplinas: [...(prev.disciplinas || []), { ...defaultDisciplina }]
+        disciplinas: [...(prev.disciplinas || []), { ...defaultDisciplina }],
       }));
     }
   };
@@ -586,30 +728,47 @@ function MapaoAcademicoView({
   const handleRemoveDisciplina = (index: number) => {
     const newDisciplinas = [...(formData.disciplinas || [])];
     newDisciplinas.splice(index, 1);
-    setFormData(prev => ({ ...prev, disciplinas: newDisciplinas }));
+    setFormData((prev) => ({ ...prev, disciplinas: newDisciplinas }));
   };
 
-  const handleChangeDisciplina = (index: number, field: string, value: string) => {
+  const handleChangeDisciplina = (
+    index: number,
+    field: string,
+    value: string,
+  ) => {
     const newDisciplinas: any = [...(formData.disciplinas || [])];
     newDisciplinas[index][field] = value;
-    if (field === 'dia' && value === 'Virtual') {
-      newDisciplinas[index].horario = '';
+    if (field === "dia" && value === "Virtual") {
+      newDisciplinas[index].horario = "";
     }
-    setFormData(prev => ({ ...prev, disciplinas: newDisciplinas }));
+    setFormData((prev) => ({ ...prev, disciplinas: newDisciplinas }));
   };
 
-  const canEdit = profile.role === ROLES.LIDER_FDV || profile.role === ROLES.ACADEMICO;
+  const canEdit =
+    profile.role === ROLES.LIDER_FDV || profile.role === ROLES.ACADEMICO;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Mapão Acadêmico</h2>
-          <p className="text-sm text-slate-500">Gestão de cursos, disciplinas e horários</p>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+            Mapão Acadêmico
+          </h2>
+          <p className="text-sm text-slate-500">
+            Gestão de cursos, disciplinas e horários
+          </p>
         </div>
         {canEdit && (
-          <button 
-            onClick={() => { setEditingEntry(null); setFormData({ modalidade: 'Presencial', tipoCurso: 'GRADUACAO', disciplinas: [{ ...defaultDisciplina }] }); setShowModal(true); }}
+          <button
+            onClick={() => {
+              setEditingEntry(null);
+              setFormData({
+                modalidade: "Presencial",
+                tipoCurso: "GRADUACAO",
+                disciplinas: [{ ...defaultDisciplina }],
+              });
+              setShowModal(true);
+            }}
             className="bg-blue-600 text-white px-6 py-2.5 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center space-x-2"
           >
             <Plus size={20} />
@@ -619,26 +778,31 @@ function MapaoAcademicoView({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {mapao.map(entry => {
+        {mapao.map((entry) => {
           const disciplinasList = entry.disciplinas || [];
 
-
           return (
-            <motion.div 
+            <motion.div
               key={entry.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className={cn(
                 "p-5 rounded-3xl border shadow-sm transition-all relative group flex flex-col",
-                entry.tipoCurso === 'GRADUACAO' ? "bg-white border-blue-100" : "bg-white border-emerald-100"
+                entry.tipoCurso === "GRADUACAO"
+                  ? "bg-white border-blue-100"
+                  : "bg-white border-emerald-100",
               )}
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex gap-2">
-                  <span className={cn(
-                    "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                    entry.tipoCurso === 'GRADUACAO' ? "bg-blue-100 text-blue-600" : "bg-emerald-100 text-emerald-600"
-                  )}>
+                  <span
+                    className={cn(
+                      "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                      entry.tipoCurso === "GRADUACAO"
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-emerald-100 text-emerald-600",
+                    )}
+                  >
                     {entry.tipoCurso}
                   </span>
                   <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600">
@@ -648,29 +812,37 @@ function MapaoAcademicoView({
                 <div className="flex space-x-1">
                   {canEdit && (
                     <>
-                      <button 
-                        onClick={() => { 
-                          setEditingEntry(entry); 
+                      <button
+                        onClick={() => {
+                          setEditingEntry(entry);
                           setFormData({
                             ...entry,
-                            disciplinas: disciplinasList.length > 0 ? disciplinasList : [{...defaultDisciplina}]
-                          }); 
-                          setShowModal(true); 
+                            disciplinas:
+                              disciplinasList.length > 0
+                                ? disciplinasList
+                                : [{ ...defaultDisciplina }],
+                          });
+                          setShowModal(true);
                         }}
                         className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                         title="Editar"
                       >
                         <Edit2 size={14} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDuplicate(entry)}
                         className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
                         title="Duplicar"
                       >
                         <Copy size={14} />
                       </button>
-                      <button 
-                        onClick={async () => { if(window.confirm('Excluir?')) await deleteDoc(doc(db, COLLECTIONS.MAPAO_ACADEMICO, entry.id)); }}
+                      <button
+                        onClick={async () => {
+                          if (window.confirm("Excluir?"))
+                            await deleteDoc(
+                              doc(db, COLLECTIONS.MAPAO_ACADEMICO, entry.id),
+                            );
+                        }}
                         className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
                         title="Excluir"
                       >
@@ -683,33 +855,52 @@ function MapaoAcademicoView({
 
               <div className="flex-1 flex flex-row gap-6">
                 <div className="w-1/3 flex flex-col justify-center border-r border-slate-100 pr-6">
-                  <h3 className="text-xl font-bold text-slate-900 leading-tight mb-1">{entry.curso}</h3>
-                  <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{entry.periodo}</p>
+                  <h3 className="text-xl font-bold text-slate-900 leading-tight mb-1">
+                    {entry.curso}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
+                    {entry.periodo}
+                  </p>
                 </div>
                 <div className="w-2/3 grid grid-cols-2 gap-3">
-                {disciplinasList.map((disc, idx) => (
-                  <div key={idx} className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col justify-between">
-                    <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">{disc.codDisc}</p>
-                      <p className="text-sm font-bold text-slate-800 leading-tight mb-2">{disc.disciplina}</p>
-                      <p className="text-[10px] text-slate-600 font-medium">Prof: {disc.professor}</p>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <div className="flex items-center space-x-1.5 text-slate-600 bg-white px-2 py-1 rounded-lg border border-slate-100">
-                        <Clock size={10} className="text-blue-500" />
-                        <span className="text-[9px] font-bold truncate">{disc.horario}</span>
+                  {disciplinasList.map((disc, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col justify-between"
+                    >
+                      <div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+                          {disc.codDisc}
+                        </p>
+                        <p className="text-sm font-bold text-slate-800 leading-tight mb-2">
+                          {disc.disciplina}
+                        </p>
+                        <p className="text-[10px] text-slate-600 font-medium">
+                          Prof: {disc.professor}
+                        </p>
                       </div>
-                      <div className="flex items-center space-x-1.5 text-slate-600 bg-white px-2 py-1 rounded-lg border border-slate-100">
-                        <Users size={10} className="text-emerald-500" />
-                        <span className="text-[9px] font-bold truncate">{disc.turma}</span>
+
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <div className="flex items-center space-x-1.5 text-slate-600 bg-white px-2 py-1 rounded-lg border border-slate-100">
+                          <Clock size={10} className="text-blue-500" />
+                          <span className="text-[9px] font-bold truncate">
+                            {disc.horario}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1.5 text-slate-600 bg-white px-2 py-1 rounded-lg border border-slate-100">
+                          <Users size={10} className="text-emerald-500" />
+                          <span className="text-[9px] font-bold truncate">
+                            {disc.turma}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
                 </div>
                 {disciplinasList.length === 0 && (
-                   <p className="text-xs text-slate-500 italic text-center py-4">Nenhuma disciplina cadastrada.</p>
+                  <p className="text-xs text-slate-500 italic text-center py-4">
+                    Nenhuma disciplina cadastrada.
+                  </p>
                 )}
               </div>
             </motion.div>
@@ -719,14 +910,20 @@ function MapaoAcademicoView({
 
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-[2.5rem] shadow-2xl max-w-3xl w-full p-8 overflow-y-auto max-h-[90vh] custom-scrollbar"
           >
-             <div className="flex justify-between items-center mb-6 sticky top-0 bg-white py-2 z-10 border-b border-slate-100">
-              <h3 className="text-2xl font-bold text-slate-900">{editingEntry ? 'Editar Curso' : 'Novo Cadastro Acadêmico'}</h3>
-              <button type="button" onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-400">
+            <div className="flex justify-between items-center mb-6 sticky top-0 bg-white py-2 z-10 border-b border-slate-100">
+              <h3 className="text-2xl font-bold text-slate-900">
+                {editingEntry ? "Editar Curso" : "Novo Cadastro Acadêmico"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-400"
+              >
                 <X size={24} />
               </button>
             </div>
@@ -734,21 +931,32 @@ function MapaoAcademicoView({
             <form onSubmit={handleSave} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-slate-100">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Período</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">
+                    Período
+                  </label>
+                  <input
+                    type="text"
                     className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700"
-                    value={formData.periodo || ''}
-                    onChange={e => setFormData({...formData, periodo: e.target.value})}
+                    value={formData.periodo || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, periodo: e.target.value })
+                    }
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Tipo de Curso</label>
-                  <select 
+                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">
+                    Tipo de Curso
+                  </label>
+                  <select
                     className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700"
                     value={formData.tipoCurso}
-                    onChange={e => setFormData({...formData, tipoCurso: e.target.value as any})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        tipoCurso: e.target.value as any,
+                      })
+                    }
                     required
                   >
                     <option value="GRADUACAO">GRADUAÇÃO</option>
@@ -757,11 +965,15 @@ function MapaoAcademicoView({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Modalidade</label>
-                  <select 
+                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">
+                    Modalidade
+                  </label>
+                  <select
                     className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700"
                     value={formData.modalidade}
-                    onChange={e => setFormData({...formData, modalidade: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, modalidade: e.target.value })
+                    }
                     required
                   >
                     <option value="Presencial">Presencial</option>
@@ -771,12 +983,16 @@ function MapaoAcademicoView({
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Nome do Curso</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">
+                    Nome do Curso
+                  </label>
+                  <input
+                    type="text"
                     className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700"
-                    value={formData.curso || ''}
-                    onChange={e => setFormData({...formData, curso: e.target.value})}
+                    value={formData.curso || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, curso: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -784,85 +1000,161 @@ function MapaoAcademicoView({
 
               <div>
                 <div className="flex justify-between items-center mb-4">
-                   <h4 className="font-bold text-slate-800 text-lg">Disciplinas do Curso</h4>
-                   {((formData.disciplinas?.length || 0) < 7) && (
-                     <button type="button" onClick={handleAddDisciplina} className="text-sm flex items-center gap-1 text-blue-600 hover:text-blue-700 font-bold bg-blue-50 px-3 py-1.5 rounded-xl">
-                       <Plus size={16} /> Adicionar ({formData.disciplinas?.length || 0}/7)
-                     </button>
-                   )}
+                  <h4 className="font-bold text-slate-800 text-lg">
+                    Disciplinas do Curso
+                  </h4>
+                  {(formData.disciplinas?.length || 0) < 7 && (
+                    <button
+                      type="button"
+                      onClick={handleAddDisciplina}
+                      className="text-sm flex items-center gap-1 text-blue-600 hover:text-blue-700 font-bold bg-blue-50 px-3 py-1.5 rounded-xl"
+                    >
+                      <Plus size={16} /> Adicionar (
+                      {formData.disciplinas?.length || 0}/7)
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-4">
                   {formData.disciplinas?.map((disc, idx) => (
-                    <div key={idx} className="bg-slate-50 border border-slate-200 p-5 rounded-2xl relative">
-                      {formData.disciplinas && formData.disciplinas.length > 1 && (
-                        <button type="button" onClick={() => handleRemoveDisciplina(idx)} className="absolute top-4 right-4 text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors">
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                      <h5 className="text-xs font-bold uppercase text-slate-400 mb-4">Disciplina {idx + 1}</h5>
+                    <div
+                      key={idx}
+                      className="bg-slate-50 border border-slate-200 p-5 rounded-2xl relative"
+                    >
+                      {formData.disciplinas &&
+                        formData.disciplinas.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDisciplina(idx)}
+                            className="absolute top-4 right-4 text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      <h5 className="text-xs font-bold uppercase text-slate-400 mb-4">
+                        Disciplina {idx + 1}
+                      </h5>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 mb-1">Código</label>
-                          <input 
-                            type="text" 
+                          <label className="block text-xs font-bold text-slate-500 mb-1">
+                            Código
+                          </label>
+                          <input
+                            type="text"
                             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500"
                             value={disc.codDisc}
-                            onChange={e => handleChangeDisciplina(idx, 'codDisc', e.target.value)}
+                            onChange={(e) =>
+                              handleChangeDisciplina(
+                                idx,
+                                "codDisc",
+                                e.target.value,
+                              )
+                            }
                             required
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 mb-1">Disciplina</label>
-                          <input 
-                            type="text" 
+                          <label className="block text-xs font-bold text-slate-500 mb-1">
+                            Disciplina
+                          </label>
+                          <input
+                            type="text"
                             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500"
                             value={disc.disciplina}
-                            onChange={e => handleChangeDisciplina(idx, 'disciplina', e.target.value)}
+                            onChange={(e) =>
+                              handleChangeDisciplina(
+                                idx,
+                                "disciplina",
+                                e.target.value,
+                              )
+                            }
                             required
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 mb-1">Dia da Semana</label>
-                          <select 
+                          <label className="block text-xs font-bold text-slate-500 mb-1">
+                            Dia da Semana
+                          </label>
+                          <select
                             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500"
                             value={disc.dia}
-                            onChange={e => handleChangeDisciplina(idx, 'dia', e.target.value)}
+                            onChange={(e) =>
+                              handleChangeDisciplina(idx, "dia", e.target.value)
+                            }
                             required
                           >
-                            {["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Virtual"].map(d => (
-                              <option key={d} value={d}>{d}</option>
+                            {[
+                              "Segunda-feira",
+                              "Terça-feira",
+                              "Quarta-feira",
+                              "Quinta-feira",
+                              "Sexta-feira",
+                              "Sábado",
+                              "Virtual",
+                            ].map((d) => (
+                              <option key={d} value={d}>
+                                {d}
+                              </option>
                             ))}
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 mb-1">Horário {disc.dia === 'Virtual' ? '(Não se aplica)' : ''}</label>
-                          <input 
-                            type="text" 
-                            placeholder={disc.dia === 'Virtual' ? "Virtual" : "Ex: 19:00 - 22:00"}
+                          <label className="block text-xs font-bold text-slate-500 mb-1">
+                            Horário{" "}
+                            {disc.dia === "Virtual" ? "(Não se aplica)" : ""}
+                          </label>
+                          <input
+                            type="text"
+                            placeholder={
+                              disc.dia === "Virtual"
+                                ? "Virtual"
+                                : "Ex: 19:00 - 22:00"
+                            }
                             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-100"
                             value={disc.horario}
-                            onChange={e => handleChangeDisciplina(idx, 'horario', e.target.value)}
-                            required={disc.dia !== 'Virtual'}
-                            disabled={disc.dia === 'Virtual'}
+                            onChange={(e) =>
+                              handleChangeDisciplina(
+                                idx,
+                                "horario",
+                                e.target.value,
+                              )
+                            }
+                            required={disc.dia !== "Virtual"}
+                            disabled={disc.dia === "Virtual"}
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 mb-1">Turma</label>
-                          <input 
-                            type="text" 
+                          <label className="block text-xs font-bold text-slate-500 mb-1">
+                            Turma
+                          </label>
+                          <input
+                            type="text"
                             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500"
                             value={disc.turma}
-                            onChange={e => handleChangeDisciplina(idx, 'turma', e.target.value)}
+                            onChange={(e) =>
+                              handleChangeDisciplina(
+                                idx,
+                                "turma",
+                                e.target.value,
+                              )
+                            }
                             required
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 mb-1">Tipo Disciplina</label>
-                          <select 
+                          <label className="block text-xs font-bold text-slate-500 mb-1">
+                            Tipo Disciplina
+                          </label>
+                          <select
                             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500"
                             value={disc.tipoDisciplina}
-                            onChange={e => handleChangeDisciplina(idx, 'tipoDisciplina', e.target.value)}
+                            onChange={(e) =>
+                              handleChangeDisciplina(
+                                idx,
+                                "tipoDisciplina",
+                                e.target.value,
+                              )
+                            }
                             required
                           >
                             <option value="PRESENCIAL">Presencial</option>
@@ -877,14 +1169,14 @@ function MapaoAcademicoView({
               </div>
 
               <div className="flex space-x-4 pt-4 sticky bottom-0 bg-white py-4 border-t border-slate-100 z-10">
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="flex-1 bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
                 >
-                  {editingEntry ? 'Salvar Alterações' : 'Cadastrar'}
+                  {editingEntry ? "Salvar Alterações" : "Cadastrar"}
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowModal(false)}
                   className="px-8 bg-slate-100 text-slate-600 font-bold py-4 rounded-2xl hover:bg-slate-200 transition-all border border-slate-200"
                 >
@@ -899,14 +1191,22 @@ function MapaoAcademicoView({
   );
 }
 
-function BasesDisparoView({ bases, onToast }: { bases: BaseDisparoEntry[], onToast: (m: string, t?: 'success' | 'error') => void }) {
+function BasesDisparoView({
+  bases,
+  onToast,
+}: {
+  bases: BaseDisparoEntry[];
+  onToast: (m: string, t?: "success" | "error") => void;
+}) {
   const [showModal, setShowModal] = useState(false);
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [filterDate, setFilterDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
   const [formData, setFormData] = useState<Partial<BaseDisparoEntry>>({
-    data: new Date().toISOString().split('T')[0],
+    data: new Date().toISOString().split("T")[0],
     totalDisparos: 0,
     positivos: 0,
-    negativos: 0
+    negativos: 0,
   });
 
   const handleSave = async (e: React.FormEvent) => {
@@ -914,19 +1214,27 @@ function BasesDisparoView({ bases, onToast }: { bases: BaseDisparoEntry[], onToa
     try {
       await addDoc(collection(db, COLLECTIONS.BASES_DISPARO), {
         ...formData,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
       onToast("Base registrada!");
       setShowModal(false);
-      setFormData({ data: new Date().toISOString().split('T')[0], totalDisparos: 0, positivos: 0, negativos: 0 });
+      setFormData({
+        data: new Date().toISOString().split("T")[0],
+        totalDisparos: 0,
+        positivos: 0,
+        negativos: 0,
+      });
     } catch (err: any) {
-      onToast("Erro ao registrar.", 'error');
+      onToast("Erro ao registrar.", "error");
     }
   };
 
-  const filteredBases = bases.filter(b => b.data === filterDate);
+  const filteredBases = bases.filter((b) => b.data === filterDate);
 
-  const totalDisparos = filteredBases.reduce((acc, b) => acc + b.totalDisparos, 0);
+  const totalDisparos = filteredBases.reduce(
+    (acc, b) => acc + b.totalDisparos,
+    0,
+  );
   const totalPositivos = filteredBases.reduce((acc, b) => acc + b.positivos, 0);
   const totalNegativos = filteredBases.reduce((acc, b) => acc + b.negativos, 0);
 
@@ -934,17 +1242,21 @@ function BasesDisparoView({ bases, onToast }: { bases: BaseDisparoEntry[], onToa
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Bases de Disparo</h2>
-          <p className="text-sm text-slate-500">Métricas diárias de disparos e conversão</p>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+            Bases de Disparo
+          </h2>
+          <p className="text-sm text-slate-500">
+            Métricas diárias de disparos e conversão
+          </p>
         </div>
         <div className="flex items-center space-x-4">
-          <input 
+          <input
             type="date"
             className="px-4 py-2.5 rounded-2xl border border-slate-200 text-sm font-bold text-slate-700"
             value={filterDate}
-            onChange={e => setFilterDate(e.target.value)}
+            onChange={(e) => setFilterDate(e.target.value)}
           />
-          <button 
+          <button
             onClick={() => setShowModal(true)}
             className="bg-blue-600 text-white px-6 py-2.5 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center space-x-2"
           >
@@ -956,18 +1268,30 @@ function BasesDisparoView({ bases, onToast }: { bases: BaseDisparoEntry[], onToa
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <p className="text-xs font-bold text-slate-400 uppercase mb-1">Total de Disparos</p>
+          <p className="text-xs font-bold text-slate-400 uppercase mb-1">
+            Total de Disparos
+          </p>
           <p className="text-3xl font-black text-blue-600">{totalDisparos}</p>
         </div>
         <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100 shadow-sm">
-          <p className="text-xs font-bold text-emerald-500 uppercase mb-1">Total Positivos</p>
-          <p className="text-3xl font-black text-emerald-600">{totalPositivos}</p>
+          <p className="text-xs font-bold text-emerald-500 uppercase mb-1">
+            Total Positivos
+          </p>
+          <p className="text-3xl font-black text-emerald-600">
+            {totalPositivos}
+          </p>
           <p className="text-xs font-bold text-emerald-500 mt-2">
-            Taxa: {totalDisparos > 0 ? ((totalPositivos / totalDisparos) * 100).toFixed(1) : 0}%
+            Taxa:{" "}
+            {totalDisparos > 0
+              ? ((totalPositivos / totalDisparos) * 100).toFixed(1)
+              : 0}
+            %
           </p>
         </div>
         <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 shadow-sm">
-          <p className="text-xs font-bold text-rose-500 uppercase mb-1">Total Negativos</p>
+          <p className="text-xs font-bold text-rose-500 uppercase mb-1">
+            Total Negativos
+          </p>
           <p className="text-3xl font-black text-rose-600">{totalNegativos}</p>
         </div>
       </div>
@@ -989,18 +1313,34 @@ function BasesDisparoView({ bases, onToast }: { bases: BaseDisparoEntry[], onToa
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {filteredBases.map(b => (
+              {filteredBases.map((b) => (
                 <tr key={b.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-slate-900">{b.nomeBase}</td>
-                  <td className="px-6 py-4 font-bold text-blue-600">{b.totalDisparos}</td>
-                  <td className="px-6 py-4 font-bold text-emerald-600">{b.positivos}</td>
-                  <td className="px-6 py-4 font-bold text-rose-600">{b.negativos}</td>
+                  <td className="px-6 py-4 font-bold text-slate-900">
+                    {b.nomeBase}
+                  </td>
+                  <td className="px-6 py-4 font-bold text-blue-600">
+                    {b.totalDisparos}
+                  </td>
+                  <td className="px-6 py-4 font-bold text-emerald-600">
+                    {b.positivos}
+                  </td>
+                  <td className="px-6 py-4 font-bold text-rose-600">
+                    {b.negativos}
+                  </td>
                   <td className="px-6 py-4 font-bold text-slate-700">
-                    {b.totalDisparos > 0 ? ((b.positivos / b.totalDisparos) * 100).toFixed(1) : 0}%
+                    {b.totalDisparos > 0
+                      ? ((b.positivos / b.totalDisparos) * 100).toFixed(1)
+                      : 0}
+                    %
                   </td>
                   <td className="px-6 py-4">
-                    <button 
-                      onClick={async () => { if(window.confirm('Excluir?')) await deleteDoc(doc(db, COLLECTIONS.BASES_DISPARO, b.id)); }}
+                    <button
+                      onClick={async () => {
+                        if (window.confirm("Excluir?"))
+                          await deleteDoc(
+                            doc(db, COLLECTIONS.BASES_DISPARO, b.id),
+                          );
+                      }}
                       className="text-rose-500 hover:bg-rose-100 p-2 rounded-xl transition-all"
                     >
                       <Trash2 size={18} />
@@ -1010,7 +1350,10 @@ function BasesDisparoView({ bases, onToast }: { bases: BaseDisparoEntry[], onToa
               ))}
               {filteredBases.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">
+                  <td
+                    colSpan={6}
+                    className="px-6 py-12 text-center text-slate-400 italic"
+                  >
                     Nenhum registro para esta data.
                   </td>
                 </tr>
@@ -1022,83 +1365,117 @@ function BasesDisparoView({ bases, onToast }: { bases: BaseDisparoEntry[], onToa
 
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-[2.5rem] shadow-2xl max-w-lg w-full p-8"
           >
             <div className="flex justify-between items-center mb-8">
-              <h3 className="text-2xl font-bold text-slate-900">Registrar Métricas da Base</h3>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-400">
+              <h3 className="text-2xl font-bold text-slate-900">
+                Registrar Métricas da Base
+              </h3>
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-400"
+              >
                 <X size={24} />
               </button>
             </div>
 
             <form onSubmit={handleSave} className="space-y-6">
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Data do Disparo</label>
-                <input 
-                  type="date" 
+                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">
+                  Data do Disparo
+                </label>
+                <input
+                  type="date"
                   className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700"
                   value={formData.data}
-                  onChange={e => setFormData({...formData, data: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, data: e.target.value })
+                  }
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Nome da Base</label>
-                <input 
-                  type="text" 
+                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">
+                  Nome da Base
+                </label>
+                <input
+                  type="text"
                   className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700"
                   value={formData.nomeBase}
-                  onChange={e => setFormData({...formData, nomeBase: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nomeBase: e.target.value })
+                  }
                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Total</label>
-                  <input 
-                    type="number" 
+                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">
+                    Total
+                  </label>
+                  <input
+                    type="number"
                     className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700"
                     value={formData.totalDisparos}
-                    onChange={e => setFormData({...formData, totalDisparos: Number(e.target.value)})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        totalDisparos: Number(e.target.value),
+                      })
+                    }
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Positivos</label>
-                  <input 
-                    type="number" 
+                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">
+                    Positivos
+                  </label>
+                  <input
+                    type="number"
                     className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700"
                     value={formData.positivos}
-                    onChange={e => setFormData({...formData, positivos: Number(e.target.value)})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        positivos: Number(e.target.value),
+                      })
+                    }
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Negativos</label>
-                  <input 
-                    type="number" 
+                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">
+                    Negativos
+                  </label>
+                  <input
+                    type="number"
                     className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700"
                     value={formData.negativos}
-                    onChange={e => setFormData({...formData, negativos: Number(e.target.value)})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        negativos: Number(e.target.value),
+                      })
+                    }
                     required
                   />
                 </div>
               </div>
 
               <div className="flex space-x-4 pt-4">
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="flex-1 bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
                 >
                   Registrar
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowModal(false)}
                   className="px-8 bg-slate-100 text-slate-600 font-bold py-4 rounded-2xl hover:bg-slate-200 transition-all"
                 >
@@ -1113,12 +1490,30 @@ function BasesDisparoView({ bases, onToast }: { bases: BaseDisparoEntry[], onToa
   );
 }
 
-const StatCard = ({ title, value, icon: Icon, color, trend }: { title: string, value: string | number, icon: any, color: string, trend?: string }) => (
+const StatCard = ({
+  title,
+  value,
+  icon: Icon,
+  color,
+  trend,
+}: {
+  title: string;
+  value: string | number;
+  icon: any;
+  color: string;
+  trend?: string;
+}) => (
   <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
     <div>
-      <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">{title}</p>
+      <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">
+        {title}
+      </p>
       <p className="text-3xl font-bold text-slate-900">{value}</p>
-      {trend && <p className="text-xs text-emerald-600 font-medium mt-1 flex items-center"><TrendingUp size={12} className="mr-1" /> {trend}</p>}
+      {trend && (
+        <p className="text-xs text-emerald-600 font-medium mt-1 flex items-center">
+          <TrendingUp size={12} className="mr-1" /> {trend}
+        </p>
+      )}
     </div>
     <div className={cn("p-4 rounded-2xl", color)}>
       <Icon size={24} className="text-white" />
@@ -1128,32 +1523,43 @@ const StatCard = ({ title, value, icon: Icon, color, trend }: { title: string, v
 
 // --- Main App ---
 
-function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast: (m: string, t?: 'success' | 'error') => void }) {
+function CampanhasView({
+  campanhas,
+  onToast,
+}: {
+  campanhas: Campanha[];
+  onToast: (m: string, t?: "success" | "error") => void;
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [editingCampanha, setEditingCampanha] = useState<Campanha | null>(null);
-  const [selectedCampanha, setSelectedCampanha] = useState<Campanha | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [startDateFilter, setStartDateFilter] = useState('');
-  const [endDateFilter, setEndDateFilter] = useState('');
+  const [selectedCampanha, setSelectedCampanha] = useState<Campanha | null>(
+    null,
+  );
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
 
   const getEffectiveStatus = (camp: Campanha) => {
-    const today = new Date().toISOString().split('T')[0];
-    if (today < camp.dataInicio) return 'Agendada';
-    if (today > camp.dataFim) return 'Finalizada';
-    return 'Ativa';
+    const today = new Date().toISOString().split("T")[0];
+    if (today < camp.dataInicio) return "Agendada";
+    if (today > camp.dataFim) return "Finalizada";
+    return "Ativa";
   };
 
   const filteredCampanhas = useMemo(() => {
-    return campanhas.filter(camp => {
+    return campanhas.filter((camp) => {
       const effectiveStatus = getEffectiveStatus(camp);
-      const matchesSearch = camp.nome.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = camp.nome
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
       const matchesStatus = !statusFilter || effectiveStatus === statusFilter;
-      
+
       let matchesDate = true;
       if (startDateFilter && endDateFilter) {
-        matchesDate = camp.dataInicio <= endDateFilter && camp.dataFim >= startDateFilter;
+        matchesDate =
+          camp.dataInicio <= endDateFilter && camp.dataFim >= startDateFilter;
       } else if (startDateFilter) {
         matchesDate = camp.dataFim >= startDateFilter;
       } else if (endDateFilter) {
@@ -1167,14 +1573,18 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const payload = {
-      nome: formData.get('nome') as string,
-      dataInicio: formData.get('dataInicio') as string,
-      dataFim: formData.get('dataFim') as string,
-      objetivo: formData.get('objetivo') as string,
+      nome: formData.get("nome") as string,
+      dataInicio: formData.get("dataInicio") as string,
+      dataFim: formData.get("dataFim") as string,
+      objetivo: formData.get("objetivo") as string,
       updatedAt: serverTimestamp(),
     };
 
-    const isDuplicate = campanhas.some(c => c.nome.toLowerCase() === payload.nome.toLowerCase() && c.id !== editingCampanha?.id);
+    const isDuplicate = campanhas.some(
+      (c) =>
+        c.nome.toLowerCase() === payload.nome.toLowerCase() &&
+        c.id !== editingCampanha?.id,
+    );
     if (isDuplicate) {
       onToast("Já existe uma campanha com este nome.", "error");
       return;
@@ -1182,29 +1592,35 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
 
     try {
       if (editingCampanha) {
-        await updateDoc(doc(db, COLLECTIONS.CAMPANHAS, editingCampanha.id), payload);
+        await updateDoc(
+          doc(db, COLLECTIONS.CAMPANHAS, editingCampanha.id),
+          payload,
+        );
         onToast("Campanha atualizada!");
       } else {
-        await addDoc(collection(db, COLLECTIONS.CAMPANHAS), { ...payload, createdAt: serverTimestamp() });
+        await addDoc(collection(db, COLLECTIONS.CAMPANHAS), {
+          ...payload,
+          createdAt: serverTimestamp(),
+        });
         onToast("Campanha criada!");
       }
       setIsModalOpen(false);
       setEditingCampanha(null);
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, COLLECTIONS.CAMPANHAS);
-      onToast("Erro ao salvar campanha.", 'error');
+      onToast("Erro ao salvar campanha.", "error");
     }
   };
 
   const handleExport = () => {
-    const data = filteredCampanhas.map(c => ({
+    const data = filteredCampanhas.map((c) => ({
       Nome: c.nome,
-      'Data Início': c.dataInicio,
-      'Data Fim': c.dataFim,
+      "Data Início": c.dataInicio,
+      "Data Fim": c.dataFim,
       Status: c.status,
-      Objetivo: c.objetivo
+      Objetivo: c.objetivo,
     }));
-    exportToExcel(data, 'Campanhas');
+    exportToExcel(data, "Campanhas");
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1213,31 +1629,35 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
 
     importFromExcel(file, async (data) => {
       try {
-        const batch = data.map(item => ({
-          nome: item.Nome || item.nome || '',
-          dataInicio: item['Data Início'] || item.dataInicio || '',
-          dataFim: item['Data Fim'] || item.dataFim || '',
-          status: item.Status || item.status || 'Ativa',
-          objetivo: item.Objetivo || item.objetivo || '',
-          createdAt: serverTimestamp()
+        const batch = data.map((item) => ({
+          nome: item.Nome || item.nome || "",
+          dataInicio: item["Data Início"] || item.dataInicio || "",
+          dataFim: item["Data Fim"] || item.dataFim || "",
+          status: item.Status || item.status || "Ativa",
+          objetivo: item.Objetivo || item.objetivo || "",
+          createdAt: serverTimestamp(),
         }));
 
         let imported = 0;
         let skipped = 0;
         const inserted = new Set();
         for (const entry of batch) {
-          const isDup = campanhas.some(c => c.nome === entry.nome) || inserted.has(entry.nome);
+          const isDup =
+            campanhas.some((c) => c.nome === entry.nome) ||
+            inserted.has(entry.nome);
           if (!isDup) {
-             await addDoc(collection(db, COLLECTIONS.CAMPANHAS), entry);
-             inserted.add(entry.nome);
-             imported++;
+            await addDoc(collection(db, COLLECTIONS.CAMPANHAS), entry);
+            inserted.add(entry.nome);
+            imported++;
           } else {
-             skipped++;
+            skipped++;
           }
         }
-        onToast(`${imported} campanhas importadas! ${skipped > 0 ? `${skipped} ignoradas.` : ''}`);
+        onToast(
+          `${imported} campanhas importadas! ${skipped > 0 ? `${skipped} ignoradas.` : ""}`,
+        );
       } catch (err: any) {
-        onToast("Erro ao importar campanhas.", 'error');
+        onToast("Erro ao importar campanhas.", "error");
       }
     });
   };
@@ -1247,8 +1667,11 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-800">Campanhas</h2>
         <div className="flex space-x-2">
-          <button 
-            onClick={() => { setEditingCampanha(null); setIsModalOpen(true); }}
+          <button
+            onClick={() => {
+              setEditingCampanha(null);
+              setIsModalOpen(true);
+            }}
             className="bg-blue-600 text-white px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
           >
             <Plus size={20} />
@@ -1257,9 +1680,14 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
           <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
             <Upload size={18} />
             <span>Importar</span>
-            <input type="file" accept=".xlsx, .xls" onChange={handleImport} className="hidden" />
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleImport}
+              className="hidden"
+            />
           </label>
-          <button 
+          <button
             onClick={handleExport}
             className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
           >
@@ -1271,18 +1699,21 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-4 items-center">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Buscar por nome..." 
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            size={18}
+          />
+          <input
+            type="text"
+            placeholder="Buscar por nome..."
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
           />
         </div>
-        <select 
+        <select
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
+          onChange={(e) => setStatusFilter(e.target.value)}
           className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
         >
           <option value="">Todos os Status</option>
@@ -1291,25 +1722,30 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
           <option value="Finalizada">Finalizada</option>
         </select>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Período:</span>
-          <input 
-            type="date" 
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            Período:
+          </span>
+          <input
+            type="date"
             value={startDateFilter}
-            onChange={e => setStartDateFilter(e.target.value)}
+            onChange={(e) => setStartDateFilter(e.target.value)}
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-semibold text-slate-600"
             title="Data de Início"
           />
           <span className="text-slate-400 text-xs font-bold">até</span>
-          <input 
-            type="date" 
+          <input
+            type="date"
             value={endDateFilter}
-            onChange={e => setEndDateFilter(e.target.value)}
+            onChange={(e) => setEndDateFilter(e.target.value)}
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-semibold text-slate-600"
             title="Data de Fim"
           />
           {(startDateFilter || endDateFilter) && (
             <button
-              onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }}
+              onClick={() => {
+                setStartDateFilter("");
+                setEndDateFilter("");
+              }}
               className="text-xs font-bold text-red-500 hover:text-red-700 hover:underline transition-all cursor-pointer px-2"
             >
               Limpar
@@ -1319,31 +1755,44 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCampanhas.map(camp => {
+        {filteredCampanhas.map((camp) => {
           const effectiveStatus = getEffectiveStatus(camp);
           return (
-            <div 
-              key={camp.id} 
+            <div
+              key={camp.id}
               className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all"
-              onClick={() => { setSelectedCampanha(camp); setIsDetailModalOpen(true); }}
+              onClick={() => {
+                setSelectedCampanha(camp);
+                setIsDetailModalOpen(true);
+              }}
             >
               <div>
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-bold text-slate-900">{camp.nome}</h3>
-                  <span className={cn(
-                    "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
-                    effectiveStatus === 'Ativa' ? "bg-emerald-100 text-emerald-600" :
-                    effectiveStatus === 'Agendada' ? "bg-blue-100 text-blue-600" :
-                    "bg-slate-100 text-slate-600"
-                  )}>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    {camp.nome}
+                  </h3>
+                  <span
+                    className={cn(
+                      "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
+                      effectiveStatus === "Ativa"
+                        ? "bg-emerald-100 text-emerald-600"
+                        : effectiveStatus === "Agendada"
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-slate-100 text-slate-600",
+                    )}
+                  >
                     {effectiveStatus}
                   </span>
                 </div>
-                <p className="text-sm text-slate-500 mb-4 line-clamp-2">{camp.objetivo}</p>
+                <p className="text-sm text-slate-500 mb-4 line-clamp-2">
+                  {camp.objetivo}
+                </p>
                 <div className="flex items-center space-x-4 text-xs text-slate-400">
                   <div className="flex items-center space-x-1">
                     <Calendar size={14} />
-                    <span>{camp.dataInicio} - {camp.dataFim}</span>
+                    <span>
+                      {camp.dataInicio} - {camp.dataFim}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1351,39 +1800,55 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
           );
         })}
         {filteredCampanhas.length === 0 && (
-          <div className="col-span-full py-12 text-center text-slate-400 italic">Nenhuma campanha encontrada.</div>
+          <div className="col-span-full py-12 text-center text-slate-400 italic">
+            Nenhuma campanha encontrada.
+          </div>
         )}
       </div>
 
       <AnimatePresence>
         {isDetailModalOpen && selectedCampanha && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-lg space-y-6"
             >
-              <h2 className="text-2xl font-bold text-slate-900">{selectedCampanha.nome}</h2>
+              <h2 className="text-2xl font-bold text-slate-900">
+                {selectedCampanha.nome}
+              </h2>
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase">Período</p>
-                  <p className="text-sm text-slate-700">{selectedCampanha.dataInicio} - {selectedCampanha.dataFim}</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase">
+                    Período
+                  </p>
+                  <p className="text-sm text-slate-700">
+                    {selectedCampanha.dataInicio} - {selectedCampanha.dataFim}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase">Objetivo</p>
-                  <p className="text-sm text-slate-700">{selectedCampanha.objetivo}</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase">
+                    Objetivo
+                  </p>
+                  <p className="text-sm text-slate-700">
+                    {selectedCampanha.objetivo}
+                  </p>
                 </div>
               </div>
               <div className="flex space-x-4 pt-4">
-                <button 
+                <button
                   onClick={() => setIsDetailModalOpen(false)}
                   className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all"
                 >
                   Fechar
                 </button>
-                <button 
-                  onClick={() => { setEditingCampanha(selectedCampanha); setIsDetailModalOpen(false); setIsModalOpen(true); }}
+                <button
+                  onClick={() => {
+                    setEditingCampanha(selectedCampanha);
+                    setIsDetailModalOpen(false);
+                    setIsModalOpen(true);
+                  }}
                   className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all"
                 >
                   Editar Campanha
@@ -1397,7 +1862,7 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -1405,41 +1870,83 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
             >
               <div className="p-6 border-b border-slate-100 flex justify-between items-center">
                 <h3 className="text-xl font-bold text-slate-900">
-                  {editingCampanha ? 'Editar Campanha' : 'Nova Campanha'}
+                  {editingCampanha ? "Editar Campanha" : "Nova Campanha"}
                 </h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
                   <X size={24} />
                 </button>
               </div>
               <form onSubmit={handleSave} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Nome da Campanha</label>
-                  <input name="nome" defaultValue={editingCampanha?.nome} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Nome da Campanha
+                  </label>
+                  <input
+                    name="nome"
+                    defaultValue={editingCampanha?.nome}
+                    required
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1">Início</label>
-                    <input type="date" name="dataInicio" defaultValue={editingCampanha?.dataInicio} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <label className="block text-sm font-bold text-slate-700 mb-1">
+                      Início
+                    </label>
+                    <input
+                      type="date"
+                      name="dataInicio"
+                      defaultValue={editingCampanha?.dataInicio}
+                      required
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1">Fim</label>
-                    <input type="date" name="dataFim" defaultValue={editingCampanha?.dataFim} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <label className="block text-sm font-bold text-slate-700 mb-1">
+                      Fim
+                    </label>
+                    <input
+                      type="date"
+                      name="dataFim"
+                      defaultValue={editingCampanha?.dataFim}
+                      required
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Status</label>
-                  <select name="status" defaultValue={editingCampanha?.status || 'Ativa'} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    name="status"
+                    defaultValue={editingCampanha?.status || "Ativa"}
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
                     <option value="Ativa">Ativa</option>
                     <option value="Pausada">Pausada</option>
                     <option value="Finalizada">Finalizada</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Objetivo</label>
-                  <textarea name="objetivo" defaultValue={editingCampanha?.objetivo} rows={3} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Objetivo
+                  </label>
+                  <textarea
+                    name="objetivo"
+                    defaultValue={editingCampanha?.objetivo}
+                    rows={3}
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
                 </div>
-                <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">
-                  {editingCampanha ? 'Salvar Alterações' : 'Criar Campanha'}
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+                >
+                  {editingCampanha ? "Salvar Alterações" : "Criar Campanha"}
                 </button>
               </form>
             </motion.div>
@@ -1450,34 +1957,36 @@ function CampanhasView({ campanhas, onToast }: { campanhas: Campanha[], onToast:
   );
 }
 
-function FiesProuniView({ 
-  data, 
-  onToast, 
-  profile, 
-  whatsappMessages, 
+function FiesProuniView({
+  data,
+  onToast,
+  profile,
+  whatsappMessages,
   periodos,
   botConfig,
   onSendBot,
-  onMassSendBot
-}: { 
-  data: FiesProuniEntry[], 
-  onToast: (m: string, t?: 'success' | 'error') => void,
-  profile: UserProfile,
-  whatsappMessages: WhatsAppMessage[],
-  periodos: PeriodoCaptacao[],
-  botConfig: BotConfig,
+  onMassSendBot,
+}: {
+  data: FiesProuniEntry[];
+  onToast: (m: string, t?: "success" | "error") => void;
+  profile: UserProfile;
+  whatsappMessages: WhatsAppMessage[];
+  periodos: PeriodoCaptacao[];
+  botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
-  onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
+  onMassSendBot: (messages: { telefone: string; message: string }[]) => void;
 }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [periodoFilter, setPeriodoFilter] = useState('');
-  const [tipoFilter, setTipoFilter] = useState('');
-  const [listaFilter, setListaFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [bolsaFilter, setBolsaFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [periodoFilter, setPeriodoFilter] = useState("");
+  const [tipoFilter, setTipoFilter] = useState("");
+  const [listaFilter, setListaFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [bolsaFilter, setBolsaFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<FiesProuniEntry | null>(null);
-  const [cpfInput, setCpfInput] = useState('');
+  const [editingEntry, setEditingEntry] = useState<FiesProuniEntry | null>(
+    null,
+  );
+  const [cpfInput, setCpfInput] = useState("");
 
   const isAdmin = profile.role === ROLES.LIDER_FDV;
 
@@ -1485,179 +1994,222 @@ function FiesProuniView({
     if (editingEntry) {
       setCpfInput(formatCPF(editingEntry.cpf));
     } else {
-      setCpfInput('');
+      setCpfInput("");
     }
   }, [editingEntry, isModalOpen]);
 
-  const filteredData = data.filter(item => {
-    const matchesSearch = item.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          item.cpf.includes(searchTerm) || 
-                          item.curso.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (item.lista && item.lista.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (item.responsavelEntrevista && item.responsavelEntrevista.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (item.status && item.status.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredData = data.filter((item) => {
+    const matchesSearch =
+      item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.cpf.includes(searchTerm) ||
+      item.curso.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.lista &&
+        item.lista.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.responsavelEntrevista &&
+        item.responsavelEntrevista
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())) ||
+      (item.status &&
+        item.status.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesPeriodo = !periodoFilter || item.periodo === periodoFilter;
     const matchesTipo = !tipoFilter || item.tipo === tipoFilter;
     const matchesLista = !listaFilter || item.lista === listaFilter;
     const matchesStatus = !statusFilter || item.status === statusFilter;
     const matchesBolsa = !bolsaFilter || item.bolsa === bolsaFilter;
-    return matchesSearch && matchesPeriodo && matchesTipo && matchesLista && matchesStatus && matchesBolsa;
+    return (
+      matchesSearch &&
+      matchesPeriodo &&
+      matchesTipo &&
+      matchesLista &&
+      matchesStatus &&
+      matchesBolsa
+    );
   });
 
-  const uniqueListas = Array.from(new Set(data.map(i => i.lista).filter(Boolean))).sort();
-  const uniqueStatuses = Array.from(new Set(data.map(i => i.status).filter(Boolean))).sort();
+  const uniqueListas = Array.from(
+    new Set(data.map((i) => i.lista).filter(Boolean)),
+  ).sort();
+  const uniqueStatuses = Array.from(
+    new Set(data.map((i) => i.status).filter(Boolean)),
+  ).sort();
 
   const stats = {
     total: filteredData.length,
-    pendentes: filteredData.filter(i => i.docsEntreguesStatus === 'Pendente').length,
-    parcial: filteredData.filter(i => i.docsEntreguesStatus === 'Parcial').length,
-    entregaram: filteredData.filter(i => i.docsEntreguesStatus === 'Sim').length,
-    comInscricao: filteredData.filter(i => i.inscricaoSales).length,
-    comMatricula: filteredData.filter(i => i.numeroMatricula).length,
-    emAnalise: filteredData.filter(i => i.digitalizaStatus === 'Em Análise').length,
-    concluido: filteredData.filter(i => i.digitalizaStatus === 'Concluído').length,
+    pendentes: filteredData.filter((i) => i.docsEntreguesStatus === "Pendente")
+      .length,
+    parcial: filteredData.filter((i) => i.docsEntreguesStatus === "Parcial")
+      .length,
+    entregaram: filteredData.filter((i) => i.docsEntreguesStatus === "Sim")
+      .length,
+    comInscricao: filteredData.filter((i) => i.inscricaoSales).length,
+    comMatricula: filteredData.filter((i) => i.numeroMatricula).length,
+    emAnalise: filteredData.filter((i) => i.digitalizaStatus === "Em Análise")
+      .length,
+    concluido: filteredData.filter((i) => i.digitalizaStatus === "Concluído")
+      .length,
   };
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const cpf = formData.get('cpf') as string;
+    const cpf = formData.get("cpf") as string;
 
     if (!validateCPF(cpf)) {
-      onToast("CPF inválido. Por favor, verifique os 11 dígitos.", 'error');
+      onToast("CPF inválido. Por favor, verifique os 11 dígitos.", "error");
       return;
     }
 
-    const cleanCpf = cpf.replace(/\D/g, '');
-    const isDuplicate = data.some(item => item.cpf === cleanCpf && item.id !== editingEntry?.id);
+    const cleanCpf = cpf.replace(/\D/g, "");
+    const isDuplicate = data.some(
+      (item) => item.cpf === cleanCpf && item.id !== editingEntry?.id,
+    );
     if (isDuplicate) {
       onToast("Este CPF já está cadastrado no FIES/Prouni.", "error");
       return;
     }
 
     const payload = {
-      nome: formData.get('nome') as string,
-      cpf: cpf.replace(/\D/g, ''), // Store only digits
-      telefone: formData.get('telefone') as string,
-      email: formData.get('email') as string,
-      endereco: formData.get('endereco') as string,
-      status: formData.get('status') as string,
-      tipo: formData.get('tipo') as 'FIES' | 'PROUNI',
-      bolsa: formData.get('bolsa') as 'Parcial' | 'Total',
-      metodologia: formData.get('metodologia') as string,
-      curso: formData.get('curso') as string,
-      inscricaoSales: formData.get('inscricaoSales') as string,
-      numeroMatricula: formData.get('numeroMatricula') as string,
-      tcbAssinado: formData.get('tcbAssinado') === 'on',
-      digitalizaStatus: formData.get('digitalizaStatus') as any,
-      docsEntreguesStatus: formData.get('docsEntreguesStatus') as any,
-      sisprouniStatus: formData.get('sisprouniStatus') as any,
-      responsavelEntrevista: formData.get('responsavelEntrevista') as string,
-      dataEntrevista: formData.get('dataEntrevista') as string,
-      observacao: formData.get('observacao') as string,
-      periodo: formData.get('periodo') as string,
-      lista: formData.get('lista') as string,
-      posicaoRanking: formData.get('posicaoRanking') as string,
-      documentosEntregues: (formData.get('documentos') as string)?.split(',').map(s => s.trim()).filter(Boolean) || [],
+      nome: formData.get("nome") as string,
+      cpf: cpf.replace(/\D/g, ""), // Store only digits
+      telefone: formData.get("telefone") as string,
+      email: formData.get("email") as string,
+      endereco: formData.get("endereco") as string,
+      status: formData.get("status") as string,
+      tipo: formData.get("tipo") as "FIES" | "PROUNI",
+      bolsa: formData.get("bolsa") as "Parcial" | "Total",
+      metodologia: formData.get("metodologia") as string,
+      curso: formData.get("curso") as string,
+      inscricaoSales: formData.get("inscricaoSales") as string,
+      numeroMatricula: formData.get("numeroMatricula") as string,
+      tcbAssinado: formData.get("tcbAssinado") === "on",
+      digitalizaStatus: formData.get("digitalizaStatus") as any,
+      docsEntreguesStatus: formData.get("docsEntreguesStatus") as any,
+      sisprouniStatus: formData.get("sisprouniStatus") as any,
+      responsavelEntrevista: formData.get("responsavelEntrevista") as string,
+      dataEntrevista: formData.get("dataEntrevista") as string,
+      observacao: formData.get("observacao") as string,
+      periodo: formData.get("periodo") as string,
+      lista: formData.get("lista") as string,
+      posicaoRanking: formData.get("posicaoRanking") as string,
+      documentosEntregues:
+        (formData.get("documentos") as string)
+          ?.split(",")
+          .map((s) => s.trim())
+          .filter(Boolean) || [],
       updatedAt: serverTimestamp(),
     };
 
     try {
       if (editingEntry) {
-        await updateDoc(doc(db, COLLECTIONS.FIES_PROUNI, editingEntry.id), payload);
+        await updateDoc(
+          doc(db, COLLECTIONS.FIES_PROUNI, editingEntry.id),
+          payload,
+        );
         onToast("Registro atualizado!");
       } else {
-        await addDoc(collection(db, COLLECTIONS.FIES_PROUNI), { ...payload, createdAt: serverTimestamp() });
+        await addDoc(collection(db, COLLECTIONS.FIES_PROUNI), {
+          ...payload,
+          createdAt: serverTimestamp(),
+        });
         onToast("Registro cadastrado!");
       }
       setIsModalOpen(false);
       setEditingEntry(null);
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, COLLECTIONS.FIES_PROUNI);
-      onToast("Erro ao salvar registro.", 'error');
+      onToast("Erro ao salvar registro.", "error");
     }
   };
 
   const handleExport = () => {
-    const exportData = filteredData.map(item => ({
+    const exportData = filteredData.map((item) => ({
       Nome: item.nome,
       CPF: item.cpf,
-      Telefone: item.telefone || '',
-      Email: item.email || '',
-      Endereço: item.endereco || '',
-      Status: item.status || '',
+      Telefone: item.telefone || "",
+      Email: item.email || "",
+      Endereço: item.endereco || "",
+      Status: item.status || "",
       Tipo: item.tipo,
       Bolsa: item.bolsa,
       Curso: item.curso,
-      Ranking: item.posicaoRanking || '',
-      Lista: item.lista || '',
-      Periodo: item.periodo || '',
-      Metodologia: item.metodologia || '',
-      'Responsável Entrevista': item.responsavelEntrevista || '',
-      'Data Entrevista': item.dataEntrevista || '',
-      'Status Docs': item.docsEntreguesStatus || '',
-      'Inscrição Sales': item.inscricaoSales || '',
-      'Número Matrícula': item.numeroMatricula || '',
-      'Status Digitaliza': item.digitalizaStatus,
-      'SISPROUNI': item.sisprouniStatus || 'Pendente',
-      'TCB Assinado': item.tcbAssinado ? 'Sim' : 'Não',
-      'Documentos Entregues': item.documentosEntregues?.join(', ') || '',
-      Observação: item.observacao || ''
+      Ranking: item.posicaoRanking || "",
+      Lista: item.lista || "",
+      Periodo: item.periodo || "",
+      Metodologia: item.metodologia || "",
+      "Responsável Entrevista": item.responsavelEntrevista || "",
+      "Data Entrevista": item.dataEntrevista || "",
+      "Status Docs": item.docsEntreguesStatus || "",
+      "Inscrição Sales": item.inscricaoSales || "",
+      "Número Matrícula": item.numeroMatricula || "",
+      "Status Digitaliza": item.digitalizaStatus,
+      SISPROUNI: item.sisprouniStatus || "Pendente",
+      "TCB Assinado": item.tcbAssinado ? "Sim" : "Não",
+      "Documentos Entregues": item.documentosEntregues?.join(", ") || "",
+      Observação: item.observacao || "",
     }));
-    exportToExcel(exportData, 'Fies_Prouni');
+    exportToExcel(exportData, "Fies_Prouni");
   };
 
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
-  
+
   const handleBulkDelete = async () => {
     if (selectedEntries.length === 0) return;
-    if (window.confirm(`Deseja excluir ${selectedEntries.length} registros Fies/Prouni selecionados?`)) {
-        try {
-            for (const id of selectedEntries) {
-                await deleteDoc(doc(db, COLLECTIONS.FIES_PROUNI, id));
-            }
-            onToast(`${selectedEntries.length} registros removidos.`);
-            setSelectedEntries([]);
-        } catch (err: any) {
-            onToast("Erro ao excluir registros.", 'error');
+    if (
+      window.confirm(
+        `Deseja excluir ${selectedEntries.length} registros Fies/Prouni selecionados?`,
+      )
+    ) {
+      try {
+        for (const id of selectedEntries) {
+          await deleteDoc(doc(db, COLLECTIONS.FIES_PROUNI, id));
         }
+        onToast(`${selectedEntries.length} registros removidos.`);
+        setSelectedEntries([]);
+      } catch (err: any) {
+        onToast("Erro ao excluir registros.", "error");
+      }
     }
   };
 
   const handleDeleteIndividual = async (id: string) => {
-    if (window.confirm('Deseja excluir este registro?')) {
-        try {
-            await deleteDoc(doc(db, COLLECTIONS.FIES_PROUNI, id));
-            onToast("Registro removido.");
-        } catch (err: any) {
-            onToast("Erro ao excluir registro.", 'error');
-        }
+    if (window.confirm("Deseja excluir este registro?")) {
+      try {
+        await deleteDoc(doc(db, COLLECTIONS.FIES_PROUNI, id));
+        onToast("Registro removido.");
+      } catch (err: any) {
+        onToast("Erro ao excluir registro.", "error");
+      }
     }
   };
 
   const toggleSelect = (id: string, checked: boolean) => {
     if (checked) {
-        setSelectedEntries([...selectedEntries, id]);
+      setSelectedEntries([...selectedEntries, id]);
     } else {
-        setSelectedEntries(selectedEntries.filter(s => s !== id));
+      setSelectedEntries(selectedEntries.filter((s) => s !== id));
     }
   };
 
   const toggleSelectAll = (checked: boolean) => {
-      if (checked) {
-          setSelectedEntries(filteredData.map(b => b.id));
-      } else {
-          setSelectedEntries([]);
-      }
+    if (checked) {
+      setSelectedEntries(filteredData.map((b) => b.id));
+    } else {
+      setSelectedEntries([]);
+    }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Acompanhamento Fies/Prouni</h2>
+        <h2 className="text-2xl font-bold text-gray-800">
+          Acompanhamento Fies/Prouni
+        </h2>
         <div className="flex space-x-2">
-          <button 
-            onClick={() => { setEditingEntry(null); setIsModalOpen(true); }}
+          <button
+            onClick={() => {
+              setEditingEntry(null);
+              setIsModalOpen(true);
+            }}
             className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-indigo-700 transition-colors"
           >
             <Plus size={20} />
@@ -1667,7 +2219,7 @@ function FiesProuniView({
             <Upload size={18} />
             <span>Importação indisponível</span>
           </label>
-          <button 
+          <button
             onClick={handleExport}
             className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
           >
@@ -1679,37 +2231,84 @@ function FiesProuniView({
 
       {/* Dashboard Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Candidatos" value={stats.total} icon={Users} color="bg-blue-500" />
-        <StatCard title="Pendentes Doc" value={stats.pendentes} icon={AlertCircle} color="bg-red-500" />
-        <StatCard title="Docs Parciais" value={stats.parcial} icon={Clock} color="bg-amber-500" />
-        <StatCard title="Docs Entregues" value={stats.entregaram} icon={CheckCircle2} color="bg-green-500" />
-        <StatCard title="Com Inscrição" value={stats.comInscricao} icon={FileText} color="bg-indigo-500" />
-        <StatCard title="Com Matrícula" value={stats.comMatricula} icon={GraduationCap} color="bg-purple-500" />
-        <StatCard title="Em Análise" value={stats.emAnalise} icon={Clock} color="bg-amber-500" />
-        <StatCard title="Docs OK" value={stats.concluido} icon={ShieldCheck} color="bg-emerald-500" />
+        <StatCard
+          title="Total Candidatos"
+          value={stats.total}
+          icon={Users}
+          color="bg-blue-500"
+        />
+        <StatCard
+          title="Pendentes Doc"
+          value={stats.pendentes}
+          icon={AlertCircle}
+          color="bg-red-500"
+        />
+        <StatCard
+          title="Docs Parciais"
+          value={stats.parcial}
+          icon={Clock}
+          color="bg-amber-500"
+        />
+        <StatCard
+          title="Docs Entregues"
+          value={stats.entregaram}
+          icon={CheckCircle2}
+          color="bg-green-500"
+        />
+        <StatCard
+          title="Com Inscrição"
+          value={stats.comInscricao}
+          icon={FileText}
+          color="bg-indigo-500"
+        />
+        <StatCard
+          title="Com Matrícula"
+          value={stats.comMatricula}
+          icon={GraduationCap}
+          color="bg-purple-500"
+        />
+        <StatCard
+          title="Em Análise"
+          value={stats.emAnalise}
+          icon={Clock}
+          color="bg-amber-500"
+        />
+        <StatCard
+          title="Docs OK"
+          value={stats.concluido}
+          icon={ShieldCheck}
+          color="bg-emerald-500"
+        />
       </div>
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-4">
         <div className="flex-1 min-w-[200px] relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input 
-            type="text" 
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
+          />
+          <input
+            type="text"
             placeholder="Pesquisar por nome, CPF ou curso..."
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <select 
+        <select
           className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
           value={periodoFilter}
           onChange={(e) => setPeriodoFilter(e.target.value)}
         >
           <option value="">Todos os Períodos</option>
-          {periodos.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+          {periodos.map((p) => (
+            <option key={p.id} value={p.nome}>
+              {p.nome}
+            </option>
+          ))}
         </select>
-        <select 
+        <select
           className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
           value={tipoFilter}
           onChange={(e) => setTipoFilter(e.target.value)}
@@ -1718,7 +2317,7 @@ function FiesProuniView({
           <option value="FIES">Apenas FIES</option>
           <option value="PROUNI">Apenas PROUNI</option>
         </select>
-        <select 
+        <select
           className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
           value={bolsaFilter}
           onChange={(e) => setBolsaFilter(e.target.value)}
@@ -1727,21 +2326,29 @@ function FiesProuniView({
           <option value="Total">Total</option>
           <option value="Parcial">Parcial</option>
         </select>
-        <select 
+        <select
           className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
           value={listaFilter}
           onChange={(e) => setListaFilter(e.target.value)}
         >
           <option value="">Todas as Listas</option>
-          {uniqueListas.map(l => <option key={l} value={l}>{l}</option>)}
+          {uniqueListas.map((l) => (
+            <option key={l} value={l}>
+              {l}
+            </option>
+          ))}
         </select>
-        <select 
+        <select
           className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
           <option value="">Todos os Status</option>
-          {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+          {uniqueStatuses.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -1752,88 +2359,153 @@ function FiesProuniView({
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="px-6 py-4">
-                  <input type="checkbox" checked={selectedEntries.length === filteredData.length && filteredData.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedEntries.length === filteredData.length &&
+                      filteredData.length > 0
+                    }
+                    onChange={(e) => toggleSelectAll(e.target.checked)}
+                  />
                 </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Candidato</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Lista/Status</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Tipo/Bolsa</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Curso/Metodologia</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Documentação</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Digitaliza</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">TCB</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                  Candidato
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                  Lista/Status
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                  Tipo/Bolsa
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                  Curso/Metodologia
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                  Documentação
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                  Digitaliza
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                  TCB
+                </th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600 flex items-center gap-4">
                   {selectedEntries.length > 0 && (
-                      <button onClick={handleBulkDelete} className="text-rose-600 font-bold hover:underline">excluir selecionados</button>
+                    <button
+                      onClick={handleBulkDelete}
+                      className="text-rose-600 font-bold hover:underline"
+                    >
+                      excluir selecionados
+                    </button>
                   )}
                   {selectedEntries.length > 0 && botConfig.url && (
-                      <button 
-                         onClick={() => {
-                            const selectedObjs = data.filter(g => selectedEntries.includes(g.id));
-                            const payloads = selectedObjs.map(item => {
-                               const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
-                               const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
-                               const msgTemplate = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                               const text = msgTemplate ? replaceMessageVariables(msgTemplate.texto, item) : `Olá ${item.nome}, tudo bem?`;
-                               return {
-                                   telefone: item.telefone,
-                                   message: text
-                               };
-                            });
-                            onMassSendBot(payloads);
-                            setSelectedEntries([]);
-                         }} 
-                         className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
-                      >
-                         <Bot size={14} /> Em Massa
-                      </button>
+                    <button
+                      onClick={() => {
+                        const selectedObjs = data.filter((g) =>
+                          selectedEntries.includes(g.id),
+                        );
+                        const payloads = selectedObjs.map((item) => {
+                          const isMatAcadOk =
+                            item.numeroMatricula &&
+                            item.numeroMatricula.trim().length > 0;
+                          const type = isMatAcadOk
+                            ? "fiesProuni_1"
+                            : "fiesProuni_0";
+                          const msgTemplate = whatsappMessages.find(
+                            (m) => m.tipo === type || m.tipo === "fiesProuni",
+                          );
+                          const text = msgTemplate
+                            ? replaceMessageVariables(msgTemplate.texto, item)
+                            : `Olá ${item.nome}, tudo bem?`;
+                          return {
+                            telefone: item.telefone,
+                            message: text,
+                          };
+                        });
+                        onMassSendBot(payloads);
+                        setSelectedEntries([]);
+                      }}
+                      className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                    >
+                      <Bot size={14} /> Em Massa
+                    </button>
                   )}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filteredData.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                <tr
+                  key={item.id}
+                  className="hover:bg-gray-50/50 transition-colors"
+                >
                   <td className="px-6 py-4">
-                      <input type="checkbox" checked={selectedEntries.includes(item.id)} onChange={e => toggleSelect(item.id, e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      checked={selectedEntries.includes(item.id)}
+                      onChange={(e) => toggleSelect(item.id, e.target.checked)}
+                    />
                   </td>
                   <td className="px-6 py-4">
                     <div className="font-medium text-gray-900">{item.nome}</div>
-                    <div className="text-[10px] font-bold text-indigo-500">Ranking: {item.posicaoRanking || '-'}</div>
-                    <div className="text-xs text-gray-500">{formatCPF(item.cpf)}</div>
+                    <div className="text-[10px] font-bold text-indigo-500">
+                      Ranking: {item.posicaoRanking || "-"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {formatCPF(item.cpf)}
+                    </div>
                     <div className="text-xs text-gray-400">{item.periodo}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm font-bold text-indigo-600">{item.lista || '-'}</div>
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">{item.status || 'Sem Status'}</div>
+                    <div className="text-sm font-bold text-indigo-600">
+                      {item.lista || "-"}
+                    </div>
+                    <div className="text-[10px] text-slate-500 uppercase font-bold">
+                      {item.status || "Sem Status"}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${item.tipo === 'FIES' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-bold ${item.tipo === "FIES" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}
+                    >
                       {item.tipo}
                     </span>
-                    <div className="text-xs text-gray-500 mt-1">{item.bolsa}</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {item.bolsa}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-700">{item.curso}</div>
-                    <div className="text-xs text-gray-500">{item.metodologia}</div>
+                    <div className="text-xs text-gray-500">
+                      {item.metodologia}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
-                      item.docsEntreguesStatus === 'Sim' ? 'bg-green-100 text-green-700' :
-                      item.docsEntreguesStatus === 'Parcial' ? 'bg-amber-100 text-amber-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {item.docsEntreguesStatus || 'Pendente'}
+                    <span
+                      className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                        item.docsEntreguesStatus === "Sim"
+                          ? "bg-green-100 text-green-700"
+                          : item.docsEntreguesStatus === "Parcial"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {item.docsEntreguesStatus || "Pendente"}
                     </span>
                     <div className="text-[10px] text-slate-400 mt-1">
                       {item.documentosEntregues?.length || 0} docs
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      item.digitalizaStatus === 'Concluído' ? 'bg-green-100 text-green-700' :
-                      item.digitalizaStatus === 'Em Análise' ? 'bg-amber-100 text-amber-700' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        item.digitalizaStatus === "Concluído"
+                          ? "bg-green-100 text-green-700"
+                          : item.digitalizaStatus === "Em Análise"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
                       {item.digitalizaStatus}
                     </span>
                   </td>
@@ -1846,8 +2518,11 @@ function FiesProuniView({
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-2">
-                      <button 
-                        onClick={() => { setEditingEntry(item); setIsModalOpen(true); }}
+                      <button
+                        onClick={() => {
+                          setEditingEntry(item);
+                          setIsModalOpen(true);
+                        }}
                         className="text-indigo-600 hover:text-indigo-800 font-medium text-sm p-2 hover:bg-indigo-50 rounded-lg transition-all"
                         title="Editar"
                       >
@@ -1856,12 +2531,24 @@ function FiesProuniView({
                       {item.telefone && (
                         <>
                           {botConfig.url && (
-                            <button 
+                            <button
                               onClick={() => {
-                                const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
-                                const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
-                                const msgObj = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                              const msg = replaceMessageVariables(msgObj ? msgObj.texto : `Olá [nome], tudo bem?`, item);
+                                const isMatAcadOk =
+                                  item.numeroMatricula &&
+                                  item.numeroMatricula.trim().length > 0;
+                                const type = isMatAcadOk
+                                  ? "fiesProuni_1"
+                                  : "fiesProuni_0";
+                                const msgObj = whatsappMessages.find(
+                                  (m) =>
+                                    m.tipo === type || m.tipo === "fiesProuni",
+                                );
+                                const msg = replaceMessageVariables(
+                                  msgObj
+                                    ? msgObj.texto
+                                    : `Olá [nome], tudo bem?`,
+                                  item,
+                                );
                                 onSendBot(item.telefone, msg);
                               }}
                               className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-all"
@@ -1870,14 +2557,28 @@ function FiesProuniView({
                               <Bot size={18} />
                             </button>
                           )}
-                          <a 
-                            href={getWhatsAppUrl(item.telefone, (() => {
-                              const isMatAcadOk = item.numeroMatricula && item.numeroMatricula.trim().length > 0;
-                              const type = isMatAcadOk ? 'fiesProuni_1' : 'fiesProuni_0';
-                              const msg = whatsappMessages.find(m => m.tipo === type || m.tipo === 'fiesProuni');
-                              if (msg) return replaceMessageVariables(msg.texto, item);
-                              return `Olá ${item.nome}, tudo bem?`;
-                            })())}
+                          <a
+                            href={getWhatsAppUrl(
+                              item.telefone,
+                              (() => {
+                                const isMatAcadOk =
+                                  item.numeroMatricula &&
+                                  item.numeroMatricula.trim().length > 0;
+                                const type = isMatAcadOk
+                                  ? "fiesProuni_1"
+                                  : "fiesProuni_0";
+                                const msg = whatsappMessages.find(
+                                  (m) =>
+                                    m.tipo === type || m.tipo === "fiesProuni",
+                                );
+                                if (msg)
+                                  return replaceMessageVariables(
+                                    msg.texto,
+                                    item,
+                                  );
+                                return `Olá ${item.nome}, tudo bem?`;
+                              })(),
+                            )}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-emerald-600 hover:text-emerald-800 p-2 hover:bg-emerald-50 rounded-lg transition-all"
@@ -1887,7 +2588,7 @@ function FiesProuniView({
                           </a>
                         </>
                       )}
-                      <button 
+                      <button
                         onClick={() => handleDeleteIndividual(item.id)}
                         className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
                         title="Excluir"
@@ -1907,7 +2608,7 @@ function FiesProuniView({
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -1915,44 +2616,86 @@ function FiesProuniView({
             >
               <div className="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
                 <h3 className="text-xl font-bold text-gray-800">
-                  {editingEntry ? 'Editar Registro' : 'Novo Cadastro Fies/Prouni'}
+                  {editingEntry
+                    ? "Editar Registro"
+                    : "Novo Cadastro Fies/Prouni"}
                 </h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
                   <X size={24} />
                 </button>
               </div>
               <form onSubmit={handleSave} className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
-                    <input name="nome" defaultValue={editingEntry?.nome} required className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
-                    <input 
-                      name="cpf" 
-                      value={cpfInput}
-                      onChange={(e) => setCpfInput(formatCPF(e.target.value))}
-                      required 
-                      placeholder="000.000.000-00"
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" 
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nome Completo
+                    </label>
+                    <input
+                      name="nome"
+                      defaultValue={editingEntry?.nome}
+                      required
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
-                    <input name="telefone" defaultValue={editingEntry?.telefone} onChange={e => { e.target.value = formatPhone(e.target.value) }} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      CPF
+                    </label>
+                    <input
+                      name="cpf"
+                      value={cpfInput}
+                      onChange={(e) => setCpfInput(formatCPF(e.target.value))}
+                      required
+                      placeholder="000.000.000-00"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input name="email" type="email" defaultValue={editingEntry?.email} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Telefone
+                    </label>
+                    <input
+                      name="telefone"
+                      defaultValue={editingEntry?.telefone}
+                      onChange={(e) => {
+                        e.target.value = formatPhone(e.target.value);
+                      }}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <input
+                      name="email"
+                      type="email"
+                      defaultValue={editingEntry?.email}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
-                    <input name="endereco" defaultValue={editingEntry?.endereco} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Endereço
+                    </label>
+                    <input
+                      name="endereco"
+                      defaultValue={editingEntry?.endereco}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select name="status" defaultValue={editingEntry?.status || 'Pendente'} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      name="status"
+                      defaultValue={editingEntry?.status || "Pendente"}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
                       <option value="Pendente">Pendente</option>
                       <option value="Aprovado">Aprovado</option>
                       <option value="Reprovado">Reprovado</option>
@@ -1962,59 +2705,135 @@ function FiesProuniView({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                    <select name="tipo" defaultValue={editingEntry?.tipo || 'PROUNI'} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tipo
+                    </label>
+                    <select
+                      name="tipo"
+                      defaultValue={editingEntry?.tipo || "PROUNI"}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
                       <option value="FIES">FIES</option>
                       <option value="PROUNI">PROUNI</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Bolsa</label>
-                    <select name="bolsa" defaultValue={editingEntry?.bolsa || 'Total'} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Bolsa
+                    </label>
+                    <select
+                      name="bolsa"
+                      defaultValue={editingEntry?.bolsa || "Total"}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
                       <option value="Total">Total</option>
                       <option value="Parcial">Parcial</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Período</label>
-                    <input name="periodo" defaultValue={editingEntry?.periodo} placeholder="Ex: 2025.1" className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Período
+                    </label>
+                    <input
+                      name="periodo"
+                      defaultValue={editingEntry?.periodo}
+                      placeholder="Ex: 2025.1"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Lista</label>
-                    <input name="lista" defaultValue={editingEntry?.lista} placeholder="Ex: Lista 1" className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Lista
+                    </label>
+                    <input
+                      name="lista"
+                      defaultValue={editingEntry?.lista}
+                      placeholder="Ex: Lista 1"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Posição no Ranking</label>
-                    <input name="posicaoRanking" defaultValue={editingEntry?.posicaoRanking} placeholder="Ex: 15º" className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Posição no Ranking
+                    </label>
+                    <input
+                      name="posicaoRanking"
+                      defaultValue={editingEntry?.posicaoRanking}
+                      placeholder="Ex: 15º"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Curso</label>
-                    <input name="curso" defaultValue={editingEntry?.curso} required className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Curso
+                    </label>
+                    <input
+                      name="curso"
+                      defaultValue={editingEntry?.curso}
+                      required
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Metodologia</label>
-                    <input name="metodologia" defaultValue={editingEntry?.metodologia} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Metodologia
+                    </label>
+                    <input
+                      name="metodologia"
+                      defaultValue={editingEntry?.metodologia}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Inscrição Sales</label>
-                    <input name="inscricaoSales" defaultValue={editingEntry?.inscricaoSales} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Inscrição Sales
+                    </label>
+                    <input
+                      name="inscricaoSales"
+                      defaultValue={editingEntry?.inscricaoSales}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Número Matrícula</label>
-                    <input name="numeroMatricula" defaultValue={editingEntry?.numeroMatricula} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Número Matrícula
+                    </label>
+                    <input
+                      name="numeroMatricula"
+                      defaultValue={editingEntry?.numeroMatricula}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status Digitaliza</label>
-                    <select name="digitalizaStatus" defaultValue={editingEntry?.digitalizaStatus || 'Não Postado'} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status Digitaliza
+                    </label>
+                    <select
+                      name="digitalizaStatus"
+                      defaultValue={
+                        editingEntry?.digitalizaStatus || "Não Postado"
+                      }
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
                       <option value="Não Postado">Não Postado</option>
                       <option value="Em Análise">Em Análise</option>
                       <option value="Concluído">Concluído</option>
-                      <option value="Documento reprovado">Documento reprovado</option>
+                      <option value="Documento reprovado">
+                        Documento reprovado
+                      </option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status Documentos</label>
-                    <select name="docsEntreguesStatus" defaultValue={editingEntry?.docsEntreguesStatus || 'Pendente'} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status Documentos
+                    </label>
+                    <select
+                      name="docsEntreguesStatus"
+                      defaultValue={
+                        editingEntry?.docsEntreguesStatus || "Pendente"
+                      }
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
                       <option value="Pendente">Pendente</option>
                       <option value="Parcial">Parcial</option>
                       <option value="Sim">Sim (Tudo Entregue)</option>
@@ -2022,48 +2841,87 @@ function FiesProuniView({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">SISPROUNI</label>
-                    <select name="sisprouniStatus" defaultValue={editingEntry?.sisprouniStatus || 'Pendente'} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      SISPROUNI
+                    </label>
+                    <select
+                      name="sisprouniStatus"
+                      defaultValue={editingEntry?.sisprouniStatus || "Pendente"}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
                       <option value="Pendente">Pendente</option>
                       <option value="Aprovado">Aprovado</option>
                       <option value="Reprovado">Reprovado</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Responsável Entrevista</label>
-                    <input 
-                      name="responsavelEntrevista" 
-                      defaultValue={editingEntry?.responsavelEntrevista || profile.name} 
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Responsável Entrevista
+                    </label>
+                    <input
+                      name="responsavelEntrevista"
+                      defaultValue={
+                        editingEntry?.responsavelEntrevista || profile.name
+                      }
                       readOnly={!isAdmin}
-                      className={`w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 ${!isAdmin ? 'bg-slate-50 text-slate-500' : ''}`} 
+                      className={`w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 ${!isAdmin ? "bg-slate-50 text-slate-500" : ""}`}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Data Entrevista</label>
-                    <input 
-                      name="dataEntrevista" 
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Data Entrevista
+                    </label>
+                    <input
+                      name="dataEntrevista"
                       type="date"
-                      defaultValue={editingEntry?.dataEntrevista || new Date().toISOString().split('T')[0]} 
+                      defaultValue={
+                        editingEntry?.dataEntrevista ||
+                        new Date().toISOString().split("T")[0]
+                      }
                       readOnly={!isAdmin}
-                      className={`w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 ${!isAdmin ? 'bg-slate-50 text-slate-500' : ''}`} 
+                      className={`w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 ${!isAdmin ? "bg-slate-50 text-slate-500" : ""}`}
                     />
                   </div>
                   <div className="flex items-center space-x-2 pt-8">
-                    <input type="checkbox" name="tcbAssinado" defaultChecked={editingEntry?.tcbAssinado} className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500" />
-                    <label className="text-sm font-medium text-gray-700">TCB Assinado</label>
+                    <input
+                      type="checkbox"
+                      name="tcbAssinado"
+                      defaultChecked={editingEntry?.tcbAssinado}
+                      className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
+                    />
+                    <label className="text-sm font-medium text-gray-700">
+                      TCB Assinado
+                    </label>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Documentos Entregues (separados por vírgula)</label>
-                  <input name="documentos" defaultValue={editingEntry?.documentosEntregues?.join(', ')} placeholder="Ex: RG, CPF, Diploma" className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Documentos Entregues (separados por vírgula)
+                  </label>
+                  <input
+                    name="documentos"
+                    defaultValue={editingEntry?.documentosEntregues?.join(", ")}
+                    placeholder="Ex: RG, CPF, Diploma"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Observações / O que falta</label>
-                  <textarea name="observacao" defaultValue={editingEntry?.observacao} rows={3} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Observações / O que falta
+                  </label>
+                  <textarea
+                    name="observacao"
+                    defaultValue={editingEntry?.observacao}
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
                 </div>
                 <div className="pt-4">
-                  <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">
-                    {editingEntry ? 'Salvar Alterações' : 'Cadastrar Candidato'}
+                  <button
+                    type="submit"
+                    className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                  >
+                    {editingEntry ? "Salvar Alterações" : "Cadastrar Candidato"}
                   </button>
                 </div>
               </form>
@@ -2081,23 +2939,28 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('view') || 'cadastro';
+    return params.get("view") || "cadastro";
   });
-  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isOnline, setIsOnline] = useState<boolean>(
+    typeof navigator !== "undefined" ? navigator.onLine : true,
+  );
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
@@ -2114,8 +2977,12 @@ export default function App() {
   const [planner, setPlanner] = useState<PlannerTask[]>([]);
   const [periodos, setPeriodos] = useState<PeriodoCaptacao[]>([]);
   const [calendarioAcoes, setCalendarioAcoes] = useState<CalendarioAcao[]>([]);
-  const [empresasParceiras, setEmpresasParceiras] = useState<EmpresaParceira[]>([]);
-  const [whatsappMessages, setWhatsappMessages] = useState<WhatsAppMessage[]>([]);
+  const [empresasParceiras, setEmpresasParceiras] = useState<EmpresaParceira[]>(
+    [],
+  );
+  const [whatsappMessages, setWhatsappMessages] = useState<WhatsAppMessage[]>(
+    [],
+  );
   const [links, setLinks] = useState<LinkUtil[]>([]);
   const [mapao, setMapao] = useState<MapaoAcademicoEntry[]>([]);
   const [basesDisparo, setBasesDisparo] = useState<BaseDisparoEntry[]>([]);
@@ -2123,16 +2990,46 @@ export default function App() {
   const [cursos, setCursos] = useState<CursoDisponivel[]>([]);
   const [insumosPedidos, setInsumosPedidos] = useState<InsumoPedido[]>([]);
   const [insumosEstoque, setInsumosEstoque] = useState<InsumoEstoque[]>([]);
-  const [insumosPedidosComercial, setInsumosPedidosComercial] = useState<InsumoPedidoComercial[]>([]);
-  const [insumosEstoqueComercial, setInsumosEstoqueComercial] = useState<InsumoEstoqueComercial[]>([]);
-  const [botConfig, setBotConfig] = useState<BotConfig>({ url: '', active: false });
-  const [botStatuses, setBotStatuses] = useState<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>({});
-  const [initialActionData, setInitialActionData] = useState<Partial<CalendarioAcao> | null>(null);
-  const [activePopup, setActivePopup] = useState<{ title: string; message: string } | null>(null);
+  const [insumosPedidosComercial, setInsumosPedidosComercial] = useState<
+    InsumoPedidoComercial[]
+  >([]);
+  const [insumosEstoqueComercial, setInsumosEstoqueComercial] = useState<
+    InsumoEstoqueComercial[]
+  >([]);
+  const [botConfig, setBotConfig] = useState<BotConfig>({
+    url: "",
+    active: false,
+  });
+  const [botStatuses, setBotStatuses] = useState<
+    Record<
+      string,
+      {
+        status: string;
+        pairingCode?: string;
+        qrCode?: string;
+        qrUrl?: string;
+        active?: boolean;
+      }
+    >
+  >({});
+  const [initialActionData, setInitialActionData] =
+    useState<Partial<CalendarioAcao> | null>(null);
+  const [activePopup, setActivePopup] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [massSendProgress, setMassSendProgress] = useState<{ total: number, sent: number, active: boolean, info: string }>({ total: 0, sent: 0, active: false, info: '' });
+  const [massSendProgress, setMassSendProgress] = useState<{
+    total: number;
+    sent: number;
+    active: boolean;
+    info: string;
+  }>({ total: 0, sent: 0, active: false, info: "" });
 
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  const showToast = (
+    message: string,
+    type: "success" | "error" = "success",
+  ) => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
@@ -2143,13 +3040,18 @@ export default function App() {
 
   const canView = (view: string) => {
     if (!profile) return false;
-    if (profile.email === "canaldonutri@gmail.com" || profile.email === "marcos.teixeira@estacio.br" || profile.role === 'Admin Master') {
+    if (
+      profile.email === "canaldonutri@gmail.com" ||
+      profile.email === "marcos.teixeira@estacio.br" ||
+      profile.role === "Admin Master"
+    ) {
       return true;
     }
-    const isComercial = localStorage.getItem('servidor_selected') === 'comercial';
+    const isComercial =
+      localStorage.getItem("servidor_selected") === "comercial";
     if (profile.role === ROLES.FINANCEIRO) {
       if (isComercial) {
-        return view === 'controlePagamentos';
+        return view === "controlePagamentos";
       } else {
         return VIEW_PERMISSIONS[view]?.includes(profile.role) || false;
       }
@@ -2157,84 +3059,122 @@ export default function App() {
     return VIEW_PERMISSIONS[view]?.includes(profile.role) || false;
   };
 
-  const callBotApi = async (path: string, options: { method?: 'GET'|'POST', body?: any } = {}) => {
+  const callBotApi = async (
+    path: string,
+    options: { method?: "GET" | "POST"; body?: any } = {},
+  ) => {
     // Determine the exact URL to fetch from, using the requested Railway API directly for send actions
-    const directUrl = path === '/api/send' 
-      ? 'https://argoscliente-production-170b.up.railway.app/api/send' 
-      : (botConfig.url ? `${botConfig.url.endsWith('/') ? botConfig.url.slice(0, -1) : botConfig.url}${path}` : `https://argoscliente-production-170b.up.railway.app${path}`);
+    const directUrl =
+      path === "/api/send"
+        ? "https://argoscliente-production-170b.up.railway.app/api/send"
+        : botConfig.url
+          ? `${botConfig.url.endsWith("/") ? botConfig.url.slice(0, -1) : botConfig.url}${path}`
+          : `https://argoscliente-production-170b.up.railway.app${path}`;
 
     const fetchOptions: RequestInit = {
-      method: options.method || 'GET',
+      method: options.method || "GET",
       headers: {
-        'Content-Type': 'application/json'
-      }
+        "Content-Type": "application/json",
+      },
     };
-    if (options.method === 'POST' && options.body) {
+    if (options.method === "POST" && options.body) {
       fetchOptions.body = JSON.stringify(options.body);
     }
 
     const response = await fetch(directUrl, fetchOptions);
     if (!response.ok) {
       const json = await response.json().catch(() => ({}));
-      throw new Error(json.error || json.message || `Erro ao conectar ao Bot (${response.status})`);
+      throw new Error(
+        json.error ||
+          json.message ||
+          `Erro ao conectar ao Bot (${response.status})`,
+      );
     }
 
     const resData = await response.json();
-    
+
     // Support either direct raw JSON responses or wrapper structures with { success: boolean, data?: any }
-    if (resData !== null && typeof resData === 'object' && 'success' in resData) {
+    if (
+      resData !== null &&
+      typeof resData === "object" &&
+      "success" in resData
+    ) {
       if (!resData.success) {
         throw new Error(resData.data?.error || resData.error || `Falha no bot`);
       }
-      return 'data' in resData ? resData.data : resData;
+      return "data" in resData ? resData.data : resData;
     }
-    
+
     return resData;
   };
 
   const handleSendBotMessage = async (telefone: string, message: string) => {
     const currentBotNumber = profile?.botNumber;
-    let safeBotNumber = currentBotNumber ? currentBotNumber.replace(/\D/g, '') : '';
-    
+    let safeBotNumber = currentBotNumber
+      ? currentBotNumber.replace(/\D/g, "")
+      : "";
+
     // Auto-fallback: if the user's personal bot number is offline, not active,
     // or not set, look for any online bot session in the system to route the dispatch.
-    const isUserBotOnline = safeBotNumber && (botStatuses as any)[safeBotNumber]?.status === 'online';
-    
+    const isUserBotOnline =
+      safeBotNumber && (botStatuses as any)[safeBotNumber]?.status === "online";
+
     if (!isUserBotOnline) {
-      const firstOnlineBot = Object.entries(botStatuses).find(([_, info]) => (info as any)?.status === 'online')?.[0];
+      const firstOnlineBot = Object.entries(botStatuses).find(
+        ([_, info]) => (info as any)?.status === "online",
+      )?.[0];
       if (firstOnlineBot) {
-        console.log(`Fallback bot activated: Routing message via active online session: ${firstOnlineBot}`);
+        console.log(
+          `Fallback bot activated: Routing message via active online session: ${firstOnlineBot}`,
+        );
         safeBotNumber = firstOnlineBot;
       } else if (!safeBotNumber) {
-        showToast('Você ainda não tem um número de WhatsApp configurado (Administração -> GestãoPro) e nenhum bot está ativo no momento.', 'error');
+        showToast(
+          "Você ainda não tem um número de WhatsApp configurado (Administração -> GestãoPro) e nenhum bot está ativo no momento.",
+          "error",
+        );
         return;
       }
     }
-    
+
     // Format phone: remove non-numeric, strip leading zero if present
-    let rawPhone = telefone.replace(/\D/g, '');
-    if (rawPhone.startsWith('0')) rawPhone = rawPhone.substring(1);
+    let rawPhone = telefone.replace(/\D/g, "");
+    if (rawPhone.startsWith("0")) rawPhone = rawPhone.substring(1);
     // Add country code if not present and has standard length
     if (rawPhone.length === 10 || rawPhone.length === 11) {
       rawPhone = `55${rawPhone}`;
     }
 
     try {
-      await callBotApi('/api/send', {
-        method: 'POST',
-        body: { botNumber: safeBotNumber, number: rawPhone, message, force: true, manual: true }
+      await callBotApi("/api/send", {
+        method: "POST",
+        body: {
+          botNumber: safeBotNumber,
+          number: rawPhone,
+          message,
+          force: true,
+          manual: true,
+        },
       });
-      showToast('Mensagem enviada com sucesso pelo Bot ARGO\'S!');
+      showToast("Mensagem enviada com sucesso pelo Bot ARGO'S!");
 
       // Automatic Status Transition Logic upon message sent
       try {
         const phonesMatch = (p1?: string, p2?: string): boolean => {
           if (!p1 || !p2) return false;
-          const c1 = p1.replace(/\D/g, '');
-          const c2 = p2.replace(/\D/g, '');
+          const c1 = p1.replace(/\D/g, "");
+          const c2 = p2.replace(/\D/g, "");
           if (c1 === c2) return true;
-          const s1 = c1.startsWith('55') ? c1.substring(2) : (c1.startsWith('0') ? c1.substring(1) : c1);
-          const s2 = c2.startsWith('55') ? c2.substring(2) : (c2.startsWith('0') ? c2.substring(1) : c2);
+          const s1 = c1.startsWith("55")
+            ? c1.substring(2)
+            : c1.startsWith("0")
+              ? c1.substring(1)
+              : c1;
+          const s2 = c2.startsWith("55")
+            ? c2.substring(2)
+            : c2.startsWith("0")
+              ? c2.substring(1)
+              : c2;
           if (s1 === s2) return true;
           if (s1.length >= 8 && s2.length >= 8) {
             const last8_1 = s1.slice(-8);
@@ -2246,20 +3186,29 @@ export default function App() {
           return false;
         };
 
-        const matchedLeads = leads.filter(item => phonesMatch(item.telefone, telefone));
-        const matchedBases = bases.filter(item => phonesMatch(item.telefone, telefone));
-        const matchedBasesRenovacao = basesRenovacao.filter(item => phonesMatch(item.telefone, telefone));
-        const matchedFiesProuni = fiesProuni.filter(item => phonesMatch(item.telefone, telefone));
+        const matchedLeads = leads.filter((item) =>
+          phonesMatch(item.telefone, telefone),
+        );
+        const matchedBases = bases.filter((item) =>
+          phonesMatch(item.telefone, telefone),
+        );
+        const matchedBasesRenovacao = basesRenovacao.filter((item) =>
+          phonesMatch(item.telefone, telefone),
+        );
+        const matchedFiesProuni = fiesProuni.filter((item) =>
+          phonesMatch(item.telefone, telefone),
+        );
 
-        const existsInGap = gap.some(g => {
+        const existsInGap = gap.some((g) => {
           if (phonesMatch(g.telefone, telefone)) return true;
-          const matchedCpf = matchedLeads.find(l => l.cpf)?.cpf || 
-                             matchedBases.find(b => b.cpf)?.cpf || 
-                             matchedBasesRenovacao.find(br => br.cpf)?.cpf ||
-                             matchedFiesProuni.find(fp => fp.cpf)?.cpf;
+          const matchedCpf =
+            matchedLeads.find((l) => l.cpf)?.cpf ||
+            matchedBases.find((b) => b.cpf)?.cpf ||
+            matchedBasesRenovacao.find((br) => br.cpf)?.cpf ||
+            matchedFiesProuni.find((fp) => fp.cpf)?.cpf;
           if (matchedCpf && g.cpf) {
-            const c1 = matchedCpf.replace(/\D/g, '');
-            const c2 = g.cpf.replace(/\D/g, '');
+            const c1 = matchedCpf.replace(/\D/g, "");
+            const c2 = g.cpf.replace(/\D/g, "");
             if (c1 && c1 === c2) return true;
           }
           return false;
@@ -2268,89 +3217,157 @@ export default function App() {
         // 1. Process matched LEADS
         for (const lead of matchedLeads) {
           if (existsInGap) {
-            if (lead.status !== 'Convertido') {
-              await updateDoc(doc(db, COLLECTIONS.LEADS, lead.id), { status: 'Convertido' });
+            if (lead.status !== "Convertido") {
+              await updateDoc(doc(db, COLLECTIONS.LEADS, lead.id), {
+                status: "Convertido",
+              });
             }
-          } else if (lead.status.toLowerCase() === 'pendente') {
-            await updateDoc(doc(db, COLLECTIONS.LEADS, lead.id), { status: 'Sem retorno' });
+          } else if (lead.status.toLowerCase() === "pendente") {
+            await updateDoc(doc(db, COLLECTIONS.LEADS, lead.id), {
+              status: "Sem retorno",
+            });
           }
         }
 
         // 2. Process matched BASES
         for (const entry of matchedBases) {
           if (existsInGap) {
-            if (entry.status !== 'Convertido') {
-              await updateDoc(doc(db, COLLECTIONS.BASES, entry.id), { status: 'Convertido' });
+            if (entry.status !== "Convertido") {
+              await updateDoc(doc(db, COLLECTIONS.BASES, entry.id), {
+                status: "Convertido",
+              });
             }
-          } else if (entry.status.toLowerCase() === 'pendente') {
-            await updateDoc(doc(db, COLLECTIONS.BASES, entry.id), { status: 'Sem retorno' });
+          } else if (entry.status.toLowerCase() === "pendente") {
+            await updateDoc(doc(db, COLLECTIONS.BASES, entry.id), {
+              status: "Sem retorno",
+            });
           }
         }
 
         // 3. Process matched BASES_RENOVACAO
         for (const entry of matchedBasesRenovacao) {
           if (existsInGap) {
-            if (entry.status !== 'Convertido') {
-              await updateDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, entry.id), { status: 'Convertido' });
+            if (entry.status !== "Convertido") {
+              await updateDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, entry.id), {
+                status: "Convertido",
+              });
             }
-          } else if (entry.status.toLowerCase() === 'pendente') {
-            await updateDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, entry.id), { status: 'Sem retorno' });
+          } else if (entry.status.toLowerCase() === "pendente") {
+            await updateDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, entry.id), {
+              status: "Sem retorno",
+            });
           }
         }
 
         // 4. Process matched FIES_PROUNI
         for (const entry of matchedFiesProuni) {
           if (existsInGap) {
-            if (entry.status !== 'Convertido') {
-              await updateDoc(doc(db, COLLECTIONS.FIES_PROUNI, entry.id), { status: 'Convertido' });
+            if (entry.status !== "Convertido") {
+              await updateDoc(doc(db, COLLECTIONS.FIES_PROUNI, entry.id), {
+                status: "Convertido",
+              });
             }
-          } else if (entry.status && entry.status.toLowerCase() === 'pendente') {
-            await updateDoc(doc(db, COLLECTIONS.FIES_PROUNI, entry.id), { status: 'Sem retorno' });
+          } else if (
+            entry.status &&
+            entry.status.toLowerCase() === "pendente"
+          ) {
+            await updateDoc(doc(db, COLLECTIONS.FIES_PROUNI, entry.id), {
+              status: "Sem retorno",
+            });
           }
         }
-      } catch (statusErr: any) {
-        console.error('[Auto Status Update] Failed to update statuses:', statusErr);
-      }
 
+        let tipoContato = "outro";
+        let baseName = "";
+        if (matchedLeads.length > 0) {
+          tipoContato = "leads";
+        } else if (matchedBases.length > 0) {
+          tipoContato = "bases";
+          baseName = matchedBases[0].nomeBase;
+        } else if (matchedBasesRenovacao.length > 0) {
+          tipoContato = "bases_renovacao";
+          baseName = matchedBasesRenovacao[0].nomeBase;
+        } else if (matchedFiesProuni.length > 0) {
+          tipoContato = "fies_prouni";
+        } else if (existsInGap) {
+          tipoContato = "gap";
+        }
+
+        await addDoc(collection(db, COLLECTIONS.BOT_REPORTS), {
+          userId: profile?.uid || "unknown",
+          userName: profile?.nome || "Usuário Desconhecido",
+          userRole: profile?.role || "unknown",
+          telefone,
+          tipoContato,
+          baseName,
+          sentAt: serverTimestamp(),
+        });
+      } catch (statusErr: any) {
+        console.error(
+          "[Auto Status Update] Failed to update statuses or log report:",
+          statusErr,
+        );
+      }
     } catch (err: any) {
-      showToast(`Erro ao enviar mensagem: ${err.message}`, 'error');
+      showToast(`Erro ao enviar mensagem: ${err.message}`, "error");
     }
   };
 
-  const handleMassSendBotMessages = async (messages: {telefone: string, message: string}[]) => {
-     if(massSendProgress.active) {
-       showToast("Já existe um envio em massa em andamento.", "error");
-       return;
-     }
-     
-     if (messages.length === 0) return;
-     if (!window.confirm(`Deseja iniciar o envio em massa via bot para ${messages.length} contatos?`)) return;
-     
-     setMassSendProgress({ total: messages.length, sent: 0, active: true, info: 'Iniciando...' });
-     
-     let sentCount = 0;
-     for (let i = 0; i < messages.length; i++) {
-        if (i > 0) {
-           if (sentCount % 5 === 0) {
-              setMassSendProgress(prev => ({ ...prev, info: `Pausa de 2 min... (${sentCount}/${messages.length})` }));
-              await new Promise(resolve => setTimeout(resolve, 120000));
-           } else {
-              setMassSendProgress(prev => ({ ...prev, info: `Aguardando 30s... (${sentCount}/${messages.length})` }));
-              await new Promise(resolve => setTimeout(resolve, 30000));
-           }
-        }
+  const handleMassSendBotMessages = async (
+    messages: { telefone: string; message: string }[],
+  ) => {
+    if (massSendProgress.active) {
+      showToast("Já existe um envio em massa em andamento.", "error");
+      return;
+    }
 
-        setMassSendProgress(prev => ({ ...prev, info: `Enviando... (${sentCount + 1}/${messages.length})` }));
-        try {
-           await handleSendBotMessage(messages[i].telefone, messages[i].message);
-        } catch(e) {
-           console.error("Error sending bot message in mass: ", e);
+    if (messages.length === 0) return;
+    if (
+      !window.confirm(
+        `Deseja iniciar o envio em massa via bot para ${messages.length} contatos?`,
+      )
+    )
+      return;
+
+    setMassSendProgress({
+      total: messages.length,
+      sent: 0,
+      active: true,
+      info: "Iniciando...",
+    });
+
+    let sentCount = 0;
+    for (let i = 0; i < messages.length; i++) {
+      if (i > 0) {
+        if (sentCount % 5 === 0) {
+          setMassSendProgress((prev) => ({
+            ...prev,
+            info: `Pausa de 2 min... (${sentCount}/${messages.length})`,
+          }));
+          await new Promise((resolve) => setTimeout(resolve, 120000));
+        } else {
+          setMassSendProgress((prev) => ({
+            ...prev,
+            info: `Aguardando 30s... (${sentCount}/${messages.length})`,
+          }));
+          await new Promise((resolve) => setTimeout(resolve, 30000));
         }
-        sentCount++;
-     }
-     
-     setMassSendProgress({ total: 0, sent: 0, active: false, info: '' });
-     showToast("Envio em massa concluído!", "success");
+      }
+
+      setMassSendProgress((prev) => ({
+        ...prev,
+        info: `Enviando... (${sentCount + 1}/${messages.length})`,
+      }));
+      try {
+        await handleSendBotMessage(messages[i].telefone, messages[i].message);
+      } catch (e) {
+        console.error("Error sending bot message in mass: ", e);
+      }
+      sentCount++;
+    }
+
+    setMassSendProgress({ total: 0, sent: 0, active: false, info: "" });
+    showToast("Envio em massa concluído!", "success");
   };
 
   useEffect(() => {
@@ -2359,17 +3376,20 @@ export default function App() {
         try {
           // 1. Try to get profile by UID
           let userDoc = await getDoc(doc(db, COLLECTIONS.USERS, user.uid));
-          
+
           if (!userDoc.exists()) {
             // 2. If not found by UID, try to find by email (for pre-registered users)
-            const q = query(collection(db, COLLECTIONS.USERS), where("email", "==", user.email));
+            const q = query(
+              collection(db, COLLECTIONS.USERS),
+              where("email", "==", user.email),
+            );
             const querySnap = await getDocs(q);
-            
+
             if (!querySnap.empty) {
               // Found by email, use this document
               const existingDoc = querySnap.docs[0];
               const data = existingDoc.data();
-              
+
               // If the document ID is not the UID, we should ideally migrate it
               // but for now we'll just use it. Wait, if we use it, rules might fail
               // because rules expect path/.../users/{uid}.
@@ -2377,43 +3397,55 @@ export default function App() {
               await setDoc(doc(db, COLLECTIONS.USERS, user.uid), {
                 ...data,
                 uid: user.uid,
-                updatedAt: serverTimestamp()
+                updatedAt: serverTimestamp(),
               });
-              
+
               // Delete the old document if it had a different ID
               if (existingDoc.id !== user.uid) {
                 try {
                   await deleteDoc(doc(db, COLLECTIONS.USERS, existingDoc.id));
                 } catch (e) {
-                  console.warn("Could not delete old user document, likely due to rules. Skipping.", e);
+                  console.warn(
+                    "Could not delete old user document, likely due to rules. Skipping.",
+                    e,
+                  );
                 }
               }
-              
+
               userDoc = await getDoc(doc(db, COLLECTIONS.USERS, user.uid));
             } else {
               // 3. Create default profile if not exists at all
               let role = ROLES.PROMOTOR;
-              let servidor: 'principal' | 'comercial' = 'principal';
-              let name = user.email!.split('@')[0];
-              
+              let servidor: "principal" | "comercial" = "principal";
+              let name = user.email!.split("@")[0];
+
               if (user.displayName) {
-                const parts = user.displayName.split('|');
+                const parts = user.displayName.split("|");
                 name = parts[0] || name;
-                if (parts.length > 1 && parts[1] === 'comercial') {
-                  servidor = 'comercial';
-                  role = 'Promotor/rua' as any;
+                if (parts.length > 1 && parts[1] === "comercial") {
+                  servidor = "comercial";
+                  role = "Promotor/rua" as any;
                 }
               }
 
-              if (user.email === "marcos.teixeira@estacio.br" || user.email === "canaldonutri@gmail.com") {
+              if (
+                user.email === "marcos.teixeira@estacio.br" ||
+                user.email === "canaldonutri@gmail.com"
+              ) {
                 role = ROLES.ADMIN_MASTER;
               } else {
-                const allUsers = await getDocs(query(collection(db, COLLECTIONS.USERS), limit(1)));
+                const allUsers = await getDocs(
+                  query(collection(db, COLLECTIONS.USERS), limit(1)),
+                );
                 if (allUsers.empty) {
-                  role = (servidor === 'comercial' ? 'Gerente Comercial (Comercial)' : ROLES.LIDER_FDV) as any;
+                  role = (
+                    servidor === "comercial"
+                      ? "Gerente Comercial (Comercial)"
+                      : ROLES.LIDER_FDV
+                  ) as any;
                 }
               }
-              
+
               const newProfile = {
                 uid: user.uid,
                 email: user.email!,
@@ -2422,16 +3454,19 @@ export default function App() {
                 servidor,
                 mustChangePassword: false, // Default for self-signup
                 createdAt: serverTimestamp(),
-                dashboardWidgets: { stats: true, links: true, planner: true }
+                dashboardWidgets: { stats: true, links: true, planner: true },
               };
               await setDoc(doc(db, COLLECTIONS.USERS, user.uid), newProfile);
               userDoc = await getDoc(doc(db, COLLECTIONS.USERS, user.uid));
             }
           }
-          
+
           if (userDoc.exists()) {
             const data = userDoc.data() as UserProfile;
-            if (data.email === "marcos.teixeira@estacio.br" || data.email === "canaldonutri@gmail.com") {
+            if (
+              data.email === "marcos.teixeira@estacio.br" ||
+              data.email === "canaldonutri@gmail.com"
+            ) {
               data.role = ROLES.ADMIN_MASTER;
             }
             setProfile({ uid: user.uid, ...data } as UserProfile);
@@ -2441,7 +3476,7 @@ export default function App() {
           console.error("Error fetching/creating profile details:", {
             code: error.code,
             message: error.message,
-            stack: error.stack
+            stack: error.stack,
           });
           showToast(`Erro ao carregar perfil: ${error.message}`, "error");
           setUser(null);
@@ -2462,214 +3497,513 @@ export default function App() {
     // Listeners for users require auth
     let unsubUsers = () => {};
     if (user) {
-      unsubUsers = onSnapshot(collection(db, COLLECTIONS.USERS), snap => {
-        setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.USERS));
+      unsubUsers = onSnapshot(
+        collection(db, COLLECTIONS.USERS),
+        (snap) => {
+          setUsers(
+            snap.docs.map((d) => ({ uid: d.id, ...d.data() }) as UserProfile),
+          );
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.USERS),
+      );
     }
 
     let unsubPlanner = () => {};
     if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
-      unsubPlanner = onSnapshot(collection(db, COLLECTIONS.PLANNER), snap => {
-        setPlanner(snap.docs.map(d => ({ id: d.id, ...d.data() } as PlannerTask)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.PLANNER));
+      unsubPlanner = onSnapshot(
+        collection(db, COLLECTIONS.PLANNER),
+        (snap) => {
+          setPlanner(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as PlannerTask),
+          );
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.PLANNER),
+      );
     }
 
     let unsubLinks = () => {};
     if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
-      unsubLinks = onSnapshot(collection(db, COLLECTIONS.LINKS), snap => {
-        setLinks(snap.docs.map(d => ({ id: d.id, ...d.data() } as LinkUtil)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.LINKS));
+      unsubLinks = onSnapshot(
+        collection(db, COLLECTIONS.LINKS),
+        (snap) => {
+          setLinks(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as LinkUtil),
+          );
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.LINKS),
+      );
     }
 
     let unsubLeads = () => {};
     if (profile) {
       let leadsQuery;
-      if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.GESTOR_UNIDADE].includes(profile.role)) {
+      if (
+        [
+          ROLES.ADMIN_MASTER,
+          ROLES.LIDER_FDV,
+          ROLES.SALA_MATRICULA,
+          ROLES.QG,
+          ROLES.GESTOR_UNIDADE,
+        ].includes(profile.role)
+      ) {
         leadsQuery = query(collection(db, COLLECTIONS.LEADS));
       } else if (profile.role === ROLES.GESTOR_COMERCIAL_COMERCIAL) {
         // Gerente Comercial (Comercial) ver everything in Comercial
-        leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("servidor", "==", "comercial"));
+        leadsQuery = query(
+          collection(db, COLLECTIONS.LEADS),
+          where("servidor", "==", "comercial"),
+        );
       } else if (profile.role === ROLES.FDV_COMERCIAL) {
         // FDV (Comercial) sees their own leads and those from their linked promontors.
-        leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("linkadoA", "==", user!.uid)));
+        leadsQuery = query(
+          collection(db, COLLECTIONS.LEADS),
+          or(
+            where("promotorId", "==", user!.uid),
+            where("linkadoA", "==", user!.uid),
+          ),
+        );
       } else if (profile.role === ROLES.FDV) {
-        leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "==", ROLES.PROMOTOR)));
+        leadsQuery = query(
+          collection(db, COLLECTIONS.LEADS),
+          or(
+            where("promotorId", "==", user!.uid),
+            where("promotorRole", "==", ROLES.PROMOTOR),
+          ),
+        );
       } else if (profile.role === ROLES.GESTOR_COMERCIAL) {
-        leadsQuery = query(collection(db, COLLECTIONS.LEADS), or(where("promotorId", "==", user!.uid), where("promotorRole", "in", [ROLES.PROMOTOR, ROLES.FDV])));
-      } else if (profile.role === ROLES.PROMOTOR || profile.role === ROLES.PROMOTOR_RUA) {
-        leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("promotorId", "==", user!.uid));
+        leadsQuery = query(
+          collection(db, COLLECTIONS.LEADS),
+          or(
+            where("promotorId", "==", user!.uid),
+            where("promotorRole", "in", [ROLES.PROMOTOR, ROLES.FDV]),
+          ),
+        );
+      } else if (
+        profile.role === ROLES.PROMOTOR ||
+        profile.role === ROLES.PROMOTOR_RUA
+      ) {
+        leadsQuery = query(
+          collection(db, COLLECTIONS.LEADS),
+          where("promotorId", "==", user!.uid),
+        );
       } else {
-        leadsQuery = query(collection(db, COLLECTIONS.LEADS), where("promotorId", "==", "none"));
+        leadsQuery = query(
+          collection(db, COLLECTIONS.LEADS),
+          where("promotorId", "==", "none"),
+        );
       }
 
-      unsubLeads = onSnapshot(leadsQuery, snap => {
-        setLeads(snap.docs.map(d => ({ id: d.id, ...d.data() } as Lead)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.LEADS));
+      unsubLeads = onSnapshot(
+        leadsQuery,
+        (snap) => {
+          setLeads(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Lead));
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.LEADS),
+      );
     }
 
     let unsubBases = () => {};
     if (profile && VIEW_PERMISSIONS.bases.includes(profile.role)) {
-      unsubBases = onSnapshot(collection(db, COLLECTIONS.BASES), snap => {
-        setBases(snap.docs.map(d => ({ id: d.id, ...d.data() } as BaseEntry)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BASES));
+      unsubBases = onSnapshot(
+        collection(db, COLLECTIONS.BASES),
+        (snap) => {
+          setBases(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as BaseEntry),
+          );
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BASES),
+      );
     }
 
     let unsubGap = () => {};
     if (profile && VIEW_PERMISSIONS.gap.includes(profile.role)) {
-      unsubGap = onSnapshot(collection(db, COLLECTIONS.GAP), snap => {
-        setGap(snap.docs.map(d => ({ id: d.id, ...d.data() } as GapEntry)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.GAP));
+      unsubGap = onSnapshot(
+        collection(db, COLLECTIONS.GAP),
+        (snap) => {
+          setGap(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as GapEntry));
+        },
+        (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.GAP),
+      );
     }
 
     let unsubFiesProuni = () => {};
     if (profile && VIEW_PERMISSIONS.fiesProuni.includes(profile.role)) {
-      unsubFiesProuni = onSnapshot(collection(db, COLLECTIONS.FIES_PROUNI), snap => {
-        setFiesProuni(snap.docs.map(d => ({ id: d.id, ...d.data() } as FiesProuniEntry)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.FIES_PROUNI));
+      unsubFiesProuni = onSnapshot(
+        collection(db, COLLECTIONS.FIES_PROUNI),
+        (snap) => {
+          setFiesProuni(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as FiesProuniEntry,
+            ),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.FIES_PROUNI,
+          ),
+      );
     }
 
     let unsubCampanhas = () => {};
     if (profile && VIEW_PERMISSIONS.campanhas.includes(profile.role)) {
-      unsubCampanhas = onSnapshot(collection(db, COLLECTIONS.CAMPANHAS), snap => {
-        setCampanhas(snap.docs.map(d => ({ id: d.id, ...d.data() } as Campanha)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.CAMPANHAS));
+      unsubCampanhas = onSnapshot(
+        collection(db, COLLECTIONS.CAMPANHAS),
+        (snap) => {
+          setCampanhas(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Campanha),
+          );
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.CAMPANHAS),
+      );
     }
 
     let unsubBomDia = () => {};
     if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
-      unsubBomDia = onSnapshot(collection(db, COLLECTIONS.BOM_DIA), snap => {
-        setBomDia(snap.docs.map(d => ({ id: d.id, ...d.data() } as BomDiaCaptacao)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BOM_DIA));
+      unsubBomDia = onSnapshot(
+        collection(db, COLLECTIONS.BOM_DIA),
+        (snap) => {
+          setBomDia(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as BomDiaCaptacao),
+          );
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BOM_DIA),
+      );
     }
 
     let unsubForecast = () => {};
     if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
-      unsubForecast = onSnapshot(collection(db, COLLECTIONS.FORECAST), snap => {
-        setForecast(snap.docs.map(d => ({ id: d.id, ...d.data() } as ForecastCaptacao)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.FORECAST));
+      unsubForecast = onSnapshot(
+        collection(db, COLLECTIONS.FORECAST),
+        (snap) => {
+          setForecast(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as ForecastCaptacao,
+            ),
+          );
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.FORECAST),
+      );
     }
 
     let unsubMetaDia = () => {};
     if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
-      unsubMetaDia = onSnapshot(collection(db, COLLECTIONS.META_DIA), snap => {
-        setMetaDia(snap.docs.map(d => ({ id: d.id, ...d.data() } as MetaDia)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.META_DIA));
+      unsubMetaDia = onSnapshot(
+        collection(db, COLLECTIONS.META_DIA),
+        (snap) => {
+          setMetaDia(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as MetaDia),
+          );
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.META_DIA),
+      );
     }
 
     let unsubPeriodos = () => {};
     if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
-      unsubPeriodos = onSnapshot(collection(db, COLLECTIONS.PERIODO_CAPTACAO), snap => {
-        setPeriodos(snap.docs.map(d => ({ id: d.id, ...d.data() } as PeriodoCaptacao)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.PERIODO_CAPTACAO));
+      unsubPeriodos = onSnapshot(
+        collection(db, COLLECTIONS.PERIODO_CAPTACAO),
+        (snap) => {
+          setPeriodos(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as PeriodoCaptacao,
+            ),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.PERIODO_CAPTACAO,
+          ),
+      );
     }
 
     let unsubCalendario = () => {};
-    if (profile && (VIEW_PERMISSIONS.calendario.includes(profile.role) || VIEW_PERMISSIONS.controlePagamentos.includes(profile.role) || canView('controlePagamentos'))) {
+    if (
+      profile &&
+      (VIEW_PERMISSIONS.calendario.includes(profile.role) ||
+        VIEW_PERMISSIONS.controlePagamentos.includes(profile.role) ||
+        canView("controlePagamentos"))
+    ) {
       let calendarioQuery;
-      if ([ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.SALA_MATRICULA, ROLES.GESTOR_UNIDADE, ROLES.GESTOR_COMERCIAL, ROLES.FINANCEIRO, ROLES.GESTOR_COMERCIAL_COMERCIAL].includes(profile.role)) {
+      if (
+        [
+          ROLES.ADMIN_MASTER,
+          ROLES.LIDER_FDV,
+          ROLES.SALA_MATRICULA,
+          ROLES.GESTOR_UNIDADE,
+          ROLES.GESTOR_COMERCIAL,
+          ROLES.FINANCEIRO,
+          ROLES.GESTOR_COMERCIAL_COMERCIAL,
+        ].includes(profile.role)
+      ) {
         calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES));
-      } else if (profile.role === ROLES.FDV || profile.role === ROLES.FDV_COMERCIAL) {
+      } else if (
+        profile.role === ROLES.FDV ||
+        profile.role === ROLES.FDV_COMERCIAL
+      ) {
         calendarioQuery = query(
-          collection(db, COLLECTIONS.CALENDARIO_ACOES), 
+          collection(db, COLLECTIONS.CALENDARIO_ACOES),
           or(
-            where("creatorId", "==", user!.uid), 
-            where("creatorRole", "==", ROLES.PROMOTOR), 
-            where("creatorRole", "==", ROLES.PROMOTOR_RUA), 
+            where("creatorId", "==", user!.uid),
+            where("creatorRole", "==", ROLES.PROMOTOR),
+            where("creatorRole", "==", ROLES.PROMOTOR_RUA),
             where("colaboradorId", "==", user!.uid),
-            where("promotoresSelecionados", "array-contains", user!.uid)
-          )
+            where("promotoresSelecionados", "array-contains", user!.uid),
+          ),
         );
-      } else if (profile.role === ROLES.PROMOTOR || profile.role === ROLES.PROMOTOR_RUA) {
+      } else if (
+        profile.role === ROLES.PROMOTOR ||
+        profile.role === ROLES.PROMOTOR_RUA
+      ) {
         calendarioQuery = query(
           collection(db, COLLECTIONS.CALENDARIO_ACOES),
           or(
             where("creatorId", "==", user!.uid),
             where("colaboradorId", "==", user!.uid),
-            where("promotoresSelecionados", "array-contains", user!.uid)
-          )
+            where("promotoresSelecionados", "array-contains", user!.uid),
+          ),
         );
       } else {
-        calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES), where("creatorId", "==", "none"));
+        calendarioQuery = query(
+          collection(db, COLLECTIONS.CALENDARIO_ACOES),
+          where("creatorId", "==", "none"),
+        );
       }
-      unsubCalendario = onSnapshot(calendarioQuery, snap => {
-        setCalendarioAcoes(snap.docs.map(d => ({ id: d.id, ...d.data() } as CalendarioAcao)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.CALENDARIO_ACOES));
+      unsubCalendario = onSnapshot(
+        calendarioQuery,
+        (snap) => {
+          setCalendarioAcoes(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as CalendarioAcao),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.CALENDARIO_ACOES,
+          ),
+      );
     }
 
     let unsubEmpresas = () => {};
     if (profile && VIEW_PERMISSIONS.empresas.includes(profile.role)) {
-      unsubEmpresas = onSnapshot(collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS), snap => {
-        setEmpresasParceiras(snap.docs.map(d => ({ id: d.id, ...d.data() } as EmpresaParceira)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.EMPRESAS_PARCEIRAS));
+      unsubEmpresas = onSnapshot(
+        collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS),
+        (snap) => {
+          setEmpresasParceiras(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as EmpresaParceira,
+            ),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.EMPRESAS_PARCEIRAS,
+          ),
+      );
     }
 
     let unsubWhatsApp = () => {};
     if (user) {
-      unsubWhatsApp = onSnapshot(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), snap => {
-        setWhatsappMessages(snap.docs.map(d => ({ id: d.id, ...d.data() } as WhatsAppMessage)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.WHATSAPP_MESSAGES));
+      unsubWhatsApp = onSnapshot(
+        collection(db, COLLECTIONS.WHATSAPP_MESSAGES),
+        (snap) => {
+          setWhatsappMessages(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as WhatsAppMessage,
+            ),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.WHATSAPP_MESSAGES,
+          ),
+      );
     }
 
     let unsubMapao = () => {};
     if (profile && VIEW_PERMISSIONS.mapao.includes(profile.role)) {
-      unsubMapao = onSnapshot(collection(db, COLLECTIONS.MAPAO_ACADEMICO), snap => {
-        setMapao(snap.docs.map(d => ({ id: d.id, ...d.data() } as MapaoAcademicoEntry)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.MAPAO_ACADEMICO));
+      unsubMapao = onSnapshot(
+        collection(db, COLLECTIONS.MAPAO_ACADEMICO),
+        (snap) => {
+          setMapao(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as MapaoAcademicoEntry,
+            ),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.MAPAO_ACADEMICO,
+          ),
+      );
     }
 
     let unsubBasesDisparo = () => {};
     if (profile && VIEW_PERMISSIONS.basesDisparo.includes(profile.role)) {
-      unsubBasesDisparo = onSnapshot(collection(db, COLLECTIONS.BASES_DISPARO), snap => {
-        setBasesDisparo(snap.docs.map(d => ({ id: d.id, ...d.data() } as BaseDisparoEntry)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BASES_DISPARO));
+      unsubBasesDisparo = onSnapshot(
+        collection(db, COLLECTIONS.BASES_DISPARO),
+        (snap) => {
+          setBasesDisparo(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as BaseDisparoEntry,
+            ),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.BASES_DISPARO,
+          ),
+      );
     }
 
     let unsubBasesRenovacao = () => {};
     if (profile && VIEW_PERMISSIONS.basesRenovacao.includes(profile.role)) {
-      unsubBasesRenovacao = onSnapshot(collection(db, COLLECTIONS.BASES_RENOVACAO), snap => {
-        setBasesRenovacao(snap.docs.map(d => ({ id: d.id, ...d.data() } as BaseEntry)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.BASES_RENOVACAO));
+      unsubBasesRenovacao = onSnapshot(
+        collection(db, COLLECTIONS.BASES_RENOVACAO),
+        (snap) => {
+          setBasesRenovacao(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as BaseEntry),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.BASES_RENOVACAO,
+          ),
+      );
     }
 
     let unsubCursos = () => {};
     if (profile && VIEW_PERMISSIONS.cursos.includes(profile.role)) {
-      unsubCursos = onSnapshot(collection(db, COLLECTIONS.CURSOS), snap => {
-        setCursos(snap.docs.map(d => ({ id: d.id, ...d.data() } as CursoDisponivel)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.CURSOS));
+      unsubCursos = onSnapshot(
+        collection(db, COLLECTIONS.CURSOS),
+        (snap) => {
+          setCursos(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as CursoDisponivel,
+            ),
+          );
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.CURSOS),
+      );
     }
 
     let unsubInsumosPedidos = () => {};
     let unsubInsumosEstoque = () => {};
     if (profile && VIEW_PERMISSIONS.controleInsumos.includes(profile.role)) {
-      unsubInsumosPedidos = onSnapshot(collection(db, COLLECTIONS.INSUMOS_PEDIDOS), snap => {
-        setInsumosPedidos(snap.docs.map(d => ({ id: d.id, ...d.data() } as InsumoPedido)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.INSUMOS_PEDIDOS));
+      unsubInsumosPedidos = onSnapshot(
+        collection(db, COLLECTIONS.INSUMOS_PEDIDOS),
+        (snap) => {
+          setInsumosPedidos(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as InsumoPedido),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.INSUMOS_PEDIDOS,
+          ),
+      );
 
-      unsubInsumosEstoque = onSnapshot(collection(db, COLLECTIONS.INSUMOS_ESTOQUE), snap => {
-        setInsumosEstoque(snap.docs.map(d => ({ id: d.id, ...d.data() } as InsumoEstoque)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.INSUMOS_ESTOQUE));
+      unsubInsumosEstoque = onSnapshot(
+        collection(db, COLLECTIONS.INSUMOS_ESTOQUE),
+        (snap) => {
+          setInsumosEstoque(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as InsumoEstoque),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.INSUMOS_ESTOQUE,
+          ),
+      );
     }
 
     let unsubInsumosPedidosComercial = () => {};
     let unsubInsumosEstoqueComercial = () => {};
-    if (profile && VIEW_PERMISSIONS.controleInsumosComercial.includes(profile.role)) {
-      const isGerenteOrAdmin = profile.role === ROLES.ADMIN_MASTER || profile.role === 'Admin Master' || profile.role === 'Gerente Comercial (Comercial)' || profile.role === 'Gestor Comercial';
-      
-      const qPedidosComercial = isGerenteOrAdmin 
+    if (
+      profile &&
+      VIEW_PERMISSIONS.controleInsumosComercial.includes(profile.role)
+    ) {
+      const isGerenteOrAdmin =
+        profile.role === ROLES.ADMIN_MASTER ||
+        profile.role === "Admin Master" ||
+        profile.role === "Gerente Comercial (Comercial)" ||
+        profile.role === "Gestor Comercial";
+
+      const qPedidosComercial = isGerenteOrAdmin
         ? collection(db, COLLECTIONS.INSUMOS_PEDIDOS_COMERCIAL)
-        : query(collection(db, COLLECTIONS.INSUMOS_PEDIDOS_COMERCIAL), where('solicitanteId', '==', profile.uid));
+        : query(
+            collection(db, COLLECTIONS.INSUMOS_PEDIDOS_COMERCIAL),
+            where("solicitanteId", "==", profile.uid),
+          );
 
       const qEstoqueComercial = isGerenteOrAdmin
         ? collection(db, COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL)
-        : query(collection(db, COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL), where('ownerId', '==', profile.uid));
+        : query(
+            collection(db, COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL),
+            where("ownerId", "==", profile.uid),
+          );
 
-      unsubInsumosPedidosComercial = onSnapshot(qPedidosComercial, snap => {
-        setInsumosPedidosComercial(snap.docs.map(d => ({ id: d.id, ...d.data() } as InsumoPedidoComercial)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.INSUMOS_PEDIDOS_COMERCIAL));
+      unsubInsumosPedidosComercial = onSnapshot(
+        qPedidosComercial,
+        (snap) => {
+          setInsumosPedidosComercial(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as InsumoPedidoComercial,
+            ),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.INSUMOS_PEDIDOS_COMERCIAL,
+          ),
+      );
 
-      unsubInsumosEstoqueComercial = onSnapshot(qEstoqueComercial, snap => {
-        setInsumosEstoqueComercial(snap.docs.map(d => ({ id: d.id, ...d.data() } as InsumoEstoqueComercial)));
-      }, (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL));
+      unsubInsumosEstoqueComercial = onSnapshot(
+        qEstoqueComercial,
+        (snap) => {
+          setInsumosEstoqueComercial(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as InsumoEstoqueComercial,
+            ),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL,
+          ),
+      );
     }
 
     return () => {
@@ -2700,15 +4034,19 @@ export default function App() {
   }, [user, profile]);
 
   useEffect(() => {
-    const unsubBotConfig = onSnapshot(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), snap => {
-      if (snap.exists()) {
-        setBotConfig({ id: snap.id, ...snap.data() } as BotConfig);
-      } else {
-        setBotConfig({ url: '', active: false });
-      }
-    }, (err) => {
-      console.warn("Could not load botConfig publicly:", err);
-    });
+    const unsubBotConfig = onSnapshot(
+      doc(db, COLLECTIONS.BOT_CONFIG, "main"),
+      (snap) => {
+        if (snap.exists()) {
+          setBotConfig({ id: snap.id, ...snap.data() } as BotConfig);
+        } else {
+          setBotConfig({ url: "", active: false });
+        }
+      },
+      (err) => {
+        console.warn("Could not load botConfig publicly:", err);
+      },
+    );
     return () => unsubBotConfig();
   }, []);
 
@@ -2716,49 +4054,58 @@ export default function App() {
     // Test connection to Firestore as per instructions
     const testConnection = async () => {
       try {
-        const { getDocFromServer, doc } = await import('firebase/firestore');
-        await getDocFromServer(doc(db, COLLECTIONS.BOT_CONFIG, 'connection_test'));
+        const { getDocFromServer, doc } = await import("firebase/firestore");
+        await getDocFromServer(
+          doc(db, COLLECTIONS.BOT_CONFIG, "connection_test"),
+        );
         console.log("Firestore connection test: OK");
       } catch (err) {
-        console.warn("Firestore connection test check (expected error if doc doesn't exist):", err);
+        console.warn(
+          "Firestore connection test check (expected error if doc doesn't exist):",
+          err,
+        );
       }
     };
     testConnection();
   }, []);
 
-   useEffect(() => {
-     let intervalId: NodeJS.Timeout;
-     
-     const checkBotStatus = async () => {
-       try {
-         const data = await callBotApi('/api/status');
-         if (data && data.bots) {
-           setBotStatuses(data.bots);
-         }
-       } catch (e: any) {
-         console.debug("Bot check fail via proxy:", e.message);
-       }
-     };
-     
-     checkBotStatus();
-     intervalId = setInterval(checkBotStatus, 3000);
-     return () => clearInterval(intervalId);
-   }, [botConfig.url]);
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    const checkBotStatus = async () => {
+      try {
+        const data = await callBotApi("/api/status");
+        if (data && data.bots) {
+          setBotStatuses(data.bots);
+        }
+      } catch (e: any) {
+        console.debug("Bot check fail via proxy:", e.message);
+      }
+    };
+
+    checkBotStatus();
+    intervalId = setInterval(checkBotStatus, 3000);
+    return () => clearInterval(intervalId);
+  }, [botConfig.url]);
 
   const knownLeadsRef = React.useRef<Set<string> | null>(null);
   const knownCampanhasRef = React.useRef<Set<string> | null>(null);
 
   useEffect(() => {
     if (!profile) return;
-    if (profile.role !== ROLES.LIDER_FDV && profile.role !== ROLES.SALA_MATRICULA) return;
+    if (
+      profile.role !== ROLES.LIDER_FDV &&
+      profile.role !== ROLES.SALA_MATRICULA
+    )
+      return;
 
     if (knownLeadsRef.current === null) {
-      knownLeadsRef.current = new Set(leads.map(l => l.id!));
+      knownLeadsRef.current = new Set(leads.map((l) => l.id!));
       return;
     }
 
     let hasNew = false;
-    leads.forEach(l => {
+    leads.forEach((l) => {
       if (!knownLeadsRef.current!.has(l.id!)) {
         knownLeadsRef.current!.add(l.id!);
         hasNew = true;
@@ -2772,15 +4119,19 @@ export default function App() {
 
   useEffect(() => {
     if (!profile) return;
-    if (profile.role !== ROLES.LIDER_FDV && profile.role !== ROLES.SALA_MATRICULA) return;
+    if (
+      profile.role !== ROLES.LIDER_FDV &&
+      profile.role !== ROLES.SALA_MATRICULA
+    )
+      return;
 
     if (knownCampanhasRef.current === null) {
-      knownCampanhasRef.current = new Set(campanhas.map(c => c.id!));
+      knownCampanhasRef.current = new Set(campanhas.map((c) => c.id!));
       return;
     }
 
     let hasNew = false;
-    campanhas.forEach(c => {
+    campanhas.forEach((c) => {
       if (!knownCampanhasRef.current!.has(c.id!)) {
         knownCampanhasRef.current!.add(c.id!);
         hasNew = true;
@@ -2792,12 +4143,28 @@ export default function App() {
     }
   }, [campanhas, profile]);
 
-
-
   useEffect(() => {
     if (profile && !canView(currentView)) {
-      const availableViews = ['dashboard', 'cadastro', 'historico', 'bases', 'gap', 'fiesProuni', 'mapao', 'cursos', 'basesDisparo', 'campanhas', 'calendario', 'empresas', 'calculo', 'emailMarketing', 'admin', 'controlePagamentos'];
-      const firstAvailable = availableViews.find(v => canView(v));
+      const availableViews = [
+        "dashboard",
+        "cadastro",
+        "historico",
+        "bases",
+        "gap",
+        "fiesProuni",
+        "mapao",
+        "cursos",
+        "basesDisparo",
+        "campanhas",
+        "calendario",
+        "empresas",
+        "calculo",
+        "emailMarketing",
+        "relatorios",
+        "admin",
+        "controlePagamentos",
+      ];
+      const firstAvailable = availableViews.find((v) => canView(v));
       if (firstAvailable) {
         setCurrentView(firstAvailable);
       }
@@ -2807,7 +4174,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#01112c] flex items-center justify-center">
-        <motion.div 
+        <motion.div
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
           className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full"
@@ -2816,22 +4183,34 @@ export default function App() {
     );
   }
 
-  if (currentView === 'pedido-insumos') {
+  if (currentView === "pedido-insumos") {
     return (
       <div className="min-h-screen bg-[#01112c] flex flex-col justify-between">
         <AnimatePresence>
-          {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+          {toast && (
+            <Toast
+              message={toast.message}
+              type={toast.type}
+              onClose={() => setToast(null)}
+            />
+          )}
         </AnimatePresence>
         <PublicInsumoForm onToast={showToast} />
       </div>
     );
   }
 
-  if (currentView === 'desconto') {
+  if (currentView === "desconto") {
     return (
       <div className="min-h-screen bg-[#01112c] flex flex-col justify-between">
         <AnimatePresence>
-          {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+          {toast && (
+            <Toast
+              message={toast.message}
+              type={toast.type}
+              onClose={() => setToast(null)}
+            />
+          )}
         </AnimatePresence>
         <PublicRegistrationForm onToast={showToast} />
       </div>
@@ -2847,9 +4226,14 @@ export default function App() {
       <div className="min-h-screen bg-[#01112c] flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-rose-100 text-center max-w-md">
           <XCircle size={64} className="text-rose-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-slate-900">Acesso Bloqueado</h2>
-          <p className="text-slate-500 mt-2">Sua conta foi suspensa. Entre em contato com o administrador para mais informações.</p>
-          <button 
+          <h2 className="text-2xl font-bold text-slate-900">
+            Acesso Bloqueado
+          </h2>
+          <p className="text-slate-500 mt-2">
+            Sua conta foi suspensa. Entre em contato com o administrador para
+            mais informações.
+          </p>
+          <button
             onClick={() => signOut(auth)}
             className="mt-6 w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-all"
           >
@@ -2863,7 +4247,13 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#01112c] flex">
       <AnimatePresence>
-        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -2875,15 +4265,22 @@ export default function App() {
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-slate-100 max-w-sm w-full text-center relative"
             >
-              <button onClick={() => setActivePopup(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
+              <button
+                onClick={() => setActivePopup(null)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+              >
                 <X size={20} />
               </button>
               <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 border-4 border-blue-50">
                 <Bell size={32} className="text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">{activePopup.title}</h3>
-              <p className="text-sm text-slate-600 mb-6">{activePopup.message}</p>
-              <button 
+              <h3 className="text-xl font-bold text-slate-900 mb-2">
+                {activePopup.title}
+              </h3>
+              <p className="text-sm text-slate-600 mb-6">
+                {activePopup.message}
+              </p>
+              <button
                 onClick={() => setActivePopup(null)}
                 className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200"
               >
@@ -2896,50 +4293,62 @@ export default function App() {
 
       <AnimatePresence>
         {massSendProgress.active && (
-           <motion.div 
-             initial={{ y: 100, opacity: 0 }}
-             animate={{ y: 0, opacity: 1 }}
-             exit={{ y: 100, opacity: 0 }}
-             className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white px-6 py-4 rounded-2xl shadow-2xl border border-slate-200 z-[300] flex flex-col items-center gap-2 max-w-sm w-[90%]"
-           >
-             <div className="flex items-center gap-3 w-full">
-               <div className="p-2 bg-blue-100 text-blue-600 rounded-full animate-pulse">
-                 <Bot size={20} />
-               </div>
-               <div className="flex-1">
-                 <h4 className="font-bold text-slate-800 text-sm">Disparo em Massa (Bot)</h4>
-                 <p className="text-xs text-slate-500">{massSendProgress.info}</p>
-               </div>
-               <div className="font-bold text-blue-600">
-                 {(massSendProgress.sent / (massSendProgress.total || 1) * 100).toFixed(0)}%
-               </div>
-             </div>
-             <div className="w-full bg-slate-100 rounded-full h-2 mt-2 overflow-hidden">
-               <div 
-                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                 style={{ width: `${(massSendProgress.sent / (massSendProgress.total || 1)) * 100}%` }}
-               />
-             </div>
-           </motion.div>
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white px-6 py-4 rounded-2xl shadow-2xl border border-slate-200 z-[300] flex flex-col items-center gap-2 max-w-sm w-[90%]"
+          >
+            <div className="flex items-center gap-3 w-full">
+              <div className="p-2 bg-blue-100 text-blue-600 rounded-full animate-pulse">
+                <Bot size={20} />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-slate-800 text-sm">
+                  Disparo em Massa (Bot)
+                </h4>
+                <p className="text-xs text-slate-500">
+                  {massSendProgress.info}
+                </p>
+              </div>
+              <div className="font-bold text-blue-600">
+                {(
+                  (massSendProgress.sent / (massSendProgress.total || 1)) *
+                  100
+                ).toFixed(0)}
+                %
+              </div>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-2 mt-2 overflow-hidden">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{
+                  width: `${(massSendProgress.sent / (massSendProgress.total || 1)) * 100}%`,
+                }}
+              />
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
       {profile?.mustChangePassword && (
-        <PasswordChangeModal 
+        <PasswordChangeModal
           onComplete={async () => {
             try {
               if (user) {
                 await updateDoc(doc(db, COLLECTIONS.USERS, user.uid), {
                   mustChangePassword: false,
-                  updatedAt: serverTimestamp()
+                  updatedAt: serverTimestamp(),
                 });
-                setProfile(prev => prev ? { ...prev, mustChangePassword: false } : null);
+                setProfile((prev) =>
+                  prev ? { ...prev, mustChangePassword: false } : null,
+                );
                 showToast("Senha atualizada com sucesso!");
               }
             } catch (err: any) {
-              showToast("Erro ao atualizar status do perfil.", 'error');
+              showToast("Erro ao atualizar status do perfil.", "error");
             }
-          }} 
+          }}
         />
       )}
 
@@ -2958,83 +4367,120 @@ export default function App() {
       </AnimatePresence>
 
       {/* Sidebar */}
-      <aside className={cn(
-        "fixed inset-y-0 left-0 z-40 w-64 bg-[#011a3c] border-r border-[#092e5c] transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
-        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 w-64 bg-[#011a3c] border-r border-[#092e5c] transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
         <div className="h-full flex flex-col">
           <div className="p-6 flex items-center space-x-3">
             {botConfig?.loginLogo ? (
-              <img src={botConfig.loginLogo} alt="Logo" className="w-full max-h-12 object-contain drop-shadow-md" referrerPolicy="no-referrer" />
+              <img
+                src={botConfig.loginLogo}
+                alt="Logo"
+                className="w-full max-h-12 object-contain drop-shadow-md"
+                referrerPolicy="no-referrer"
+              />
             ) : (
               <>
                 <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
                   <TrendingUp size={24} />
                 </div>
-                <h1 className="text-xl font-bold text-white tracking-tight">Gestão Oeste pro</h1>
+                <h1 className="text-xl font-bold text-white tracking-tight">
+                  Gestão Oeste pro
+                </h1>
               </>
             )}
           </div>
 
           <nav className="flex-1 px-4 space-y-1">
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-              { id: 'cadastro', label: 'Novo Lead', icon: UserPlus },
-              { id: 'historico', label: 'Histórico', icon: History },
-              { id: 'bases', label: 'Bases', icon: Database },
-              { id: 'gap', label: 'GAP Acadêmico', icon: GraduationCap },
-              { id: 'fiesProuni', label: 'Fies/Prouni', icon: FileText },
-              { id: 'mapao', label: 'Mapão Acadêmico', icon: MapPin },
-              { id: 'cursos', label: 'Cursos Disponíveis', icon: BookOpen },
-              { id: 'basesDisparo', label: 'Bases de Disparo', icon: Globe },
-              { id: 'basesRenovacao', label: 'Base Líquida', icon: Database },
-              { id: 'campanhas', label: 'Campanhas', icon: Megaphone },
-              { id: 'calendario', label: 'Plano de Ação', icon: Calendar },
-              { id: 'empresas', label: 'Empresas Parceiras', icon: Building2 },
-              { id: 'calculo', label: 'Cálculo de Remuneração', icon: Calculator },
-              { id: 'controlePagamentos', label: 'Controle de Pagamentos', icon: Coins },
-              { id: 'controleInsumos', label: 'Controle de Insumos', icon: Boxes },
-              { id: 'controleInsumosComercial', label: 'Controle de Insumos (Comercial)', icon: Boxes },
-              { id: 'emailMarketing', label: 'Envio de e-mail Marketing', icon: Mail },
-              { id: 'admin', label: 'Administração', icon: Settings },
-            ].map((item) => canView(item.id) && (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setCurrentView(item.id);
-                  setIsSidebarOpen(false);
-                }}
-                className={cn(
-                  "w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all",
-                  currentView === item.id 
-                    ? "bg-blue-500/10 text-white" 
-                    : "text-slate-400 hover:bg-[#082a5c] hover:text-white"
-                )}
-              >
-                <item.icon size={20} />
-                <span>{item.label}</span>
-              </button>
-            ))}
+              { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+              { id: "cadastro", label: "Novo Lead", icon: UserPlus },
+              { id: "historico", label: "Histórico", icon: History },
+              { id: "bases", label: "Bases", icon: Database },
+              { id: "gap", label: "GAP Acadêmico", icon: GraduationCap },
+              { id: "fiesProuni", label: "Fies/Prouni", icon: FileText },
+              { id: "mapao", label: "Mapão Acadêmico", icon: MapPin },
+              { id: "cursos", label: "Cursos Disponíveis", icon: BookOpen },
+              { id: "basesDisparo", label: "Bases de Disparo", icon: Globe },
+              { id: "basesRenovacao", label: "Base Líquida", icon: Database },
+              { id: "campanhas", label: "Campanhas", icon: Megaphone },
+              { id: "calendario", label: "Plano de Ação", icon: Calendar },
+              { id: "empresas", label: "Empresas Parceiras", icon: Building2 },
+              {
+                id: "calculo",
+                label: "Cálculo de Remuneração",
+                icon: Calculator,
+              },
+              {
+                id: "controlePagamentos",
+                label: "Controle de Pagamentos",
+                icon: Coins,
+              },
+              {
+                id: "controleInsumos",
+                label: "Controle de Insumos",
+                icon: Boxes,
+              },
+              {
+                id: "controleInsumosComercial",
+                label: "Controle de Insumos (Comercial)",
+                icon: Boxes,
+              },
+              {
+                id: "emailMarketing",
+                label: "Envio de e-mail Marketing",
+                icon: Mail,
+              },
+              { id: "relatorios", label: "Relatórios", icon: FileText },
+              { id: "admin", label: "Administração", icon: Settings },
+            ].map(
+              (item) =>
+                canView(item.id) && (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setCurrentView(item.id);
+                      setIsSidebarOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all",
+                      currentView === item.id
+                        ? "bg-blue-500/10 text-white"
+                        : "text-slate-400 hover:bg-[#082a5c] hover:text-white",
+                    )}
+                  >
+                    <item.icon size={20} />
+                    <span>{item.label}</span>
+                  </button>
+                ),
+            )}
           </nav>
 
           <div className="p-4 border-t border-[#092e5c]">
             <div className="bg-[#082a5c]/50 p-4 rounded-2xl mb-4">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Usuário</p>
-              <p className="text-sm font-bold text-white truncate">{profile?.name}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Usuário
+              </p>
+              <p className="text-sm font-bold text-white truncate">
+                {profile?.name}
+              </p>
               <span className="inline-block mt-1 px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded-full">
                 {profile?.role}
               </span>
             </div>
-            
+
             <div className="space-y-1">
-              <button 
+              <button
                 onClick={async () => {
                   if (user?.email) {
                     try {
                       await sendPasswordResetEmail(auth, user.email);
                       showToast("E-mail de redefinição enviado!");
                     } catch (err: any) {
-                      showToast("Erro ao enviar e-mail.", 'error');
+                      showToast("Erro ao enviar e-mail.", "error");
                     }
                   }
                 }}
@@ -3044,7 +4490,7 @@ export default function App() {
                 <span>Trocar Senha</span>
               </button>
 
-              <button 
+              <button
                 onClick={() => signOut(auth)}
                 className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold text-rose-400 hover:bg-rose-500/10 transition-all"
               >
@@ -3059,7 +4505,7 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="h-16 bg-[#011a3c] border-b border-[#092e5c] flex items-center justify-between px-4 lg:px-8 shrink-0">
-          <button 
+          <button
             onClick={() => setIsSidebarOpen(true)}
             className="lg:hidden p-2 text-slate-400 hover:bg-[#082a5c] rounded-lg"
           >
@@ -3067,10 +4513,13 @@ export default function App() {
           </button>
           <div className="flex-1 lg:flex-none flex items-center space-x-3 flex-wrap gap-y-1">
             <h2 className="text-lg font-bold text-white capitalize ml-2 lg:ml-0">
-              {currentView.replace('-', ' ')}
+              {currentView.replace("-", " ")}
             </h2>
             <span className="px-2.5 py-1 bg-gradient-to-r from-blue-600 to-sky-500 text-white text-[10px] font-extrabold rounded-md shadow-sm uppercase tracking-wider">
-              Servidor: {localStorage.getItem('servidor_selected') === 'comercial' ? 'Comercial' : 'SM'}
+              Servidor:{" "}
+              {localStorage.getItem("servidor_selected") === "comercial"
+                ? "Comercial"
+                : "SM"}
             </span>
             {isOnline ? (
               <span className="flex items-center space-x-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold rounded-md border border-emerald-500/20 shadow-sm uppercase tracking-wider">
@@ -3087,7 +4536,7 @@ export default function App() {
           <div className="flex items-center space-x-4">
             <div className="hidden md:flex items-center space-x-2 text-sm text-slate-400">
               <Calendar size={16} />
-              <span>{new Date().toLocaleDateString('pt-BR')}</span>
+              <span>{new Date().toLocaleDateString("pt-BR")}</span>
             </div>
             <button
               onClick={() => setIsProfileModalOpen(true)}
@@ -3108,66 +4557,178 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {currentView === 'dashboard' && <DashboardView leads={leads} planner={planner} links={links} profile={profile!} onToast={showToast} campanhas={campanhas} bomDia={bomDia} forecast={forecast} periodos={periodos} metaDia={metaDia} users={users} />}
-              {currentView === 'cadastro' && <CadastroView onToast={showToast} profile={profile!} />}
-              {currentView === 'historico' && <HistoricoView leads={leads} profile={profile!} onToast={showToast} users={users} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} gap={gap} basesRenovacao={basesRenovacao} />}
-              {currentView === 'bases' && <BasesView bases={bases} profile={profile!} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} gap={gap} basesRenovacao={basesRenovacao} />}
-              {currentView === 'gap' && <GapView gap={gap} onToast={showToast} whatsappMessages={whatsappMessages} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
-              {currentView === 'fiesProuni' && <FiesProuniView data={fiesProuni} onToast={showToast} profile={profile!} whatsappMessages={whatsappMessages} periodos={periodos} botConfig={botConfig} onSendBot={handleSendBotMessage} onMassSendBot={handleMassSendBotMessages} />}
-              {currentView === 'mapao' && <MapaoAcademicoView mapao={mapao} onToast={showToast} profile={profile!} />}
-              {currentView === 'cursos' && <CursosDisponiveisView cursos={cursos} onToast={showToast} profile={profile!} />}
-              {currentView === 'basesDisparo' && <BasesDisparoView bases={basesDisparo} onToast={showToast} />}
-              {currentView === 'basesRenovacao' && (
-                <BasesRenovacaoView 
-                  bases={basesRenovacao} 
-                  onToast={showToast} 
-                  whatsappMessages={whatsappMessages} 
-                  botConfig={botConfig} 
-                  onSendBot={handleSendBotMessage} 
-                  onMassSendBot={handleMassSendBotMessages} 
+              {currentView === "dashboard" && (
+                <DashboardView
+                  leads={leads}
+                  planner={planner}
+                  links={links}
+                  profile={profile!}
+                  onToast={showToast}
+                  campanhas={campanhas}
+                  bomDia={bomDia}
+                  forecast={forecast}
+                  periodos={periodos}
+                  metaDia={metaDia}
+                  users={users}
                 />
               )}
-              {currentView === 'campanhas' && <CampanhasView campanhas={campanhas} onToast={showToast} />}
-              {currentView === 'calculo' && <CalculoRemuneracaoView />}
-              {currentView === 'emailMarketing' && <EmailMarketingView onToast={showToast} />}
-              {currentView === 'controlePagamentos' && <ControlePagamentosView calendarioAcoes={calendarioAcoes} users={users} onToast={showToast} profile={profile} />}
-              {currentView === 'controleInsumos' && <ControleInsumosView pedidos={insumosPedidos} estoque={insumosEstoque} profile={profile!} onToast={showToast} />}
-              {currentView === 'controleInsumosComercial' && <ControleInsumosComercialView pedidos={insumosPedidosComercial} estoque={insumosEstoqueComercial} profile={profile!} onToast={showToast} />}
-              {currentView === 'calendario' && <CalendarioAcoesView data={calendarioAcoes} onToast={showToast} profile={profile!} initialData={initialActionData} onClearInitialData={() => setInitialActionData(null)} users={users} />}
-              {currentView === 'empresas' && (
-                <EmpresasParceirasView 
-                  data={empresasParceiras} 
-                  onToast={showToast} 
+              {currentView === "cadastro" && (
+                <CadastroView onToast={showToast} profile={profile!} />
+              )}
+              {currentView === "historico" && (
+                <HistoricoView
+                  leads={leads}
+                  profile={profile!}
+                  onToast={showToast}
+                  users={users}
+                  whatsappMessages={whatsappMessages}
+                  botConfig={botConfig}
+                  onSendBot={handleSendBotMessage}
+                  onMassSendBot={handleMassSendBotMessages}
+                  gap={gap}
+                  basesRenovacao={basesRenovacao}
+                />
+              )}
+              {currentView === "bases" && (
+                <BasesView
+                  bases={bases}
+                  profile={profile!}
+                  onToast={showToast}
+                  whatsappMessages={whatsappMessages}
+                  botConfig={botConfig}
+                  onSendBot={handleSendBotMessage}
+                  onMassSendBot={handleMassSendBotMessages}
+                  gap={gap}
+                  basesRenovacao={basesRenovacao}
+                />
+              )}
+              {currentView === "gap" && (
+                <GapView
+                  gap={gap}
+                  onToast={showToast}
+                  whatsappMessages={whatsappMessages}
+                  botConfig={botConfig}
+                  onSendBot={handleSendBotMessage}
+                  onMassSendBot={handleMassSendBotMessages}
+                />
+              )}
+              {currentView === "fiesProuni" && (
+                <FiesProuniView
+                  data={fiesProuni}
+                  onToast={showToast}
+                  profile={profile!}
+                  whatsappMessages={whatsappMessages}
+                  periodos={periodos}
+                  botConfig={botConfig}
+                  onSendBot={handleSendBotMessage}
+                  onMassSendBot={handleMassSendBotMessages}
+                />
+              )}
+              {currentView === "mapao" && (
+                <MapaoAcademicoView
+                  mapao={mapao}
+                  onToast={showToast}
+                  profile={profile!}
+                />
+              )}
+              {currentView === "cursos" && (
+                <CursosDisponiveisView
+                  cursos={cursos}
+                  onToast={showToast}
+                  profile={profile!}
+                />
+              )}
+              {currentView === "basesDisparo" && (
+                <BasesDisparoView bases={basesDisparo} onToast={showToast} />
+              )}
+              {currentView === "basesRenovacao" && (
+                <BasesRenovacaoView
+                  bases={basesRenovacao}
+                  onToast={showToast}
+                  whatsappMessages={whatsappMessages}
+                  botConfig={botConfig}
+                  onSendBot={handleSendBotMessage}
+                  onMassSendBot={handleMassSendBotMessages}
+                />
+              )}
+              {currentView === "campanhas" && (
+                <CampanhasView campanhas={campanhas} onToast={showToast} />
+              )}
+              {currentView === "calculo" && <CalculoRemuneracaoView />}
+              {currentView === "emailMarketing" && (
+                <EmailMarketingView onToast={showToast} />
+              )}
+              {currentView === "relatorios" && (
+                <RelatoriosView profile={profile!} />
+              )}
+              {currentView === "controlePagamentos" && (
+                <ControlePagamentosView
+                  calendarioAcoes={calendarioAcoes}
+                  users={users}
+                  onToast={showToast}
+                  profile={profile}
+                />
+              )}
+              {currentView === "controleInsumos" && (
+                <ControleInsumosView
+                  pedidos={insumosPedidos}
+                  estoque={insumosEstoque}
+                  profile={profile!}
+                  onToast={showToast}
+                />
+              )}
+              {currentView === "controleInsumosComercial" && (
+                <ControleInsumosComercialView
+                  pedidos={insumosPedidosComercial}
+                  estoque={insumosEstoqueComercial}
+                  profile={profile!}
+                  onToast={showToast}
+                />
+              )}
+              {currentView === "calendario" && (
+                <CalendarioAcoesView
+                  data={calendarioAcoes}
+                  onToast={showToast}
+                  profile={profile!}
+                  initialData={initialActionData}
+                  onClearInitialData={() => setInitialActionData(null)}
+                  users={users}
+                />
+              )}
+              {currentView === "empresas" && (
+                <EmpresasParceirasView
+                  data={empresasParceiras}
+                  onToast={showToast}
                   cursos={cursos}
                   onGenerateAction={(empresa) => {
                     setInitialActionData({
                       nome: `Ação na empresa ${empresa.nome}`,
                       local: empresa.endereco,
-                      observacao: `Responsável: ${empresa.responsavel}\nTelefone: ${empresa.telefone}`
+                      observacao: `Responsável: ${empresa.responsavel}\nTelefone: ${empresa.telefone}`,
                     });
-                    setCurrentView('calendario');
-                  }} 
+                    setCurrentView("calendario");
+                  }}
                 />
               )}
-              {currentView === 'admin' && (
-                <AdminView 
-                  users={users} 
-                  links={links} 
-                  onToast={showToast} 
-                  leads={leads} 
-                  bases={bases} 
-                  gap={gap} 
-                  planner={planner} 
-                  campanhas={campanhas} 
-                  bomDia={bomDia} 
-                  forecast={forecast} 
-                  periodos={periodos} 
-                  whatsappMessages={whatsappMessages} 
-                  empresasParceiras={empresasParceiras} 
-                  botConfig={botConfig} 
-                  botStatuses={botStatuses} 
-                  setBotStatuses={setBotStatuses} 
-                  callBotApi={callBotApi} 
+              {currentView === "admin" && (
+                <AdminView
+                  users={users}
+                  links={links}
+                  onToast={showToast}
+                  leads={leads}
+                  bases={bases}
+                  gap={gap}
+                  planner={planner}
+                  campanhas={campanhas}
+                  bomDia={bomDia}
+                  forecast={forecast}
+                  periodos={periodos}
+                  whatsappMessages={whatsappMessages}
+                  empresasParceiras={empresasParceiras}
+                  botConfig={botConfig}
+                  botStatuses={botStatuses}
+                  setBotStatuses={setBotStatuses}
+                  callBotApi={callBotApi}
                   metaDia={metaDia}
                 />
               )}
@@ -3176,10 +4737,14 @@ export default function App() {
 
           <footer className="mt-12 py-6 border-t border-slate-200 text-center">
             <p className="text-sm text-slate-500 font-medium">
-              Sistema Criado por <span className="font-bold text-slate-900">Agencia Argo's</span> - 
-              <a 
-                href={getWhatsAppUrl('24992777019', 'Gostaria de realizar um orçamento para um sistema')} 
-                target="_blank" 
+              Sistema Criado por{" "}
+              <span className="font-bold text-slate-900">Agencia Argo's</span> -
+              <a
+                href={getWhatsAppUrl(
+                  "24992777019",
+                  "Gostaria de realizar um orçamento para um sistema",
+                )}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="ml-1 text-blue-600 hover:underline font-bold"
               >
@@ -3192,7 +4757,7 @@ export default function App() {
 
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-900/50 z-30 lg:hidden backdrop-blur-sm"
           onClick={() => setIsSidebarOpen(false)}
         />
@@ -3207,13 +4772,21 @@ function AvisosView() {
   return null;
 }
 
-
-function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success' | 'error') => void, botConfig?: BotConfig }) {
+function AuthScreen({
+  onToast,
+  botConfig,
+}: {
+  onToast: (m: string, t?: "success" | "error") => void;
+  botConfig?: BotConfig;
+}) {
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [servidor, setServidor] = useState<'principal' | 'comercial'>((localStorage.getItem('servidor_selected') as 'principal' | 'comercial') || 'principal');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [servidor, setServidor] = useState<"principal" | "comercial">(
+    (localStorage.getItem("servidor_selected") as "principal" | "comercial") ||
+      "principal",
+  );
   const [loading, setLoading] = useState(false);
 
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -3222,10 +4795,11 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
   const [isAppInstalled, setIsAppInstalled] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                        (window.navigator as any).standalone || 
-                        document.referrer.includes('android-app://');
+    if (typeof window === "undefined") return;
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone ||
+      document.referrer.includes("android-app://");
     setIsAppInstalled(isStandalone);
 
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -3233,9 +4807,12 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
       setDeferredPrompt(e);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt,
+      );
     };
   }, []);
 
@@ -3243,14 +4820,14 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
     if (deferredPrompt) {
       deferredPrompt.prompt();
       deferredPrompt.userChoice.then((choiceResult: { outcome: string }) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('User accepted the PWA install prompt');
+        if (choiceResult.outcome === "accepted") {
+          console.log("User accepted the PWA install prompt");
           setIsAppInstalled(true);
         }
         setDeferredPrompt(null);
       });
     } else {
-      setShowInstallGuide(prev => !prev);
+      setShowInstallGuide((prev) => !prev);
     }
   };
 
@@ -3258,7 +4835,7 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
     e.preventDefault();
     setLoading(true);
     if (!isLogin && password.length < 6) {
-      onToast("A senha deve ter pelo menos 6 caracteres.", 'error');
+      onToast("A senha deve ter pelo menos 6 caracteres.", "error");
       setLoading(false);
       return;
     }
@@ -3268,31 +4845,40 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
           // Attempt login on the CURRENTLY SELECTED server
           await signInWithEmailAndPassword(auth, email, password);
         } catch (err: any) {
-          // If user login fails with invalid credentials or user not found, 
+          // If user login fails with invalid credentials or user not found,
           // let's check programmatically if the credentials are valid on the OTHER server!
-          const isUserNotFound = err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential';
+          const isUserNotFound =
+            err.code === "auth/user-not-found" ||
+            err.code === "auth/invalid-credential";
           if (isUserNotFound) {
             const currentSelected = servidor;
-            const alternativeServer = currentSelected === 'principal' ? 'comercial' : 'principal';
-            
+            const alternativeServer =
+              currentSelected === "principal" ? "comercial" : "principal";
+
             // Build the alternative config
-            const altConfig = alternativeServer === 'comercial' ? firebaseConfigComercial : firebaseConfigPrincipal;
-            
+            const altConfig =
+              alternativeServer === "comercial"
+                ? firebaseConfigComercial
+                : firebaseConfigPrincipal;
+
             // Resolve alternative app
             let altApp;
             try {
-              altApp = getApp('alternative_login_check');
+              altApp = getApp("alternative_login_check");
             } catch {
-              altApp = initializeApp(altConfig, 'alternative_login_check');
+              altApp = initializeApp(altConfig, "alternative_login_check");
             }
             const altAuth = getAuth(altApp);
-            
+
             try {
               // Attempt login on the ALTERNATIVE server
               await signInWithEmailAndPassword(altAuth, email, password);
               // SUCCESS on the other server! Let's update localStorage and reload to apply the active configuration
-              localStorage.setItem('servidor_selected', alternativeServer);
-              onToast(`Login bem sucedido! Redirecionando para o Servidor ${alternativeServer === 'principal' ? 'Principal' : 'Comercial'}...`, 'success');
+              localStorage.setItem("servidor_selected", alternativeServer);
+              onToast(
+                `Login bem sucedido! Redirecionando para o Servidor ${alternativeServer === "principal" ? "Principal" : "Comercial"}...`,
+                "success",
+              );
               setTimeout(() => {
                 window.location.reload();
               }, 1200);
@@ -3306,24 +4892,34 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
           }
         }
       } else {
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        const userCred = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password,
+        );
         // Pack the chosen servidor into displayName so App.tsx can extract it
-        await updateProfile(userCred.user, { displayName: `${name}|${servidor}` });
+        await updateProfile(userCred.user, {
+          displayName: `${name}|${servidor}`,
+        });
         onToast("Conta criada com sucesso!");
       }
     } catch (err: any) {
       console.error("Auth error details (AuthScreen):", {
         code: err.code,
         message: err.message,
-        stack: err.stack
+        stack: err.stack,
       });
       let friendlyMessage = err.message;
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        friendlyMessage = "E-mail ou senha inválidos em ambos os servidores (Principal / Comercial).";
-      } else if (err.code === 'auth/wrong-password') {
+      if (
+        err.code === "auth/user-not-found" ||
+        err.code === "auth/invalid-credential"
+      ) {
+        friendlyMessage =
+          "E-mail ou senha inválidos em ambos os servidores (Principal / Comercial).";
+      } else if (err.code === "auth/wrong-password") {
         friendlyMessage = "Senha incorreta.";
       }
-      onToast(`Erro: ${friendlyMessage}`, 'error');
+      onToast(`Erro: ${friendlyMessage}`, "error");
     } finally {
       setLoading(false);
     }
@@ -3341,9 +4937,9 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
           <div>
             {botConfig?.loginLogo ? (
               <div className="mb-6 flex">
-                <img 
-                  src={botConfig.loginLogo} 
-                  alt="Logo" 
+                <img
+                  src={botConfig.loginLogo}
+                  alt="Logo"
                   className="max-h-32 w-full object-contain drop-shadow-lg"
                   referrerPolicy="no-referrer"
                 />
@@ -3353,11 +4949,15 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                 <div className="w-16 h-16 bg-gradient-to-tr from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-500/20 mb-6">
                   <TrendingUp size={32} />
                 </div>
-                <h2 className="text-3xl font-extrabold text-white tracking-tight">Gestão Oeste pro</h2>
+                <h2 className="text-3xl font-extrabold text-white tracking-tight">
+                  Gestão Oeste pro
+                </h2>
               </>
             )}
             <p className="text-slate-400 mt-2 text-sm">
-              {isLogin ? 'Bem-vindo de volta! Insira suas credenciais:' : 'Preencha os dados e crie sua conta agora:'}
+              {isLogin
+                ? "Bem-vindo de volta! Insira suas credenciais:"
+                : "Preencha os dados e crie sua conta agora:"}
             </p>
           </div>
 
@@ -3366,24 +4966,24 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
             <button
               type="button"
               onClick={() => {
-                if (servidor !== 'principal') {
-                  localStorage.setItem('servidor_selected', 'principal');
+                if (servidor !== "principal") {
+                  localStorage.setItem("servidor_selected", "principal");
                   window.location.reload();
                 }
               }}
-              className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${servidor === 'principal' ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow shadow-sky-500/20' : 'text-slate-400 hover:text-white'}`}
+              className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${servidor === "principal" ? "bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow shadow-sky-500/20" : "text-slate-400 hover:text-white"}`}
             >
               Principal
             </button>
             <button
               type="button"
               onClick={() => {
-                if (servidor !== 'comercial') {
-                  localStorage.setItem('servidor_selected', 'comercial');
+                if (servidor !== "comercial") {
+                  localStorage.setItem("servidor_selected", "comercial");
                   window.location.reload();
                 }
               }}
-              className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${servidor === 'comercial' ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow shadow-sky-500/20' : 'text-slate-400 hover:text-white'}`}
+              className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${servidor === "comercial" ? "bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow shadow-sky-500/20" : "text-slate-400 hover:text-white"}`}
             >
               Comercial
             </button>
@@ -3392,35 +4992,41 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
           <form onSubmit={handleSubmit} className="space-y-4 font-sans">
             {!isLogin && (
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Nome Completo</label>
-                <input 
-                  type="text" 
-                  value={name} 
-                  onChange={e => setName(e.target.value)} 
-                  required 
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Nome Completo
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
                   className="w-full bg-[#032654] border border-[#0d4182] text-white px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none transition-all placeholder-slate-500 text-sm font-medium"
                   placeholder="Seu nome"
                 />
               </div>
             )}
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Email</label>
-              <input 
-                type="email" 
-                value={email} 
-                onChange={e => setEmail(e.target.value)} 
-                required 
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 className="w-full bg-[#032654] border border-[#0d4182] text-white px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none transition-all placeholder-slate-500 text-sm font-medium"
                 placeholder="seu@email.com"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Senha</label>
-              <input 
-                type="password" 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-                required 
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                Senha
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
                 className="w-full bg-[#032654] border border-[#0d4182] text-white px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none transition-all placeholder-slate-500 text-sm font-medium"
                 placeholder="••••••••"
               />
@@ -3432,14 +5038,17 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                   type="button"
                   onClick={async () => {
                     if (!email) {
-                      onToast("Por favor, digite seu e-mail primeiro.", 'error');
+                      onToast(
+                        "Por favor, digite seu e-mail primeiro.",
+                        "error",
+                      );
                       return;
                     }
                     try {
                       await sendPasswordResetEmail(auth, email);
                       onToast("E-mail de redefinição enviado!");
                     } catch (err: any) {
-                      onToast("Erro ao enviar e-mail.", 'error');
+                      onToast("Erro ao enviar e-mail.", "error");
                     }
                   }}
                   className="text-xs font-bold text-sky-400 hover:text-sky-300 hover:underline transition-colors cursor-pointer"
@@ -3449,21 +5058,27 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
               </div>
             )}
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
               className="w-full bg-gradient-to-tr from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] cursor-pointer"
             >
-              {loading ? 'Processando...' : (isLogin ? 'Entrar no Sistema' : 'Criar Minha Conta')}
+              {loading
+                ? "Processando..."
+                : isLogin
+                  ? "Entrar no Sistema"
+                  : "Criar Minha Conta"}
             </button>
           </form>
 
           <div className="mt-8 text-center pt-2 border-t border-[#092e5c]">
-            <button 
+            <button
               onClick={() => setIsLogin(!isLogin)}
               className="text-sm font-semibold text-sky-400 hover:text-sky-300 hover:underline cursor-pointer"
             >
-              {isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça login'}
+              {isLogin
+                ? "Não tem uma conta? Cadastre-se"
+                : "Já tem uma conta? Faça login"}
             </button>
           </div>
 
@@ -3480,7 +5095,11 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                       Instalar Aplicativo (Android)
                     </h4>
                     <p className="text-xs text-slate-300 leading-relaxed font-semibold">
-                      Deseja usar no celular? Instale o App para usar <strong className="text-emerald-400 font-extrabold">com ou sem internet</strong>. Sincroniza automático ao conectar.
+                      Deseja usar no celular? Instale o App para usar{" "}
+                      <strong className="text-emerald-400 font-extrabold">
+                        com ou sem internet
+                      </strong>
+                      . Sincroniza automático ao conectar.
                     </p>
                   </div>
                 </div>
@@ -3510,21 +5129,43 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                 {showInstallGuide && (
                   <div className="mt-4 pt-4 border-t border-[#092e5c] space-y-3 text-xs">
                     <div className="space-y-1">
-                      <span className="text-[10px] font-black uppercase text-emerald-400">Passo 1:</span>
+                      <span className="text-[10px] font-black uppercase text-emerald-400">
+                        Passo 1:
+                      </span>
                       <p className="text-slate-300 font-semibold leading-relaxed">
-                        Abra este endereço no <strong className="text-white font-bold">Google Chrome</strong> do seu Android.
+                        Abra este endereço no{" "}
+                        <strong className="text-white font-bold">
+                          Google Chrome
+                        </strong>{" "}
+                        do seu Android.
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[10px] font-black uppercase text-emerald-400">Passo 2:</span>
+                      <span className="text-[10px] font-black uppercase text-emerald-400">
+                        Passo 2:
+                      </span>
                       <p className="text-slate-300 font-semibold leading-relaxed">
-                        Toque nos <strong className="text-white font-bold">três pontinhos (⋮)</strong> no canto superior direito.
+                        Toque nos{" "}
+                        <strong className="text-white font-bold">
+                          três pontinhos (⋮)
+                        </strong>{" "}
+                        no canto superior direito.
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[10px] font-black uppercase text-emerald-400">Passo 3:</span>
+                      <span className="text-[10px] font-black uppercase text-emerald-400">
+                        Passo 3:
+                      </span>
                       <p className="text-slate-300 font-semibold leading-relaxed">
-                        Selecione <strong className="text-emerald-400 font-extrabold">"Instalar aplicativo"</strong> ou <strong className="text-emerald-400 font-extrabold">"Adicionar à tela inicial"</strong>.
+                        Selecione{" "}
+                        <strong className="text-emerald-400 font-extrabold">
+                          "Instalar aplicativo"
+                        </strong>{" "}
+                        ou{" "}
+                        <strong className="text-emerald-400 font-extrabold">
+                          "Adicionar à tela inicial"
+                        </strong>
+                        .
                       </p>
                     </div>
                   </div>
@@ -3544,7 +5185,7 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
       <div className="hidden md:flex flex-1 items-center justify-center bg-[#01112c] p-12 relative overflow-hidden z-0">
         {/* Subtle grid mesh backdrop */}
         <div className="absolute inset-0 bg-[radial-gradient(#082a5c_1px,transparent_1px)] [background-size:24px_24px] opacity-25" />
-        
+
         {/* Animated ambient outer halo circles */}
         <div className="absolute w-[600px] h-[600px] border border-[#0d4182]/20 rounded-full animate-pulse" />
         <div className="absolute w-[800px] h-[800px] border border-[#0d4182]/10 rounded-full opacity-60" />
@@ -3552,9 +5193,9 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
         {/* SVG ART Container */}
         <div className="relative z-10 w-full flex justify-center">
           {botConfig?.loginLogo ? (
-            <img 
-              src={botConfig.loginLogo} 
-              alt="Logo Promocional" 
+            <img
+              src={botConfig.loginLogo}
+              alt="Logo Promocional"
               className="w-full max-w-[560px] aspect-square rounded-3xl object-contain drop-shadow-[0_35px_60px_rgba(14,116,253,0.35)] border border-slate-700/40 p-12 bg-[#011a3c]/50 animate-fade-in"
               referrerPolicy="no-referrer"
             />
@@ -3565,20 +5206,44 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
               className="w-full max-w-[560px] aspect-square drop-shadow-[0_25px_60px_rgba(14,116,253,0.35)] select-none"
             >
               <defs>
-                <linearGradient id="blueRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient
+                  id="blueRingGrad"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
                   <stop offset="0%" stopColor="#0a397a" />
                   <stop offset="50%" stopColor="#125cb5" />
                   <stop offset="100%" stopColor="#082c5f" />
                 </linearGradient>
-                <linearGradient id="wolfEyeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <linearGradient
+                  id="wolfEyeGrad"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
                   <stop offset="0%" stopColor="#00f0ff" />
                   <stop offset="100%" stopColor="#00a8ff" />
                 </linearGradient>
-                <linearGradient id="muzzleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <linearGradient
+                  id="muzzleGrad"
+                  x1="0%"
+                  y1="0%"
+                  x2="0%"
+                  y2="100%"
+                >
                   <stop offset="0%" stopColor="#ffffff" />
                   <stop offset="100%" stopColor="#cfd8dc" />
                 </linearGradient>
-                <linearGradient id="bannerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <linearGradient
+                  id="bannerGrad"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
                   <stop offset="0%" stopColor="#010f24" />
                   <stop offset="50%" stopColor="#051c3d" />
                   <stop offset="100%" stopColor="#010d21" />
@@ -3587,7 +5252,13 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                   <feGaussianBlur stdDeviation="8" result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
-                <filter id="eyeGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <filter
+                  id="eyeGlow"
+                  x="-50%"
+                  y="-50%"
+                  width="200%"
+                  height="200%"
+                >
                   <feGaussianBlur stdDeviation="6" result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
@@ -3599,12 +5270,12 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                 <line x1="500" y1="20" x2="500" y2="980" />
                 {/* Horizontal Crosshair Line */}
                 <line x1="20" y1="500" x2="980" y2="500" />
-                
+
                 {/* Target ticks (top, bottom, left, right) */}
                 <line x1="500" y1="80" x2="520" y2="80" />
                 <line x1="500" y1="140" x2="515" y2="140" />
                 <line x1="500" y1="200" x2="520" y2="200" />
-                
+
                 <line x1="500" y1="920" x2="520" y2="920" />
                 <line x1="500" y1="860" x2="515" y2="860" />
                 <line x1="500" y1="800" x2="520" y2="800" />
@@ -3619,82 +5290,233 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
               </g>
 
               {/* Target Reticle Outer Box ticks */}
-              <rect x="480" y="40" width="40" height="20" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
-              <rect x="480" y="940" width="40" height="20" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
-              <rect x="40" y="480" width="20" height="40" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
-              <rect x="940" y="480" width="20" height="40" fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.4" />
+              <rect
+                x="480"
+                y="40"
+                width="40"
+                height="20"
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="3"
+                opacity="0.4"
+              />
+              <rect
+                x="480"
+                y="940"
+                width="40"
+                height="20"
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="3"
+                opacity="0.4"
+              />
+              <rect
+                x="40"
+                y="480"
+                width="20"
+                height="40"
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="3"
+                opacity="0.4"
+              />
+              <rect
+                x="940"
+                y="480"
+                width="20"
+                height="40"
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="3"
+                opacity="0.4"
+              />
 
               {/* 1. Outer target circle with dashes */}
-              <circle cx="500" cy="500" r="445" fill="none" stroke="#ffffff" strokeWidth="3" strokeDasharray="16 20" opacity="0.35" />
+              <circle
+                cx="500"
+                cy="500"
+                r="445"
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="3"
+                strokeDasharray="16 20"
+                opacity="0.35"
+              />
 
               {/* 2. Concentric circle borders */}
-              <circle cx="500" cy="500" r="415" fill="none" stroke="#ffffff" strokeWidth="2.5" opacity="0.4" />
-              
+              <circle
+                cx="500"
+                cy="500"
+                r="415"
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="2.5"
+                opacity="0.4"
+              />
+
               {/* 3. Main Thick Ring Outer Rim */}
-              <circle cx="500" cy="500" r="400" fill="none" stroke="#ffffff" strokeWidth="4" />
+              <circle
+                cx="500"
+                cy="500"
+                r="400"
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="4"
+              />
 
               {/* 4. The Mighty Blue Ring Body */}
-              <circle cx="500" cy="500" r="348" fill="none" stroke="url(#blueRingGrad)" strokeWidth="100" />
+              <circle
+                cx="500"
+                cy="500"
+                r="348"
+                fill="none"
+                stroke="url(#blueRingGrad)"
+                strokeWidth="100"
+              />
 
               {/* 5. Inner Rim of the Blue Ring */}
-              <circle cx="500" cy="500" r="298" fill="none" stroke="#ffffff" strokeWidth="4" />
+              <circle
+                cx="500"
+                cy="500"
+                r="298"
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="4"
+              />
 
               {/* 6. Main Inner Graphic Backdrop (Turquoise circle) */}
-              <circle cx="500" cy="500" r="294" fill="#009be1" stroke="#ffffff" strokeWidth="2" />
+              <circle
+                cx="500"
+                cy="500"
+                r="294"
+                fill="#009be1"
+                stroke="#ffffff"
+                strokeWidth="2"
+              />
               <circle cx="500" cy="500" r="275" fill="#0388c7" />
 
               {/* Curves for circular text alignment */}
               {/* Path for 'OESTE' arched on top (left-to-right) */}
-              <path id="topArchPath" d="M 160,500 A 340,340 0 0,1 840,500" fill="none" />
-              
+              <path
+                id="topArchPath"
+                d="M 160,500 A 340,340 0 0,1 840,500"
+                fill="none"
+              />
+
               {/* Path for 'OESTE HUNTER' arched on bottom (right-to-left) */}
-              <path id="bottomArchPath" d="M 840,500 A 340,340 0 0,1 160,500" fill="none" />
+              <path
+                id="bottomArchPath"
+                d="M 840,500 A 340,340 0 0,1 160,500"
+                fill="none"
+              />
 
               {/* Arched Texts */}
-              <text fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="75" fill="#ffffff" letterSpacing="18">
-                <textPath href="#topArchPath" startOffset="50%" textAnchor="middle">OESTE</textPath>
+              <text
+                fontFamily="'Inter', sans-serif"
+                fontWeight="900"
+                fontSize="75"
+                fill="#ffffff"
+                letterSpacing="18"
+              >
+                <textPath
+                  href="#topArchPath"
+                  startOffset="50%"
+                  textAnchor="middle"
+                >
+                  OESTE
+                </textPath>
               </text>
 
-              <text fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="44" fill="#ffffff" letterSpacing="14">
-                <textPath href="#bottomArchPath" startOffset="50%" textAnchor="middle">OESTE HUNTER</textPath>
+              <text
+                fontFamily="'Inter', sans-serif"
+                fontWeight="900"
+                fontSize="44"
+                fill="#ffffff"
+                letterSpacing="14"
+              >
+                <textPath
+                  href="#bottomArchPath"
+                  startOffset="50%"
+                  textAnchor="middle"
+                >
+                  OESTE HUNTER
+                </textPath>
               </text>
 
               {/* ======================================= */}
               {/* WOLF HEAD INTERIOR ELEMENT MASCOT ART   */}
               {/* ======================================= */}
               <g id="wolfMascot" transform="translate(0, -35)">
-                
                 {/* Wolf Ears Behind */}
                 {/* Left ear dark back */}
-                <polygon points="350,330 435,420 380,480" fill="#020f2b" stroke="#ffffff" strokeWidth="3" />
+                <polygon
+                  points="350,330 435,420 380,480"
+                  fill="#020f2b"
+                  stroke="#ffffff"
+                  strokeWidth="3"
+                />
                 {/* Left ear internal blue */}
                 <polygon points="365,345 425,415 385,465" fill="#0096e6" />
-                
+
                 {/* Right ear dark back */}
-                <polygon points="650,330 565,420 620,480" fill="#020f2b" stroke="#ffffff" strokeWidth="3" />
+                <polygon
+                  points="650,330 565,420 620,480"
+                  fill="#020f2b"
+                  stroke="#ffffff"
+                  strokeWidth="3"
+                />
                 {/* Right ear internal blue */}
                 <polygon points="635,345 575,415 615,465" fill="#0096e6" />
 
                 {/* Wolf Forehead and Cheek structure */}
                 {/* Base Head polygon */}
-                <polygon points="500,380 340,500 370,625 500,680 630,625 660,500" fill="#03112b" />
-                
+                <polygon
+                  points="500,380 340,500 370,625 500,680 630,625 660,500"
+                  fill="#03112b"
+                />
+
                 {/* White outer framing highlights (Cheek fur) */}
                 {/* Left cheek outer fluff */}
-                <polygon points="340,500 310,560 385,585" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
-                <polygon points="310,560 330,630 400,610" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
-                
+                <polygon
+                  points="340,500 310,560 385,585"
+                  fill="#ffffff"
+                  stroke="#ffffff"
+                  strokeWidth="2.5"
+                />
+                <polygon
+                  points="310,560 330,630 400,610"
+                  fill="#ffffff"
+                  stroke="#ffffff"
+                  strokeWidth="2.5"
+                />
+
                 {/* Right cheek outer fluff */}
-                <polygon points="660,500 690,560 615,585" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
-                <polygon points="690,560 670,630 600,610" fill="#ffffff" stroke="#ffffff" strokeWidth="2.5" />
+                <polygon
+                  points="660,500 690,560 615,585"
+                  fill="#ffffff"
+                  stroke="#ffffff"
+                  strokeWidth="2.5"
+                />
+                <polygon
+                  points="690,560 670,630 600,610"
+                  fill="#ffffff"
+                  stroke="#ffffff"
+                  strokeWidth="2.5"
+                />
 
                 {/* Intermediate Blue Shadows Cheeks */}
                 <polygon points="340,500 385,585 410,515" fill="#0a3c7c" />
                 <polygon points="660,500 615,585 590,515" fill="#0a3c7c" />
 
                 {/* Side Dark fur shades */}
-                <polygon points="410,515 385,585 440,590 460,530" fill="#00183b" />
-                <polygon points="590,515 615,585 560,590 540,530" fill="#00183b" />
+                <polygon
+                  points="410,515 385,585 440,590 460,530"
+                  fill="#00183b"
+                />
+                <polygon
+                  points="590,515 615,585 560,590 540,530"
+                  fill="#00183b"
+                />
 
                 {/* Center forehead wolf shield (cyan core) */}
                 <polygon points="500,380 460,470 500,510" fill="#00bdff" />
@@ -3704,28 +5526,67 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                 <polygon points="500,395 530,470 500,500" fill="#ffffff" />
 
                 {/* Wolf Eyes Areas (Black framing masks) */}
-                <polygon points="420,490 470,510 460,535 410,515" fill="#010614" />
-                <polygon points="580,490 530,510 540,535 590,515" fill="#010614" />
+                <polygon
+                  points="420,490 470,510 460,535 410,515"
+                  fill="#010614"
+                />
+                <polygon
+                  points="580,490 530,510 540,535 590,515"
+                  fill="#010614"
+                />
 
                 {/* Fierce Cyan Eyes */}
-                <polygon points="432,498 462,510 452,525 430,512" fill="url(#wolfEyeGrad)" filter="url(#eyeGlow)" />
-                <polygon points="568,498 538,510 548,525 570,512" fill="url(#wolfEyeGrad)" filter="url(#eyeGlow)" />
-                
+                <polygon
+                  points="432,498 462,510 452,525 430,512"
+                  fill="url(#wolfEyeGrad)"
+                  filter="url(#eyeGlow)"
+                />
+                <polygon
+                  points="568,498 538,510 548,525 570,512"
+                  fill="url(#wolfEyeGrad)"
+                  filter="url(#eyeGlow)"
+                />
+
                 {/* Wolf Nose Bridge */}
-                <polygon points="500,510 460,530 475,590 500,610" fill="#020f26" />
-                <polygon points="500,510 540,530 525,590 500,610" fill="#020f26" />
-                
-                <polygon points="500,510 480,530 485,585 500,600" fill="#0080cf" />
-                <polygon points="500,510 520,530 515,585 500,600" fill="#0080cf" />
+                <polygon
+                  points="500,510 460,530 475,590 500,610"
+                  fill="#020f26"
+                />
+                <polygon
+                  points="500,510 540,530 525,590 500,610"
+                  fill="#020f26"
+                />
+
+                <polygon
+                  points="500,510 480,530 485,585 500,600"
+                  fill="#0080cf"
+                />
+                <polygon
+                  points="500,510 520,530 515,585 500,600"
+                  fill="#0080cf"
+                />
 
                 {/* Muzzle (White muzzle side facets) */}
-                <polygon points="500,610 440,590 445,635 500,665" fill="url(#muzzleGrad)" stroke="#ffffff" strokeWidth="2.5" />
-                <polygon points="500,610 560,590 555,635 500,665" fill="url(#muzzleGrad)" stroke="#ffffff" strokeWidth="2.5" />
+                <polygon
+                  points="500,610 440,590 445,635 500,665"
+                  fill="url(#muzzleGrad)"
+                  stroke="#ffffff"
+                  strokeWidth="2.5"
+                />
+                <polygon
+                  points="500,610 560,590 555,635 500,665"
+                  fill="url(#muzzleGrad)"
+                  stroke="#ffffff"
+                  strokeWidth="2.5"
+                />
 
                 {/* Black Nose Tip */}
                 <polygon points="500,620 475,605 525,605" fill="#010614" />
                 <polygon points="500,620 485,635 515,635" fill="#010614" />
-                <polygon points="475,605 525,605 515,635 485,635" fill="#010614" />
+                <polygon
+                  points="475,605 525,605 515,635 485,635"
+                  fill="#010614"
+                />
                 {/* Nose shine */}
                 <circle cx="500" cy="612" r="3" fill="#ffffff" />
               </g>
@@ -3733,23 +5594,66 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
               {/* Left and Right Side Banners - NPS and CAPTAÇÃO DE ALUNOS */}
               {/* LEFT BANNER (NPS) */}
               <g id="leftBanner">
-                <polygon points="6,505 130,505 110,615 6,615 30,560" fill="#07336e" stroke="#ffffff" strokeWidth="3" />
-                <polygon points="12,515 120,515 104,605 12,605" fill="#0b4594" />
-                
-                <text x="63" y="578" textAnchor="middle" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="46" fill="#ffffff" letterSpacing="1">
+                <polygon
+                  points="6,505 130,505 110,615 6,615 30,560"
+                  fill="#07336e"
+                  stroke="#ffffff"
+                  strokeWidth="3"
+                />
+                <polygon
+                  points="12,515 120,515 104,605 12,605"
+                  fill="#0b4594"
+                />
+
+                <text
+                  x="63"
+                  y="578"
+                  textAnchor="middle"
+                  fontFamily="'Inter', sans-serif"
+                  fontWeight="900"
+                  fontSize="46"
+                  fill="#ffffff"
+                  letterSpacing="1"
+                >
                   NPS
                 </text>
               </g>
 
               {/* RIGHT BANNER (CAPTAÇÃO DE ALUNOS) */}
               <g id="rightBanner">
-                <polygon points="994,505 870,505 890,615 994,615 970,560" fill="#07336e" stroke="#ffffff" strokeWidth="3" />
-                <polygon points="988,515 880,515 896,605 988,605" fill="#0b4594" />
-                
-                <text x="934" y="555" textAnchor="middle" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="20" fill="#ffffff" letterSpacing="2">
+                <polygon
+                  points="994,505 870,505 890,615 994,615 970,560"
+                  fill="#07336e"
+                  stroke="#ffffff"
+                  strokeWidth="3"
+                />
+                <polygon
+                  points="988,515 880,515 896,605 988,605"
+                  fill="#0b4594"
+                />
+
+                <text
+                  x="934"
+                  y="555"
+                  textAnchor="middle"
+                  fontFamily="'Inter', sans-serif"
+                  fontWeight="900"
+                  fontSize="20"
+                  fill="#ffffff"
+                  letterSpacing="2"
+                >
                   CAPTAÇÃO
                 </text>
-                <text x="934" y="583" textAnchor="middle" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="18" fill="#ffffff" letterSpacing="1">
+                <text
+                  x="934"
+                  y="583"
+                  textAnchor="middle"
+                  fontFamily="'Inter', sans-serif"
+                  fontWeight="900"
+                  fontSize="18"
+                  fill="#ffffff"
+                  letterSpacing="1"
+                >
                   DE ALUNOS
                 </text>
               </g>
@@ -3759,19 +5663,39 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                 {/* Banner Ribbon shadow back folds */}
                 <polygon points="180,685 240,685 220,625" fill="#01050e" />
                 <polygon points="820,685 760,685 780,625" fill="#01050e" />
-                
+
                 {/* Front Main Banner Body */}
-                <polygon points="180,625 820,625 790,735 210,735" fill="url(#bannerGrad)" stroke="#ffffff" strokeWidth="6" />
-                
+                <polygon
+                  points="180,625 820,625 790,735 210,735"
+                  fill="url(#bannerGrad)"
+                  stroke="#ffffff"
+                  strokeWidth="6"
+                />
+
                 {/* Inner stroke accent */}
-                <polygon points="195,635 805,635 780,725 220,725" fill="none" stroke="#2575fc" strokeWidth="3.5" opacity="0.8" />
+                <polygon
+                  points="195,635 805,635 780,725 220,725"
+                  fill="none"
+                  stroke="#2575fc"
+                  strokeWidth="3.5"
+                  opacity="0.8"
+                />
 
                 {/* Bold Athletics display text - HUNTER */}
-                <text x="500" y="702" textAnchor="middle" fontFamily="'Impact', 'Arial Black', 'Inter', sans-serif" fontWeight="900" fontSize="105" fill="#ffffff" letterSpacing="5" filter="url(#glow)">
+                <text
+                  x="500"
+                  y="702"
+                  textAnchor="middle"
+                  fontFamily="'Impact', 'Arial Black', 'Inter', sans-serif"
+                  fontWeight="900"
+                  fontSize="105"
+                  fill="#ffffff"
+                  letterSpacing="5"
+                  filter="url(#glow)"
+                >
                   HUNTER
                 </text>
               </g>
-
             </svg>
           )}
         </div>
@@ -3785,10 +5709,13 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
             <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
               <Download size={32} className="text-blue-600" />
             </div>
-            
-            <h3 className="text-xl font-black text-slate-800 text-center mb-2">Download do Arquivo APK</h3>
+
+            <h3 className="text-xl font-black text-slate-800 text-center mb-2">
+              Download do Arquivo APK
+            </h3>
             <p className="text-sm text-slate-500 text-center font-medium leading-relaxed mb-6">
-              O projeto nativo Android foi gerado e configurado usando Capacitor.
+              O projeto nativo Android foi gerado e configurado usando
+              Capacitor.
             </p>
 
             <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-100 mb-6">
@@ -3797,8 +5724,17 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                   <Smartphone size={18} />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-800">1. Instalação Imediata (Via Chrome)</h4>
-                  <p className="text-xs text-slate-600 mt-1 font-medium">Recomendado: Feche esta aba e clique em <strong className="text-emerald-600">"Instalar no Aparelho"</strong> na tela de login (usando o Google Chrome no seu celular) para instalação automática PWA/WebAPK direta no aparelho.</p>
+                  <h4 className="text-sm font-bold text-slate-800">
+                    1. Instalação Imediata (Via Chrome)
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-1 font-medium">
+                    Recomendado: Feche esta aba e clique em{" "}
+                    <strong className="text-emerald-600">
+                      "Instalar no Aparelho"
+                    </strong>{" "}
+                    na tela de login (usando o Google Chrome no seu celular)
+                    para instalação automática PWA/WebAPK direta no aparelho.
+                  </p>
                 </div>
               </div>
 
@@ -3809,8 +5745,19 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                   <Download size={18} />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-800">2. Desenvolvedores (Compilação Nativa)</h4>
-                  <p className="text-xs text-slate-600 mt-1 font-medium">Devido as limitações do ambiente Cloud, o arquivo <strong className="font-bold">.apk</strong> real precisa ser compilado localmente: Exporte os arquivos do app, abra a pasta <code className="bg-slate-200 px-1 py-0.5 rounded font-mono text-amber-800">android/</code> no Android Studio e compile o APK.</p>
+                  <h4 className="text-sm font-bold text-slate-800">
+                    2. Desenvolvedores (Compilação Nativa)
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-1 font-medium">
+                    Devido as limitações do ambiente Cloud, o arquivo{" "}
+                    <strong className="font-bold">.apk</strong> real precisa ser
+                    compilado localmente: Exporte os arquivos do app, abra a
+                    pasta{" "}
+                    <code className="bg-slate-200 px-1 py-0.5 rounded font-mono text-amber-800">
+                      android/
+                    </code>{" "}
+                    no Android Studio e compile o APK.
+                  </p>
                 </div>
               </div>
             </div>
@@ -3826,23 +5773,34 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
           </div>
         </div>
       )}
-
     </div>
   );
 }
 
-function DashboardView({ leads, planner, links, profile, onToast, campanhas, bomDia, forecast, periodos, metaDia, users }: { 
-  leads: Lead[], 
-  planner: PlannerTask[], 
-  links: LinkUtil[],
-  profile: UserProfile,
-  onToast: (m: string, t?: 'success' | 'error') => void,
-  campanhas: Campanha[],
-  bomDia: BomDiaCaptacao[],
-  forecast: ForecastCaptacao[],
-  periodos: PeriodoCaptacao[],
-  metaDia: MetaDia[],
-  users: UserProfile[]
+function DashboardView({
+  leads,
+  planner,
+  links,
+  profile,
+  onToast,
+  campanhas,
+  bomDia,
+  forecast,
+  periodos,
+  metaDia,
+  users,
+}: {
+  leads: Lead[];
+  planner: PlannerTask[];
+  links: LinkUtil[];
+  profile: UserProfile;
+  onToast: (m: string, t?: "success" | "error") => void;
+  campanhas: Campanha[];
+  bomDia: BomDiaCaptacao[];
+  forecast: ForecastCaptacao[];
+  periodos: PeriodoCaptacao[];
+  metaDia: MetaDia[];
+  users: UserProfile[];
 }) {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -3850,10 +5808,11 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
   const [isAppInstalled, setIsAppInstalled] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                        (window.navigator as any).standalone || 
-                        document.referrer.includes('android-app://');
+    if (typeof window === "undefined") return;
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone ||
+      document.referrer.includes("android-app://");
     setIsAppInstalled(isStandalone);
 
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -3861,9 +5820,12 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
       setDeferredPrompt(e);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt,
+      );
     };
   }, []);
 
@@ -3871,8 +5833,8 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
     if (deferredPrompt) {
       deferredPrompt.prompt();
       deferredPrompt.userChoice.then((choiceResult: { outcome: string }) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('User accepted the PWA install prompt');
+        if (choiceResult.outcome === "accepted") {
+          console.log("User accepted the PWA install prompt");
           setIsAppInstalled(true);
         }
         setDeferredPrompt(null);
@@ -3882,56 +5844,93 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
     }
   };
 
-  const widgets = profile.dashboardWidgets || { stats: false, links: true, planner: true, campanhas: false, bomDia: true, forecast: true, periodo: true, aniversarios: true };
+  const widgets = profile.dashboardWidgets || {
+    stats: false,
+    links: true,
+    planner: true,
+    campanhas: false,
+    bomDia: true,
+    forecast: true,
+    periodo: true,
+    aniversarios: true,
+  };
 
   const currentMonthNum = new Date().getMonth() + 1; // 1-12
   const monthNamesPt = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
   ];
   const currentMonthName = monthNamesPt[currentMonthNum - 1];
 
   const currentDayNum = new Date().getDate();
   const checkIsToday = (dob: string) => {
-    const parts = dob.split('-');
+    const parts = dob.split("-");
     if (parts.length !== 3) return false;
-    return parseInt(parts[2], 10) === currentDayNum && parseInt(parts[1], 10) === currentMonthNum;
+    return (
+      parseInt(parts[2], 10) === currentDayNum &&
+      parseInt(parts[1], 10) === currentMonthNum
+    );
   };
 
   const birthdaysThisMonth = (users || [])
-    .filter(u => {
+    .filter((u) => {
       if (u.blocked) return false;
       if (!u.dataNascimento) return false;
-      const dateParts = u.dataNascimento.split('-');
+      const dateParts = u.dataNascimento.split("-");
       if (dateParts.length !== 3) return false;
       const birthMonth = parseInt(dateParts[1], 10);
       return birthMonth === currentMonthNum;
     })
     .sort((a, b) => {
-      const dayA = parseInt(a.dataNascimento!.split('-')[2], 10);
-      const dayB = parseInt(b.dataNascimento!.split('-')[2], 10);
+      const dayA = parseInt(a.dataNascimento!.split("-")[2], 10);
+      const dayB = parseInt(b.dataNascimento!.split("-")[2], 10);
       return dayA - dayB;
     });
 
-  const today = new Date().toISOString().split('T')[0];
-  const activePeriod = periodos.find(p => today >= p.inicioInscricao && today <= p.fimMatFin);
+  const today = new Date().toISOString().split("T")[0];
+  const activePeriod = periodos.find(
+    (p) => today >= p.inicioInscricao && today <= p.fimMatFin,
+  );
 
   // Find meta for today, or find the latest meta as a fallback
-  const todayEntry = metaDia.find(m => m.data === today);
-  const latestEntry = metaDia.length > 0 ? [...metaDia].sort((a,b) => b.data.localeCompare(a.data))[0] : null;
+  const todayEntry = metaDia.find((m) => m.data === today);
+  const latestEntry =
+    metaDia.length > 0
+      ? [...metaDia].sort((a, b) => b.data.localeCompare(a.data))[0]
+      : null;
   const activeMeta = todayEntry || latestEntry;
 
-  const days = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
+  const days = [
+    "Segunda-feira",
+    "Terça-feira",
+    "Quarta-feira",
+    "Quinta-feira",
+    "Sexta-feira",
+    "Sábado",
+    "Domingo",
+  ];
 
-  const toggleWidget = async (key: keyof NonNullable<UserProfile['dashboardWidgets']>) => {
+  const toggleWidget = async (
+    key: keyof NonNullable<UserProfile["dashboardWidgets"]>,
+  ) => {
     try {
       const newWidgets = { ...widgets, [key]: !widgets[key] };
       await updateDoc(doc(db, COLLECTIONS.USERS, profile.uid), {
-        dashboardWidgets: newWidgets
+        dashboardWidgets: newWidgets,
       });
       onToast("Preferências salvas!");
     } catch (err: any) {
-      onToast("Erro ao salvar preferências.", 'error');
+      onToast("Erro ao salvar preferências.", "error");
     }
   };
 
@@ -3940,7 +5939,7 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-800">Dashboard</h2>
         <div className="flex items-center space-x-4">
-          <button 
+          <button
             onClick={() => setIsCustomizing(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
           >
@@ -3952,7 +5951,10 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
 
       {/* Android App Promotion Card */}
       {!isAppInstalled && (
-        <div id="android-app-prompt-card" className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-6 rounded-3xl text-white shadow-xl relative overflow-hidden border border-slate-700/60 transition-all duration-300">
+        <div
+          id="android-app-prompt-card"
+          className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-6 rounded-3xl text-white shadow-xl relative overflow-hidden border border-slate-700/60 transition-all duration-300"
+        >
           {/* Decorative design bubbles */}
           <div className="absolute -top-16 -right-16 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl"></div>
           <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl"></div>
@@ -3960,7 +5962,11 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
             <div className="flex items-start space-x-4">
               <div className="p-3.5 bg-slate-800/80 rounded-2xl border border-slate-700/80 flex items-center justify-center shadow-lg transform hover:scale-105 transition-all shrink-0">
-                <img src="/icon.svg" alt="Gestão Oeste" className="w-12 h-12 rounded-xl object-contain" />
+                <img
+                  src="/icon.svg"
+                  alt="Gestão Oeste"
+                  className="w-12 h-12 rounded-xl object-contain"
+                />
               </div>
               <div className="space-y-1">
                 <div className="flex items-center space-x-2">
@@ -3975,7 +5981,13 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                   Instalar Aplicativo Gestão Oeste no Android
                 </h3>
                 <p className="text-sm text-slate-300 max-w-2xl mt-1.5 leading-relaxed font-semibold">
-                  Trabalhe de qualquer lugar! Faça pedidos de insumos e visualize dados <strong className="text-emerald-400 font-bold">com ou sem internet</strong>. Ao voltar a ter conexão, o sistema sincroniza automaticamente com o servidor.
+                  Trabalhe de qualquer lugar! Faça pedidos de insumos e
+                  visualize dados{" "}
+                  <strong className="text-emerald-400 font-bold">
+                    com ou sem internet
+                  </strong>
+                  . Ao voltar a ter conexão, o sistema sincroniza
+                  automaticamente com o servidor.
                 </p>
               </div>
             </div>
@@ -4005,10 +6017,15 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                   1
                 </span>
                 <h4 className="font-extrabold text-white flex items-center gap-1.5 text-xs uppercase tracking-wider">
-                  <Chrome size={14} className="text-emerald-400" /> No Google Chrome
+                  <Chrome size={14} className="text-emerald-400" /> No Google
+                  Chrome
                 </h4>
                 <p className="text-slate-300 text-xs leading-relaxed font-semibold">
-                  Abra este site no seu aparelho Android utilizando o navegador <strong className="text-emerald-400 font-bold">Google Chrome</strong>.
+                  Abra este site no seu aparelho Android utilizando o navegador{" "}
+                  <strong className="text-emerald-400 font-bold">
+                    Google Chrome
+                  </strong>
+                  .
                 </p>
               </div>
 
@@ -4017,10 +6034,15 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                   2
                 </span>
                 <h4 className="font-extrabold text-white flex items-center gap-1.5 text-xs uppercase tracking-wider">
-                  <Smartphone size={14} className="text-emerald-400" /> Menu de Opções
+                  <Smartphone size={14} className="text-emerald-400" /> Menu de
+                  Opções
                 </h4>
                 <p className="text-slate-300 text-xs leading-relaxed font-semibold">
-                  Toque nos <strong className="text-white font-bold">três pontinhos (⋮)</strong> localizados no canto superior direito do navegador Chrome.
+                  Toque nos{" "}
+                  <strong className="text-white font-bold">
+                    três pontinhos (⋮)
+                  </strong>{" "}
+                  localizados no canto superior direito do navegador Chrome.
                 </p>
               </div>
 
@@ -4029,10 +6051,19 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                   3
                 </span>
                 <h4 className="font-extrabold text-white flex items-center gap-1.5 text-xs uppercase tracking-wider">
-                  <Download size={14} className="text-emerald-400" /> Instalar App
+                  <Download size={14} className="text-emerald-400" /> Instalar
+                  App
                 </h4>
                 <p className="text-slate-300 text-xs leading-relaxed font-semibold">
-                  Selecione <strong className="text-emerald-400 font-bold">"Instalar aplicativo"</strong> ou <strong className="text-emerald-400 font-bold">"Adicionar à tela de início"</strong>. Um atalho oficial será criado no seu telefone!
+                  Selecione{" "}
+                  <strong className="text-emerald-400 font-bold">
+                    "Instalar aplicativo"
+                  </strong>{" "}
+                  ou{" "}
+                  <strong className="text-emerald-400 font-bold">
+                    "Adicionar à tela de início"
+                  </strong>
+                  . Um atalho oficial será criado no seu telefone!
                 </p>
               </div>
 
@@ -4055,30 +6086,51 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
             <div>
               <div className="flex items-center space-x-2 text-slate-900">
                 <Target size={20} className="text-blue-600" />
-                <h3 className="text-lg font-bold">Acompanhamento de Meta Diária</h3>
+                <h3 className="text-lg font-bold">
+                  Acompanhamento de Meta Diária
+                </h3>
               </div>
               <p className="text-xs text-slate-400 font-medium mt-1">
-                Referente ao dia: <span className="font-bold">{new Date(activeMeta.data + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
-                {activeMeta.data === today ? ' (Hoje)' : ' (Última meta registrada)'}
+                Referente ao dia:{" "}
+                <span className="font-bold">
+                  {new Date(activeMeta.data + "T00:00:00").toLocaleDateString(
+                    "pt-BR",
+                  )}
+                </span>
+                {activeMeta.data === today
+                  ? " (Hoje)"
+                  : " (Última meta registrada)"}
               </p>
             </div>
-            
+
             {(() => {
-              const totYTD = activeMeta.ytdPresencial + activeMeta.ytdSemipresencial + activeMeta.ytdDigital;
-              const totReal = activeMeta.realizadoPresencial + activeMeta.realizadoSemipresencial + activeMeta.realizadoDigital;
-              
+              const totYTD =
+                activeMeta.ytdPresencial +
+                activeMeta.ytdSemipresencial +
+                activeMeta.ytdDigital;
+              const totReal =
+                activeMeta.realizadoPresencial +
+                activeMeta.realizadoSemipresencial +
+                activeMeta.realizadoDigital;
+
               let statusText = "Abaixo da Meta";
               let statusColor = "bg-rose-50 text-rose-600 border-rose-100";
               if (totReal > totYTD) {
                 statusText = "Meta Superada!";
-                statusColor = "bg-emerald-50 text-emerald-600 border-emerald-100";
+                statusColor =
+                  "bg-emerald-50 text-emerald-600 border-emerald-100";
               } else if (totReal === totYTD) {
                 statusText = "Meta Atingida";
                 statusColor = "bg-blue-50 text-blue-600 border-blue-100";
               }
-              
+
               return (
-                <span className={cn("px-3 py-1.5 rounded-full text-xs font-bold border mt-2 sm:mt-0", statusColor)}>
+                <span
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-bold border mt-2 sm:mt-0",
+                    statusColor,
+                  )}
+                >
                   {statusText}
                 </span>
               );
@@ -4087,23 +6139,35 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
             <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Boletos Necessários (YTD)</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">
+                Boletos Necessários (YTD)
+              </span>
               <span className="text-2xl font-black text-slate-800 mt-2">
-                {activeMeta.ytdPresencial + activeMeta.ytdSemipresencial + activeMeta.ytdDigital}
+                {activeMeta.ytdPresencial +
+                  activeMeta.ytdSemipresencial +
+                  activeMeta.ytdDigital}
               </span>
             </div>
-            
+
             {(() => {
-              const totYTD = activeMeta.ytdPresencial + activeMeta.ytdSemipresencial + activeMeta.ytdDigital;
-              const totReal = activeMeta.realizadoPresencial + activeMeta.realizadoSemipresencial + activeMeta.realizadoDigital;
-              
+              const totYTD =
+                activeMeta.ytdPresencial +
+                activeMeta.ytdSemipresencial +
+                activeMeta.ytdDigital;
+              const totReal =
+                activeMeta.realizadoPresencial +
+                activeMeta.realizadoSemipresencial +
+                activeMeta.realizadoDigital;
+
               let color = "text-rose-600";
               if (totReal > totYTD) color = "text-emerald-600";
               else if (totReal === totYTD) color = "text-blue-600";
-              
+
               return (
                 <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Total Realizado</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">
+                    Total Realizado
+                  </span>
                   <span className={cn("text-2xl font-black mt-2", color)}>
                     {totReal}
                   </span>
@@ -4112,26 +6176,43 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
             })()}
 
             <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Ano Anterior (A.A)</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">
+                Ano Anterior (A.A)
+              </span>
               <span className="text-2xl font-black text-slate-500 mt-2">
-                {activeMeta.aaPresencial + activeMeta.aaSemipresencial + activeMeta.aaDigital}
+                {activeMeta.aaPresencial +
+                  activeMeta.aaSemipresencial +
+                  activeMeta.aaDigital}
               </span>
             </div>
 
             {(() => {
-              const totYTD = activeMeta.ytdPresencial + activeMeta.ytdSemipresencial + activeMeta.ytdDigital;
-              const totReal = activeMeta.realizadoPresencial + activeMeta.realizadoSemipresencial + activeMeta.realizadoDigital;
+              const totYTD =
+                activeMeta.ytdPresencial +
+                activeMeta.ytdSemipresencial +
+                activeMeta.ytdDigital;
+              const totReal =
+                activeMeta.realizadoPresencial +
+                activeMeta.realizadoSemipresencial +
+                activeMeta.realizadoDigital;
               const pct = totYTD > 0 ? (totReal / totYTD) * 100 : 0;
-              
+
               let pctBg = "bg-rose-50 text-rose-700";
               if (totReal > totYTD) pctBg = "bg-emerald-50 text-emerald-700";
               else if (totReal === totYTD) pctBg = "bg-blue-50 text-blue-700";
-              
+
               return (
                 <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Aproveitamento</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">
+                    Aproveitamento
+                  </span>
                   <div className="flex items-baseline space-x-2 mt-2">
-                    <span className={cn("text-xl font-extrabold px-2.5 py-0.5 rounded-lg", pctBg)}>
+                    <span
+                      className={cn(
+                        "text-xl font-extrabold px-2.5 py-0.5 rounded-lg",
+                        pctBg,
+                      )}
+                    >
                       {pct.toFixed(0)}%
                     </span>
                   </div>
@@ -4142,43 +6223,59 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
             {[
-              { 
-                label: 'Presencial', 
-                ytd: activeMeta.ytdPresencial, 
-                real: activeMeta.realizadoPresencial, 
+              {
+                label: "Presencial",
+                ytd: activeMeta.ytdPresencial,
+                real: activeMeta.realizadoPresencial,
                 aa: activeMeta.aaPresencial,
-                accent: 'border-l-4 border-l-blue-500'
+                accent: "border-l-4 border-l-blue-500",
               },
-              { 
-                label: 'Semipresencial', 
-                ytd: activeMeta.ytdSemipresencial, 
-                real: activeMeta.realizadoSemipresencial, 
+              {
+                label: "Semipresencial",
+                ytd: activeMeta.ytdSemipresencial,
+                real: activeMeta.realizadoSemipresencial,
                 aa: activeMeta.aaSemipresencial,
-                accent: 'border-l-4 border-l-orange-500'
+                accent: "border-l-4 border-l-orange-500",
               },
-              { 
-                label: 'Digital', 
-                ytd: activeMeta.ytdDigital, 
-                real: activeMeta.realizadoDigital, 
+              {
+                label: "Digital",
+                ytd: activeMeta.ytdDigital,
+                real: activeMeta.realizadoDigital,
                 aa: activeMeta.aaDigital,
-                accent: 'border-l-4 border-l-indigo-500'
-              }
+                accent: "border-l-4 border-l-indigo-500",
+              },
             ].map((modal, idx) => {
-              let color = 'text-rose-600';
-              if (modal.real > modal.ytd) color = 'text-emerald-600';
-              else if (modal.real === modal.ytd) color = 'text-blue-600';
-              
+              let color = "text-rose-600";
+              if (modal.real > modal.ytd) color = "text-emerald-600";
+              else if (modal.real === modal.ytd) color = "text-blue-600";
+
               return (
-                <div key={idx} className={cn("bg-slate-50/30 p-3 rounded-xl border border-slate-100 flex justify-between items-center", modal.accent)}>
+                <div
+                  key={idx}
+                  className={cn(
+                    "bg-slate-50/30 p-3 rounded-xl border border-slate-100 flex justify-between items-center",
+                    modal.accent,
+                  )}
+                >
                   <div>
-                    <span className="text-xs font-bold text-slate-700">{modal.label}</span>
-                    <span className="block text-[10px] text-slate-400">Ano Ant: {modal.aa}</span>
+                    <span className="text-xs font-bold text-slate-700">
+                      {modal.label}
+                    </span>
+                    <span className="block text-[10px] text-slate-400">
+                      Ano Ant: {modal.aa}
+                    </span>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Meta / Real</span>
-                    <span className="text-xs font-semibold text-slate-600">{modal.ytd}</span>
+                    <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                      Meta / Real
+                    </span>
+                    <span className="text-xs font-semibold text-slate-600">
+                      {modal.ytd}
+                    </span>
                     <span className="mx-1 text-slate-300">/</span>
-                    <span className={cn("text-xs font-bold", color)}>{modal.real}</span>
+                    <span className={cn("text-xs font-bold", color)}>
+                      {modal.real}
+                    </span>
                   </div>
                 </div>
               );
@@ -4189,274 +6286,459 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
 
       {/* Aniversariantes do Mês Widget */}
       {widgets.aniversarios !== false && (
-         <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <div className="flex items-center space-x-2 text-rose-500 mb-6">
-               <Cake size={24} />
-               <h3 className="text-xl font-bold text-slate-900">Aniversariantes do Mês ({currentMonthName})</h3>
+        <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <div className="flex items-center space-x-2 text-rose-500 mb-6">
+            <Cake size={24} />
+            <h3 className="text-xl font-bold text-slate-900">
+              Aniversariantes do Mês ({currentMonthName})
+            </h3>
+          </div>
+          {birthdaysThisMonth.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              {birthdaysThisMonth.map((u) => {
+                const bday = parseInt(u.dataNascimento!.split("-")[2], 10);
+                const isToday = checkIsToday(u.dataNascimento!);
+                return (
+                  <div
+                    key={u.uid}
+                    className={cn(
+                      "p-4 rounded-2xl border transition-all flex items-center justify-between",
+                      isToday
+                        ? "bg-rose-50/50 border-rose-200 shadow-sm shadow-rose-50"
+                        : "bg-slate-50/50 border-slate-100 hover:border-slate-200",
+                    )}
+                  >
+                    <div className="flex items-center space-x-3 overflow-hidden">
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0",
+                          isToday
+                            ? "bg-rose-600 text-white animate-bounce"
+                            : "bg-blue-50 text-blue-600",
+                        )}
+                      >
+                        {u.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="overflow-hidden">
+                        <h4 className="font-bold text-slate-800 text-sm truncate">
+                          {u.name}
+                        </h4>
+                        <p className="text-[10px] text-slate-400 font-semibold truncate uppercase tracking-wider">
+                          {u.role}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {isToday ? (
+                        <span className="inline-block px-2 py-1 bg-amber-100 text-amber-800 text-[10px] font-black rounded-lg uppercase tracking-wide animate-pulse">
+                          Hoje! 🎉
+                        </span>
+                      ) : (
+                        <span className="text-xs font-black text-slate-500">
+                          Dia {bday}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            {birthdaysThisMonth.length > 0 ? (
-               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {birthdaysThisMonth.map((u) => {
-                     const bday = parseInt(u.dataNascimento!.split('-')[2], 10);
-                     const isToday = checkIsToday(u.dataNascimento!);
-                     return (
-                        <div
-                           key={u.uid}
-                           className={cn(
-                              "p-4 rounded-2xl border transition-all flex items-center justify-between",
-                              isToday
-                                 ? "bg-rose-50/50 border-rose-200 shadow-sm shadow-rose-50"
-                                 : "bg-slate-50/50 border-slate-100 hover:border-slate-200"
-                           )}
-                        >
-                           <div className="flex items-center space-x-3 overflow-hidden">
-                              <div className={cn(
-                                 "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0",
-                                 isToday
-                                    ? "bg-rose-600 text-white animate-bounce"
-                                    : "bg-blue-50 text-blue-600"
-                              )}>
-                                 {u.name.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="overflow-hidden">
-                                 <h4 className="font-bold text-slate-800 text-sm truncate">{u.name}</h4>
-                                 <p className="text-[10px] text-slate-400 font-semibold truncate uppercase tracking-wider">{u.role}</p>
-                              </div>
-                           </div>
-                           <div className="text-right shrink-0">
-                              {isToday ? (
-                                 <span className="inline-block px-2 py-1 bg-amber-100 text-amber-800 text-[10px] font-black rounded-lg uppercase tracking-wide animate-pulse">
-                                    Hoje! 🎉
-                                 </span>
-                              ) : (
-                                 <span className="text-xs font-black text-slate-500">
-                                    Dia {bday}
-                                 </span>
-                              )}
-                           </div>
-                        </div>
-                     );
-                  })}
-               </div>
-            ) : (
-               <div className="text-center py-8 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl">
-                  <Cake size={32} className="mx-auto text-slate-300 mb-2" />
-                  <p className="text-sm text-slate-400 font-semibold">Nenhum aniversariante registrado neste mês de {currentMonthName}.</p>
-               </div>
-            )}
-         </section>
+          ) : (
+            <div className="text-center py-8 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl">
+              <Cake size={32} className="mx-auto text-slate-300 mb-2" />
+              <p className="text-sm text-slate-400 font-semibold">
+                Nenhum aniversariante registrado neste mês de {currentMonthName}
+                .
+              </p>
+            </div>
+          )}
+        </section>
       )}
 
       {/* Bom Dia Captação (Complete - All cards) */}
       {widgets.bomDia && bomDia.length > 0 && (
-         <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <div className="flex items-center justify-between mb-6">
-               <div className="flex items-center space-x-2 text-emerald-600">
-                  <Sun size={24} />
-                  <h3 className="text-xl font-bold text-slate-900">Bom Dia Captação</h3>
-               </div>
-               <p className="text-xs text-slate-400 font-medium">
-                  Última atualização: {new Date(bomDia[bomDia.length - 1].data).toLocaleDateString()}
-               </p>
+        <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-2 text-emerald-600">
+              <Sun size={24} />
+              <h3 className="text-xl font-bold text-slate-900">
+                Bom Dia Captação
+              </h3>
             </div>
-            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
-               {bomDia.map(card => (
-                  <div key={card.id} className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
-                     <div className="bg-emerald-600 p-4">
-                        <h4 className="font-bold text-white text-sm uppercase tracking-wider">{card.titulo}</h4>
-                     </div>
-                     <div className="p-4">
-                        <table className="w-full text-xs">
-                           <thead>
-                              <tr className="text-slate-400 font-bold uppercase tracking-tighter">
-                                 <th className="text-left pb-2">Indicador</th>
-                                 <th className="text-center pb-2">INSC</th>
-                                 <th className="text-center pb-2">MAT FIN</th>
-                                 <th className="text-center pb-2">MAT ACAD</th>
-                              </tr>
-                           </thead>
-                           <tbody className="divide-y divide-slate-200">
-                              {[
-                                 { label: 'Meta Final', data: card.metaFinal, color: 'text-slate-600' },
-                                 { label: 'Meta Dia', data: card.metaDia, color: 'text-slate-600' },
-                                 { label: 'Ano Anterior', data: card.anoAnterior, color: 'text-slate-400' },
-                                 { label: 'Real', data: card.real, color: 'text-emerald-600 font-bold' }
-                              ].map((row, idx) => (
-                                 <tr key={idx} className="hover:bg-white/50 transition-colors">
-                                    <td className="py-2 font-semibold text-slate-500">{row.label}</td>
-                                    <td className={cn("py-2 text-center", row.color)}>{row.data?.insc ?? 0}</td>
-                                    <td className={cn("py-2 text-center", row.color)}>{row.data?.matFin ?? 0}</td>
-                                    <td className={cn("py-2 text-center", row.color)}>{row.data?.matAcad ?? 0}</td>
-                                 </tr>
-                              ))}
-                              {/* Calculated Rows */}
-                              {[
-                                 { 
-                                    label: '% Meta Dia', 
-                                    calc: (m: keyof BomDiaMetrics) => (card.metaDia && card.metaDia[m] > 0 && card.real) ? `${((card.real[m] / card.metaDia[m]) * 100).toFixed(0)}%` : '0%',
-                                    color: 'text-blue-600 font-bold'
-                                 },
-                                 { 
-                                    label: '% Ano Ant.', 
-                                    calc: (m: keyof BomDiaMetrics) => (card.anoAnterior && card.anoAnterior[m] > 0 && card.real) ? `${((card.real[m] / card.anoAnterior[m]) * 100).toFixed(0)}%` : '0%',
-                                    color: 'text-slate-500 font-bold'
-                                 },
-                                 { 
-                                    label: 'Gap Meta Dia', 
-                                    calc: (m: keyof BomDiaMetrics) => (card.real && card.metaDia) ? card.real[m] - card.metaDia[m] : 0,
-                                    color: (m: keyof BomDiaMetrics) => (card.real && card.metaDia && (card.real[m] - card.metaDia[m]) >= 0) ? 'text-emerald-600' : 'text-rose-600'
-                                 },
-                                 { 
-                                    label: 'Gap Ano Ant.', 
-                                    calc: (m: keyof BomDiaMetrics) => (card.real && card.anoAnterior) ? card.real[m] - card.anoAnterior[m] : 0,
-                                    color: (m: keyof BomDiaMetrics) => (card.real && card.anoAnterior && (card.real[m] - card.anoAnterior[m]) >= 0) ? 'text-emerald-600' : 'text-rose-600'
-                                 },
-                                 { 
-                                    label: 'Gap Meta Final', 
-                                    calc: (m: keyof BomDiaMetrics) => (card.real && card.metaFinal) ? card.real[m] - card.metaFinal[m] : 0,
-                                    color: (m: keyof BomDiaMetrics) => (card.real && card.metaFinal && (card.real[m] - card.metaFinal[m]) >= 0) ? 'text-emerald-600' : 'text-rose-600'
-                                 }
-                              ].map((row, idx) => (
-                                 <tr key={`calc-${idx}`} className="bg-slate-100/50">
-                                    <td className="py-1.5 font-bold text-[9px] text-slate-400 uppercase">{row.label}</td>
-                                    <td className={cn("py-1.5 text-center text-[10px] font-bold", typeof row.color === 'function' ? row.color('insc') : row.color)}>{row.calc('insc')}</td>
-                                    <td className={cn("py-1.5 text-center text-[10px] font-bold", typeof row.color === 'function' ? row.color('matFin') : row.color)}>{row.calc('matFin')}</td>
-                                    <td className={cn("py-1.5 text-center text-[10px] font-bold", typeof row.color === 'function' ? row.color('matAcad') : row.color)}>{row.calc('matAcad')}</td>
-                                 </tr>
-                              ))}
-                           </tbody>
-                        </table>
-                     </div>
-                  </div>
-               ))}
-            </div>
-         </section>
+            <p className="text-xs text-slate-400 font-medium">
+              Última atualização:{" "}
+              {new Date(bomDia[bomDia.length - 1].data).toLocaleDateString()}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
+            {bomDia.map((card) => (
+              <div
+                key={card.id}
+                className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden"
+              >
+                <div className="bg-emerald-600 p-4">
+                  <h4 className="font-bold text-white text-sm uppercase tracking-wider">
+                    {card.titulo}
+                  </h4>
+                </div>
+                <div className="p-4">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-slate-400 font-bold uppercase tracking-tighter">
+                        <th className="text-left pb-2">Indicador</th>
+                        <th className="text-center pb-2">INSC</th>
+                        <th className="text-center pb-2">MAT FIN</th>
+                        <th className="text-center pb-2">MAT ACAD</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {[
+                        {
+                          label: "Meta Final",
+                          data: card.metaFinal,
+                          color: "text-slate-600",
+                        },
+                        {
+                          label: "Meta Dia",
+                          data: card.metaDia,
+                          color: "text-slate-600",
+                        },
+                        {
+                          label: "Ano Anterior",
+                          data: card.anoAnterior,
+                          color: "text-slate-400",
+                        },
+                        {
+                          label: "Real",
+                          data: card.real,
+                          color: "text-emerald-600 font-bold",
+                        },
+                      ].map((row, idx) => (
+                        <tr
+                          key={idx}
+                          className="hover:bg-white/50 transition-colors"
+                        >
+                          <td className="py-2 font-semibold text-slate-500">
+                            {row.label}
+                          </td>
+                          <td className={cn("py-2 text-center", row.color)}>
+                            {row.data?.insc ?? 0}
+                          </td>
+                          <td className={cn("py-2 text-center", row.color)}>
+                            {row.data?.matFin ?? 0}
+                          </td>
+                          <td className={cn("py-2 text-center", row.color)}>
+                            {row.data?.matAcad ?? 0}
+                          </td>
+                        </tr>
+                      ))}
+                      {/* Calculated Rows */}
+                      {[
+                        {
+                          label: "% Meta Dia",
+                          calc: (m: keyof BomDiaMetrics) =>
+                            card.metaDia && card.metaDia[m] > 0 && card.real
+                              ? `${((card.real[m] / card.metaDia[m]) * 100).toFixed(0)}%`
+                              : "0%",
+                          color: "text-blue-600 font-bold",
+                        },
+                        {
+                          label: "% Ano Ant.",
+                          calc: (m: keyof BomDiaMetrics) =>
+                            card.anoAnterior &&
+                            card.anoAnterior[m] > 0 &&
+                            card.real
+                              ? `${((card.real[m] / card.anoAnterior[m]) * 100).toFixed(0)}%`
+                              : "0%",
+                          color: "text-slate-500 font-bold",
+                        },
+                        {
+                          label: "Gap Meta Dia",
+                          calc: (m: keyof BomDiaMetrics) =>
+                            card.real && card.metaDia
+                              ? card.real[m] - card.metaDia[m]
+                              : 0,
+                          color: (m: keyof BomDiaMetrics) =>
+                            card.real &&
+                            card.metaDia &&
+                            card.real[m] - card.metaDia[m] >= 0
+                              ? "text-emerald-600"
+                              : "text-rose-600",
+                        },
+                        {
+                          label: "Gap Ano Ant.",
+                          calc: (m: keyof BomDiaMetrics) =>
+                            card.real && card.anoAnterior
+                              ? card.real[m] - card.anoAnterior[m]
+                              : 0,
+                          color: (m: keyof BomDiaMetrics) =>
+                            card.real &&
+                            card.anoAnterior &&
+                            card.real[m] - card.anoAnterior[m] >= 0
+                              ? "text-emerald-600"
+                              : "text-rose-600",
+                        },
+                        {
+                          label: "Gap Meta Final",
+                          calc: (m: keyof BomDiaMetrics) =>
+                            card.real && card.metaFinal
+                              ? card.real[m] - card.metaFinal[m]
+                              : 0,
+                          color: (m: keyof BomDiaMetrics) =>
+                            card.real &&
+                            card.metaFinal &&
+                            card.real[m] - card.metaFinal[m] >= 0
+                              ? "text-emerald-600"
+                              : "text-rose-600",
+                        },
+                      ].map((row, idx) => (
+                        <tr key={`calc-${idx}`} className="bg-slate-100/50">
+                          <td className="py-1.5 font-bold text-[9px] text-slate-400 uppercase">
+                            {row.label}
+                          </td>
+                          <td
+                            className={cn(
+                              "py-1.5 text-center text-[10px] font-bold",
+                              typeof row.color === "function"
+                                ? row.color("insc")
+                                : row.color,
+                            )}
+                          >
+                            {row.calc("insc")}
+                          </td>
+                          <td
+                            className={cn(
+                              "py-1.5 text-center text-[10px] font-bold",
+                              typeof row.color === "function"
+                                ? row.color("matFin")
+                                : row.color,
+                            )}
+                          >
+                            {row.calc("matFin")}
+                          </td>
+                          <td
+                            className={cn(
+                              "py-1.5 text-center text-[10px] font-bold",
+                              typeof row.color === "function"
+                                ? row.color("matAcad")
+                                : row.color,
+                            )}
+                          >
+                            {row.calc("matAcad")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Forecasts (Complete - All cards) */}
       {widgets.forecast && forecast.length > 0 && (
-         <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <div className="flex items-center justify-between mb-6">
-               <h3 className="text-xl font-bold text-slate-900">Forecasts de Captação</h3>
-               <TrendingUp size={24} className="text-blue-600" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-               {forecast.map(f => {
-                  const percFech = f.metaFechamento > 0 ? ((f.realizado / f.metaFechamento) * 100).toFixed(1) : '0';
-                  const gapFech = f.realizado - f.metaFechamento;
-                  const dataFim = new Date(f.dataFim);
-                  const hoje = new Date();
-                  const diffTime = dataFim.getTime() - hoje.getTime();
-                  const diasRestantes = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-                  const pacing = (Math.abs(gapFech) / diasRestantes).toFixed(1);
+        <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-slate-900">
+              Forecasts de Captação
+            </h3>
+            <TrendingUp size={24} className="text-blue-600" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {forecast.map((f) => {
+              const percFech =
+                f.metaFechamento > 0
+                  ? ((f.realizado / f.metaFechamento) * 100).toFixed(1)
+                  : "0";
+              const gapFech = f.realizado - f.metaFechamento;
+              const dataFim = new Date(f.dataFim);
+              const hoje = new Date();
+              const diffTime = dataFim.getTime() - hoje.getTime();
+              const diasRestantes = Math.max(
+                1,
+                Math.ceil(diffTime / (1000 * 60 * 60 * 24)),
+              );
+              const pacing = (Math.abs(gapFech) / diasRestantes).toFixed(1);
 
-                  return (
-                     <div key={f.id} className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                        <div className="flex justify-between items-start mb-4">
-                           <div>
-                              <h4 className="font-bold text-slate-900">{f.nome}</h4>
-                              <p className="text-[10px] text-slate-500 font-medium">Até {f.dataFim.split('T')[0].split('-').reverse().join('/')}</p>
-                           </div>
-                           <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${Number(percFech) >= 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
-                              {percFech}%
-                           </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                           <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase">Realizado</p>
-                              <p className="text-lg font-bold text-emerald-600">{f.realizado || 0}</p>
-                           </div>
-                           <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase">Meta</p>
-                              <p className="text-lg font-bold text-slate-700">{f.metaFechamento || 0}</p>
-                           </div>
-                        </div>
+              return (
+                <div
+                  key={f.id}
+                  className="bg-slate-50 p-5 rounded-2xl border border-slate-100"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="font-bold text-slate-900">{f.nome}</h4>
+                      <p className="text-[10px] text-slate-500 font-medium">
+                        Até{" "}
+                        {f.dataFim.split("T")[0].split("-").reverse().join("/")}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-1 rounded-full ${Number(percFech) >= 100 ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"}`}
+                    >
+                      {percFech}%
+                    </span>
+                  </div>
 
-                        <div className="space-y-3 pt-4 border-t border-slate-200/60">
-                           <div className="flex justify-between items-center">
-                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-slate-400">Meta Dia YTD</span>
-                              <span className="text-xs font-bold text-slate-700">{f.metaDiaYTD || 0}</span>
-                           </div>
-                           <div className="flex justify-between items-center">
-                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-rose-400">Gap Fechamento</span>
-                              <span className={`text-xs font-bold ${gapFech >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                 {gapFech >= 0 ? '+' : ''}{gapFech}
-                              </span>
-                           </div>
-                           <div className="flex justify-between items-center">
-                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-blue-400">Pacing (por dia)</span>
-                              <span className="text-xs font-bold text-blue-600">{pacing}</span>
-                           </div>
-                           <div className="flex justify-between items-center bg-slate-200/50 p-2 rounded-lg mt-2">
-                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dias Restantes</span>
-                              <span className="text-xs font-bold text-slate-800">{diasRestantes}</span>
-                           </div>
-                        </div>
-                     </div>
-                  );
-               })}
-            </div>
-         </section>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">
+                        Realizado
+                      </p>
+                      <p className="text-lg font-bold text-emerald-600">
+                        {f.realizado || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">
+                        Meta
+                      </p>
+                      <p className="text-lg font-bold text-slate-700">
+                        {f.metaFechamento || 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t border-slate-200/60">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-slate-400">
+                        Meta Dia YTD
+                      </span>
+                      <span className="text-xs font-bold text-slate-700">
+                        {f.metaDiaYTD || 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-rose-400">
+                        Gap Fechamento
+                      </span>
+                      <span
+                        className={`text-xs font-bold ${gapFech >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                      >
+                        {gapFech >= 0 ? "+" : ""}
+                        {gapFech}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-blue-400">
+                        Pacing (por dia)
+                      </span>
+                      <span className="text-xs font-bold text-blue-600">
+                        {pacing}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center bg-slate-200/50 p-2 rounded-lg mt-2">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Dias Restantes
+                      </span>
+                      <span className="text-xs font-bold text-slate-800">
+                        {diasRestantes}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       {widgets.periodo && periodos.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-slate-900">Períodos da Captação</h3>
+            <h3 className="text-xl font-bold text-slate-900">
+              Períodos da Captação
+            </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {periodos.map(p => {
-              const isActive = today >= p.inicioInscricao && today <= p.fimMatFin;
+            {periodos.map((p) => {
+              const isActive =
+                today >= p.inicioInscricao && today <= p.fimMatFin;
               return (
-                <div key={p.id} className={cn(
-                  "bg-white p-5 rounded-3xl shadow-sm border transition-all",
-                  isActive ? "border-blue-500 ring-4 ring-blue-50" : "border-slate-100"
-                )}>
+                <div
+                  key={p.id}
+                  className={cn(
+                    "bg-white p-5 rounded-3xl shadow-sm border transition-all",
+                    isActive
+                      ? "border-blue-500 ring-4 ring-blue-50"
+                      : "border-slate-100",
+                  )}
+                >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-3">
-                      <div className={cn(
-                        "p-2 rounded-xl",
-                        isActive ? "bg-blue-600 text-white" : "bg-blue-100 text-blue-600"
-                      )}>
+                      <div
+                        className={cn(
+                          "p-2 rounded-xl",
+                          isActive
+                            ? "bg-blue-600 text-white"
+                            : "bg-blue-100 text-blue-600",
+                        )}
+                      >
                         <Calendar size={20} />
                       </div>
                       <h4 className="font-bold text-slate-900">{p.nome}</h4>
                     </div>
                     {isActive && (
-                      <span className="px-2 py-1 bg-emerald-100 text-emerald-600 text-[10px] font-bold rounded-full uppercase">Ativo</span>
+                      <span className="px-2 py-1 bg-emerald-100 text-emerald-600 text-[10px] font-bold rounded-full uppercase">
+                        Ativo
+                      </span>
                     )}
                   </div>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center p-3 bg-slate-50 rounded-2xl">
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Inscrição</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">
+                          Inscrição
+                        </p>
                         <p className="text-xs font-bold text-slate-700">
-                          {formatLocalDateString(p.inicioInscricao)} - {formatLocalDateString(p.fimInscricao)}
+                          {formatLocalDateString(p.inicioInscricao)} -{" "}
+                          {formatLocalDateString(p.fimInscricao)}
                         </p>
                       </div>
-                      <span className="text-xs font-bold text-blue-600">{getWorkingDaysBetween(p.inicioInscricao, p.fimInscricao)} dias</span>
+                      <span className="text-xs font-bold text-blue-600">
+                        {getWorkingDaysBetween(
+                          p.inicioInscricao,
+                          p.fimInscricao,
+                        )}{" "}
+                        dias
+                      </span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-slate-50 rounded-2xl">
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Mat Fin</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">
+                          Mat Fin
+                        </p>
                         <p className="text-xs font-bold text-slate-700">
-                          {formatLocalDateString(p.inicioMatFin)} - {formatLocalDateString(p.fimMatFin)}
+                          {formatLocalDateString(p.inicioMatFin)} -{" "}
+                          {formatLocalDateString(p.fimMatFin)}
                         </p>
                       </div>
                       <div className="text-right">
-                        <span className="text-xs font-bold text-blue-600 block">{getWorkingDaysBetween(p.inicioMatFin, p.fimMatFin)} dias úteis</span>
-                        <span className="text-[10px] font-bold text-slate-500 block">{getWorkingDaysRemaining(p.fimMatFin)} dias restantes</span>
+                        <span className="text-xs font-bold text-blue-600 block">
+                          {getWorkingDaysBetween(p.inicioMatFin, p.fimMatFin)}{" "}
+                          dias úteis
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-500 block">
+                          {getWorkingDaysRemaining(p.fimMatFin)} dias restantes
+                        </span>
                       </div>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-slate-50 rounded-2xl">
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Mat Acad</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">
+                          Mat Acad
+                        </p>
                         <p className="text-xs font-bold text-slate-700">
-                          {formatLocalDateString(p.inicioMatAcad)} - {formatLocalDateString(p.fimMatAcad)}
+                          {formatLocalDateString(p.inicioMatAcad)} -{" "}
+                          {formatLocalDateString(p.fimMatAcad)}
                         </p>
                       </div>
-                      <span className="text-xs font-bold text-blue-600">{getWorkingDaysBetween(p.inicioMatAcad, p.fimMatAcad)} dias</span>
+                      <span className="text-xs font-bold text-blue-600">
+                        {getWorkingDaysBetween(p.inicioMatAcad, p.fimMatAcad)}{" "}
+                        dias
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -4472,43 +6754,65 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
             <h3 className="text-xl font-bold text-slate-900">Links Úteis</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {links.map(link => (
-              <a 
-                key={link.id} 
-                href={link.url} 
-                target="_blank" 
+            {links.map((link) => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-3 hover:border-blue-200 hover:bg-blue-50/30 transition-all group"
               >
                 <div className="p-2 bg-blue-100 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-all">
                   <ExternalLink size={18} />
                 </div>
-                <span className="font-bold text-slate-700 truncate">{link.nome}</span>
+                <span className="font-bold text-slate-700 truncate">
+                  {link.nome}
+                </span>
               </a>
             ))}
-            {links.length === 0 && <p className="text-slate-400 text-sm italic">Nenhum link cadastrado.</p>}
+            {links.length === 0 && (
+              <p className="text-slate-400 text-sm italic">
+                Nenhum link cadastrado.
+              </p>
+            )}
           </div>
         </section>
       )}
 
       {widgets.planner && (
         <section>
-          <h3 className="text-xl font-bold text-slate-900 mb-4">Planner da Semana</h3>
+          <h3 className="text-xl font-bold text-slate-900 mb-4">
+            Planner da Semana
+          </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-            {days.map(day => {
-              const tasks = planner.filter(t => t.dayOfWeek === day);
+            {days.map((day) => {
+              const tasks = planner.filter((t) => t.dayOfWeek === day);
               return (
-                <div key={day} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                <div
+                  key={day}
+                  className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col"
+                >
                   <div className="bg-slate-50 px-4 py-2 border-b border-slate-100">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{day.split('-')[0]}</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {day.split("-")[0]}
+                    </span>
                   </div>
                   <div className="p-4 flex-1 space-y-2">
-                    {tasks.length > 0 ? tasks.map(task => (
-                      <div key={task.id} className="p-2 bg-blue-50 border-l-4 border-blue-600 rounded-r-lg">
-                        <p className="text-xs font-bold text-blue-900">{task.atendenteName}</p>
-                        <p className="text-[10px] text-blue-600 font-medium">{task.baseName}</p>
-                      </div>
-                    )) : (
+                    {tasks.length > 0 ? (
+                      tasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className="p-2 bg-blue-50 border-l-4 border-blue-600 rounded-r-lg"
+                        >
+                          <p className="text-xs font-bold text-blue-900">
+                            {task.atendenteName}
+                          </p>
+                          <p className="text-[10px] text-blue-600 font-medium">
+                            {task.baseName}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
                       <div className="h-full flex items-center justify-center">
                         <p className="text-xs text-slate-300 italic">Folga</p>
                       </div>
@@ -4525,28 +6829,44 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
       <AnimatePresence>
         {isCustomizing && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
             >
               <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                <h3 className="text-xl font-bold text-slate-900">Personalizar Dashboard</h3>
-                <button onClick={() => setIsCustomizing(false)} className="text-slate-400 hover:text-slate-600">
+                <h3 className="text-xl font-bold text-slate-900">
+                  Personalizar Dashboard
+                </h3>
+                <button
+                  onClick={() => setIsCustomizing(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
                   <X size={24} />
                 </button>
               </div>
               <div className="p-6 space-y-4">
-                <p className="text-sm text-slate-500 mb-4">Escolha quais blocos você deseja visualizar na sua tela principal.</p>
-                
+                <p className="text-sm text-slate-500 mb-4">
+                  Escolha quais blocos você deseja visualizar na sua tela
+                  principal.
+                </p>
+
                 {[
-                  { id: 'periodo', label: 'Períodos da Captação', icon: Calendar },
-                  { id: 'bomDia', label: 'Bom Dia Captação', icon: Sun },
-                  { id: 'forecast', label: 'Forecasts', icon: TrendingUp },
-                  { id: 'links', label: 'Links Úteis', icon: ExternalLink },
-                  { id: 'planner', label: 'Planner da Semana', icon: Calendar },
-                  { id: 'aniversarios', label: 'Aniversariantes do Mês', icon: Cake },
+                  {
+                    id: "periodo",
+                    label: "Períodos da Captação",
+                    icon: Calendar,
+                  },
+                  { id: "bomDia", label: "Bom Dia Captação", icon: Sun },
+                  { id: "forecast", label: "Forecasts", icon: TrendingUp },
+                  { id: "links", label: "Links Úteis", icon: ExternalLink },
+                  { id: "planner", label: "Planner da Semana", icon: Calendar },
+                  {
+                    id: "aniversarios",
+                    label: "Aniversariantes do Mês",
+                    icon: Cake,
+                  },
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -4555,27 +6875,35 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
                       "w-full flex items-center justify-between p-4 rounded-xl border transition-all",
                       widgets[item.id as keyof typeof widgets]
                         ? "bg-blue-50 border-blue-200 text-blue-900"
-                        : "bg-white border-slate-100 text-slate-500"
+                        : "bg-white border-slate-100 text-slate-500",
                     )}
                   >
                     <div className="flex items-center space-x-3">
                       <item.icon size={20} />
                       <span className="font-bold">{item.label}</span>
                     </div>
-                    <div className={cn(
-                      "w-10 h-6 rounded-full relative transition-all",
-                      widgets[item.id as keyof typeof widgets] ? "bg-blue-600" : "bg-slate-200"
-                    )}>
-                      <div className={cn(
-                        "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
-                        widgets[item.id as keyof typeof widgets] ? "left-5" : "left-1"
-                      )} />
+                    <div
+                      className={cn(
+                        "w-10 h-6 rounded-full relative transition-all",
+                        widgets[item.id as keyof typeof widgets]
+                          ? "bg-blue-600"
+                          : "bg-slate-200",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
+                          widgets[item.id as keyof typeof widgets]
+                            ? "left-5"
+                            : "left-1",
+                        )}
+                      />
                     </div>
                   </button>
                 ))}
               </div>
               <div className="p-6 bg-slate-50 border-t border-slate-100">
-                <button 
+                <button
                   onClick={() => setIsCustomizing(false)}
                   className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-all"
                 >
@@ -4590,44 +6918,62 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
   );
 }
 
-function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success' | 'error') => void, profile: UserProfile }) {
+function CadastroView({
+  onToast,
+  profile,
+}: {
+  onToast: (m: string, t?: "success" | "error") => void;
+  profile: UserProfile;
+}) {
   const [formData, setFormData] = useState({
-    acao: '',
-    nome: '',
-    telefone: '',
-    cpf: '',
-    cursoInteresse: ''
+    acao: "",
+    nome: "",
+    telefone: "",
+    cpf: "",
+    cursoInteresse: "",
   });
   const [loading, setLoading] = useState(false);
-  const [activeForm, setActiveForm] = useState<'lead' | 'promotor'>('lead');
+  const [activeForm, setActiveForm] = useState<"lead" | "promotor">("lead");
   const [promotorData, setPromotorData] = useState({
-    nome: '',
-    email: '',
-    cpf: '',
-    dataNascimento: '',
-    phone: '',
-    chavePix: ''
+    nome: "",
+    email: "",
+    cpf: "",
+    dataNascimento: "",
+    phone: "",
+    chavePix: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Duplicate check
-    const cleanCpf = formData.cpf.replace(/\D/g, '');
-    const cleanTelefone = formData.telefone.replace(/\D/g, '');
-    
+    const cleanCpf = formData.cpf.replace(/\D/g, "");
+    const cleanTelefone = formData.telefone.replace(/\D/g, "");
+
     if (cleanCpf) {
-      const qCpf = query(collection(db, COLLECTIONS.LEADS), where('cpf', '==', cleanCpf));
+      const qCpf = query(
+        collection(db, COLLECTIONS.LEADS),
+        where("cpf", "==", cleanCpf),
+      );
       const snapCpf = await getDocs(qCpf);
       if (!snapCpf.empty) {
-        onToast("Atenção: Este CPF já possui um lead cadastrado no sistema.", "error");
+        onToast(
+          "Atenção: Este CPF já possui um lead cadastrado no sistema.",
+          "error",
+        );
         return;
       }
     } else if (cleanTelefone) {
-      const qTel = query(collection(db, COLLECTIONS.LEADS), where('telefone', '==', cleanTelefone));
+      const qTel = query(
+        collection(db, COLLECTIONS.LEADS),
+        where("telefone", "==", cleanTelefone),
+      );
       const snapTel = await getDocs(qTel);
       if (!snapTel.empty) {
-        onToast("Atenção: Este Telefone já possui um lead cadastrado no sistema.", "error");
+        onToast(
+          "Atenção: Este Telefone já possui um lead cadastrado no sistema.",
+          "error",
+        );
         return;
       }
     }
@@ -4643,18 +6989,24 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
         promotorId: profile.uid,
         promotorName: profile.name,
         promotorRole: profile.role,
-        servidor: profile.servidor || 'principal'
+        servidor: profile.servidor || "principal",
       };
-      
+
       if (profile.linkadoA) {
         newLeadData.linkadoA = profile.linkadoA;
       }
 
       await addDoc(collection(db, COLLECTIONS.LEADS), newLeadData);
       onToast("Lead cadastrado com sucesso!");
-      setFormData({ acao: '', nome: '', telefone: '', cpf: '', cursoInteresse: '' });
+      setFormData({
+        acao: "",
+        nome: "",
+        telefone: "",
+        cpf: "",
+        cursoInteresse: "",
+      });
     } catch (err: any) {
-      onToast(err.message, 'error');
+      onToast(err.message, "error");
     } finally {
       setLoading(false);
     }
@@ -4662,17 +7014,20 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
 
   const handlePromotorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const cleanCpf = promotorData.cpf.replace(/\D/g, '');
-    const cleanPhone = promotorData.phone.replace(/\D/g, '');
+
+    const cleanCpf = promotorData.cpf.replace(/\D/g, "");
+    const cleanPhone = promotorData.phone.replace(/\D/g, "");
     const cleanEmail = promotorData.email.trim();
 
     if (!promotorData.nome || !cleanEmail || !cleanPhone) {
-      onToast("Por favor, preencha todos os campos obrigatórios (Nome, Email e Telefone).", "error");
+      onToast(
+        "Por favor, preencha todos os campos obrigatórios (Nome, Email e Telefone).",
+        "error",
+      );
       return;
     }
 
-    if (!cleanEmail.includes('@')) {
+    if (!cleanEmail.includes("@")) {
       onToast("Formato de email inválido.", "error");
       return;
     }
@@ -4680,8 +7035,14 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
     setLoading(true);
     try {
       // 1. Create promoter in Auth with standard base password using secondaryAuth
-      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, cleanEmail, '123456');
-      await updateProfile(userCredential.user, { displayName: `${promotorData.nome}|comercial` });
+      const userCredential = await createUserWithEmailAndPassword(
+        secondaryAuth,
+        cleanEmail,
+        "123456",
+      );
+      await updateProfile(userCredential.user, {
+        displayName: `${promotorData.nome}|comercial`,
+      });
       const newUid = userCredential.user.uid;
 
       // 2. Create profile matching promoter/rua rules
@@ -4692,14 +7053,14 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
         cpf: cleanCpf,
         dataNascimento: promotorData.dataNascimento,
         role: ROLES.PROMOTOR_RUA, // 'Promotor/rua'
-        servidor: 'comercial',    // specified for commercial
+        servidor: "comercial", // specified for commercial
         phone: cleanPhone,
         chavePix: promotorData.chavePix,
         blocked: false,
         mustChangePassword: true,
-        linkadoA: profile.uid,     // linked to the creator FDV
+        linkadoA: profile.uid, // linked to the creator FDV
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       };
 
       // 3. Save profile document
@@ -4708,20 +7069,40 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
       // 4. Sign out from secondary auth to avoid trace
       await signOut(secondaryAuth);
 
-      onToast("Promotor/rua cadastrado com sucesso! Senha padrão: 123456", "success");
-      setPromotorData({ nome: '', email: '', cpf: '', dataNascimento: '', phone: '', chavePix: '' });
-      setActiveForm('lead');
+      onToast(
+        "Promotor/rua cadastrado com sucesso! Senha padrão: 123456",
+        "success",
+      );
+      setPromotorData({
+        nome: "",
+        email: "",
+        cpf: "",
+        dataNascimento: "",
+        phone: "",
+        chavePix: "",
+      });
+      setActiveForm("lead");
     } catch (err: any) {
       console.error("Auth error details (Promoter Registration):", err);
       let errorMsg = err.message;
-      if (err.code === 'auth/email-already-in-use' || err.message?.includes('email-already-in-use')) {
+      if (
+        err.code === "auth/email-already-in-use" ||
+        err.message?.includes("email-already-in-use")
+      ) {
         errorMsg = "Este email já está em uso.";
-      } else if (err.code === 'auth/weak-password' || err.message?.includes('weak-password')) {
-        errorMsg = "A senha de cadastro padrão deve conter pelo menos 6 caracteres.";
-      } else if (err.code === 'auth/invalid-email' || err.message?.includes('invalid-email')) {
+      } else if (
+        err.code === "auth/weak-password" ||
+        err.message?.includes("weak-password")
+      ) {
+        errorMsg =
+          "A senha de cadastro padrão deve conter pelo menos 6 caracteres.";
+      } else if (
+        err.code === "auth/invalid-email" ||
+        err.message?.includes("invalid-email")
+      ) {
         errorMsg = "Endereço de email inválido.";
       }
-      onToast(`Erro ao criar promotor: ${errorMsg}`, 'error');
+      onToast(`Erro ao criar promotor: ${errorMsg}`, "error");
     } finally {
       setLoading(false);
     }
@@ -4730,16 +7111,15 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
   return (
     <div className="max-w-2xl mx-auto">
       <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-        
         {profile?.role === ROLES.FDV_COMERCIAL && (
           <div className="flex space-x-2 bg-slate-50 p-1.5 rounded-2xl mb-6 border border-slate-100">
             <button
               type="button"
-              onClick={() => setActiveForm('lead')}
+              onClick={() => setActiveForm("lead")}
               className={`flex-1 py-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-2 ${
-                activeForm === 'lead'
-                  ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow shadow-sky-500/20'
-                  : 'text-slate-400 hover:text-slate-700'
+                activeForm === "lead"
+                  ? "bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow shadow-sky-500/20"
+                  : "text-slate-400 hover:text-slate-700"
               }`}
             >
               <UserPlus size={16} />
@@ -4747,11 +7127,11 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
             </button>
             <button
               type="button"
-              onClick={() => setActiveForm('promotor')}
+              onClick={() => setActiveForm("promotor")}
               className={`flex-1 py-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-2 ${
-                activeForm === 'promotor'
-                  ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow shadow-sky-500/20'
-                  : 'text-slate-400 hover:text-slate-700'
+                activeForm === "promotor"
+                  ? "bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow shadow-sky-500/20"
+                  : "text-slate-400 hover:text-slate-700"
               }`}
             >
               <Users size={16} />
@@ -4760,152 +7140,230 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
           </div>
         )}
 
-        {activeForm === 'lead' ? (
+        {activeForm === "lead" ? (
           <>
-            <h3 className="text-2xl font-bold text-slate-900 mb-6">Cadastrar Novo Lead</h3>
+            <h3 className="text-2xl font-bold text-slate-900 mb-6">
+              Cadastrar Novo Lead
+            </h3>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Ação / Origem</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Ação / Origem
+                  </label>
+                  <input
+                    type="text"
                     required
                     value={formData.acao}
-                    onChange={e => setFormData({...formData, acao: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, acao: e.target.value })
+                    }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     placeholder="Ex: Evento Junino, Facebook, etc."
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Nome do Candidato</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Nome do Candidato
+                  </label>
+                  <input
+                    type="text"
                     required
                     value={formData.nome}
-                    onChange={e => setFormData({...formData, nome: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nome: e.target.value })
+                    }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     placeholder="Nome completo"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Telefone (WhatsApp)</label>
-                  <input 
-                    type="tel" 
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Telefone (WhatsApp)
+                  </label>
+                  <input
+                    type="tel"
                     required
                     value={formData.telefone}
-                    onChange={e => setFormData({...formData, telefone: formatPhone(e.target.value)})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        telefone: formatPhone(e.target.value),
+                      })
+                    }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     placeholder="DDD + Número"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">CPF (Opcional)</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    CPF (Opcional)
+                  </label>
+                  <input
+                    type="text"
                     value={formData.cpf}
-                    onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        cpf: formatCPF(e.target.value),
+                      })
+                    }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     placeholder="000.000.000-00"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Curso de Interesse</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Curso de Interesse
+                  </label>
+                  <input
+                    type="text"
                     value={formData.cursoInteresse}
-                    onChange={e => setFormData({...formData, cursoInteresse: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        cursoInteresse: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     placeholder="Ex: Administração, Direito..."
                   />
                 </div>
               </div>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
               >
                 <Plus size={20} />
-                <span>{loading ? 'Salvando...' : 'Salvar Lead'}</span>
+                <span>{loading ? "Salvando..." : "Salvar Lead"}</span>
               </button>
             </form>
           </>
         ) : (
           <>
-            <h3 className="text-2xl font-bold text-slate-900 mb-2">Cadastrar Promotor de Rua</h3>
-            <p className="text-xs text-slate-500 mb-6 font-medium">Os promotores cadastrados por você ficarão automaticamente vinculados ao seu perfil de FDV e herdarão todas as regras de visualização do sistema.</p>
-            
+            <h3 className="text-2xl font-bold text-slate-900 mb-2">
+              Cadastrar Promotor de Rua
+            </h3>
+            <p className="text-xs text-slate-500 mb-6 font-medium">
+              Os promotores cadastrados por você ficarão automaticamente
+              vinculados ao seu perfil de FDV e herdarão todas as regras de
+              visualização do sistema.
+            </p>
+
             <form onSubmit={handlePromotorSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Nome Completo *</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Nome Completo *
+                  </label>
+                  <input
+                    type="text"
                     required
                     value={promotorData.nome}
-                    onChange={e => setPromotorData({...promotorData, nome: e.target.value})}
+                    onChange={(e) =>
+                      setPromotorData({ ...promotorData, nome: e.target.value })
+                    }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     placeholder="Nome completo do promotor"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Email (Google institucional ou pessoal) *</label>
-                  <input 
-                    type="email" 
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Email (Google institucional ou pessoal) *
+                  </label>
+                  <input
+                    type="email"
                     required
                     value={promotorData.email}
-                    onChange={e => setPromotorData({...promotorData, email: e.target.value})}
+                    onChange={(e) =>
+                      setPromotorData({
+                        ...promotorData,
+                        email: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     placeholder="exemplo@gmail.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Telefone / WhatsApp *</label>
-                  <input 
-                    type="tel" 
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Telefone / WhatsApp *
+                  </label>
+                  <input
+                    type="tel"
                     required
                     value={promotorData.phone}
-                    onChange={e => setPromotorData({...promotorData, phone: formatPhone(e.target.value)})}
+                    onChange={(e) =>
+                      setPromotorData({
+                        ...promotorData,
+                        phone: formatPhone(e.target.value),
+                      })
+                    }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     placeholder="(00) 00000-0000"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">CPF (Opcional)</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    CPF (Opcional)
+                  </label>
+                  <input
+                    type="text"
                     value={promotorData.cpf}
-                    onChange={e => setPromotorData({...promotorData, cpf: formatCPF(e.target.value)})}
+                    onChange={(e) =>
+                      setPromotorData({
+                        ...promotorData,
+                        cpf: formatCPF(e.target.value),
+                      })
+                    }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     placeholder="000.000.000-00"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Data de Nascimento (Opcional)</label>
-                  <input 
-                    type="date" 
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Data de Nascimento (Opcional)
+                  </label>
+                  <input
+                    type="date"
                     value={promotorData.dataNascimento}
-                    onChange={e => setPromotorData({...promotorData, dataNascimento: e.target.value})}
+                    onChange={(e) =>
+                      setPromotorData({
+                        ...promotorData,
+                        dataNascimento: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Chave PIX (Opcional)</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Chave PIX (Opcional)
+                  </label>
+                  <input
+                    type="text"
                     value={promotorData.chavePix}
-                    onChange={e => setPromotorData({...promotorData, chavePix: e.target.value})}
+                    onChange={(e) =>
+                      setPromotorData({
+                        ...promotorData,
+                        chavePix: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     placeholder="CPF, E-mail, Telefone ou Aleatória"
                   />
                 </div>
               </div>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
               >
                 <Plus size={20} />
-                <span>{loading ? 'Cadastrando...' : 'Cadastrar Promotor de Rua'}</span>
+                <span>
+                  {loading ? "Cadastrando..." : "Cadastrar Promotor de Rua"}
+                </span>
               </button>
             </form>
           </>
@@ -4915,95 +7373,136 @@ function CadastroView({ onToast, profile }: { onToast: (m: string, t?: 'success'
   );
 }
 
-function HistoricoView({ 
-  leads, 
-  profile, 
-  onToast, 
-  users, 
+function HistoricoView({
+  leads,
+  profile,
+  onToast,
+  users,
   whatsappMessages,
   botConfig,
   onSendBot,
   onMassSendBot,
   gap,
-  basesRenovacao
-}: { 
-  leads: Lead[]; 
-  profile: UserProfile; 
-  onToast: (m: string, t?: 'success' | 'error') => void; 
-  users: UserProfile[]; 
+  basesRenovacao,
+}: {
+  leads: Lead[];
+  profile: UserProfile;
+  onToast: (m: string, t?: "success" | "error") => void;
+  users: UserProfile[];
   whatsappMessages: WhatsAppMessage[];
   botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
-  onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
+  onMassSendBot: (messages: { telefone: string; message: string }[]) => void;
   gap: GapEntry[];
   basesRenovacao: BaseEntry[];
 }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [courseFilter, setCourseFilter] = useState('');
-  const [baseFilter, setBaseFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [promotorFilter, setPromotorFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [courseFilter, setCourseFilter] = useState("");
+  const [baseFilter, setBaseFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [promotorFilter, setPromotorFilter] = useState("");
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
   const [massSelectorOpen, setMassSelectorOpen] = useState(false);
   const [isAddMsgModalOpen, setIsAddMsgModalOpen] = useState(false);
-  const [newMsgData, setNewMsgData] = useState({ modelName: '', texto: '' });
+  const [newMsgData, setNewMsgData] = useState({ modelName: "", texto: "" });
   const [msgLoading, setMsgLoading] = useState(false);
   const [invalidLeadIds, setInvalidLeadIds] = useState<Set<string>>(new Set());
-  const [blockedFilter, setBlockedFilter] = useState<'all' | 'blocked' | 'unblocked'>('all');
-  
+  const [blockedFilter, setBlockedFilter] = useState<
+    "all" | "blocked" | "unblocked"
+  >("all");
+
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  
+
   const [editFormData, setEditFormData] = useState({
-    nome: '',
-    telefone: '',
-    cpf: '',
-    cursoInteresse: '',
-    acao: ''
+    nome: "",
+    telefone: "",
+    cpf: "",
+    cursoInteresse: "",
+    acao: "",
   });
 
   const handleVerificacao = () => {
-      const invalidIds = new Set<string>();
-      leads.forEach(lead => {
-          let match = false;
-          
-          if (gap.some(g => (g.cpf && lead.cpf && g.cpf.replace(/\D/g, '') === lead.cpf.replace(/\D/g, '')) || 
-                            (g.telefone && lead.telefone && g.telefone.replace(/\D/g, '') === lead.telefone.replace(/\D/g, '')) || 
-                            (g.nome.toLowerCase().trim() === lead.nome.toLowerCase().trim()))) {
-              match = true;
-          }
-          
-          if (!match && basesRenovacao.some(b => (b.cpf && lead.cpf && b.cpf.replace(/\D/g, '') === lead.cpf.replace(/\D/g, '')) || 
-                                                 (b.telefone && lead.telefone && b.telefone.replace(/\D/g, '') === lead.telefone.replace(/\D/g, '')) || 
-                                                 (b.nome.toLowerCase().trim() === lead.nome.toLowerCase().trim()))) {
-              match = true;
-          }
-  
-          if (match) {
-              invalidIds.add(lead.id);
-          }
-      });
-      setInvalidLeadIds(invalidIds);
-      onToast(`Verificação concluída: ${invalidIds.size} leads já estão cadastrados em GAP/Base Líquida.`, "success");
+    const invalidIds = new Set<string>();
+    leads.forEach((lead) => {
+      let match = false;
+
+      if (
+        gap.some(
+          (g) =>
+            (g.cpf &&
+              lead.cpf &&
+              g.cpf.replace(/\D/g, "") === lead.cpf.replace(/\D/g, "")) ||
+            (g.telefone &&
+              lead.telefone &&
+              g.telefone.replace(/\D/g, "") ===
+                lead.telefone.replace(/\D/g, "")) ||
+            g.nome.toLowerCase().trim() === lead.nome.toLowerCase().trim(),
+        )
+      ) {
+        match = true;
+      }
+
+      if (
+        !match &&
+        basesRenovacao.some(
+          (b) =>
+            (b.cpf &&
+              lead.cpf &&
+              b.cpf.replace(/\D/g, "") === lead.cpf.replace(/\D/g, "")) ||
+            (b.telefone &&
+              lead.telefone &&
+              b.telefone.replace(/\D/g, "") ===
+                lead.telefone.replace(/\D/g, "")) ||
+            b.nome.toLowerCase().trim() === lead.nome.toLowerCase().trim(),
+        )
+      ) {
+        match = true;
+      }
+
+      if (match) {
+        invalidIds.add(lead.id);
+      }
+    });
+    setInvalidLeadIds(invalidIds);
+    onToast(
+      `Verificação concluída: ${invalidIds.size} leads já estão cadastrados em GAP/Base Líquida.`,
+      "success",
+    );
   };
 
   const uniqueCursos = useMemo(() => {
-    return Array.from(new Set(leads.map(l => l.cursoInteresse).filter(Boolean))).sort();
+    return Array.from(
+      new Set(leads.map((l) => l.cursoInteresse).filter(Boolean)),
+    ).sort();
   }, [leads]);
 
   const uniqueBases = useMemo(() => {
-    return Array.from(new Set(leads.map(l => l.acao).filter(Boolean))).sort();
+    return Array.from(new Set(leads.map((l) => l.acao).filter(Boolean))).sort();
   }, [leads]);
 
-  const uniqueStatuses = ['Pendente', 'Sem retorno', 'Interessado', 'Não Interessado', 'Convertido'];
+  const uniqueStatuses = [
+    "Pendente",
+    "Sem retorno",
+    "Interessado",
+    "Não Interessado",
+    "Convertido",
+  ];
 
   const uniquePromotores = useMemo(() => {
-    return Array.from(new Set(leads.map(l => l.promotorName).filter(Boolean))).sort();
+    return Array.from(
+      new Set(leads.map((l) => l.promotorName).filter(Boolean)),
+    ).sort();
   }, [leads]);
-  
-  const isAdmin = [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV, ROLES.GESTOR_COMERCIAL, ROLES.GESTOR_COMERCIAL_COMERCIAL].includes(profile.role);
+
+  const isAdmin = [
+    ROLES.ADMIN_MASTER,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ].includes(profile.role);
 
   const handleAddCustomMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -5011,17 +7510,17 @@ function HistoricoView({
     setMsgLoading(true);
     try {
       await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
-        tipo: 'historico',
+        tipo: "historico",
         texto: newMsgData.texto,
         nome: newMsgData.modelName || undefined,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
       onToast("Mensagem de histórico salva!");
-      setNewMsgData({ modelName: '', texto: '' });
+      setNewMsgData({ modelName: "", texto: "" });
       setIsAddMsgModalOpen(false);
     } catch (err: any) {
       console.error("Erro ao salvar mensagem:", err);
-      onToast(`Erro ao salvar mensagem: ${err.message}`, 'error');
+      onToast(`Erro ao salvar mensagem: ${err.message}`, "error");
     } finally {
       setMsgLoading(false);
     }
@@ -5029,73 +7528,108 @@ function HistoricoView({
 
   const handleInsertDefaultHistoricoMessages = async () => {
     try {
-      const existing = whatsappMessages.filter(m => m.tipo === 'historico');
+      const existing = whatsappMessages.filter((m) => m.tipo === "historico");
       if (existing.length > 0) {
-        if (!window.confirm("Já existem mensagens para Histórico. Deseja adicionar as mensagens padrões mesmo assim?")) {
+        if (
+          !window.confirm(
+            "Já existem mensagens para Histórico. Deseja adicionar as mensagens padrões mesmo assim?",
+          )
+        ) {
           return;
         }
       }
-      
+
       const defaults = [
         "Olá [nome], tudo bem? Vimos aqui seu interesse no curso de [curso]. Podemos te ajudar?",
         "Oi [nome], aqui é da faculdade! Recebemos seu cadastro sobre o curso de [curso]. Qual o melhor horário para conversarmos?",
-        "Olá [nome]! Qual a sua dúvida sobre o curso de [curso]?"
+        "Olá [nome]! Qual a sua dúvida sobre o curso de [curso]?",
       ];
-      
+
       for (const texto of defaults) {
         await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
-          tipo: 'historico',
+          tipo: "historico",
           texto,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         });
       }
       onToast("Mensagens padrões de histórico inseridas!");
     } catch (err: any) {
-      onToast("Erro ao inserir mensagens padrões.", 'error');
+      onToast("Erro ao inserir mensagens padrões.", "error");
     }
   };
-  
+
   const filteredLeads = useMemo(() => {
     return leads
-      .filter(l => {
-        const matchesSearch = !searchTerm || 
-          l.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      .filter((l) => {
+        const matchesSearch =
+          !searchTerm ||
+          l.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
           l.telefone.includes(searchTerm) ||
           l.acao.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCourse = !courseFilter || l.cursoInteresse === courseFilter;
+        const matchesCourse =
+          !courseFilter || l.cursoInteresse === courseFilter;
         const matchesBase = !baseFilter || l.acao === baseFilter;
         const matchesStatus = !statusFilter || l.status === statusFilter;
-        const matchesPromotor = !promotorFilter || l.promotorName === promotorFilter;
+        const matchesPromotor =
+          !promotorFilter || l.promotorName === promotorFilter;
         const isBlocked = invalidLeadIds.has(l.id);
-        const matchesBlocked = blockedFilter === 'all' ||
-          (blockedFilter === 'blocked' && isBlocked) ||
-          (blockedFilter === 'unblocked' && !isBlocked);
-        return matchesSearch && matchesCourse && matchesBase && matchesStatus && matchesPromotor && matchesBlocked;
+        const matchesBlocked =
+          blockedFilter === "all" ||
+          (blockedFilter === "blocked" && isBlocked) ||
+          (blockedFilter === "unblocked" && !isBlocked);
+        return (
+          matchesSearch &&
+          matchesCourse &&
+          matchesBase &&
+          matchesStatus &&
+          matchesPromotor &&
+          matchesBlocked
+        );
       })
-      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-  }, [leads, searchTerm, courseFilter, baseFilter, statusFilter, promotorFilter, blockedFilter, invalidLeadIds]);
+      .sort(
+        (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0),
+      );
+  }, [
+    leads,
+    searchTerm,
+    courseFilter,
+    baseFilter,
+    statusFilter,
+    promotorFilter,
+    blockedFilter,
+    invalidLeadIds,
+  ]);
 
   const stats = useMemo(() => {
     const total = filteredLeads.length;
-    const conv = filteredLeads.filter(l => l.converted).length;
-    const userLeads = filteredLeads.filter(l => l.promotorId === profile.uid).length;
-    return { total, conv, userLeads, rate: total > 0 ? ((conv/total)*100).toFixed(1) : '0' };
+    const conv = filteredLeads.filter((l) => l.converted).length;
+    const userLeads = filteredLeads.filter(
+      (l) => l.promotorId === profile.uid,
+    ).length;
+    return {
+      total,
+      conv,
+      userLeads,
+      rate: total > 0 ? ((conv / total) * 100).toFixed(1) : "0",
+    };
   }, [filteredLeads, profile]);
 
   const toggleSelect = (id: string, checked: boolean) => {
     if (checked) {
-        setSelectedEntries(prev => [...prev, id]);
+      setSelectedEntries((prev) => [...prev, id]);
     } else {
-        setSelectedEntries(prev => prev.filter(s => s !== id));
+      setSelectedEntries((prev) => prev.filter((s) => s !== id));
     }
   };
 
   const toggleSelectAll = (checked: boolean) => {
-      if (checked) {
-          setSelectedEntries(filteredLeads.filter(l => !invalidLeadIds.has(l.id)).map(l => l.id));
-      } else {
-          setSelectedEntries([]);
-      }
+    if (checked) {
+      setSelectedEntries(
+        filteredLeads.filter((l) => !invalidLeadIds.has(l.id)).map((l) => l.id),
+      );
+    } else {
+      setSelectedEntries([]);
+    }
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
@@ -5103,8 +7637,12 @@ function HistoricoView({
       await updateDoc(doc(db, COLLECTIONS.LEADS, id), { status: newStatus });
       onToast("Status atualizado!");
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.UPDATE, `${COLLECTIONS.LEADS}/${id}`);
-      onToast("Erro ao atualizar status.", 'error');
+      handleFirestoreError(
+        err,
+        OperationType.UPDATE,
+        `${COLLECTIONS.LEADS}/${id}`,
+      );
+      onToast("Erro ao atualizar status.", "error");
     }
   };
 
@@ -5116,55 +7654,68 @@ function HistoricoView({
         matAcad: false,
         documentos: {},
         leadId: lead.id,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
       onToast("Candidato movido para o GAP!");
     } catch (err: any) {
       handleFirestoreError(err, OperationType.CREATE, COLLECTIONS.GAP);
-      onToast("Erro ao mover para o GAP.", 'error');
+      onToast("Erro ao mover para o GAP.", "error");
     }
   };
 
   const handleDeleteLead = async (id: string) => {
-    if (!window.confirm("Tem certeza que deseja excluir este lead do histórico?")) return;
+    if (
+      !window.confirm("Tem certeza que deseja excluir este lead do histórico?")
+    )
+      return;
     try {
       await deleteDoc(doc(db, COLLECTIONS.LEADS, id));
-      onToast("Lead excluído com sucesso!", 'success');
-      setSelectedEntries(prev => prev.filter(s => s !== id));
+      onToast("Lead excluído com sucesso!", "success");
+      setSelectedEntries((prev) => prev.filter((s) => s !== id));
     } catch (err: any) {
       console.error(err);
-      onToast("Erro ao excluir lead.", 'error');
+      onToast("Erro ao excluir lead.", "error");
     }
   };
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Tem certeza que deseja excluir ${selectedEntries.length} lead(s) do histórico?`)) return;
+    if (
+      !window.confirm(
+        `Tem certeza que deseja excluir ${selectedEntries.length} lead(s) do histórico?`,
+      )
+    )
+      return;
     try {
       const firestoreBatch = writeBatch(db);
-      selectedEntries.forEach(id => {
+      selectedEntries.forEach((id) => {
         firestoreBatch.delete(doc(db, COLLECTIONS.LEADS, id));
       });
       await firestoreBatch.commit();
-      onToast(`${selectedEntries.length} lead(s) excluído(s) com sucesso!`, 'success');
+      onToast(
+        `${selectedEntries.length} lead(s) excluído(s) com sucesso!`,
+        "success",
+      );
       setSelectedEntries([]);
     } catch (err) {
       console.error(err);
-      onToast('Erro ao excluir leads em massa.', 'error');
+      onToast("Erro ao excluir leads em massa.", "error");
     }
   };
 
   const handleExport = () => {
-    const data = filteredLeads.map(l => ({
+    const data = filteredLeads.map((l) => ({
       Nome: l.nome,
       Telefone: l.telefone,
-      CPF: l.cpf || '',
-      Curso: l.cursoInteresse || '',
+      CPF: l.cpf || "",
+      Curso: l.cursoInteresse || "",
       Acao: l.acao,
       Promotor: l.promotorName,
-      Status: l.converted ? 'Convertido' : 'Pendente',
-      Data: l.createdAt?.seconds ? new Date(l.createdAt.seconds * 1000).toLocaleDateString() : ''
+      Status: l.converted ? "Convertido" : "Pendente",
+      Data: l.createdAt?.seconds
+        ? new Date(l.createdAt.seconds * 1000).toLocaleDateString()
+        : "",
     }));
-    exportToExcel(data, 'Historico_Leads');
+    exportToExcel(data, "Historico_Leads");
   };
 
   const handleEditClick = (lead: Lead) => {
@@ -5172,9 +7723,9 @@ function HistoricoView({
     setEditFormData({
       nome: lead.nome,
       telefone: lead.telefone,
-      cpf: lead.cpf || '',
-      cursoInteresse: lead.cursoInteresse || '',
-      acao: lead.acao
+      cpf: lead.cpf || "",
+      cursoInteresse: lead.cursoInteresse || "",
+      acao: lead.acao,
     });
     setEditModalOpen(true);
   };
@@ -5188,14 +7739,14 @@ function HistoricoView({
         telefone: editFormData.telefone,
         cpf: editFormData.cpf,
         cursoInteresse: editFormData.cursoInteresse,
-        acao: editFormData.acao
+        acao: editFormData.acao,
       });
-      onToast("Lead atualizado com sucesso!", 'success');
+      onToast("Lead atualizado com sucesso!", "success");
       setEditModalOpen(false);
       setEditingLead(null);
     } catch (err: any) {
       console.error(err);
-      onToast("Erro ao editar lead.", 'error');
+      onToast("Erro ao editar lead.", "error");
     }
   };
 
@@ -5205,16 +7756,19 @@ function HistoricoView({
 
     importFromExcel(file, async (data) => {
       try {
-        const batch = data.map(item => ({
-          nome: item.Nome || item.nome || '',
-          telefone: String(item.Telefone || item.telefone || '').replace(/\D/g, ''),
-          cpf: String(item.CPF || item.cpf || '').replace(/\D/g, ''),
-          cursoInteresse: item.Curso || item.cursoInteresse || '',
-          acao: item.Acao || item.acao || 'Importação',
-          promotorId: 'import',
-          promotorName: item.Promotor || item.promotorName || 'Sistema',
-          converted: item.Status === 'Convertido' || item.converted === true,
-          createdAt: serverTimestamp()
+        const batch = data.map((item) => ({
+          nome: item.Nome || item.nome || "",
+          telefone: String(item.Telefone || item.telefone || "").replace(
+            /\D/g,
+            "",
+          ),
+          cpf: String(item.CPF || item.cpf || "").replace(/\D/g, ""),
+          cursoInteresse: item.Curso || item.cursoInteresse || "",
+          acao: item.Acao || item.acao || "Importação",
+          promotorId: "import",
+          promotorName: item.Promotor || item.promotorName || "Sistema",
+          converted: item.Status === "Convertido" || item.converted === true,
+          createdAt: serverTimestamp(),
         }));
 
         let imported = 0;
@@ -5223,9 +7777,15 @@ function HistoricoView({
         const insertedTels = new Set();
 
         for (const entry of batch) {
-          const isDupCpf = entry.cpf && (leads.some(l => l.cpf === entry.cpf) || insertedCpfs.has(entry.cpf));
-          const isDupTel = entry.telefone && (leads.some(l => l.telefone === entry.telefone) || insertedTels.has(entry.telefone));
-          
+          const isDupCpf =
+            entry.cpf &&
+            (leads.some((l) => l.cpf === entry.cpf) ||
+              insertedCpfs.has(entry.cpf));
+          const isDupTel =
+            entry.telefone &&
+            (leads.some((l) => l.telefone === entry.telefone) ||
+              insertedTels.has(entry.telefone));
+
           if (!isDupCpf && !isDupTel) {
             await addDoc(collection(db, COLLECTIONS.LEADS), entry);
             if (entry.cpf) insertedCpfs.add(entry.cpf);
@@ -5235,9 +7795,11 @@ function HistoricoView({
             skipped++;
           }
         }
-        onToast(`${imported} leads importados! ${skipped > 0 ? `${skipped} ignorados por duplicidade.` : ''}`);
+        onToast(
+          `${imported} leads importados! ${skipped > 0 ? `${skipped} ignorados por duplicidade.` : ""}`,
+        );
       } catch (err: any) {
-        onToast("Erro ao importar leads.", 'error');
+        onToast("Erro ao importar leads.", "error");
       }
     });
   };
@@ -5245,10 +7807,12 @@ function HistoricoView({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-800">Histórico de Leads</h2>
+        <h2 className="text-2xl font-bold text-slate-800">
+          Histórico de Leads
+        </h2>
         <div className="flex space-x-2">
           {[ROLES.ADMIN_MASTER, ROLES.LIDER_FDV].includes(profile.role) && (
-            <button 
+            <button
               onClick={handleVerificacao}
               className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold"
               title="Verificar se leads existem no GAP ou Base Líquida"
@@ -5257,26 +7821,31 @@ function HistoricoView({
               <span>Verificação</span>
             </button>
           )}
-          <button 
-             onClick={() => setIsAddMsgModalOpen(true)}
-             className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
+          <button
+            onClick={() => setIsAddMsgModalOpen(true)}
+            className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
           >
-             <Plus size={18} />
-             <span>Inserir Mensagens</span>
+            <Plus size={18} />
+            <span>Inserir Mensagens</span>
           </button>
-          <button 
-             onClick={handleInsertDefaultHistoricoMessages}
-             className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold"
-             title="Inserir Mensagens Padrões"
+          <button
+            onClick={handleInsertDefaultHistoricoMessages}
+            className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold"
+            title="Inserir Mensagens Padrões"
           >
-             <MessageSquare size={14} />
+            <MessageSquare size={14} />
           </button>
           <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
             <Upload size={18} />
             <span>Importar</span>
-            <input type="file" accept=".xlsx, .xls" onChange={handleImport} className="hidden" />
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleImport}
+              className="hidden"
+            />
           </label>
-          <button 
+          <button
             onClick={handleExport}
             className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
           >
@@ -5286,67 +7855,108 @@ function HistoricoView({
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Filtrados" value={stats.total} icon={Users} color="bg-blue-500" />
-        <StatCard title="Convertidos" value={stats.conv} icon={CheckCircle2} color="bg-emerald-500" />
-        <StatCard title="Taxa" value={`${stats.rate}%`} icon={TrendingUp} color="bg-purple-500" />
-        <StatCard title="Meus Leads" value={stats.userLeads} icon={UserPlus} color="bg-amber-500" />
+        <StatCard
+          title="Filtrados"
+          value={stats.total}
+          icon={Users}
+          color="bg-blue-500"
+        />
+        <StatCard
+          title="Convertidos"
+          value={stats.conv}
+          icon={CheckCircle2}
+          color="bg-emerald-500"
+        />
+        <StatCard
+          title="Taxa"
+          value={`${stats.rate}%`}
+          icon={TrendingUp}
+          color="bg-purple-500"
+        />
+        <StatCard
+          title="Meus Leads"
+          value={stats.userLeads}
+          icon={UserPlus}
+          color="bg-amber-500"
+        />
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-          <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap font-sans tracking-tight">Lista de Leads</h3>
+          <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap font-sans tracking-tight">
+            Lista de Leads
+          </h3>
           <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto xl:justify-end">
             <div className="relative flex-1 min-w-[200px] xl:flex-none">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input 
-                type="text" 
-                placeholder="Buscar por nome, telefone..." 
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={16}
+              />
+              <input
+                type="text"
+                placeholder="Buscar por nome, telefone..."
                 value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
               />
             </div>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 max-w-[180px] lg:max-w-[220px] truncate"
               value={baseFilter}
-              onChange={e => setBaseFilter(e.target.value)}
+              onChange={(e) => setBaseFilter(e.target.value)}
             >
               <option value="">Todas as Origens / Ações</option>
-              {uniqueBases.map(b => <option key={b} value={b}>{b}</option>)}
+              {uniqueBases.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
             </select>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 max-w-[150px] lg:max-w-[200px] truncate"
               value={courseFilter}
-              onChange={e => setCourseFilter(e.target.value)}
+              onChange={(e) => setCourseFilter(e.target.value)}
             >
               <option value="">Todos os Cursos</option>
-              {uniqueCursos.map(c => <option key={c} value={c}>{c}</option>)}
+              {uniqueCursos.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
+              onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="">Todos os Status</option>
-              {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+              {uniqueStatuses.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={blockedFilter}
-              onChange={e => setBlockedFilter(e.target.value as any)}
+              onChange={(e) => setBlockedFilter(e.target.value as any)}
             >
               <option value="all">Verificação: Todos</option>
               <option value="blocked">Verificação: Bloqueados</option>
               <option value="unblocked">Verificação: Ativos</option>
             </select>
             {isAdmin && (
-              <select 
+              <select
                 className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 max-w-[150px] lg:max-w-[200px] truncate"
                 value={promotorFilter}
-                onChange={e => setPromotorFilter(e.target.value)}
+                onChange={(e) => setPromotorFilter(e.target.value)}
               >
                 <option value="">Todos os Promotores</option>
-                {uniquePromotores.map(p => <option key={p} value={p}>{p}</option>)}
+                {uniquePromotores.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
               </select>
             )}
           </div>
@@ -5357,7 +7967,17 @@ function HistoricoView({
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
                 <th className="px-6 py-4 w-12">
-                  <input type="checkbox" checked={filteredLeads.filter(l => !invalidLeadIds.has(l.id)).length > 0 && selectedEntries.length === filteredLeads.filter(l => !invalidLeadIds.has(l.id)).length} onChange={e => toggleSelectAll(e.target.checked)} />
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredLeads.filter((l) => !invalidLeadIds.has(l.id))
+                        .length > 0 &&
+                      selectedEntries.length ===
+                        filteredLeads.filter((l) => !invalidLeadIds.has(l.id))
+                          .length
+                    }
+                    onChange={(e) => toggleSelectAll(e.target.checked)}
+                  />
                 </th>
                 <th className="px-3 py-4 w-12 text-slate-400">#</th>
                 <th className="px-6 py-4">Candidato</th>
@@ -5366,66 +7986,95 @@ function HistoricoView({
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 flex flex-col gap-2">
                   {selectedEntries.length > 0 && botConfig.url && (
-                      <button 
-                         onClick={() => setMassSelectorOpen(true)} 
-                         className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
-                      >
-                         <Bot size={14} /> Em Massa
-                      </button>
+                    <button
+                      onClick={() => setMassSelectorOpen(true)}
+                      className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                    >
+                      <Bot size={14} /> Em Massa
+                    </button>
                   )}
                   {selectedEntries.length > 0 && (
-                      <button 
-                         onClick={handleBulkDelete} 
-                         className="text-rose-600 font-bold hover:underline py-1 px-2 bg-rose-50 rounded-lg flex items-center gap-1"
-                      >
-                         <Trash2 size={14} /> Excluir ({selectedEntries.length})
-                      </button>
+                    <button
+                      onClick={handleBulkDelete}
+                      className="text-rose-600 font-bold hover:underline py-1 px-2 bg-rose-50 rounded-lg flex items-center gap-1"
+                    >
+                      <Trash2 size={14} /> Excluir ({selectedEntries.length})
+                    </button>
                   )}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredLeads.map((lead, index) => (
-                <tr key={lead.id} className={cn("hover:bg-slate-50/50 transition-all", invalidLeadIds.has(lead.id) && "bg-rose-50/50")}>
+                <tr
+                  key={lead.id}
+                  className={cn(
+                    "hover:bg-slate-50/50 transition-all",
+                    invalidLeadIds.has(lead.id) && "bg-rose-50/50",
+                  )}
+                >
                   <td className="px-6 py-4">
-                      <input 
-                        type="checkbox" 
-                        disabled={invalidLeadIds.has(lead.id)}
-                        checked={selectedEntries.includes(lead.id)} 
-                        onChange={e => !invalidLeadIds.has(lead.id) && toggleSelect(lead.id, e.target.checked)} 
-                      />
+                    <input
+                      type="checkbox"
+                      disabled={invalidLeadIds.has(lead.id)}
+                      checked={selectedEntries.includes(lead.id)}
+                      onChange={(e) =>
+                        !invalidLeadIds.has(lead.id) &&
+                        toggleSelect(lead.id, e.target.checked)
+                      }
+                    />
                   </td>
                   <td className="px-3 py-4 text-xs font-bold text-slate-400 font-mono">
-                      {index + 1}
+                    {index + 1}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-900">{lead.nome}</span>
-                      <span className="text-xs text-slate-500">{formatPhone(lead.telefone)}</span>
+                      <span className="font-bold text-slate-900">
+                        {lead.nome}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {formatPhone(lead.telefone)}
+                      </span>
                       {lead.cursoInteresse && (
-                        <span className="text-xs text-slate-600 font-medium">Curso: {lead.cursoInteresse}</span>
+                        <span className="text-xs text-slate-600 font-medium">
+                          Curso: {lead.cursoInteresse}
+                        </span>
                       )}
                       {lead.empresa && (
-                        <span className="text-[11px] text-indigo-600 font-bold mt-0.5 bg-indigo-50/60 border border-indigo-100/40 px-2 py-0.5 rounded-md self-start">Empresa: {lead.empresa}</span>
+                        <span className="text-[11px] text-indigo-600 font-bold mt-0.5 bg-indigo-50/60 border border-indigo-100/40 px-2 py-0.5 rounded-md self-start">
+                          Empresa: {lead.empresa}
+                        </span>
                       )}
                       {lead.cpf && (
-                        <span className="text-xs text-slate-400">CPF: {formatCPF(lead.cpf)}</span>
+                        <span className="text-xs text-slate-400">
+                          CPF: {formatCPF(lead.cpf)}
+                        </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{lead.acao}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600 font-medium">{lead.promotorName}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {lead.acao}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600 font-medium">
+                    {lead.promotorName}
+                  </td>
                   <td className="px-6 py-4">
-                    <select 
-                      value={lead.status || 'Pendente'}
-                      onChange={(e) => handleStatusChange(lead.id, e.target.value)}
+                    <select
+                      value={lead.status || "Pendente"}
+                      onChange={(e) =>
+                        handleStatusChange(lead.id, e.target.value)
+                      }
                       className={cn(
                         "px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all border-none focus:ring-0",
-                        lead.status === 'Convertido' ? "bg-emerald-100 text-emerald-600" :
-                        lead.status === 'Interessado' ? "bg-blue-100 text-blue-600" :
-                        lead.status === 'Não Interessado' ? "bg-rose-100 text-rose-600" :
-                        lead.status === 'Sem retorno' ? "bg-slate-100 text-slate-600" :
-                        "bg-amber-100 text-amber-600"
+                        lead.status === "Convertido"
+                          ? "bg-emerald-100 text-emerald-600"
+                          : lead.status === "Interessado"
+                            ? "bg-blue-100 text-blue-600"
+                            : lead.status === "Não Interessado"
+                              ? "bg-rose-100 text-rose-600"
+                              : lead.status === "Sem retorno"
+                                ? "bg-slate-100 text-slate-600"
+                                : "bg-amber-100 text-amber-600",
                       )}
                     >
                       <option value="Pendente">Pendente</option>
@@ -5438,7 +8087,7 @@ function HistoricoView({
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-3">
                       {!invalidLeadIds.has(lead.id) && (
-                        <button 
+                        <button
                           onClick={() => {
                             setSelectedLead(lead);
                             setSelectorOpen(true);
@@ -5449,8 +8098,8 @@ function HistoricoView({
                           <span>WhatsApp</span>
                         </button>
                       )}
-                      {lead.status === 'Convertido' && (
-                        <button 
+                      {lead.status === "Convertido" && (
+                        <button
                           onClick={() => handleMoveToGap(lead)}
                           className="text-purple-600 hover:text-purple-700 font-bold text-sm flex items-center space-x-1"
                           title="Mover para GAP Acadêmico"
@@ -5478,7 +8127,12 @@ function HistoricoView({
               ))}
               {filteredLeads.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400 italic">Nenhum lead encontrado.</td>
+                  <td
+                    colSpan={7}
+                    className="px-6 py-12 text-center text-slate-400 italic"
+                  >
+                    Nenhum lead encontrado.
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -5486,15 +8140,15 @@ function HistoricoView({
         </div>
       </div>
 
-      <WhatsAppMessageSelector 
+      <WhatsAppMessageSelector
         isOpen={selectorOpen}
         onClose={() => setSelectorOpen(false)}
-        leadName={selectedLead?.nome || ''}
-        leadCurso={selectedLead?.cursoInteresse || ''}
-        messages={whatsappMessages.filter(m => m.tipo === 'historico')}
+        leadName={selectedLead?.nome || ""}
+        leadCurso={selectedLead?.cursoInteresse || ""}
+        messages={whatsappMessages.filter((m) => m.tipo === "historico")}
         onSelect={(msg) => {
           if (selectedLead) {
-            window.open(getWhatsAppUrl(selectedLead.telefone, msg), '_blank');
+            window.open(getWhatsAppUrl(selectedLead.telefone, msg), "_blank");
           }
         }}
         botConfig={botConfig}
@@ -5504,21 +8158,23 @@ function HistoricoView({
           }
         }}
       />
-      
-      <WhatsAppMessageSelector 
+
+      <WhatsAppMessageSelector
         isOpen={massSelectorOpen}
         onClose={() => setMassSelectorOpen(false)}
         leadName="Candidatos"
-        messages={whatsappMessages.filter(m => m.tipo === 'historico')}
+        messages={whatsappMessages.filter((m) => m.tipo === "historico")}
         onSelect={(msg) => {
           // not used for mass send
         }}
         botConfig={botConfig}
         onSendBot={(msgTemplate) => {
-          const selectedLeadObjs = leads.filter(l => selectedEntries.includes(l.id) && !invalidLeadIds.has(l.id));
-          const messagesPayload = selectedLeadObjs.map(l => ({
+          const selectedLeadObjs = leads.filter(
+            (l) => selectedEntries.includes(l.id) && !invalidLeadIds.has(l.id),
+          );
+          const messagesPayload = selectedLeadObjs.map((l) => ({
             telefone: l.telefone,
-            message: replaceMessageVariables(msgTemplate, l)
+            message: replaceMessageVariables(msgTemplate, l),
           }));
           onMassSendBot(messagesPayload);
           setMassSelectorOpen(false);
@@ -5533,17 +8189,29 @@ function HistoricoView({
         tipo="historico"
         onToast={onToast}
         availableVariables={[
-          { key: '[nome]', label: 'Nome do Lead', previewValue: 'João Silva' },
-          { key: '[curso]', label: 'Curso', previewValue: 'Engenharia de Software' },
-          { key: '[unidade]', label: 'Unidade', previewValue: 'Unidade Central' },
-          { key: '[data_contato]', label: 'Data', previewValue: new Date().toLocaleDateString('pt-BR') },
-          { key: '[saudacao]', label: 'Saudação', previewValue: 'Bom dia' }
+          { key: "[nome]", label: "Nome do Lead", previewValue: "João Silva" },
+          {
+            key: "[curso]",
+            label: "Curso",
+            previewValue: "Engenharia de Software",
+          },
+          {
+            key: "[unidade]",
+            label: "Unidade",
+            previewValue: "Unidade Central",
+          },
+          {
+            key: "[data_contato]",
+            label: "Data",
+            previewValue: new Date().toLocaleDateString("pt-BR"),
+          },
+          { key: "[saudacao]", label: "Saudação", previewValue: "Bom dia" },
         ]}
       />
 
       {editModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -5551,8 +8219,11 @@ function HistoricoView({
           >
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h3 className="text-xl font-bold text-slate-900">Editar Lead</h3>
-              <button 
-                onClick={() => { setEditModalOpen(false); setEditingLead(null); }} 
+              <button
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setEditingLead(null);
+                }}
                 className="text-slate-400 hover:text-slate-600"
               >
                 <X size={24} />
@@ -5561,28 +8232,78 @@ function HistoricoView({
             <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Nome</label>
-                  <input required value={editFormData.nome} onChange={e => setEditFormData({...editFormData, nome: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Nome
+                  </label>
+                  <input
+                    required
+                    value={editFormData.nome}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, nome: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Telefone</label>
-                  <input required value={editFormData.telefone} onChange={e => { e.target.value = formatPhone(e.target.value); setEditFormData({...editFormData, telefone: e.target.value}); }} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Telefone
+                  </label>
+                  <input
+                    required
+                    value={editFormData.telefone}
+                    onChange={(e) => {
+                      e.target.value = formatPhone(e.target.value);
+                      setEditFormData({
+                        ...editFormData,
+                        telefone: e.target.value,
+                      });
+                    }}
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">CPF</label>
-                  <input value={editFormData.cpf} onChange={e => { e.target.value = formatCPF(e.target.value); setEditFormData({...editFormData, cpf: e.target.value}); }} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    CPF
+                  </label>
+                  <input
+                    value={editFormData.cpf}
+                    onChange={(e) => {
+                      e.target.value = formatCPF(e.target.value);
+                      setEditFormData({ ...editFormData, cpf: e.target.value });
+                    }}
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Curso</label>
-                  <input value={editFormData.cursoInteresse} onChange={e => setEditFormData({...editFormData, cursoInteresse: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Curso
+                  </label>
+                  <input
+                    value={editFormData.cursoInteresse}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        cursoInteresse: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Origem / Ação</label>
-                  <input value={editFormData.acao} onChange={e => setEditFormData({...editFormData, acao: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Origem / Ação
+                  </label>
+                  <input
+                    value={editFormData.acao}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, acao: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
                 </div>
               </div>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition flex items-center justify-center space-x-2"
               >
                 <span>Salvar Alterações</span>
@@ -5595,141 +8316,186 @@ function HistoricoView({
   );
 }
 
-function BasesView({ 
-  bases, 
-  onToast, 
+function BasesView({
+  bases,
+  onToast,
   whatsappMessages,
   botConfig,
   onSendBot,
   onMassSendBot,
   gap,
   basesRenovacao,
-  profile
-}: { 
-  bases: BaseEntry[]; 
-  onToast: (m: string, t?: 'success' | 'error') => void; 
+  profile,
+}: {
+  bases: BaseEntry[];
+  onToast: (m: string, t?: "success" | "error") => void;
   whatsappMessages: WhatsAppMessage[];
   botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
-  onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
+  onMassSendBot: (messages: { telefone: string; message: string }[]) => void;
   gap: GapEntry[];
   basesRenovacao: BaseEntry[];
   profile: UserProfile;
 }) {
   const [formData, setFormData] = useState({
-    nomeBase: '',
-    nome: '',
-    telefone: '',
-    cpf: '',
-    curso: '',
-    produto: 'Graduação' as 'Graduação' | 'Técnico' | 'Pós-graduação',
-    numeroOportunidade: '',
-    semestre: '',
-    periodo: '',
-    metodologia: '',
-    formaIngresso: '',
-    numeroMatricula: ''
+    nomeBase: "",
+    nome: "",
+    telefone: "",
+    cpf: "",
+    curso: "",
+    produto: "Graduação" as "Graduação" | "Técnico" | "Pós-graduação",
+    numeroOportunidade: "",
+    semestre: "",
+    periodo: "",
+    metodologia: "",
+    formaIngresso: "",
+    numeroMatricula: "",
   });
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [baseFilter, setBaseFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [produtoFilter, setProdutoFilter] = useState('');
-  const [cursoFilter, setCursoFilter] = useState('');
-  const [semestreFilter, setSemestreFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [baseFilter, setBaseFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [produtoFilter, setProdutoFilter] = useState("");
+  const [cursoFilter, setCursoFilter] = useState("");
+  const [semestreFilter, setSemestreFilter] = useState("");
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<BaseEntry | null>(null);
   const [massSelectorOpen, setMassSelectorOpen] = useState(false);
   const [isAddMsgModalOpen, setIsAddMsgModalOpen] = useState(false);
-  const [newMsgData, setNewMsgData] = useState({ modelName: '', texto: '' });
+  const [newMsgData, setNewMsgData] = useState({ modelName: "", texto: "" });
   const [invalidBaseIds, setInvalidBaseIds] = useState<Set<string>>(new Set());
-  const [blockedFilter, setBlockedFilter] = useState<'all' | 'blocked' | 'unblocked'>('all');
+  const [blockedFilter, setBlockedFilter] = useState<
+    "all" | "blocked" | "unblocked"
+  >("all");
 
   const handleVerificacao = () => {
-      const invalidIds = new Set<string>();
-      bases.forEach(base => {
-          let match = false;
-          
-          if (gap.some(g => (g.cpf && base.cpf && g.cpf.replace(/\D/g, '') === base.cpf.replace(/\D/g, '')) || 
-                            (g.telefone && base.telefone && g.telefone.replace(/\D/g, '') === base.telefone.replace(/\D/g, '')) || 
-                            (g.nome.toLowerCase().trim() === base.nome.toLowerCase().trim()))) {
-              match = true;
-          }
-          
-          if (!match && basesRenovacao.some(b => (b.cpf && base.cpf && b.cpf.replace(/\D/g, '') === base.cpf.replace(/\D/g, '')) || 
-                                                 (b.telefone && base.telefone && b.telefone.replace(/\D/g, '') === base.telefone.replace(/\D/g, '')) || 
-                                                 (b.nome.toLowerCase().trim() === base.nome.toLowerCase().trim()))) {
-              match = true;
-          }
-  
-          if (match) {
-              invalidIds.add(base.id);
-          }
-      });
-      setInvalidBaseIds(invalidIds);
-      onToast(`Verificação concluída: ${invalidIds.size} contatos já estão cadastrados em GAP/Base Líquida.`, "success");
+    const invalidIds = new Set<string>();
+    bases.forEach((base) => {
+      let match = false;
+
+      if (
+        gap.some(
+          (g) =>
+            (g.cpf &&
+              base.cpf &&
+              g.cpf.replace(/\D/g, "") === base.cpf.replace(/\D/g, "")) ||
+            (g.telefone &&
+              base.telefone &&
+              g.telefone.replace(/\D/g, "") ===
+                base.telefone.replace(/\D/g, "")) ||
+            g.nome.toLowerCase().trim() === base.nome.toLowerCase().trim(),
+        )
+      ) {
+        match = true;
+      }
+
+      if (
+        !match &&
+        basesRenovacao.some(
+          (b) =>
+            (b.cpf &&
+              base.cpf &&
+              b.cpf.replace(/\D/g, "") === base.cpf.replace(/\D/g, "")) ||
+            (b.telefone &&
+              base.telefone &&
+              b.telefone.replace(/\D/g, "") ===
+                base.telefone.replace(/\D/g, "")) ||
+            b.nome.toLowerCase().trim() === base.nome.toLowerCase().trim(),
+        )
+      ) {
+        match = true;
+      }
+
+      if (match) {
+        invalidIds.add(base.id);
+      }
+    });
+    setInvalidBaseIds(invalidIds);
+    onToast(
+      `Verificação concluída: ${invalidIds.size} contatos já estão cadastrados em GAP/Base Líquida.`,
+      "success",
+    );
   };
 
-  const filteredBases = bases.filter(b => {
-    const matchesSearch = b.nome.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredBases = bases.filter((b) => {
+    const matchesSearch = b.nome
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
     const matchesBase = !baseFilter || b.nomeBase === baseFilter;
     const matchesStatus = !statusFilter || b.status === statusFilter;
     const matchesProduto = !produtoFilter || b.produto === produtoFilter;
-    const matchesCurso = !cursoFilter || b.curso.toLowerCase().includes(cursoFilter.toLowerCase());
-    const matchesSemestre = !semestreFilter || (b.semestre && b.semestre.toLowerCase().includes(semestreFilter.toLowerCase()));
-    
-    const isBlocked = invalidBaseIds.has(b.id);
-    const matchesBlocked = blockedFilter === 'all' ||
-      (blockedFilter === 'blocked' && isBlocked) ||
-      (blockedFilter === 'unblocked' && !isBlocked);
+    const matchesCurso =
+      !cursoFilter || b.curso.toLowerCase().includes(cursoFilter.toLowerCase());
+    const matchesSemestre =
+      !semestreFilter ||
+      (b.semestre &&
+        b.semestre.toLowerCase().includes(semestreFilter.toLowerCase()));
 
-    return matchesSearch && matchesBase && matchesStatus && matchesProduto && matchesCurso && matchesSemestre && matchesBlocked;
+    const isBlocked = invalidBaseIds.has(b.id);
+    const matchesBlocked =
+      blockedFilter === "all" ||
+      (blockedFilter === "blocked" && isBlocked) ||
+      (blockedFilter === "unblocked" && !isBlocked);
+
+    return (
+      matchesSearch &&
+      matchesBase &&
+      matchesStatus &&
+      matchesProduto &&
+      matchesCurso &&
+      matchesSemestre &&
+      matchesBlocked
+    );
   });
 
-  const uniqueBases = Array.from(new Set(bases.map(b => b.nomeBase))).sort();
-  const uniqueProdutos = ['Graduação', 'Técnico', 'Pós-graduação'];
-  const uniqueCursos = Array.from(new Set(bases.map(b => b.curso))).sort();
-  const uniqueSemestres = Array.from(new Set(bases.map(b => b.semestre).filter(Boolean))).sort();
+  const uniqueBases = Array.from(new Set(bases.map((b) => b.nomeBase))).sort();
+  const uniqueProdutos = ["Graduação", "Técnico", "Pós-graduação"];
+  const uniqueCursos = Array.from(new Set(bases.map((b) => b.curso))).sort();
+  const uniqueSemestres = Array.from(
+    new Set(bases.map((b) => b.semestre).filter(Boolean)),
+  ).sort();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const cleanCpf = formData.cpf ? formData.cpf.replace(/\D/g, '') : '';
-    const cleanTelefone = formData.telefone.replace(/\D/g, '');
-    
-    const isDuplicate = bases.some(b => 
-      (cleanCpf && b.cpf === cleanCpf) || (!cleanCpf && cleanTelefone && b.telefone === cleanTelefone)
+    const cleanCpf = formData.cpf ? formData.cpf.replace(/\D/g, "") : "";
+    const cleanTelefone = formData.telefone.replace(/\D/g, "");
+
+    const isDuplicate = bases.some(
+      (b) =>
+        (cleanCpf && b.cpf === cleanCpf) ||
+        (!cleanCpf && cleanTelefone && b.telefone === cleanTelefone),
     );
 
     if (isDuplicate) {
-       onToast("Registro já existe na base (verificado CPF/Telefone).", "error");
-       return;
+      onToast("Registro já existe na base (verificado CPF/Telefone).", "error");
+      return;
     }
 
     setLoading(true);
     try {
       await addDoc(collection(db, COLLECTIONS.BASES), {
         ...formData,
-        status: 'Pendente',
-        createdAt: serverTimestamp()
+        status: "Pendente",
+        createdAt: serverTimestamp(),
       });
       onToast("Registro salvo na base!");
-      setFormData({ 
-        nomeBase: '', 
-        nome: '', 
-        telefone: '', 
-        cpf: '', 
-        curso: '',
-        produto: 'Graduação',
-        numeroOportunidade: '',
-        semestre: '',
-        periodo: '',
-        metodologia: '',
-        formaIngresso: '',
-        numeroMatricula: ''
+      setFormData({
+        nomeBase: "",
+        nome: "",
+        telefone: "",
+        cpf: "",
+        curso: "",
+        produto: "Graduação",
+        numeroOportunidade: "",
+        semestre: "",
+        periodo: "",
+        metodologia: "",
+        formaIngresso: "",
+        numeroMatricula: "",
       });
     } catch (err: any) {
-      onToast(err.message, 'error');
+      onToast(err.message, "error");
     } finally {
       setLoading(false);
     }
@@ -5741,17 +8507,17 @@ function BasesView({
     setLoading(true);
     try {
       await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
-        tipo: 'bases',
+        tipo: "bases",
         texto: newMsgData.texto,
         nome: newMsgData.modelName || undefined,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
       onToast("Mensagem de base salva!");
-      setNewMsgData({ modelName: '', texto: '' });
+      setNewMsgData({ modelName: "", texto: "" });
       setIsAddMsgModalOpen(false);
     } catch (err: any) {
       console.error("Erro ao salvar mensagem:", err);
-      onToast(`Erro ao salvar mensagem: ${err.message}`, 'error');
+      onToast(`Erro ao salvar mensagem: ${err.message}`, "error");
     } finally {
       setLoading(false);
     }
@@ -5759,128 +8525,141 @@ function BasesView({
 
   const handleInsertDefaultBasesMessages = async () => {
     try {
-      const existing = whatsappMessages.filter(m => m.tipo === 'bases');
+      const existing = whatsappMessages.filter((m) => m.tipo === "bases");
       if (existing.length > 0) {
-        if (!window.confirm("Já existem mensagens para Bases. Deseja adicionar as mensagens padrões mesmo assim?")) {
+        if (
+          !window.confirm(
+            "Já existem mensagens para Bases. Deseja adicionar as mensagens padrões mesmo assim?",
+          )
+        ) {
           return;
         }
       }
-      
+
       const defaults = [
         "Olá [nome], vi que você tem interesse no curso de [curso]. Vamos tirar suas dúvidas?",
         "Oi [nome], aqui é da faculdade! Recebemos sua solicitação sobre o curso de [curso]. Qual o melhor horário para conversarmos?",
-        "Tudo bem, [nome]? Preparamos uma oferta especial para você começar o curso de [curso] ainda este semestre! Vamos lá?"
+        "Tudo bem, [nome]? Preparamos uma oferta especial para você começar o curso de [curso] ainda este semestre! Vamos lá?",
       ];
-      
+
       for (const texto of defaults) {
         await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
-          tipo: 'bases',
+          tipo: "bases",
           texto,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         });
       }
       onToast("Mensagens padrões de base inseridas!");
     } catch (err: any) {
-      onToast("Erro ao inserir mensagens padrões.", 'error');
+      onToast("Erro ao inserir mensagens padrões.", "error");
     }
   };
 
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
-  
+
   const handleBulkDelete = async () => {
     if (selectedEntries.length === 0) return;
-    if (window.confirm(`Deseja excluir ${selectedEntries.length} registros selecionados?`)) {
-        try {
-            for (const id of selectedEntries) {
-                await deleteDoc(doc(db, COLLECTIONS.BASES, id));
-            }
-            onToast(`${selectedEntries.length} registros removidos.`);
-            setSelectedEntries([]);
-        } catch (err: any) {
-            onToast("Erro ao excluir registros.", 'error');
+    if (
+      window.confirm(
+        `Deseja excluir ${selectedEntries.length} registros selecionados?`,
+      )
+    ) {
+      try {
+        for (const id of selectedEntries) {
+          await deleteDoc(doc(db, COLLECTIONS.BASES, id));
         }
+        onToast(`${selectedEntries.length} registros removidos.`);
+        setSelectedEntries([]);
+      } catch (err: any) {
+        onToast("Erro ao excluir registros.", "error");
+      }
     }
   };
 
   const toggleSelect = (id: string, checked: boolean) => {
     if (checked) {
-        setSelectedEntries([...selectedEntries, id]);
+      setSelectedEntries([...selectedEntries, id]);
     } else {
-        setSelectedEntries(selectedEntries.filter(s => s !== id));
+      setSelectedEntries(selectedEntries.filter((s) => s !== id));
     }
   };
 
   const toggleSelectAll = (checked: boolean) => {
-      if (checked) {
-          setSelectedEntries(filteredBases.filter(b => !invalidBaseIds.has(b.id)).map(b => b.id));
-      } else {
-          setSelectedEntries([]);
-      }
+    if (checked) {
+      setSelectedEntries(
+        filteredBases.filter((b) => !invalidBaseIds.has(b.id)).map((b) => b.id),
+      );
+    } else {
+      setSelectedEntries([]);
+    }
   };
 
   const handleStatusChange = async (entry: BaseEntry, status: string) => {
     try {
       await updateDoc(doc(db, COLLECTIONS.BASES, entry.id), { status });
-      
-      if (status === 'Convertido') {
-         // Logic for transferring to GAP
-         const q = query(collection(db, COLLECTIONS.GAP), where("cpf", "==", entry.cpf || ''));
-         const snap = await getDocs(q);
-         if (snap.empty && entry.cpf) {
-             await addDoc(collection(db, COLLECTIONS.GAP), {
-                nome: entry.nome,
-                telefone: entry.telefone,
-                cpf: entry.cpf,
-                produto: entry.produto,
-                numeroOportunidade: entry.numeroOportunidade,
-                curso: entry.curso,
-                metodologia: entry.metodologia,
-                formaIngresso: entry.formaIngresso,
-                semestre: entry.semestre,
-                matAcad: false,
-                documentos: {},
-                createdAt: serverTimestamp()
-             });
-             onToast("Candidato convertido e enviado para GAP!");
-         } else {
-             onToast("Status atualizado!");
-         }
+
+      if (status === "Convertido") {
+        // Logic for transferring to GAP
+        const q = query(
+          collection(db, COLLECTIONS.GAP),
+          where("cpf", "==", entry.cpf || ""),
+        );
+        const snap = await getDocs(q);
+        if (snap.empty && entry.cpf) {
+          await addDoc(collection(db, COLLECTIONS.GAP), {
+            nome: entry.nome,
+            telefone: entry.telefone,
+            cpf: entry.cpf,
+            produto: entry.produto,
+            numeroOportunidade: entry.numeroOportunidade,
+            curso: entry.curso,
+            metodologia: entry.metodologia,
+            formaIngresso: entry.formaIngresso,
+            semestre: entry.semestre,
+            matAcad: false,
+            documentos: {},
+            createdAt: serverTimestamp(),
+          });
+          onToast("Candidato convertido e enviado para GAP!");
+        } else {
+          onToast("Status atualizado!");
+        }
       } else {
         onToast("Status da base atualizado!");
       }
     } catch (err: any) {
-      onToast(err.message, 'error');
+      onToast(err.message, "error");
     }
   };
 
   const handleDeleteBase = async (id: string) => {
-    if (window.confirm('Deseja excluir este registro da base?')) {
+    if (window.confirm("Deseja excluir este registro da base?")) {
       try {
         await deleteDoc(doc(db, COLLECTIONS.BASES, id));
         onToast("Registro removido.");
       } catch (err: any) {
-        onToast("Erro ao excluir registro.", 'error');
+        onToast("Erro ao excluir registro.", "error");
       }
     }
   };
 
   const handleExport = () => {
-    const data = filteredBases.map(b => ({
+    const data = filteredBases.map((b) => ({
       Nome: b.nome,
       Telefone: b.telefone,
-      CPF: b.cpf || '',
+      CPF: b.cpf || "",
       Curso: b.curso,
-      Produto: b.produto || 'Graduação',
-      'Nº Oportunidade': b.numeroOportunidade || '',
-      Semestre: b.semestre || '',
-      Periodo: b.periodo || '',
-      Metodologia: b.metodologia || '',
-      'Forma de Ingresso': b.formaIngresso || '',
-      'Nº Matrícula': b.numeroMatricula || '',
+      Produto: b.produto || "Graduação",
+      "Nº Oportunidade": b.numeroOportunidade || "",
+      Semestre: b.semestre || "",
+      Periodo: b.periodo || "",
+      Metodologia: b.metodologia || "",
+      "Forma de Ingresso": b.formaIngresso || "",
+      "Nº Matrícula": b.numeroMatricula || "",
       Base: b.nomeBase,
-      Status: b.status
+      Status: b.status,
     }));
-    exportToExcel(data, 'Bases_Trabalho');
+    exportToExcel(data, "Bases_Trabalho");
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -5889,21 +8668,25 @@ function BasesView({
 
     importFromExcel(file, async (data) => {
       try {
-        const batch = data.map(item => ({
-          nome: item.Nome || item.nome || '',
-          telefone: String(item.Telefone || item.telefone || '').replace(/\D/g, ''),
-          cpf: String(item.CPF || item.cpf || '').replace(/\D/g, ''),
-          curso: item.Curso || item.curso || '',
-          produto: item.Produto || item.produto || 'Graduação',
-          numeroOportunidade: item['Nº Oportunidade'] || item.numeroOportunidade || '',
-          semestre: item.Semestre || item.semestre || '',
-          periodo: item.Periodo || item.periodo || '',
-          metodologia: item.Metodologia || item.metodologia || '',
-          formaIngresso: item['Forma de Ingresso'] || item.formaIngresso || '',
-          numeroMatricula: item['Nº Matrícula'] || item.numeroMatricula || '',
-          nomeBase: item.Base || item.nomeBase || 'Importado',
-          status: item.Status || item.status || 'Pendente',
-          createdAt: serverTimestamp()
+        const batch = data.map((item) => ({
+          nome: item.Nome || item.nome || "",
+          telefone: String(item.Telefone || item.telefone || "").replace(
+            /\D/g,
+            "",
+          ),
+          cpf: String(item.CPF || item.cpf || "").replace(/\D/g, ""),
+          curso: item.Curso || item.curso || "",
+          produto: item.Produto || item.produto || "Graduação",
+          numeroOportunidade:
+            item["Nº Oportunidade"] || item.numeroOportunidade || "",
+          semestre: item.Semestre || item.semestre || "",
+          periodo: item.Periodo || item.periodo || "",
+          metodologia: item.Metodologia || item.metodologia || "",
+          formaIngresso: item["Forma de Ingresso"] || item.formaIngresso || "",
+          numeroMatricula: item["Nº Matrícula"] || item.numeroMatricula || "",
+          nomeBase: item.Base || item.nomeBase || "Importado",
+          status: item.Status || item.status || "Pendente",
+          createdAt: serverTimestamp(),
         }));
 
         let imported = 0;
@@ -5912,9 +8695,15 @@ function BasesView({
         const insertedTels = new Set();
 
         for (const entry of batch) {
-          const isDupCpf = entry.cpf && (bases.some(b => b.cpf === entry.cpf) || insertedCpfs.has(entry.cpf));
-          const isDupTel = entry.telefone && (bases.some(b => b.telefone === entry.telefone) || insertedTels.has(entry.telefone));
-          
+          const isDupCpf =
+            entry.cpf &&
+            (bases.some((b) => b.cpf === entry.cpf) ||
+              insertedCpfs.has(entry.cpf));
+          const isDupTel =
+            entry.telefone &&
+            (bases.some((b) => b.telefone === entry.telefone) ||
+              insertedTels.has(entry.telefone));
+
           if (!isDupCpf && !isDupTel) {
             await addDoc(collection(db, COLLECTIONS.BASES), entry);
             if (entry.cpf) insertedCpfs.add(entry.cpf);
@@ -5924,9 +8713,11 @@ function BasesView({
             skipped++;
           }
         }
-        onToast(`${imported} registros importados com sucesso! ${skipped > 0 ? `${skipped} ignorados por duplicidade.` : ''}`);
+        onToast(
+          `${imported} registros importados com sucesso! ${skipped > 0 ? `${skipped} ignorados por duplicidade.` : ""}`,
+        );
       } catch (err: any) {
-        onToast("Erro ao importar dados.", 'error');
+        onToast("Erro ao importar dados.", "error");
       }
     });
   };
@@ -5934,10 +8725,12 @@ function BasesView({
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-center max-w-xl mx-auto gap-4">
-        <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap">Bases</h3>
+        <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap">
+          Bases
+        </h3>
         <div className="flex flex-wrap justify-center gap-2">
           {[ROLES.ADMIN_MASTER, ROLES.LIDER_FDV].includes(profile.role) && (
-            <button 
+            <button
               onClick={handleVerificacao}
               className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold"
               title="Verificar se contatos existem no GAP ou Base Líquida"
@@ -5946,26 +8739,31 @@ function BasesView({
               <span>Verificação</span>
             </button>
           )}
-          <button 
-             onClick={() => setIsAddMsgModalOpen(true)}
-             className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
+          <button
+            onClick={() => setIsAddMsgModalOpen(true)}
+            className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
           >
-             <Plus size={18} />
-             <span>Inserir Mensagens</span>
+            <Plus size={18} />
+            <span>Inserir Mensagens</span>
           </button>
-          <button 
-             onClick={handleInsertDefaultBasesMessages}
-             className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold"
-             title="Inserir Mensagens Padrões"
+          <button
+            onClick={handleInsertDefaultBasesMessages}
+            className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold"
+            title="Inserir Mensagens Padrões"
           >
-             <MessageSquare size={14} />
+            <MessageSquare size={14} />
           </button>
           <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
             <Upload size={18} />
             <span>Importar</span>
-            <input type="file" accept=".xlsx, .xls" onChange={handleImport} className="hidden" />
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleImport}
+              className="hidden"
+            />
           </label>
-          <button 
+          <button
             onClick={handleExport}
             className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
           >
@@ -5976,105 +8774,141 @@ function BasesView({
       </div>
       <div className="max-w-xl mx-auto">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-          <h3 className="text-xl font-bold text-slate-900 mb-4">Novo Registro em Base</h3>
+          <h3 className="text-xl font-bold text-slate-900 mb-4">
+            Novo Registro em Base
+          </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input 
-              placeholder="Nome da Base (Ex: Junho 2024)" 
-              required 
+            <input
+              placeholder="Nome da Base (Ex: Junho 2024)"
+              required
               value={formData.nomeBase}
-              onChange={e => setFormData({...formData, nomeBase: e.target.value})}
+              onChange={(e) =>
+                setFormData({ ...formData, nomeBase: e.target.value })
+              }
               className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
             />
             <div className="grid grid-cols-2 gap-4">
-              <input 
-                placeholder="Nome" 
-                required 
+              <input
+                placeholder="Nome"
+                required
                 value={formData.nome}
-                onChange={e => setFormData({...formData, nome: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, nome: e.target.value })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
-              <input 
-                placeholder="Telefone" 
-                required 
+              <input
+                placeholder="Telefone"
+                required
                 value={formData.telefone}
-                onChange={e => setFormData({...formData, telefone: formatPhone(e.target.value)})}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    telefone: formatPhone(e.target.value),
+                  })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <input 
-                placeholder="CPF" 
+              <input
+                placeholder="CPF"
                 value={formData.cpf}
-                onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}
+                onChange={(e) =>
+                  setFormData({ ...formData, cpf: formatCPF(e.target.value) })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
-              <input 
-                placeholder="N° Oportunidade" 
-                required 
+              <input
+                placeholder="N° Oportunidade"
+                required
                 value={formData.numeroOportunidade}
-                onChange={e => setFormData({...formData, numeroOportunidade: e.target.value})}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    numeroOportunidade: e.target.value,
+                  })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <input 
-                placeholder="Semestre" 
-                required 
+              <input
+                placeholder="Semestre"
+                required
                 value={formData.semestre}
-                onChange={e => setFormData({...formData, semestre: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, semestre: e.target.value })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
-              <select 
+              <select
                 value={formData.produto}
-                onChange={e => setFormData({...formData, produto: e.target.value as any})}
+                onChange={(e) =>
+                  setFormData({ ...formData, produto: e.target.value as any })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               >
-                {uniqueProdutos.map(p => <option key={p} value={p}>{p}</option>)}
+                {uniqueProdutos.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <input 
-                placeholder="Metodologia" 
-                required 
+              <input
+                placeholder="Metodologia"
+                required
                 value={formData.metodologia}
-                onChange={e => setFormData({...formData, metodologia: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, metodologia: e.target.value })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
-              <input 
-                placeholder="Forma de Ingresso" 
-                required 
+              <input
+                placeholder="Forma de Ingresso"
+                required
                 value={formData.formaIngresso}
-                onChange={e => setFormData({...formData, formaIngresso: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, formaIngresso: e.target.value })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <input 
-                placeholder="Período" 
+              <input
+                placeholder="Período"
                 value={formData.periodo}
-                onChange={e => setFormData({...formData, periodo: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, periodo: e.target.value })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
-              <input 
-                placeholder="Nº Matrícula" 
+              <input
+                placeholder="Nº Matrícula"
                 value={formData.numeroMatricula}
-                onChange={e => setFormData({...formData, numeroMatricula: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, numeroMatricula: e.target.value })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
-            <input 
-              placeholder="Curso" 
-              required 
+            <input
+              placeholder="Curso"
+              required
               value={formData.curso}
-              onChange={e => setFormData({...formData, curso: e.target.value})}
+              onChange={(e) =>
+                setFormData({ ...formData, curso: e.target.value })
+              }
               className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
             />
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
               className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50"
             >
-              {loading ? 'Salvando...' : 'Adicionar à Base'}
+              {loading ? "Salvando..." : "Adicionar à Base"}
             </button>
           </form>
         </div>
@@ -6082,54 +8916,75 @@ function BasesView({
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h3 className="text-xl font-bold text-slate-900">Bases a Trabalhar</h3>
+          <h3 className="text-xl font-bold text-slate-900">
+            Bases a Trabalhar
+          </h3>
           <div className="flex flex-wrap gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input 
-                type="text" 
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={16}
+              />
+              <input
+                type="text"
                 placeholder="Buscar por nome..."
                 className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 w-48"
                 value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={baseFilter}
-              onChange={e => setBaseFilter(e.target.value)}
+              onChange={(e) => setBaseFilter(e.target.value)}
             >
               <option value="">Todas as Bases</option>
-              {uniqueBases.map(b => <option key={b} value={b}>{b}</option>)}
+              {uniqueBases.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
             </select>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={produtoFilter}
-              onChange={e => setProdutoFilter(e.target.value)}
+              onChange={(e) => setProdutoFilter(e.target.value)}
             >
               <option value="">Todos os Produtos</option>
-              {uniqueProdutos.map(p => <option key={p} value={p}>{p}</option>)}
+              {uniqueProdutos.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
             </select>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={cursoFilter}
-              onChange={e => setCursoFilter(e.target.value)}
+              onChange={(e) => setCursoFilter(e.target.value)}
             >
               <option value="">Todos os Cursos</option>
-              {uniqueCursos.map(c => <option key={c} value={c}>{c}</option>)}
+              {uniqueCursos.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={semestreFilter}
-              onChange={e => setSemestreFilter(e.target.value)}
+              onChange={(e) => setSemestreFilter(e.target.value)}
             >
               <option value="">Todos os Semestres</option>
-              {uniqueSemestres.map(s => <option key={s} value={s}>{s}</option>)}
+              {uniqueSemestres.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
+              onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="">Todos Status</option>
               <option value="Pendente">Pendente</option>
@@ -6138,10 +8993,10 @@ function BasesView({
               <option value="Não tem interesse">Não tem interesse</option>
               <option value="Sem retorno">Sem retorno</option>
             </select>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={blockedFilter}
-              onChange={e => setBlockedFilter(e.target.value as any)}
+              onChange={(e) => setBlockedFilter(e.target.value as any)}
             >
               <option value="all">Verificação: Todos</option>
               <option value="blocked">Verificação: Bloqueados</option>
@@ -6153,80 +9008,133 @@ function BasesView({
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
-                <th className="px-6 py-4 w-12 text-center">
-                  #
-                </th>
+                <th className="px-6 py-4 w-12 text-center">#</th>
                 <th className="px-6 py-4 w-12">
-                  <input type="checkbox" checked={filteredBases.filter(b => !invalidBaseIds.has(b.id)).length > 0 && selectedEntries.length === filteredBases.filter(b => !invalidBaseIds.has(b.id)).length} onChange={e => toggleSelectAll(e.target.checked)} />
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredBases.filter((b) => !invalidBaseIds.has(b.id))
+                        .length > 0 &&
+                      selectedEntries.length ===
+                        filteredBases.filter((b) => !invalidBaseIds.has(b.id))
+                          .length
+                    }
+                    onChange={(e) => toggleSelectAll(e.target.checked)}
+                  />
                 </th>
                 <th className="px-6 py-4">Nome</th>
                 <th className="px-6 py-4">Base</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 flex items-center gap-4">
                   {selectedEntries.length > 0 && (
-                      <button onClick={handleBulkDelete} className="text-rose-600 font-bold hover:underline">excluir selecionados</button>
+                    <button
+                      onClick={handleBulkDelete}
+                      className="text-rose-600 font-bold hover:underline"
+                    >
+                      excluir selecionados
+                    </button>
                   )}
                   {selectedEntries.length > 0 && botConfig.url && (
-                      <button 
-                         onClick={() => setMassSelectorOpen(true)} 
-                         className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
-                      >
-                         <Bot size={14} /> Em Massa
-                      </button>
+                    <button
+                      onClick={() => setMassSelectorOpen(true)}
+                      className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                    >
+                      <Bot size={14} /> Em Massa
+                    </button>
                   )}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredBases.map((entry, index) => (
-                <tr key={entry.id} className={cn("hover:bg-slate-50/50 transition-all", invalidBaseIds.has(entry.id) && "bg-rose-50/50")}>
+                <tr
+                  key={entry.id}
+                  className={cn(
+                    "hover:bg-slate-50/50 transition-all",
+                    invalidBaseIds.has(entry.id) && "bg-rose-50/50",
+                  )}
+                >
                   <td className="px-6 py-4 text-center font-bold text-slate-400 text-xs">
                     {index + 1}
                   </td>
                   <td className="px-6 py-4">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       disabled={invalidBaseIds.has(entry.id)}
-                      checked={selectedEntries.includes(entry.id)} 
-                      onChange={e => !invalidBaseIds.has(entry.id) && toggleSelect(entry.id, e.target.checked)} 
+                      checked={selectedEntries.includes(entry.id)}
+                      onChange={(e) =>
+                        !invalidBaseIds.has(entry.id) &&
+                        toggleSelect(entry.id, e.target.checked)
+                      }
                     />
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-900">{entry.nome}</span>
-                      <span className="text-xs text-slate-500">{entry.curso}</span>
+                      <span className="font-bold text-slate-900">
+                        {entry.nome}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {entry.curso}
+                      </span>
                       <div className="flex items-center space-x-2 mt-1 flex-wrap gap-y-1">
-                        {entry.telefone && <span className="text-[10px] text-slate-400 font-bold">{entry.telefone}</span>}
-                        {entry.cpf && <span className="text-[10px] text-slate-500 font-bold px-2 py-0.5 bg-slate-100 rounded-full">CPF: {formatCPF(entry.cpf)}</span>}
-                        {entry.semestre && <span className="text-[10px] text-blue-500 font-bold px-2 py-0.5 bg-blue-50 rounded-full">{entry.semestre}</span>}
-                        {entry.periodo && <span className="text-[10px] text-purple-500 font-bold px-2 py-0.5 bg-purple-50 rounded-full">{entry.periodo}</span>}
+                        {entry.telefone && (
+                          <span className="text-[10px] text-slate-400 font-bold">
+                            {entry.telefone}
+                          </span>
+                        )}
+                        {entry.cpf && (
+                          <span className="text-[10px] text-slate-500 font-bold px-2 py-0.5 bg-slate-100 rounded-full">
+                            CPF: {formatCPF(entry.cpf)}
+                          </span>
+                        )}
+                        {entry.semestre && (
+                          <span className="text-[10px] text-blue-500 font-bold px-2 py-0.5 bg-blue-50 rounded-full">
+                            {entry.semestre}
+                          </span>
+                        )}
+                        {entry.periodo && (
+                          <span className="text-[10px] text-purple-500 font-bold px-2 py-0.5 bg-purple-50 rounded-full">
+                            {entry.periodo}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{entry.nomeBase}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {entry.nomeBase}
+                  </td>
                   <td className="px-6 py-4">
-                    <select 
+                    <select
                       value={entry.status}
-                      onChange={e => handleStatusChange(entry, e.target.value)}
+                      onChange={(e) =>
+                        handleStatusChange(entry, e.target.value)
+                      }
                       className={cn(
                         "px-2 py-1 rounded-lg text-xs font-bold outline-none border-none",
-                        entry.status === 'Pendente' && "bg-slate-100 text-slate-600",
-                        entry.status === 'Interessado' && "bg-blue-100 text-blue-600",
-                        entry.status === 'Convertido' && "bg-emerald-100 text-emerald-600",
-                        entry.status === 'Não tem interesse' && "bg-rose-100 text-rose-600",
-                        entry.status === 'Sem retorno' && "bg-orange-100 text-orange-600"
+                        entry.status === "Pendente" &&
+                          "bg-slate-100 text-slate-600",
+                        entry.status === "Interessado" &&
+                          "bg-blue-100 text-blue-600",
+                        entry.status === "Convertido" &&
+                          "bg-emerald-100 text-emerald-600",
+                        entry.status === "Não tem interesse" &&
+                          "bg-rose-100 text-rose-600",
+                        entry.status === "Sem retorno" &&
+                          "bg-orange-100 text-orange-600",
                       )}
                     >
                       <option value="Pendente">Pendente</option>
                       <option value="Interessado">Interessado</option>
                       <option value="Convertido">Convertido</option>
-                      <option value="Não tem interesse">Não tem interesse</option>
+                      <option value="Não tem interesse">
+                        Não tem interesse
+                      </option>
                       <option value="Sem retorno">Sem retorno</option>
                     </select>
                   </td>
                   <td className="px-6 py-4 flex items-center space-x-2">
                     {!invalidBaseIds.has(entry.id) && (
-                      <button 
+                      <button
                         onClick={() => {
                           setSelectedEntry(entry);
                           setSelectorOpen(true);
@@ -6237,7 +9145,7 @@ function BasesView({
                         <span>WhatsApp</span>
                       </button>
                     )}
-                    <button 
+                    <button
                       onClick={() => handleDeleteBase(entry.id)}
                       className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
                     >
@@ -6248,7 +9156,12 @@ function BasesView({
               ))}
               {filteredBases.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Nenhum registro encontrado com os filtros aplicados.</td>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-12 text-center text-slate-400 italic"
+                  >
+                    Nenhum registro encontrado com os filtros aplicados.
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -6256,16 +9169,16 @@ function BasesView({
         </div>
       </div>
 
-      <WhatsAppMessageSelector 
+      <WhatsAppMessageSelector
         isOpen={selectorOpen}
         onClose={() => setSelectorOpen(false)}
-        leadName={selectedEntry?.nome || ''}
-        leadCurso={selectedEntry?.curso || ''}
-        leadMatricula={selectedEntry?.numeroMatricula || ''}
-        messages={whatsappMessages.filter(m => m.tipo === 'bases')}
+        leadName={selectedEntry?.nome || ""}
+        leadCurso={selectedEntry?.curso || ""}
+        leadMatricula={selectedEntry?.numeroMatricula || ""}
+        messages={whatsappMessages.filter((m) => m.tipo === "bases")}
         onSelect={(msg) => {
           if (selectedEntry) {
-            window.open(getWhatsAppUrl(selectedEntry.telefone, msg), '_blank');
+            window.open(getWhatsAppUrl(selectedEntry.telefone, msg), "_blank");
           }
         }}
         botConfig={botConfig}
@@ -6275,19 +9188,21 @@ function BasesView({
           }
         }}
       />
-      
-      <WhatsAppMessageSelector 
+
+      <WhatsAppMessageSelector
         isOpen={massSelectorOpen}
         onClose={() => setMassSelectorOpen(false)}
         leadName="Candidatos"
-        messages={whatsappMessages.filter(m => m.tipo === 'bases')}
+        messages={whatsappMessages.filter((m) => m.tipo === "bases")}
         onSelect={(msg) => {}}
         botConfig={botConfig}
         onSendBot={(msgTemplate) => {
-          const selectedLeadObjs = bases.filter(b => selectedEntries.includes(b.id) && !invalidBaseIds.has(b.id));
-          const messagesPayload = selectedLeadObjs.map(l => ({
+          const selectedLeadObjs = bases.filter(
+            (b) => selectedEntries.includes(b.id) && !invalidBaseIds.has(b.id),
+          );
+          const messagesPayload = selectedLeadObjs.map((l) => ({
             telefone: l.telefone,
-            message: replaceMessageVariables(msgTemplate, l)
+            message: replaceMessageVariables(msgTemplate, l),
           }));
           onMassSendBot(messagesPayload);
           setMassSelectorOpen(false);
@@ -6303,11 +9218,23 @@ function BasesView({
           tipo="bases"
           onToast={onToast}
           availableVariables={[
-            { key: '[nome]', label: 'Nome do Lead', previewValue: 'Maria Souza' },
-            { key: '[curso]', label: 'Curso', previewValue: 'Administração' },
-            { key: '[unidade]', label: 'Unidade', previewValue: 'Unidade Central' },
-            { key: '[data_contato]', label: 'Data', previewValue: new Date().toLocaleDateString('pt-BR') },
-            { key: '[saudacao]', label: 'Saudação', previewValue: 'Olá' }
+            {
+              key: "[nome]",
+              label: "Nome do Lead",
+              previewValue: "Maria Souza",
+            },
+            { key: "[curso]", label: "Curso", previewValue: "Administração" },
+            {
+              key: "[unidade]",
+              label: "Unidade",
+              previewValue: "Unidade Central",
+            },
+            {
+              key: "[data_contato]",
+              label: "Data",
+              previewValue: new Date().toLocaleDateString("pt-BR"),
+            },
+            { key: "[saudacao]", label: "Saudação", previewValue: "Olá" },
           ]}
         />
       </AnimatePresence>
@@ -6315,177 +9242,200 @@ function BasesView({
   );
 }
 
-function BasesRenovacaoView({ 
-  bases, 
-  onToast, 
+function BasesRenovacaoView({
+  bases,
+  onToast,
   whatsappMessages,
   botConfig,
   onSendBot,
-  onMassSendBot
-}: { 
-  bases: BaseEntry[]; 
-  onToast: (m: string, t?: 'success' | 'error') => void; 
+  onMassSendBot,
+}: {
+  bases: BaseEntry[];
+  onToast: (m: string, t?: "success" | "error") => void;
   whatsappMessages: WhatsAppMessage[];
   botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
-  onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
+  onMassSendBot: (messages: { telefone: string; message: string }[]) => void;
 }) {
   const [formData, setFormData] = useState({
-    nomeBase: '',
-    nome: '',
-    telefone: '',
-    cpf: '',
-    curso: '',
-    produto: 'Graduação' as 'Graduação' | 'Técnico' | 'Pós-graduação',
-    numeroOportunidade: '',
-    semestre: '',
-    periodo: '',
-    metodologia: '',
-    formaIngresso: '',
-    numeroMatricula: ''
+    nomeBase: "",
+    nome: "",
+    telefone: "",
+    cpf: "",
+    curso: "",
+    produto: "Graduação" as "Graduação" | "Técnico" | "Pós-graduação",
+    numeroOportunidade: "",
+    semestre: "",
+    periodo: "",
+    metodologia: "",
+    formaIngresso: "",
+    numeroMatricula: "",
   });
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [baseFilter, setBaseFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [produtoFilter, setProdutoFilter] = useState('');
-  const [cursoFilter, setCursoFilter] = useState('');
-  const [semestreFilter, setSemestreFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [baseFilter, setBaseFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [produtoFilter, setProdutoFilter] = useState("");
+  const [cursoFilter, setCursoFilter] = useState("");
+  const [semestreFilter, setSemestreFilter] = useState("");
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<BaseEntry | null>(null);
   const [massSelectorOpen, setMassSelectorOpen] = useState(false);
   const [isAddMsgModalOpen, setIsAddMsgModalOpen] = useState(false);
-  const [newMsgData, setNewMsgData] = useState({ modelName: '', texto: '' });
+  const [newMsgData, setNewMsgData] = useState({ modelName: "", texto: "" });
 
-  const filteredBases = bases.filter(b => {
-    const matchesSearch = b.nome.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredBases = bases.filter((b) => {
+    const matchesSearch = b.nome
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
     const matchesBase = !baseFilter || b.nomeBase === baseFilter;
     const matchesStatus = !statusFilter || b.status === statusFilter;
     const matchesProduto = !produtoFilter || b.produto === produtoFilter;
-    const matchesCurso = !cursoFilter || b.curso.toLowerCase().includes(cursoFilter.toLowerCase());
-    const matchesSemestre = !semestreFilter || (b.semestre && b.semestre.toLowerCase().includes(semestreFilter.toLowerCase()));
-    return matchesSearch && matchesBase && matchesStatus && matchesProduto && matchesCurso && matchesSemestre;
+    const matchesCurso =
+      !cursoFilter || b.curso.toLowerCase().includes(cursoFilter.toLowerCase());
+    const matchesSemestre =
+      !semestreFilter ||
+      (b.semestre &&
+        b.semestre.toLowerCase().includes(semestreFilter.toLowerCase()));
+    return (
+      matchesSearch &&
+      matchesBase &&
+      matchesStatus &&
+      matchesProduto &&
+      matchesCurso &&
+      matchesSemestre
+    );
   });
 
-  const uniqueBases = Array.from(new Set(bases.map(b => b.nomeBase))).sort();
-  const uniqueProdutos = ['Graduação', 'Técnico', 'Pós-graduação'];
-  const uniqueCursos = Array.from(new Set(bases.map(b => b.curso))).sort();
-  const uniqueSemestres = Array.from(new Set(bases.map(b => b.semestre).filter(Boolean))).sort();
+  const uniqueBases = Array.from(new Set(bases.map((b) => b.nomeBase))).sort();
+  const uniqueProdutos = ["Graduação", "Técnico", "Pós-graduação"];
+  const uniqueCursos = Array.from(new Set(bases.map((b) => b.curso))).sort();
+  const uniqueSemestres = Array.from(
+    new Set(bases.map((b) => b.semestre).filter(Boolean)),
+  ).sort();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const cleanCpf = formData.cpf ? formData.cpf.replace(/\D/g, '') : '';
-    const cleanTelefone = formData.telefone.replace(/\D/g, '');
-    
-    const isDuplicate = bases.some(b => 
-      (cleanCpf && b.cpf === cleanCpf) || (!cleanCpf && cleanTelefone && b.telefone === cleanTelefone)
+    const cleanCpf = formData.cpf ? formData.cpf.replace(/\D/g, "") : "";
+    const cleanTelefone = formData.telefone.replace(/\D/g, "");
+
+    const isDuplicate = bases.some(
+      (b) =>
+        (cleanCpf && b.cpf === cleanCpf) ||
+        (!cleanCpf && cleanTelefone && b.telefone === cleanTelefone),
     );
 
     if (isDuplicate) {
-       onToast("Registro já existe na base (verificado CPF/Telefone).", "error");
-       return;
+      onToast("Registro já existe na base (verificado CPF/Telefone).", "error");
+      return;
     }
 
     setLoading(true);
     try {
       await addDoc(collection(db, COLLECTIONS.BASES_RENOVACAO), {
         ...formData,
-        status: 'Pendente',
-        createdAt: serverTimestamp()
+        status: "Pendente",
+        createdAt: serverTimestamp(),
       });
       onToast("Registro salvo na base de renovação!");
-      setFormData({ 
-        nomeBase: '', 
-        nome: '', 
-        telefone: '', 
-        cpf: '', 
-        curso: '',
-        produto: 'Graduação',
-        numeroOportunidade: '',
-        semestre: '',
-        periodo: '',
-        metodologia: '',
-        formaIngresso: '',
-        numeroMatricula: ''
+      setFormData({
+        nomeBase: "",
+        nome: "",
+        telefone: "",
+        cpf: "",
+        curso: "",
+        produto: "Graduação",
+        numeroOportunidade: "",
+        semestre: "",
+        periodo: "",
+        metodologia: "",
+        formaIngresso: "",
+        numeroMatricula: "",
       });
     } catch (err: any) {
-      onToast(err.message, 'error');
+      onToast(err.message, "error");
     } finally {
       setLoading(false);
     }
   };
 
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
-  
+
   const handleBulkDelete = async () => {
     if (selectedEntries.length === 0) return;
-    if (window.confirm(`Deseja excluir ${selectedEntries.length} registros selecionados?`)) {
-        try {
-            for (const id of selectedEntries) {
-                await deleteDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, id));
-            }
-            onToast(`${selectedEntries.length} registros removidos.`);
-            setSelectedEntries([]);
-        } catch (err: any) {
-            onToast("Erro ao excluir registros.", 'error');
+    if (
+      window.confirm(
+        `Deseja excluir ${selectedEntries.length} registros selecionados?`,
+      )
+    ) {
+      try {
+        for (const id of selectedEntries) {
+          await deleteDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, id));
         }
+        onToast(`${selectedEntries.length} registros removidos.`);
+        setSelectedEntries([]);
+      } catch (err: any) {
+        onToast("Erro ao excluir registros.", "error");
+      }
     }
   };
 
   const toggleSelect = (id: string, checked: boolean) => {
     if (checked) {
-        setSelectedEntries([...selectedEntries, id]);
+      setSelectedEntries([...selectedEntries, id]);
     } else {
-        setSelectedEntries(selectedEntries.filter(s => s !== id));
+      setSelectedEntries(selectedEntries.filter((s) => s !== id));
     }
   };
 
   const toggleSelectAll = (checked: boolean) => {
-      if (checked) {
-          setSelectedEntries(filteredBases.map(b => b.id));
-      } else {
-          setSelectedEntries([]);
-      }
+    if (checked) {
+      setSelectedEntries(filteredBases.map((b) => b.id));
+    } else {
+      setSelectedEntries([]);
+    }
   };
 
   const handleStatusChange = async (entry: BaseEntry, status: string) => {
     try {
-      await updateDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, entry.id), { status });
+      await updateDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, entry.id), {
+        status,
+      });
       onToast("Status atualizado!");
     } catch (err: any) {
-      onToast(err.message, 'error');
+      onToast(err.message, "error");
     }
   };
 
   const handleDeleteBase = async (id: string) => {
-    if (window.confirm('Deseja excluir este registro da base?')) {
+    if (window.confirm("Deseja excluir este registro da base?")) {
       try {
         await deleteDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, id));
         onToast("Registro removido.");
       } catch (err: any) {
-        onToast("Erro ao excluir registro.", 'error');
+        onToast("Erro ao excluir registro.", "error");
       }
     }
   };
 
   const handleExport = () => {
-    const data = filteredBases.map(b => ({
+    const data = filteredBases.map((b) => ({
       Nome: b.nome,
       Telefone: b.telefone,
-      CPF: b.cpf || '',
+      CPF: b.cpf || "",
       Curso: b.curso,
-      Produto: b.produto || 'Graduação',
-      'Nº Oportunidade': b.numeroOportunidade || '',
-      Semestre: b.semestre || '',
-      Periodo: b.periodo || '',
-      Metodologia: b.metodologia || '',
-      'Forma de Ingresso': b.formaIngresso || '',
-      'Nº Matrícula': b.numeroMatricula || '',
+      Produto: b.produto || "Graduação",
+      "Nº Oportunidade": b.numeroOportunidade || "",
+      Semestre: b.semestre || "",
+      Periodo: b.periodo || "",
+      Metodologia: b.metodologia || "",
+      "Forma de Ingresso": b.formaIngresso || "",
+      "Nº Matrícula": b.numeroMatricula || "",
       Base: b.nomeBase,
-      Status: b.status
+      Status: b.status,
     }));
-    exportToExcel(data, 'Bases_Renovacao');
+    exportToExcel(data, "Bases_Renovacao");
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -6494,21 +9444,25 @@ function BasesRenovacaoView({
 
     importFromExcel(file, async (data) => {
       try {
-        const batch = data.map(item => ({
-          nome: item.Nome || item.nome || '',
-          telefone: String(item.Telefone || item.telefone || '').replace(/\D/g, ''),
-          cpf: String(item.CPF || item.cpf || '').replace(/\D/g, ''),
-          curso: item.Curso || item.curso || '',
-          produto: item.Produto || item.produto || 'Graduação',
-          numeroOportunidade: item['Nº Oportunidade'] || item.numeroOportunidade || '',
-          semestre: item.Semestre || item.semestre || '',
-          periodo: item.Periodo || item.periodo || '',
-          metodologia: item.Metodologia || item.metodologia || '',
-          formaIngresso: item['Forma de Ingresso'] || item.formaIngresso || '',
-          numeroMatricula: item['Nº Matrícula'] || item.numeroMatricula || '',
-          nomeBase: item.Base || item.nomeBase || 'Importado Renovação',
-          status: item.Status || item.status || 'Pendente',
-          createdAt: serverTimestamp()
+        const batch = data.map((item) => ({
+          nome: item.Nome || item.nome || "",
+          telefone: String(item.Telefone || item.telefone || "").replace(
+            /\D/g,
+            "",
+          ),
+          cpf: String(item.CPF || item.cpf || "").replace(/\D/g, ""),
+          curso: item.Curso || item.curso || "",
+          produto: item.Produto || item.produto || "Graduação",
+          numeroOportunidade:
+            item["Nº Oportunidade"] || item.numeroOportunidade || "",
+          semestre: item.Semestre || item.semestre || "",
+          periodo: item.Periodo || item.periodo || "",
+          metodologia: item.Metodologia || item.metodologia || "",
+          formaIngresso: item["Forma de Ingresso"] || item.formaIngresso || "",
+          numeroMatricula: item["Nº Matrícula"] || item.numeroMatricula || "",
+          nomeBase: item.Base || item.nomeBase || "Importado Renovação",
+          status: item.Status || item.status || "Pendente",
+          createdAt: serverTimestamp(),
         }));
 
         let imported = 0;
@@ -6517,9 +9471,15 @@ function BasesRenovacaoView({
         const insertedTels = new Set();
 
         for (const entry of batch) {
-          const isDupCpf = entry.cpf && (bases.some(b => b.cpf === entry.cpf) || insertedCpfs.has(entry.cpf));
-          const isDupTel = entry.telefone && (bases.some(b => b.telefone === entry.telefone) || insertedTels.has(entry.telefone));
-          
+          const isDupCpf =
+            entry.cpf &&
+            (bases.some((b) => b.cpf === entry.cpf) ||
+              insertedCpfs.has(entry.cpf));
+          const isDupTel =
+            entry.telefone &&
+            (bases.some((b) => b.telefone === entry.telefone) ||
+              insertedTels.has(entry.telefone));
+
           if (!isDupCpf && !isDupTel) {
             await addDoc(collection(db, COLLECTIONS.BASES_RENOVACAO), entry);
             if (entry.cpf) insertedCpfs.add(entry.cpf);
@@ -6529,9 +9489,11 @@ function BasesRenovacaoView({
             skipped++;
           }
         }
-        onToast(`${imported} registros importados com sucesso! ${skipped > 0 ? `${skipped} ignorados por duplicidade.` : ''}`);
+        onToast(
+          `${imported} registros importados com sucesso! ${skipped > 0 ? `${skipped} ignorados por duplicidade.` : ""}`,
+        );
       } catch (err: any) {
-        onToast("Erro ao importar dados.", 'error');
+        onToast("Erro ao importar dados.", "error");
       }
     });
   };
@@ -6542,17 +9504,17 @@ function BasesRenovacaoView({
     setLoading(true);
     try {
       await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
-        tipo: 'bases_renovacao',
+        tipo: "bases_renovacao",
         texto: newMsgData.texto,
         nome: newMsgData.modelName || undefined,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
       onToast("Mensagem de renovação salva!");
-      setNewMsgData({ modelName: '', texto: '' });
+      setNewMsgData({ modelName: "", texto: "" });
       setIsAddMsgModalOpen(false);
     } catch (err: any) {
       console.error("Erro ao salvar mensagem renovação:", err);
-      onToast(`Erro ao salvar mensagem: ${err.message}`, 'error');
+      onToast(`Erro ao salvar mensagem: ${err.message}`, "error");
     } finally {
       setLoading(false);
     }
@@ -6560,61 +9522,76 @@ function BasesRenovacaoView({
 
   const handleInsertDefaultRenovacaoMessages = async () => {
     try {
-      const existing = whatsappMessages.filter(m => m.tipo === 'bases_renovacao');
+      const existing = whatsappMessages.filter(
+        (m) => m.tipo === "bases_renovacao",
+      );
       if (existing.length > 0) {
-        if (!window.confirm("Já existem mensagens de renovação. Deseja adicionar as mensagens padrões mesmo assim?")) {
+        if (
+          !window.confirm(
+            "Já existem mensagens de renovação. Deseja adicionar as mensagens padrões mesmo assim?",
+          )
+        ) {
           return;
         }
       }
-      
+
       const defaults = [
         "Olá [nome], notamos que sua matrícula ainda não foi renovada. Vamos garantir sua vaga para o próximo semestre?",
         "Oi [nome], preparamos condições exclusivas para sua renovação hoje! Vamos conferir?",
-        "Atenção [nome]! O prazo para renovação está terminando. Não perca sua vaga!"
+        "Atenção [nome]! O prazo para renovação está terminando. Não perca sua vaga!",
       ];
-      
+
       for (const texto of defaults) {
         await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), {
-          tipo: 'bases_renovacao',
+          tipo: "bases_renovacao",
           texto,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         });
       }
       onToast("Mensagens padrões inseridas com sucesso!");
     } catch (err: any) {
-      onToast("Erro ao inserir mensagens padrões.", 'error');
+      onToast("Erro ao inserir mensagens padrões.", "error");
     }
   };
 
   const totalAlunos = filteredBases.length;
-  const renovados = filteredBases.filter(b => b.status === 'Convertido').length;
+  const renovados = filteredBases.filter(
+    (b) => b.status === "Convertido",
+  ).length;
   const naoRenovados = totalAlunos - renovados;
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-center max-w-xl mx-auto gap-4">
-        <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap">Base Líquida</h3>
+        <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap">
+          Base Líquida
+        </h3>
         <div className="flex flex-wrap justify-center gap-2">
-          <button 
-             onClick={() => setIsAddMsgModalOpen(true)}
-             className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
+          <button
+            onClick={() => setIsAddMsgModalOpen(true)}
+            className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
           >
-             <Plus size={18} />
-             <span>Inserir Mensagens</span>
+            <Plus size={18} />
+            <span>Inserir Mensagens</span>
           </button>
-          <button 
-             onClick={handleInsertDefaultRenovacaoMessages}
-             className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold"
-             title="Inserir Mensagens Padrões"
+          <button
+            onClick={handleInsertDefaultRenovacaoMessages}
+            className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold"
+            title="Inserir Mensagens Padrões"
           >
-             <MessageSquare size={14} />
+            <MessageSquare size={14} />
           </button>
           <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
             <Upload size={18} />
             <span>Importar</span>
-            <input type="file" accept=".xlsx, .xls" onChange={handleImport} className="hidden" />
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleImport}
+              className="hidden"
+            />
           </label>
-          <button 
+          <button
             onClick={handleExport}
             className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
           >
@@ -6626,24 +9603,44 @@ function BasesRenovacaoView({
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center">
-          <div className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Total na Base</div>
-          <div className="text-3xl font-black text-slate-800">{totalAlunos}</div>
+          <div className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Total na Base
+          </div>
+          <div className="text-3xl font-black text-slate-800">
+            {totalAlunos}
+          </div>
         </div>
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-emerald-100 flex flex-col justify-center items-center text-center">
-          <div className="text-sm font-bold text-emerald-600 uppercase tracking-wider mb-2">Renovados</div>
-          <div className="text-3xl font-black text-emerald-700">{renovados}</div>
+          <div className="text-sm font-bold text-emerald-600 uppercase tracking-wider mb-2">
+            Renovados
+          </div>
+          <div className="text-3xl font-black text-emerald-700">
+            {renovados}
+          </div>
         </div>
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-orange-100 flex flex-col justify-center items-center text-center">
-          <div className="text-sm font-bold text-orange-600 uppercase tracking-wider mb-2">Não Renovados</div>
-          <div className="text-3xl font-black text-orange-700">{naoRenovados}</div>
+          <div className="text-sm font-bold text-orange-600 uppercase tracking-wider mb-2">
+            Não Renovados
+          </div>
+          <div className="text-3xl font-black text-orange-700">
+            {naoRenovados}
+          </div>
         </div>
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-rose-100 flex flex-col justify-center items-center text-center relative overflow-hidden">
           <div className="absolute inset-0 bg-rose-50 opacity-50"></div>
           <div className="relative z-10 w-full">
-            <div className="text-sm font-bold text-rose-600 uppercase tracking-wider mb-2">Gap</div>
-            <div className="text-3xl font-black text-rose-700">{totalAlunos > 0 ? naoRenovados : 0}</div>
+            <div className="text-sm font-bold text-rose-600 uppercase tracking-wider mb-2">
+              Gap
+            </div>
+            <div className="text-3xl font-black text-rose-700">
+              {totalAlunos > 0 ? naoRenovados : 0}
+            </div>
             <div className="text-xs text-rose-500 font-bold mt-1">
-              Faltam {totalAlunos > 0 ? ((naoRenovados / totalAlunos) * 100).toFixed(1) : 0}% para a meta
+              Faltam{" "}
+              {totalAlunos > 0
+                ? ((naoRenovados / totalAlunos) * 100).toFixed(1)
+                : 0}
+              % para a meta
             </div>
           </div>
         </div>
@@ -6651,84 +9648,111 @@ function BasesRenovacaoView({
 
       <div className="max-w-xl mx-auto">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-          <h3 className="text-xl font-bold text-slate-900 mb-4">Novo Registro em Renovação</h3>
+          <h3 className="text-xl font-bold text-slate-900 mb-4">
+            Novo Registro em Renovação
+          </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input 
-              placeholder="Nome da Base (Ex: Renovação 2024.2)" 
-              required 
+            <input
+              placeholder="Nome da Base (Ex: Renovação 2024.2)"
+              required
               value={formData.nomeBase}
-              onChange={e => setFormData({...formData, nomeBase: e.target.value})}
+              onChange={(e) =>
+                setFormData({ ...formData, nomeBase: e.target.value })
+              }
               className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
             />
             <div className="grid grid-cols-2 gap-4">
-              <input 
-                placeholder="Nome" 
-                required 
+              <input
+                placeholder="Nome"
+                required
                 value={formData.nome}
-                onChange={e => setFormData({...formData, nome: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, nome: e.target.value })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
-              <input 
-                placeholder="Telefone" 
-                required 
+              <input
+                placeholder="Telefone"
+                required
                 value={formData.telefone}
-                onChange={e => setFormData({...formData, telefone: formatPhone(e.target.value)})}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    telefone: formatPhone(e.target.value),
+                  })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <input 
-                placeholder="CPF" 
+              <input
+                placeholder="CPF"
                 value={formData.cpf}
-                onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}
+                onChange={(e) =>
+                  setFormData({ ...formData, cpf: formatCPF(e.target.value) })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
-              <input 
-                placeholder="N° de Matrícula" 
-                required 
+              <input
+                placeholder="N° de Matrícula"
+                required
                 value={formData.numeroMatricula}
-                onChange={e => setFormData({...formData, numeroMatricula: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, numeroMatricula: e.target.value })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <input 
-                placeholder="Semestre" 
-                required 
+              <input
+                placeholder="Semestre"
+                required
                 value={formData.semestre}
-                onChange={e => setFormData({...formData, semestre: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, semestre: e.target.value })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
-              <select 
+              <select
                 value={formData.produto}
-                onChange={e => setFormData({...formData, produto: e.target.value as any})}
+                onChange={(e) =>
+                  setFormData({ ...formData, produto: e.target.value as any })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               >
-                {uniqueProdutos.map(p => <option key={p} value={p}>{p}</option>)}
+                {uniqueProdutos.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="grid grid-cols-1">
-              <input 
-                placeholder="Metodologia" 
-                required 
+              <input
+                placeholder="Metodologia"
+                required
                 value={formData.metodologia}
-                onChange={e => setFormData({...formData, metodologia: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, metodologia: e.target.value })
+                }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
-            <input 
-              placeholder="Curso" 
-              required 
+            <input
+              placeholder="Curso"
+              required
               value={formData.curso}
-              onChange={e => setFormData({...formData, curso: e.target.value})}
+              onChange={(e) =>
+                setFormData({ ...formData, curso: e.target.value })
+              }
               className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
             />
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50"
             >
-              {loading ? 'Salvando...' : 'Adicionar à Renovação'}
+              {loading ? "Salvando..." : "Adicionar à Renovação"}
             </button>
           </form>
         </div>
@@ -6736,54 +9760,75 @@ function BasesRenovacaoView({
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h3 className="text-xl font-bold text-slate-900">Bases a Trabalhar (Líquida)</h3>
+          <h3 className="text-xl font-bold text-slate-900">
+            Bases a Trabalhar (Líquida)
+          </h3>
           <div className="flex flex-wrap gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input 
-                type="text" 
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={16}
+              />
+              <input
+                type="text"
                 placeholder="Buscar por nome..."
                 className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 w-48"
                 value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={baseFilter}
-              onChange={e => setBaseFilter(e.target.value)}
+              onChange={(e) => setBaseFilter(e.target.value)}
             >
               <option value="">Todas as Bases</option>
-              {uniqueBases.map(b => <option key={b} value={b}>{b}</option>)}
+              {uniqueBases.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
             </select>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={produtoFilter}
-              onChange={e => setProdutoFilter(e.target.value)}
+              onChange={(e) => setProdutoFilter(e.target.value)}
             >
               <option value="">Todos os Produtos</option>
-              {uniqueProdutos.map(p => <option key={p} value={p}>{p}</option>)}
+              {uniqueProdutos.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
             </select>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={cursoFilter}
-              onChange={e => setCursoFilter(e.target.value)}
+              onChange={(e) => setCursoFilter(e.target.value)}
             >
               <option value="">Todos os Cursos</option>
-              {uniqueCursos.map(c => <option key={c} value={c}>{c}</option>)}
+              {uniqueCursos.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={semestreFilter}
-              onChange={e => setSemestreFilter(e.target.value)}
+              onChange={(e) => setSemestreFilter(e.target.value)}
             >
               <option value="">Todos os Semestres</option>
-              {uniqueSemestres.map(s => <option key={s} value={s}>{s}</option>)}
+              {uniqueSemestres.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
-            <select 
+            <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
+              onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="">Todos Status</option>
               <option value="Pendente">Pendente</option>
@@ -6798,73 +9843,117 @@ function BasesRenovacaoView({
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
-                <th className="px-6 py-4 w-12 text-center">
-                  #
-                </th>
+                <th className="px-6 py-4 w-12 text-center">#</th>
                 <th className="px-6 py-4 w-12">
-                  <input type="checkbox" checked={selectedEntries.length === filteredBases.length && filteredBases.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedEntries.length === filteredBases.length &&
+                      filteredBases.length > 0
+                    }
+                    onChange={(e) => toggleSelectAll(e.target.checked)}
+                  />
                 </th>
                 <th className="px-6 py-4">Nome</th>
                 <th className="px-6 py-4">Base</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 flex items-center gap-4">
                   {selectedEntries.length > 0 && (
-                      <button onClick={handleBulkDelete} className="text-rose-600 font-bold hover:underline">excluir selecionados</button>
+                    <button
+                      onClick={handleBulkDelete}
+                      className="text-rose-600 font-bold hover:underline"
+                    >
+                      excluir selecionados
+                    </button>
                   )}
                   {selectedEntries.length > 0 && botConfig.url && (
-                      <button 
-                         onClick={() => setMassSelectorOpen(true)} 
-                         className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
-                      >
-                         <Bot size={14} /> Em Massa
-                      </button>
+                    <button
+                      onClick={() => setMassSelectorOpen(true)}
+                      className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                    >
+                      <Bot size={14} /> Em Massa
+                    </button>
                   )}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredBases.map((entry, index) => (
-                <tr key={entry.id} className="hover:bg-slate-50/50 transition-all">
+                <tr
+                  key={entry.id}
+                  className="hover:bg-slate-50/50 transition-all"
+                >
                   <td className="px-6 py-4 text-center font-bold text-slate-400 text-xs">
                     {index + 1}
                   </td>
                   <td className="px-6 py-4">
-                    <input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={e => toggleSelect(entry.id, e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      checked={selectedEntries.includes(entry.id)}
+                      onChange={(e) => toggleSelect(entry.id, e.target.checked)}
+                    />
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-900">{entry.nome}</span>
-                      <span className="text-xs text-slate-500">{entry.curso}</span>
+                      <span className="font-bold text-slate-900">
+                        {entry.nome}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {entry.curso}
+                      </span>
                       <div className="flex items-center space-x-2 mt-1">
-                        {entry.telefone && <span className="text-[10px] text-slate-400 font-bold">{entry.telefone}</span>}
-                        {entry.semestre && <span className="text-[10px] text-blue-500 font-bold px-2 py-0.5 bg-blue-50 rounded-full">{entry.semestre}</span>}
-                        {entry.periodo && <span className="text-[10px] text-purple-500 font-bold px-2 py-0.5 bg-purple-50 rounded-full">{entry.periodo}</span>}
+                        {entry.telefone && (
+                          <span className="text-[10px] text-slate-400 font-bold">
+                            {entry.telefone}
+                          </span>
+                        )}
+                        {entry.semestre && (
+                          <span className="text-[10px] text-blue-500 font-bold px-2 py-0.5 bg-blue-50 rounded-full">
+                            {entry.semestre}
+                          </span>
+                        )}
+                        {entry.periodo && (
+                          <span className="text-[10px] text-purple-500 font-bold px-2 py-0.5 bg-purple-50 rounded-full">
+                            {entry.periodo}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{entry.nomeBase}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {entry.nomeBase}
+                  </td>
                   <td className="px-6 py-4">
-                    <select 
+                    <select
                       value={entry.status}
-                      onChange={e => handleStatusChange(entry, e.target.value)}
+                      onChange={(e) =>
+                        handleStatusChange(entry, e.target.value)
+                      }
                       className={cn(
                         "px-2 py-1 rounded-lg text-xs font-bold outline-none border-none",
-                        entry.status === 'Pendente' && "bg-slate-100 text-slate-600",
-                        entry.status === 'Interessado' && "bg-blue-100 text-blue-600",
-                        entry.status === 'Convertido' && "bg-emerald-100 text-emerald-600",
-                        entry.status === 'Não tem interesse' && "bg-rose-100 text-rose-600",
-                        entry.status === 'Sem retorno' && "bg-orange-100 text-orange-600"
+                        entry.status === "Pendente" &&
+                          "bg-slate-100 text-slate-600",
+                        entry.status === "Interessado" &&
+                          "bg-blue-100 text-blue-600",
+                        entry.status === "Convertido" &&
+                          "bg-emerald-100 text-emerald-600",
+                        entry.status === "Não tem interesse" &&
+                          "bg-rose-100 text-rose-600",
+                        entry.status === "Sem retorno" &&
+                          "bg-orange-100 text-orange-600",
                       )}
                     >
                       <option value="Pendente">Pendente</option>
                       <option value="Interessado">Interessado</option>
                       <option value="Convertido">Convertido</option>
-                      <option value="Não tem interesse">Não tem interesse</option>
+                      <option value="Não tem interesse">
+                        Não tem interesse
+                      </option>
                       <option value="Sem retorno">Sem retorno</option>
                     </select>
                   </td>
                   <td className="px-6 py-4 flex items-center space-x-2">
-                    <button 
+                    <button
                       onClick={() => {
                         setSelectedEntry(entry);
                         setSelectorOpen(true);
@@ -6874,7 +9963,7 @@ function BasesRenovacaoView({
                       <MessageSquare size={14} />
                       <span>WhatsApp</span>
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDeleteBase(entry.id)}
                       className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
                     >
@@ -6885,7 +9974,12 @@ function BasesRenovacaoView({
               ))}
               {filteredBases.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Nenhum registro encontrado com os filtros aplicados.</td>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-12 text-center text-slate-400 italic"
+                  >
+                    Nenhum registro encontrado com os filtros aplicados.
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -6893,16 +9987,16 @@ function BasesRenovacaoView({
         </div>
       </div>
 
-      <WhatsAppMessageSelector 
+      <WhatsAppMessageSelector
         isOpen={selectorOpen}
         onClose={() => setSelectorOpen(false)}
-        leadName={selectedEntry?.nome || ''}
-        leadCurso={selectedEntry?.curso || ''}
-        leadMatricula={selectedEntry?.numeroMatricula || ''}
-        messages={whatsappMessages.filter(m => m.tipo === 'bases_renovacao')}
+        leadName={selectedEntry?.nome || ""}
+        leadCurso={selectedEntry?.curso || ""}
+        leadMatricula={selectedEntry?.numeroMatricula || ""}
+        messages={whatsappMessages.filter((m) => m.tipo === "bases_renovacao")}
         onSelect={(msg) => {
           if (selectedEntry) {
-            window.open(getWhatsAppUrl(selectedEntry.telefone, msg), '_blank');
+            window.open(getWhatsAppUrl(selectedEntry.telefone, msg), "_blank");
           }
         }}
         botConfig={botConfig}
@@ -6912,19 +10006,21 @@ function BasesRenovacaoView({
           }
         }}
       />
-      
-      <WhatsAppMessageSelector 
+
+      <WhatsAppMessageSelector
         isOpen={massSelectorOpen}
         onClose={() => setMassSelectorOpen(false)}
         leadName="Candidatos"
-        messages={whatsappMessages.filter(m => m.tipo === 'bases_renovacao')}
+        messages={whatsappMessages.filter((m) => m.tipo === "bases_renovacao")}
         onSelect={(msg) => {}}
         botConfig={botConfig}
         onSendBot={(msgTemplate) => {
-          const selectedLeadObjs = bases.filter(b => selectedEntries.includes(b.id));
-          const messagesPayload = selectedLeadObjs.map(l => ({
+          const selectedLeadObjs = bases.filter((b) =>
+            selectedEntries.includes(b.id),
+          );
+          const messagesPayload = selectedLeadObjs.map((l) => ({
             telefone: l.telefone,
-            message: replaceMessageVariables(msgTemplate, l)
+            message: replaceMessageVariables(msgTemplate, l),
           }));
           onMassSendBot(messagesPayload);
           setMassSelectorOpen(false);
@@ -6940,11 +10036,23 @@ function BasesRenovacaoView({
           tipo="bases_renovacao"
           onToast={onToast}
           availableVariables={[
-            { key: '[nome]', label: 'Nome do Aluno', previewValue: 'Maria Souza' },
-            { key: '[curso]', label: 'Curso', previewValue: 'Administração' },
-            { key: '[unidade]', label: 'Unidade', previewValue: 'Unidade Central' },
-            { key: '[data_contato]', label: 'Data', previewValue: new Date().toLocaleDateString('pt-BR') },
-            { key: '[saudacao]', label: 'Saudação', previewValue: 'Olá' }
+            {
+              key: "[nome]",
+              label: "Nome do Aluno",
+              previewValue: "Maria Souza",
+            },
+            { key: "[curso]", label: "Curso", previewValue: "Administração" },
+            {
+              key: "[unidade]",
+              label: "Unidade",
+              previewValue: "Unidade Central",
+            },
+            {
+              key: "[data_contato]",
+              label: "Data",
+              previewValue: new Date().toLocaleDateString("pt-BR"),
+            },
+            { key: "[saudacao]", label: "Saudação", previewValue: "Olá" },
           ]}
         />
       </AnimatePresence>
@@ -6952,143 +10060,191 @@ function BasesRenovacaoView({
   );
 }
 
-function GapView({ 
-  gap, 
-  onToast, 
+function GapView({
+  gap,
+  onToast,
   whatsappMessages,
   botConfig,
   onSendBot,
-  onMassSendBot
-}: { 
-  gap: GapEntry[]; 
-  onToast: (m: string, t?: 'success' | 'error') => void; 
+  onMassSendBot,
+}: {
+  gap: GapEntry[];
+  onToast: (m: string, t?: "success" | "error") => void;
   whatsappMessages: WhatsAppMessage[];
   botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
-  onMassSendBot: (messages: {telefone: string, message: string}[]) => void;
+  onMassSendBot: (messages: { telefone: string; message: string }[]) => void;
 }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [cpfFilter, setCpfFilter] = useState('');
-  const [produtoFilter, setProdutoFilter] = useState('');
-  const [cursoFilter, setCursoFilter] = useState('');
-  const [periodoFilter, setPeriodoFilter] = useState('');
-  const [matAcadFilter, setMatAcadFilter] = useState('');
-  const [gapFilter, setGapFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [cpfFilter, setCpfFilter] = useState("");
+  const [produtoFilter, setProdutoFilter] = useState("");
+  const [cursoFilter, setCursoFilter] = useState("");
+  const [periodoFilter, setPeriodoFilter] = useState("");
+  const [matAcadFilter, setMatAcadFilter] = useState("");
+  const [gapFilter, setGapFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<GapEntry | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
-  
+
   const handleBulkDelete = async () => {
     if (selectedEntries.length === 0) return;
-    if (window.confirm(`Deseja excluir ${selectedEntries.length} registros selecionados do GAP?`)) {
-        try {
-            for (const id of selectedEntries) {
-                await deleteDoc(doc(db, COLLECTIONS.GAP, id));
-            }
-            onToast(`${selectedEntries.length} registros no GAP removidos.`);
-            setSelectedEntries([]);
-        } catch (err: any) {
-            onToast("Erro ao excluir registros do GAP.", 'error');
+    if (
+      window.confirm(
+        `Deseja excluir ${selectedEntries.length} registros selecionados do GAP?`,
+      )
+    ) {
+      try {
+        for (const id of selectedEntries) {
+          await deleteDoc(doc(db, COLLECTIONS.GAP, id));
         }
+        onToast(`${selectedEntries.length} registros no GAP removidos.`);
+        setSelectedEntries([]);
+      } catch (err: any) {
+        onToast("Erro ao excluir registros do GAP.", "error");
+      }
     }
   };
 
   const toggleSelect = (id: string, checked: boolean) => {
     if (checked) {
-        setSelectedEntries([...selectedEntries, id]);
+      setSelectedEntries([...selectedEntries, id]);
     } else {
-        setSelectedEntries(selectedEntries.filter(s => s !== id));
+      setSelectedEntries(selectedEntries.filter((s) => s !== id));
     }
   };
 
   const toggleSelectAll = (checked: boolean) => {
-      if (checked) {
-          setSelectedEntries(filteredGap.map(g => g.id));
-      } else {
-          setSelectedEntries([]);
-      }
+    if (checked) {
+      setSelectedEntries(filteredGap.map((g) => g.id));
+    } else {
+      setSelectedEntries([]);
+    }
   };
   const [formData, setFormData] = useState({
-    nome: '',
-    telefone: '',
-    cpf: '',
-    produto: 'Graduação' as any,
-    numeroOportunidade: '',
-    curso: '',
-    semestre: '',
-    metodologia: '',
-    formaIngresso: '',
-    numeroMatricula: '',
-    periodo: ''
+    nome: "",
+    telefone: "",
+    cpf: "",
+    produto: "Graduação" as any,
+    numeroOportunidade: "",
+    curso: "",
+    semestre: "",
+    metodologia: "",
+    formaIngresso: "",
+    numeroMatricula: "",
+    periodo: "",
   });
 
-  const docLabels: Record<string, string> = { 
-    rg: 'RG', 
-    cpf: 'CPF', 
-    diploma: 'Diploma', 
-    enem: 'ENEM', 
-    historico: 'Hist.', 
-    planoEnsino: 'Plano', 
-    contrato: 'Contr.', 
-    carta: 'Carta' 
+  const docLabels: Record<string, string> = {
+    rg: "RG",
+    cpf: "CPF",
+    diploma: "Diploma",
+    enem: "ENEM",
+    historico: "Hist.",
+    planoEnsino: "Plano",
+    contrato: "Contr.",
+    carta: "Carta",
   };
 
   const stats = useMemo(() => {
     const total = gap.length;
-    const matFin = total; 
-    const matAcadOk = gap.filter(g => g.matAcad).length;
+    const matFin = total;
+    const matAcadOk = gap.filter(
+      (g) =>
+        g.matAcad === true ||
+        g.matAcad === "Matrícula Gerada" ||
+        g.matAcad === "OK",
+    ).length;
     const pendingDocs = matFin - matAcadOk;
-    const conversionRate = total > 0 ? ((matAcadOk / total) * 100).toFixed(1) : '0';
+    const conversionRate =
+      total > 0 ? ((matAcadOk / total) * 100).toFixed(1) : "0";
     return { matFin, matAcadOk, pendingDocs, conversionRate };
   }, [gap]);
 
   const filteredGap = useMemo(() => {
-    return gap.filter(g => {
-      const matchesSearch = g.nome.toLowerCase().includes(searchTerm.toLowerCase());
+    return gap.filter((g) => {
+      const matchesSearch = g.nome
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
       const matchesCpf = !cpfFilter || g.cpf?.includes(cpfFilter);
       const matchesProduto = !produtoFilter || g.produto === produtoFilter;
-      const matchesCurso = !cursoFilter || g.curso.toLowerCase().includes(cursoFilter.toLowerCase());
-      const matchesPeriodo = !periodoFilter || g.periodo?.toLowerCase().includes(periodoFilter.toLowerCase());
-      const matchesMatAcad = !matAcadFilter || (matAcadFilter === 'Sim' ? g.matAcad : !g.matAcad);
-      
+      const matchesCurso =
+        !cursoFilter ||
+        g.curso.toLowerCase().includes(cursoFilter.toLowerCase());
+      const matchesPeriodo =
+        !periodoFilter ||
+        g.periodo?.toLowerCase().includes(periodoFilter.toLowerCase());
+
+      const isOk =
+        g.matAcad === true ||
+        g.matAcad === "Matrícula Gerada" ||
+        g.matAcad === "OK";
+      let matchesMatAcad = true;
+      if (matAcadFilter === "Matrícula Gerada") matchesMatAcad = isOk;
+      else if (matAcadFilter === "Pendente")
+        matchesMatAcad =
+          !g.matAcad || g.matAcad === "false" || g.matAcad === "Pendente";
+      else if (matAcadFilter === "Aguardando N° de Matrícula")
+        matchesMatAcad = g.matAcad === "Aguardando N° de Matrícula";
+      else if (matAcadFilter === "Desistente")
+        matchesMatAcad = g.matAcad === "Desistente";
+
       const docs = g.documentos || {};
-      const hasGap = Object.keys(docLabels).some(key => !(docs as any)[key]);
-      const matchesGap = !gapFilter || (gapFilter === 'Sim' ? hasGap : !hasGap);
-      const matchesAll = matchesSearch && matchesCpf && matchesProduto && matchesCurso && matchesPeriodo && matchesMatAcad && matchesGap;
+      const hasGap = Object.keys(docLabels).some((key) => !(docs as any)[key]);
+      const matchesGap = !gapFilter || (gapFilter === "Sim" ? hasGap : !hasGap);
+      const matchesAll =
+        matchesSearch &&
+        matchesCpf &&
+        matchesProduto &&
+        matchesCurso &&
+        matchesPeriodo &&
+        matchesMatAcad &&
+        matchesGap;
       return matchesAll;
     });
-  }, [gap, searchTerm, cpfFilter, produtoFilter, cursoFilter, periodoFilter, matAcadFilter, gapFilter]);
+  }, [
+    gap,
+    searchTerm,
+    cpfFilter,
+    produtoFilter,
+    cursoFilter,
+    periodoFilter,
+    matAcadFilter,
+    gapFilter,
+  ]);
 
   const toggleDoc = async (id: string, docKey: string, current: boolean) => {
     try {
-      const entry = gap.find(g => g.id === id);
+      const entry = gap.find((g) => g.id === id);
       if (!entry) return;
       const newDocs = { ...(entry.documentos || {}) };
       (newDocs as any)[docKey] = !current;
       await updateDoc(doc(db, COLLECTIONS.GAP, id), { documentos: newDocs });
       onToast("Documento atualizado!");
     } catch (err: any) {
-      onToast("Erro ao atualizar documento.", 'error');
+      onToast("Erro ao atualizar documento.", "error");
     }
   };
 
-  const toggleMatAcad = async (id: string, current: boolean) => {
+  const updateMatAcadStatus = async (
+    id: string,
+    newStatus: string | boolean,
+  ) => {
     try {
-      await updateDoc(doc(db, COLLECTIONS.GAP, id), { matAcad: !current });
+      await updateDoc(doc(db, COLLECTIONS.GAP, id), { matAcad: newStatus });
       onToast("Status de matrícula atualizado!");
     } catch (err: any) {
-      onToast("Erro ao atualizar matrícula.", 'error');
+      onToast("Erro ao atualizar matrícula.", "error");
     }
   };
 
   const handleDeleteGap = async (id: string) => {
-    if (window.confirm('Deseja excluir este registro do GAP?')) {
+    if (window.confirm("Deseja excluir este registro do GAP?")) {
       try {
         await deleteDoc(doc(db, COLLECTIONS.GAP, id));
         onToast("Registro removido.");
       } catch (err: any) {
-        onToast("Erro ao excluir registro.", 'error');
+        onToast("Erro ao excluir registro.", "error");
       }
     }
   };
@@ -7098,16 +10254,20 @@ function GapView({
     const missingDocs = Object.entries(docLabels)
       .filter(([key]) => !(docs as any)[key])
       .map(([_, label]) => label);
-      
+
     const applyReplacements = (text: string) => {
-       return replaceMessageVariables(text, { ...entry, missingDocs });
+      return replaceMessageVariables(text, { ...entry, missingDocs });
     };
 
     // se ok e tiver matricula
-    if (entry.matAcad && entry.numeroMatricula) {
-      const msgOk = whatsappMessages.find(m => m.tipo === 'gap_1');
+    const isOk =
+      entry.matAcad === true ||
+      entry.matAcad === "Matrícula Gerada" ||
+      entry.matAcad === "OK";
+    if (isOk && entry.numeroMatricula) {
+      const msgOk = whatsappMessages.find((m) => m.tipo === "gap_1");
       if (msgOk) {
-         return applyReplacements(msgOk.texto);
+        return applyReplacements(msgOk.texto);
       }
       return applyReplacements(`PARABÉNS [nome] 🎊 Agora você é aluno Estácio 💎  
  
@@ -7124,46 +10284,53 @@ Senha de primeiro acesso para usar com o e-mail: os seis primeiros dígitos do s
 Aplicativo de celular: Minha Estácio 
 
 Pela internet: https://sia.estacio.br/sianet/Logon`);
-    } else if (entry.matAcad) {
-      const msgOk = whatsappMessages.find(m => m.tipo === 'gap_1');
+    } else if (isOk) {
+      const msgOk = whatsappMessages.find((m) => m.tipo === "gap_1");
       if (msgOk) return applyReplacements(msgOk.texto);
       return `Olá ${entry.nome}, vimos que sua matrícula acadêmica está ok! Parabéns!`;
     }
-    
+
     // Add logic to include registration number automatically if it exists
-    let message = '';
-    const customMsg = whatsappMessages.find(m => m.tipo === 'gap' || m.tipo === 'gap_0');
+    let message = "";
+    const customMsg = whatsappMessages.find(
+      (m) => m.tipo === "gap" || m.tipo === "gap_0",
+    );
     if (customMsg) {
       message = applyReplacements(customMsg.texto);
     } else if (missingDocs.length > 0) {
-       message = `Olá ${entry.nome}, tudo bem? Sou da equipe de captação e meu contato é referente à sua matrícula no curso de ${entry.curso}. Identificamos que sua matrícula ainda não foi finalizada devido à pendência dos seguintes documentos: ${missingDocs.join(', ')}. É fundamental regularizar essa situação o quanto antes para garantir sua vaga e evitar o cancelamento do processo.`;
+      message = `Olá ${entry.nome}, tudo bem? Sou da equipe de captação e meu contato é referente à sua matrícula no curso de ${entry.curso}. Identificamos que sua matrícula ainda não foi finalizada devido à pendência dos seguintes documentos: ${missingDocs.join(", ")}. É fundamental regularizar essa situação o quanto antes para garantir sua vaga e evitar o cancelamento do processo.`;
     }
 
     if (entry.numeroMatricula && !message.includes(entry.numeroMatricula)) {
-        message += `\n\nNº Matrícula: ${entry.numeroMatricula}`;
+      message += `\n\nNº Matrícula: ${entry.numeroMatricula}`;
     }
 
     if (!docs.contrato || !docs.carta) {
-        message += `\n\nACEITE DO CONTRATO, para isso vou lhe enviar o passo a passo aqui a baixo: \n\n1º PASSO:ACESSAR O PORTAL DO CANDIDATO: https://candidatos.portal.estacio.br/acompanhe-sua-matricula \n\n2° COLOQUE SEU CPF E SENHA, CASO SEJA A 1° VEZ, COLOQUE ESQUECI MINHA SENHA. \n\n3° CLIQUE EM CONTRATO EDUCACIONAL E EM SEGUIDA EM ACEITAR E CONTINUAR`;
+      message += `\n\nACEITE DO CONTRATO, para isso vou lhe enviar o passo a passo aqui a baixo: \n\n1º PASSO:ACESSAR O PORTAL DO CANDIDATO: https://candidatos.portal.estacio.br/acompanhe-sua-matricula \n\n2° COLOQUE SEU CPF E SENHA, CASO SEJA A 1° VEZ, COLOQUE ESQUECI MINHA SENHA. \n\n3° CLIQUE EM CONTRATO EDUCACIONAL E EM SEGUIDA EM ACEITAR E CONTINUAR`;
     }
-    
+
     return message;
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const cleanCpf = formData.cpf ? formData.cpf.replace(/\D/g, '') : '';
-    const cleanTelefone = formData.telefone.replace(/\D/g, '');
+    const cleanCpf = formData.cpf ? formData.cpf.replace(/\D/g, "") : "";
+    const cleanTelefone = formData.telefone.replace(/\D/g, "");
 
-    const isDuplicate = gap.some(g => 
-      g.id !== editingEntry?.id && 
-      ((cleanCpf && g.cpf === cleanCpf) || (!cleanCpf && cleanTelefone && g.telefone === cleanTelefone))
+    const isDuplicate = gap.some(
+      (g) =>
+        g.id !== editingEntry?.id &&
+        ((cleanCpf && g.cpf === cleanCpf) ||
+          (!cleanCpf && cleanTelefone && g.telefone === cleanTelefone)),
     );
 
     if (isDuplicate) {
-       onToast("Candidato já cadastrado no GAP (verificado CPF/Telefone).", "error");
-       return;
+      onToast(
+        "Candidato já cadastrado no GAP (verificado CPF/Telefone).",
+        "error",
+      );
+      return;
     }
 
     setLoading(true);
@@ -7171,7 +10338,7 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
       if (editingEntry) {
         await updateDoc(doc(db, COLLECTIONS.GAP, editingEntry.id), {
           ...formData,
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         });
         onToast("Candidato atualizado com sucesso!");
       } else {
@@ -7179,43 +10346,58 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
           ...formData,
           matAcad: false,
           documentos: {},
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         });
         onToast("Candidato cadastrado no GAP!");
       }
       setIsModalOpen(false);
       setEditingEntry(null);
       setFormData({
-        nome: '', telefone: '', cpf: '', produto: 'Graduação',
-        numeroOportunidade: '', curso: '', metodologia: '',
-        formaIngresso: '', numeroMatricula: '', periodo: ''
+        nome: "",
+        telefone: "",
+        cpf: "",
+        produto: "Graduação",
+        numeroOportunidade: "",
+        curso: "",
+        metodologia: "",
+        formaIngresso: "",
+        numeroMatricula: "",
+        periodo: "",
       } as any);
     } catch (err: any) {
-      onToast("Erro ao salvar.", 'error');
+      onToast("Erro ao salvar.", "error");
     } finally {
       setLoading(false);
     }
   };
 
   const handleExport = () => {
-    const data = filteredGap.map(g => ({
+    const data = filteredGap.map((g) => ({
       Nome: g.nome,
       Telefone: g.telefone,
       CPF: g.cpf,
       Produto: g.produto,
-      'Nº Oportunidade': g.numeroOportunidade || '',
+      "Nº Oportunidade": g.numeroOportunidade || "",
       Curso: g.curso,
-      Semestre: g.semestre || '',
-      Metodologia: g.metodologia || '',
-      'Forma de Ingresso': g.formaIngresso || '',
-      Periodo: g.periodo || '',
-      Matricula: g.numeroMatricula || '',
-      MatAcad: g.matAcad ? 'Sim' : 'Não',
+      Semestre: g.semestre || "",
+      Metodologia: g.metodologia || "",
+      "Forma de Ingresso": g.formaIngresso || "",
+      Periodo: g.periodo || "",
+      Matricula: g.numeroMatricula || "",
+      MatAcad:
+        g.matAcad === true ||
+        g.matAcad === "Matrícula Gerada" ||
+        g.matAcad === "OK"
+          ? "Sim"
+          : "Não",
       Documentos: Object.entries(docLabels)
-        .map(([key, label]) => `${label}: ${(g.documentos as any)?.[key] ? 'OK' : 'Pendente'}`)
-        .join(', ')
+        .map(
+          ([key, label]) =>
+            `${label}: ${(g.documentos as any)?.[key] ? "OK" : "Pendente"}`,
+        )
+        .join(", "),
     }));
-    exportToExcel(data, 'Gap_Academico');
+    exportToExcel(data, "Gap_Academico");
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -7224,21 +10406,35 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
 
     importFromExcel(file, async (data) => {
       try {
-        const batch = data.map(item => ({
-          nome: item.Nome || item.nome || '',
-          cpf: String(item.CPF || item.cpf || '').replace(/\D/g, ''),
-          telefone: String(item.Telefone || item.telefone || '').replace(/\D/g, ''),
-          produto: item.Produto || item.produto || '',
-          curso: item.Curso || item.curso || '',
-          semestre: item.Semestre || item.semestre || '',
-          metodologia: item.Metodologia || item.metodologia || '',
-          formaIngresso: item['Forma de Ingresso'] || item.formaIngresso || '',
-          numeroOportunidade: item['Nº Oportunidade'] || item.numeroOportunidade || '',
-          periodo: item.Periodo || item.periodo || '',
-          numeroMatricula: String(item.Matricula || item.numeroMatricula || item['Nº Matrícula'] || item.Matrícula || item['Nº Matricula'] || ''),
-          matAcad: item.MatAcad === 'Sim' || item.matAcad === true || item['Mat. Acad.'] === 'OK',
+        const batch = data.map((item) => ({
+          nome: item.Nome || item.nome || "",
+          cpf: String(item.CPF || item.cpf || "").replace(/\D/g, ""),
+          telefone: String(item.Telefone || item.telefone || "").replace(
+            /\D/g,
+            "",
+          ),
+          produto: item.Produto || item.produto || "",
+          curso: item.Curso || item.curso || "",
+          semestre: item.Semestre || item.semestre || "",
+          metodologia: item.Metodologia || item.metodologia || "",
+          formaIngresso: item["Forma de Ingresso"] || item.formaIngresso || "",
+          numeroOportunidade:
+            item["Nº Oportunidade"] || item.numeroOportunidade || "",
+          periodo: item.Periodo || item.periodo || "",
+          numeroMatricula: String(
+            item.Matricula ||
+              item.numeroMatricula ||
+              item["Nº Matrícula"] ||
+              item.Matrícula ||
+              item["Nº Matricula"] ||
+              "",
+          ),
+          matAcad:
+            item.MatAcad === "Sim" ||
+            item.matAcad === true ||
+            item["Mat. Acad."] === "OK",
           documentos: {},
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         }));
 
         let imported = 0;
@@ -7247,9 +10443,15 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
         const insertedTels = new Set();
 
         for (const entry of batch) {
-          const isDupCpf = entry.cpf && (gap.some(g => g.cpf === entry.cpf) || insertedCpfs.has(entry.cpf));
-          const isDupTel = entry.telefone && (gap.some(g => g.telefone === entry.telefone) || insertedTels.has(entry.telefone));
-          
+          const isDupCpf =
+            entry.cpf &&
+            (gap.some((g) => g.cpf === entry.cpf) ||
+              insertedCpfs.has(entry.cpf));
+          const isDupTel =
+            entry.telefone &&
+            (gap.some((g) => g.telefone === entry.telefone) ||
+              insertedTels.has(entry.telefone));
+
           if (!isDupCpf && !isDupTel) {
             await addDoc(collection(db, COLLECTIONS.GAP), entry);
             if (entry.cpf) insertedCpfs.add(entry.cpf);
@@ -7259,9 +10461,11 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
             skipped++;
           }
         }
-        onToast(`${imported} registros importados! ${skipped > 0 ? `${skipped} ignorados por duplicidade.` : ''}`);
+        onToast(
+          `${imported} registros importados! ${skipped > 0 ? `${skipped} ignorados por duplicidade.` : ""}`,
+        );
       } catch (err: any) {
-        onToast("Erro ao importar dados.", 'error');
+        onToast("Erro ao importar dados.", "error");
       }
     });
   };
@@ -7269,22 +10473,49 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Mat. Financeira" value={stats.matFin} icon={Database} color="bg-blue-500" />
-        <StatCard title="Mat. Acadêmica OK" value={stats.matAcadOk} icon={CheckCircle2} color="bg-emerald-500" />
-        <StatCard title="Gap (Docs Pendentes)" value={stats.pendingDocs} icon={Clock} color="bg-amber-500" />
-        <StatCard title="Taxa Conv. Acad" value={`${stats.conversionRate}%`} icon={TrendingUp} color="bg-purple-500" />
+        <StatCard
+          title="Mat. Financeira"
+          value={stats.matFin}
+          icon={Database}
+          color="bg-blue-500"
+        />
+        <StatCard
+          title="Mat. Acadêmica OK"
+          value={stats.matAcadOk}
+          icon={CheckCircle2}
+          color="bg-emerald-500"
+        />
+        <StatCard
+          title="Gap (Docs Pendentes)"
+          value={stats.pendingDocs}
+          icon={Clock}
+          color="bg-amber-500"
+        />
+        <StatCard
+          title="Taxa Conv. Acad"
+          value={`${stats.conversionRate}%`}
+          icon={TrendingUp}
+          color="bg-purple-500"
+        />
       </div>
 
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-800">GAP Acadêmico</h2>
         <div className="flex space-x-2">
-          <button 
+          <button
             onClick={() => {
               setEditingEntry(null);
               setFormData({
-                nome: '', telefone: '', cpf: '', produto: 'Graduação',
-                numeroOportunidade: '', curso: '', metodologia: '',
-                formaIngresso: '', numeroMatricula: '', periodo: ''
+                nome: "",
+                telefone: "",
+                cpf: "",
+                produto: "Graduação",
+                numeroOportunidade: "",
+                curso: "",
+                metodologia: "",
+                formaIngresso: "",
+                numeroMatricula: "",
+                periodo: "",
               } as any);
               setIsModalOpen(true);
             }}
@@ -7296,9 +10527,14 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
           <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
             <Upload size={18} />
             <span>Importar</span>
-            <input type="file" accept=".xlsx, .xls" onChange={handleImport} className="hidden" />
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleImport}
+              className="hidden"
+            />
           </label>
-          <button 
+          <button
             onClick={handleExport}
             className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
           >
@@ -7309,21 +10545,21 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <input 
-          placeholder="Nome..." 
+        <input
+          placeholder="Nome..."
           value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <input 
-          placeholder="CPF..." 
+        <input
+          placeholder="CPF..."
           value={cpfFilter}
-          onChange={e => setCpfFilter(e.target.value)}
+          onChange={(e) => setCpfFilter(e.target.value)}
           className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <select 
+        <select
           value={produtoFilter}
-          onChange={e => setProdutoFilter(e.target.value)}
+          onChange={(e) => setProdutoFilter(e.target.value)}
           className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Produto</option>
@@ -7331,30 +10567,34 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
           <option value="Técnico">Técnico</option>
           <option value="Pós-graduação">Pós-graduação</option>
         </select>
-        <input 
-          placeholder="Curso..." 
+        <input
+          placeholder="Curso..."
           value={cursoFilter}
-          onChange={e => setCursoFilter(e.target.value)}
+          onChange={(e) => setCursoFilter(e.target.value)}
           className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <input 
-          placeholder="Período..." 
+        <input
+          placeholder="Período..."
           value={periodoFilter}
-          onChange={e => setPeriodoFilter(e.target.value)}
+          onChange={(e) => setPeriodoFilter(e.target.value)}
           className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <select 
+        <select
           value={matAcadFilter}
-          onChange={e => setMatAcadFilter(e.target.value)}
+          onChange={(e) => setMatAcadFilter(e.target.value)}
           className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Mat. Acadêmica</option>
-          <option value="Sim">Sim</option>
-          <option value="Não">Não</option>
+          <option value="Matrícula Gerada">Matrícula Gerada</option>
+          <option value="Aguardando N° de Matrícula">
+            Aguardando N° de Matrícula
+          </option>
+          <option value="Pendente">Pendente</option>
+          <option value="Desistente">Desistente</option>
         </select>
-        <select 
+        <select
           value={gapFilter}
-          onChange={e => setGapFilter(e.target.value)}
+          onChange={(e) => setGapFilter(e.target.value)}
           className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Gap (Docs)</option>
@@ -7369,7 +10609,14 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
                 <th className="px-6 py-4 w-12">
-                  <input type="checkbox" checked={selectedEntries.length === filteredGap.length && filteredGap.length > 0} onChange={e => toggleSelectAll(e.target.checked)} />
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedEntries.length === filteredGap.length &&
+                      filteredGap.length > 0
+                    }
+                    onChange={(e) => toggleSelectAll(e.target.checked)}
+                  />
                 </th>
                 <th className="px-6 py-4">Candidato</th>
                 <th className="px-6 py-4">Curso / Produto</th>
@@ -7377,48 +10624,80 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
                 <th className="px-6 py-4">Mat. Acad.</th>
                 <th className="px-6 py-4 flex items-center gap-4">
                   {selectedEntries.length > 0 && (
-                      <button onClick={handleBulkDelete} className="text-rose-600 font-bold hover:underline">excluir selecionados</button>
+                    <button
+                      onClick={handleBulkDelete}
+                      className="text-rose-600 font-bold hover:underline"
+                    >
+                      excluir selecionados
+                    </button>
                   )}
                   {selectedEntries.length > 0 && botConfig.url && (
-                      <button 
-                         onClick={() => {
-                            const selectedObjs = gap.filter(g => selectedEntries.includes(g.id));
-                            const payloads = selectedObjs.map(g => ({
-                                telefone: g.telefone,
-                                message: getGapWhatsAppMessage(g)
-                            }));
-                            onMassSendBot(payloads);
-                            setSelectedEntries([]);
-                         }} 
-                         className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
-                      >
-                         <Bot size={14} /> Em Massa
-                      </button>
+                    <button
+                      onClick={() => {
+                        const selectedObjs = gap.filter((g) =>
+                          selectedEntries.includes(g.id),
+                        );
+                        const payloads = selectedObjs.map((g) => ({
+                          telefone: g.telefone,
+                          message: getGapWhatsAppMessage(g),
+                        }));
+                        onMassSendBot(payloads);
+                        setSelectedEntries([]);
+                      }}
+                      className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                    >
+                      <Bot size={14} /> Em Massa
+                    </button>
                   )}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredGap.map(entry => (
-                <tr key={entry.id} className="hover:bg-slate-50/50 transition-all">
+              {filteredGap.map((entry) => (
+                <tr
+                  key={entry.id}
+                  className="hover:bg-slate-50/50 transition-all"
+                >
                   <td className="px-6 py-4">
-                      <input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={e => toggleSelect(entry.id, e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      checked={selectedEntries.includes(entry.id)}
+                      onChange={(e) => toggleSelect(entry.id, e.target.checked)}
+                    />
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-900">{entry.nome}</span>
-                      <span className="text-xs text-slate-500">{entry.cpf}</span>
-                      <span className="text-xs text-slate-500">{formatPhone(entry.telefone)}</span>
+                      <span className="font-bold text-slate-900">
+                        {entry.nome}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {entry.cpf}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {formatPhone(entry.telefone)}
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-slate-700">{entry.curso}</span>
+                      <span className="text-sm font-medium text-slate-700">
+                        {entry.curso}
+                      </span>
                       <div className="flex items-center space-x-2">
-                        <span className="text-[10px] text-slate-400">{entry.produto}</span>
-                        {entry.periodo && <span className="text-[10px] text-slate-400">• {entry.periodo}</span>}
+                        <span className="text-[10px] text-slate-400">
+                          {entry.produto}
+                        </span>
+                        {entry.periodo && (
+                          <span className="text-[10px] text-slate-400">
+                            • {entry.periodo}
+                          </span>
+                        )}
                       </div>
-                      {entry.numeroMatricula && <span className="text-[10px] font-bold text-blue-600">Mat: {entry.numeroMatricula}</span>}
+                      {entry.numeroMatricula && (
+                        <span className="text-[10px] font-bold text-blue-600">
+                          Mat: {entry.numeroMatricula}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -7426,12 +10705,18 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
                       {Object.entries(docLabels).map(([key, label]) => (
                         <button
                           key={key}
-                          onClick={() => toggleDoc(entry.id, key, !!(entry.documentos as any)?.[key])}
+                          onClick={() =>
+                            toggleDoc(
+                              entry.id,
+                              key,
+                              !!(entry.documentos as any)?.[key],
+                            )
+                          }
                           className={cn(
                             "px-2 py-0.5 rounded text-[9px] font-bold transition-all",
-                            (entry.documentos as any)?.[key] 
-                              ? "bg-emerald-100 text-emerald-600" 
-                              : "bg-slate-100 text-slate-400"
+                            (entry.documentos as any)?.[key]
+                              ? "bg-emerald-100 text-emerald-600"
+                              : "bg-slate-100 text-slate-400",
                           )}
                         >
                           {label}
@@ -7440,50 +10725,78 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <button 
-                      onClick={() => toggleMatAcad(entry.id, entry.matAcad)}
+                    <select
+                      value={String(entry.matAcad)}
+                      onChange={(e) => {
+                        let selectedValue: string | boolean = e.target.value;
+                        if (selectedValue === "false") selectedValue = false;
+                        if (selectedValue === "true") selectedValue = true;
+                        updateMatAcadStatus(entry.id, selectedValue);
+                      }}
                       className={cn(
-                        "px-3 py-1 rounded-full text-[10px] font-bold uppercase",
-                        entry.matAcad ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
+                        "px-2 py-1 rounded-lg text-[10px] font-bold uppercase outline-none",
+                        entry.matAcad === true ||
+                          String(entry.matAcad) === "true" ||
+                          entry.matAcad === "Matrícula Gerada" ||
+                          entry.matAcad === "OK"
+                          ? "bg-emerald-100 text-emerald-600"
+                          : entry.matAcad === "Aguardando N° de Matrícula"
+                            ? "bg-blue-100 text-blue-600"
+                            : entry.matAcad === "Desistente"
+                              ? "bg-rose-100 text-rose-600"
+                              : "bg-amber-100 text-amber-600",
                       )}
                     >
-                      {entry.matAcad ? 'OK' : 'Pendente'}
-                    </button>
+                      <option value="false">Pendente</option>
+                      <option value="Matrícula Gerada">Matrícula Gerada</option>
+                      <option value="Aguardando N° de Matrícula">
+                        Aguardando N° de Matrícula
+                      </option>
+                      <option value="Desistente">Desistente</option>
+                    </select>
                   </td>
                   <td className="px-6 py-4 flex items-center space-x-2">
                     {botConfig.url && (
-                      <button 
-                        onClick={() => onSendBot(entry.telefone, getGapWhatsAppMessage(entry))}
+                      <button
+                        onClick={() =>
+                          onSendBot(
+                            entry.telefone,
+                            getGapWhatsAppMessage(entry),
+                          )
+                        }
                         className="text-blue-600 hover:text-blue-700 font-bold text-sm bg-blue-50 p-2 rounded-lg"
                         title="Enviar pelo Bot ARGO'S"
                       >
                         <Bot size={16} />
                       </button>
                     )}
-                    <a 
-                      href={getWhatsAppUrl(entry.telefone, getGapWhatsAppMessage(entry))} 
-                      target="_blank" 
+                    <a
+                      href={getWhatsAppUrl(
+                        entry.telefone,
+                        getGapWhatsAppMessage(entry),
+                      )}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-emerald-600 hover:text-emerald-700 font-bold text-sm bg-emerald-50 p-2 rounded-lg"
                       title="Abrir WhatsApp"
                     >
                       <MessageSquare size={16} />
                     </a>
-                    <button 
+                    <button
                       onClick={() => {
                         setEditingEntry(entry);
                         setFormData({
-                          nome: entry.nome || '',
-                          telefone: entry.telefone || '',
-                          cpf: entry.cpf || '',
-                          produto: entry.produto || 'Graduação',
-                          numeroOportunidade: entry.numeroOportunidade || '',
-                          curso: entry.curso || '',
-                          semestre: entry.semestre || '',
-                          metodologia: entry.metodologia || '',
-                          formaIngresso: entry.formaIngresso || '',
-                          numeroMatricula: entry.numeroMatricula || '',
-                          periodo: entry.periodo || ''
+                          nome: entry.nome || "",
+                          telefone: entry.telefone || "",
+                          cpf: entry.cpf || "",
+                          produto: entry.produto || "Graduação",
+                          numeroOportunidade: entry.numeroOportunidade || "",
+                          curso: entry.curso || "",
+                          semestre: entry.semestre || "",
+                          metodologia: entry.metodologia || "",
+                          formaIngresso: entry.formaIngresso || "",
+                          numeroMatricula: entry.numeroMatricula || "",
+                          periodo: entry.periodo || "",
                         });
                         setIsModalOpen(true);
                       }}
@@ -7492,7 +10805,7 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
                     >
                       <Edit2 size={16} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDeleteGap(entry.id)}
                       className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
                       title="Excluir"
@@ -7504,7 +10817,12 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
               ))}
               {filteredGap.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Nenhum registro no GAP.</td>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-12 text-center text-slate-400 italic"
+                  >
+                    Nenhum registro no GAP.
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -7515,70 +10833,197 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden"
             >
               <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                <h3 className="text-xl font-bold text-slate-900">{editingEntry ? 'Editar Candidato' : 'Cadastrar no GAP'}</h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <h3 className="text-xl font-bold text-slate-900">
+                  {editingEntry ? "Editar Candidato" : "Cadastrar no GAP"}
+                </h3>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
                   <X size={24} />
                 </button>
               </div>
-              <form onSubmit={handleRegister} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form
+                onSubmit={handleRegister}
+                className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+              >
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Nome Completo</label>
-                  <input required value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Nome Completo
+                  </label>
+                  <input
+                    required
+                    value={formData.nome}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nome: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">CPF</label>
-                  <input required value={formData.cpf} onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    CPF
+                  </label>
+                  <input
+                    required
+                    value={formData.cpf}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        cpf: formatCPF(e.target.value),
+                      })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Telefone</label>
-                  <input required value={formData.telefone} onChange={e => setFormData({...formData, telefone: formatPhone(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Telefone
+                  </label>
+                  <input
+                    required
+                    value={formData.telefone}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        telefone: formatPhone(e.target.value),
+                      })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Produto</label>
-                  <select value={formData.produto} onChange={e => setFormData({...formData, produto: e.target.value as any})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Produto
+                  </label>
+                  <select
+                    value={formData.produto}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        produto: e.target.value as any,
+                      })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                  >
                     <option value="Graduação">Graduação</option>
                     <option value="Técnico">Técnico</option>
                     <option value="Pós-graduação">Pós-graduação</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">N° Oportunidade</label>
-                  <input value={formData.numeroOportunidade} onChange={e => setFormData({...formData, numeroOportunidade: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    N° Oportunidade
+                  </label>
+                  <input
+                    value={formData.numeroOportunidade}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        numeroOportunidade: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Curso</label>
-                  <input required value={formData.curso} onChange={e => setFormData({...formData, curso: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Curso
+                  </label>
+                  <input
+                    required
+                    value={formData.curso}
+                    onChange={(e) =>
+                      setFormData({ ...formData, curso: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Período</label>
-                  <input value={formData.periodo} onChange={e => setFormData({...formData, periodo: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" placeholder="Ex: 2024.1" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Período
+                  </label>
+                  <input
+                    value={formData.periodo}
+                    onChange={(e) =>
+                      setFormData({ ...formData, periodo: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    placeholder="Ex: 2024.1"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Semestre</label>
-                  <input value={formData.semestre} onChange={e => setFormData({...formData, semestre: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Semestre
+                  </label>
+                  <input
+                    value={formData.semestre}
+                    onChange={(e) =>
+                      setFormData({ ...formData, semestre: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Metodologia</label>
-                  <input value={formData.metodologia} onChange={e => setFormData({...formData, metodologia: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Metodologia
+                  </label>
+                  <input
+                    value={formData.metodologia}
+                    onChange={(e) =>
+                      setFormData({ ...formData, metodologia: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Forma de Ingresso</label>
-                  <input value={formData.formaIngresso} onChange={e => setFormData({...formData, formaIngresso: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Forma de Ingresso
+                  </label>
+                  <input
+                    value={formData.formaIngresso}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        formaIngresso: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Nº Matrícula</label>
-                  <input value={formData.numeroMatricula} onChange={e => setFormData({...formData, numeroMatricula: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Nº Matrícula
+                  </label>
+                  <input
+                    value={formData.numeroMatricula}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        numeroMatricula: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
                 </div>
                 <div className="md:col-span-2">
-                  <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50">
-                    {loading ? 'Salvando...' : (editingEntry ? 'Salvar Alterações' : 'Cadastrar Candidato')}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
+                  >
+                    {loading
+                      ? "Salvando..."
+                      : editingEntry
+                        ? "Salvar Alterações"
+                        : "Cadastrar Candidato"}
                   </button>
                 </div>
               </form>
@@ -7590,89 +11035,116 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
   );
 }
 
-function CalendarioAcoesView({ 
-  data, 
-  onToast, 
+function CalendarioAcoesView({
+  data,
+  onToast,
   profile,
   initialData,
   onClearInitialData,
   users,
-  empresasParceiras = []
-}: { 
-  data: CalendarioAcao[], 
-  onToast: (m: string, t?: 'success' | 'error') => void, 
-  profile: UserProfile,
-  initialData?: Partial<CalendarioAcao> | null,
-  onClearInitialData?: () => void,
-  users: UserProfile[],
-  empresasParceiras?: EmpresaParceira[]
+  empresasParceiras = [],
+}: {
+  data: CalendarioAcao[];
+  onToast: (m: string, t?: "success" | "error") => void;
+  profile: UserProfile;
+  initialData?: Partial<CalendarioAcao> | null;
+  onClearInitialData?: () => void;
+  users: UserProfile[];
+  empresasParceiras?: EmpresaParceira[];
 }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'concluida' | 'pendente'>('all');
-  const [startDateFilter, setStartDateFilter] = useState('');
-  const [endDateFilter, setEndDateFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "concluida" | "pendente"
+  >("all");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
   const [isAdding, setIsAdding] = useState(false);
-  const [editingAction, setEditingAction] = useState<CalendarioAcao | null>(null);
-  
+  const [editingAction, setEditingAction] = useState<CalendarioAcao | null>(
+    null,
+  );
+
   const [newAction, setNewAction] = useState({
-    nome: '',
-    dataInicio: '',
-    dataFim: '',
-    local: '',
-    observacao: '',
+    nome: "",
+    dataInicio: "",
+    dataFim: "",
+    local: "",
+    observacao: "",
     concluida: false,
-    fotos: ['', '', ''],
-    metaBoletos: '' as number | '',
-    metaInscritos: '' as number | '',
+    fotos: ["", "", ""],
+    metaBoletos: "" as number | "",
+    metaInscritos: "" as number | "",
     precisaPromotor: false,
     promotoresSelecionados: [] as string[],
-    valorPromotor: '' as number | '',
-    valorOrcado: '' as number | '',
-    colaboradorId: '',
-    colaboradorNome: '',
-    tipoAtividade: 'Ação' as 'Ação' | 'Visita',
-    empresaParceiraId: '',
-    empresaParceiraNome: ''
+    valorPromotor: "" as number | "",
+    valorOrcado: "" as number | "",
+    colaboradorId: "",
+    colaboradorNome: "",
+    tipoAtividade: "Ação" as "Ação" | "Visita",
+    empresaParceiraId: "",
+    empresaParceiraNome: "",
   });
 
-  const promotoresDisponiveis = (users || []).filter(u => u.role === ROLES.PROMOTOR || u.role === ROLES.PROMOTOR_RUA);
-  const colaboradoresDisponiveis = (users || []).filter(u => u.role === ROLES.FDV_COMERCIAL || u.role === ROLES.FDV);
+  const promotoresDisponiveis = (users || []).filter(
+    (u) => u.role === ROLES.PROMOTOR || u.role === ROLES.PROMOTOR_RUA,
+  );
+  const colaboradoresDisponiveis = (users || []).filter(
+    (u) => u.role === ROLES.FDV_COMERCIAL || u.role === ROLES.FDV,
+  );
 
   useEffect(() => {
     if (initialData) {
       setNewAction({
-        nome: initialData.nome || '',
-        dataInicio: initialData.dataInicio || '',
-        dataFim: initialData.dataFim || '',
-        local: initialData.local || '',
-        observacao: initialData.observacao || '',
+        nome: initialData.nome || "",
+        dataInicio: initialData.dataInicio || "",
+        dataFim: initialData.dataFim || "",
+        local: initialData.local || "",
+        observacao: initialData.observacao || "",
         concluida: false,
-        fotos: ['', '', ''],
-        metaBoletos: (initialData as any).metaBoletos !== undefined ? (initialData as any).metaBoletos : '',
-        metaInscritos: (initialData as any).metaInscritos !== undefined ? (initialData as any).metaInscritos : '',
+        fotos: ["", "", ""],
+        metaBoletos:
+          (initialData as any).metaBoletos !== undefined
+            ? (initialData as any).metaBoletos
+            : "",
+        metaInscritos:
+          (initialData as any).metaInscritos !== undefined
+            ? (initialData as any).metaInscritos
+            : "",
         precisaPromotor: !!(initialData as any).precisaPromotor,
-        promotoresSelecionados: (initialData as any).promotoresSelecionados || [],
-        valorPromotor: (initialData as any).valorPromotor !== undefined ? (initialData as any).valorPromotor : '',
-        valorOrcado: (initialData as any).valorOrcado !== undefined ? (initialData as any).valorOrcado : '',
-        colaboradorId: (initialData as any).colaboradorId || '',
-        colaboradorNome: (initialData as any).colaboradorNome || '',
-        tipoAtividade: (initialData as any).tipoAtividade || 'Ação',
-        empresaParceiraId: (initialData as any).empresaParceiraId || '',
-        empresaParceiraNome: (initialData as any).empresaParceiraNome || ''
+        promotoresSelecionados:
+          (initialData as any).promotoresSelecionados || [],
+        valorPromotor:
+          (initialData as any).valorPromotor !== undefined
+            ? (initialData as any).valorPromotor
+            : "",
+        valorOrcado:
+          (initialData as any).valorOrcado !== undefined
+            ? (initialData as any).valorOrcado
+            : "",
+        colaboradorId: (initialData as any).colaboradorId || "",
+        colaboradorNome: (initialData as any).colaboradorNome || "",
+        tipoAtividade: (initialData as any).tipoAtividade || "Ação",
+        empresaParceiraId: (initialData as any).empresaParceiraId || "",
+        empresaParceiraNome: (initialData as any).empresaParceiraNome || "",
       });
       setIsAdding(true);
       if (onClearInitialData) onClearInitialData();
     }
   }, [initialData]);
 
-  const filteredData = data.filter(item => {
-    const matchesSearch = item.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         item.local.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' ? true : 
-                         statusFilter === 'concluida' ? item.concluida : !item.concluida;
+  const filteredData = data.filter((item) => {
+    const matchesSearch =
+      item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.local.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all"
+        ? true
+        : statusFilter === "concluida"
+          ? item.concluida
+          : !item.concluida;
     let matchesDate = true;
     if (startDateFilter && endDateFilter) {
-      matchesDate = item.dataInicio <= endDateFilter && item.dataFim >= startDateFilter;
+      matchesDate =
+        item.dataInicio <= endDateFilter && item.dataFim >= startDateFilter;
     } else if (startDateFilter) {
       matchesDate = item.dataFim >= startDateFilter;
     } else if (endDateFilter) {
@@ -7686,71 +11158,90 @@ function CalendarioAcoesView({
     try {
       const payload = {
         ...newAction,
-        metaBoletos: newAction.metaBoletos === '' ? 0 : Number(newAction.metaBoletos),
-        metaInscritos: newAction.metaInscritos === '' ? 0 : Number(newAction.metaInscritos),
-        valorPromotor: newAction.valorPromotor === '' ? 0 : Number(newAction.valorPromotor),
-        valorOrcado: newAction.valorOrcado === '' ? 0 : Number(newAction.valorOrcado),
-        fotos: newAction.fotos.filter(f => f.trim() !== ''),
-        updatedAt: serverTimestamp()
+        metaBoletos:
+          newAction.metaBoletos === "" ? 0 : Number(newAction.metaBoletos),
+        metaInscritos:
+          newAction.metaInscritos === "" ? 0 : Number(newAction.metaInscritos),
+        valorPromotor:
+          newAction.valorPromotor === "" ? 0 : Number(newAction.valorPromotor),
+        valorOrcado:
+          newAction.valorOrcado === "" ? 0 : Number(newAction.valorOrcado),
+        fotos: newAction.fotos.filter((f) => f.trim() !== ""),
+        updatedAt: serverTimestamp(),
       };
 
-      const isDuplicate = data.some(action => action.nome.toLowerCase() === payload.nome.toLowerCase() && action.dataInicio === payload.dataInicio && action.id !== editingAction?.id);
+      const isDuplicate = data.some(
+        (action) =>
+          action.nome.toLowerCase() === payload.nome.toLowerCase() &&
+          action.dataInicio === payload.dataInicio &&
+          action.id !== editingAction?.id,
+      );
       if (isDuplicate) {
-         onToast("Já existe uma ação com este nome e data.", "error");
-         return;
+        onToast("Já existe uma ação com este nome e data.", "error");
+        return;
       }
 
       if (editingAction) {
-        await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, editingAction.id), payload);
+        await updateDoc(
+          doc(db, COLLECTIONS.CALENDARIO_ACOES, editingAction.id),
+          payload,
+        );
         onToast("Ação updated com sucesso!");
       } else {
         await addDoc(collection(db, COLLECTIONS.CALENDARIO_ACOES), {
           ...payload,
           creatorId: profile.uid,
           creatorRole: profile.role,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         });
         onToast("Ação agendada com sucesso!");
       }
       setIsAdding(false);
       setEditingAction(null);
       setNewAction({
-        nome: '',
-        dataInicio: '',
-        dataFim: '',
-        local: '',
-        observacao: '',
+        nome: "",
+        dataInicio: "",
+        dataFim: "",
+        local: "",
+        observacao: "",
         concluida: false,
-        fotos: ['', '', ''],
-        metaBoletos: '',
-        metaInscritos: '',
+        fotos: ["", "", ""],
+        metaBoletos: "",
+        metaInscritos: "",
         precisaPromotor: false,
         promotoresSelecionados: [],
-        valorPromotor: '',
-        valorOrcado: '',
-        colaboradorId: '',
-        colaboradorNome: '',
-        tipoAtividade: 'Ação',
-        empresaParceiraId: '',
-        empresaParceiraNome: ''
+        valorPromotor: "",
+        valorOrcado: "",
+        colaboradorId: "",
+        colaboradorNome: "",
+        tipoAtividade: "Ação",
+        empresaParceiraId: "",
+        empresaParceiraNome: "",
       });
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.WRITE, COLLECTIONS.CALENDARIO_ACOES);
-      onToast("Erro ao salvar ação.", 'error');
+      handleFirestoreError(
+        err,
+        OperationType.WRITE,
+        COLLECTIONS.CALENDARIO_ACOES,
+      );
+      onToast("Erro ao salvar ação.", "error");
     }
   };
 
-  const togglePromoterAttendance = async (action: CalendarioAcao, promoterUid: string) => {
+  const togglePromoterAttendance = async (
+    action: CalendarioAcao,
+    promoterUid: string,
+  ) => {
     try {
       const currentAttendance = action.presencaPromotores || {};
       const nextVal = !currentAttendance[promoterUid];
       const updatedAttendance = {
         ...currentAttendance,
-        [promoterUid]: nextVal
+        [promoterUid]: nextVal,
       };
 
       const payload: any = {
-        presencaPromotores: updatedAttendance
+        presencaPromotores: updatedAttendance,
       };
 
       if (nextVal) {
@@ -7759,25 +11250,32 @@ function CalendarioAcoesView({
           payload.dadosPresencaPromotores = {
             ...currentDetails,
             [promoterUid]: {
-              empresa: 'GR15',
-              horas: 4
-            }
+              empresa: "GR15",
+              horas: 4,
+            },
           };
         }
       }
 
-      await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, action.id), payload);
-      onToast(nextVal ? "Formulário de presença aberto e registrado!" : "Presença do promotor removida!");
+      await updateDoc(
+        doc(db, COLLECTIONS.CALENDARIO_ACOES, action.id),
+        payload,
+      );
+      onToast(
+        nextVal
+          ? "Formulário de presença aberto e registrado!"
+          : "Presença do promotor removida!",
+      );
     } catch (err: any) {
-      onToast("Erro ao atualizar presença do promotor.", 'error');
+      onToast("Erro ao atualizar presença do promotor.", "error");
     }
   };
 
   const updatePromoterPresenceDetails = async (
     action: CalendarioAcao,
     promoterUid: string,
-    empresa?: 'GR15' | 'RP7',
-    horas?: number
+    empresa?: "GR15" | "RP7",
+    horas?: number,
   ) => {
     try {
       const currentDetails = action.dadosPresencaPromotores || {};
@@ -7787,50 +11285,52 @@ function CalendarioAcoesView({
         [promoterUid]: {
           ...promoterDetails,
           ...(empresa !== undefined ? { empresa } : {}),
-          ...(horas !== undefined ? { horas } : {})
-        }
+          ...(horas !== undefined ? { horas } : {}),
+        },
       };
       await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, action.id), {
-        dadosPresencaPromotores: updatedDetails
+        dadosPresencaPromotores: updatedDetails,
       });
       onToast("Dados de pagamento atualizados!");
     } catch (err: any) {
-      onToast("Erro ao atualizar dados de pagamento.", 'error');
+      onToast("Erro ao atualizar dados de pagamento.", "error");
     }
   };
 
   const toggleStatus = async (action: CalendarioAcao) => {
     try {
       await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, action.id), {
-        concluida: !action.concluida
+        concluida: !action.concluida,
       });
-      onToast(action.concluida ? "Ação marcada como pendente" : "Ação concluída!");
+      onToast(
+        action.concluida ? "Ação marcada como pendente" : "Ação concluída!",
+      );
     } catch (err: any) {
-      onToast("Erro ao atualizar status.", 'error');
+      onToast("Erro ao atualizar status.", "error");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Deseja excluir esta ação?')) {
+    if (window.confirm("Deseja excluir esta ação?")) {
       try {
         await deleteDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, id));
         onToast("Ação removida.");
       } catch (err: any) {
-        onToast("Erro ao excluir ação.", 'error');
+        onToast("Erro ao excluir ação.", "error");
       }
     }
   };
 
   const handleExport = () => {
-    const exportData = filteredData.map(item => ({
+    const exportData = filteredData.map((item) => ({
       Nome: item.nome,
-      'Data Início': item.dataInicio,
-      'Data Fim': item.dataFim,
+      "Data Início": item.dataInicio,
+      "Data Fim": item.dataFim,
       Local: item.local,
       Observação: item.observacao,
-      Status: item.concluida ? 'Concluída' : 'Pendente'
+      Status: item.concluida ? "Concluída" : "Pendente",
     }));
-    exportToExcel(exportData, 'Calendario_Acoes');
+    exportToExcel(exportData, "Calendario_Acoes");
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -7839,24 +11339,27 @@ function CalendarioAcoesView({
 
     importFromExcel(file, async (importData) => {
       try {
-        const batch = importData.map(item => ({
-          nome: item.Nome || item.nome || '',
-          dataInicio: item['Data Início'] || item.dataInicio || '',
-          dataFim: item['Data Fim'] || item.dataFim || '',
-          local: item.Local || item.local || '',
-          observacao: item.Observação || item.observacao || '',
-          concluida: item.Status === 'Concluída' || item.concluida === true,
+        const batch = importData.map((item) => ({
+          nome: item.Nome || item.nome || "",
+          dataInicio: item["Data Início"] || item.dataInicio || "",
+          dataFim: item["Data Fim"] || item.dataFim || "",
+          local: item.Local || item.local || "",
+          observacao: item.Observação || item.observacao || "",
+          concluida: item.Status === "Concluída" || item.concluida === true,
           fotos: [],
           creatorId: profile.uid,
           creatorRole: profile.role,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         }));
 
         let imported = 0;
         let skipped = 0;
         const inserted = new Set();
         for (const entry of batch) {
-          const isDup = data.some(a => a.nome === entry.nome && a.dataInicio === entry.dataInicio) || inserted.has(`${entry.nome}-${entry.dataInicio}`);
+          const isDup =
+            data.some(
+              (a) => a.nome === entry.nome && a.dataInicio === entry.dataInicio,
+            ) || inserted.has(`${entry.nome}-${entry.dataInicio}`);
           if (!isDup) {
             await addDoc(collection(db, COLLECTIONS.CALENDARIO_ACOES), entry);
             inserted.add(`${entry.nome}-${entry.dataInicio}`);
@@ -7865,9 +11368,11 @@ function CalendarioAcoesView({
             skipped++;
           }
         }
-        onToast(`${imported} ações importadas! ${skipped > 0 ? `${skipped} ignoradas.` : ''}`);
+        onToast(
+          `${imported} ações importadas! ${skipped > 0 ? `${skipped} ignoradas.` : ""}`,
+        );
       } catch (err: any) {
-        onToast("Erro ao importar ações.", 'error');
+        onToast("Erro ao importar ações.", "error");
       }
     });
   };
@@ -7881,11 +11386,13 @@ function CalendarioAcoesView({
           </div>
           <div>
             <h2 className="text-2xl font-bold text-slate-900">Plano de Ação</h2>
-            <p className="text-slate-500 text-sm">Gerencie as ações e eventos da equipe</p>
+            <p className="text-slate-500 text-sm">
+              Gerencie as ações e eventos da equipe
+            </p>
           </div>
         </div>
         <div className="flex space-x-2">
-          <button 
+          <button
             onClick={() => setIsAdding(true)}
             className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center space-x-2"
           >
@@ -7895,9 +11402,14 @@ function CalendarioAcoesView({
           <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
             <Upload size={18} />
             <span>Importar</span>
-            <input type="file" accept=".xlsx, .xls" onChange={handleImport} className="hidden" />
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleImport}
+              className="hidden"
+            />
           </label>
-          <button 
+          <button
             onClick={handleExport}
             className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
           >
@@ -7909,23 +11421,30 @@ function CalendarioAcoesView({
 
       <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Pesquisar</label>
+          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+            Pesquisar
+          </label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              size={18}
+            />
+            <input
+              type="text"
               placeholder="Nome ou local..."
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
             />
           </div>
         </div>
         <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Status</label>
-          <select 
+          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+            Status
+          </label>
+          <select
             value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value as any)}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
             className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
           >
             <option value="all">Todos os Status</option>
@@ -7935,53 +11454,66 @@ function CalendarioAcoesView({
         </div>
         <div>
           <div className="flex justify-between items-center mb-1 ml-1">
-            <label className="block text-[10px] font-bold text-slate-400 uppercase">Data Início</label>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase">
+              Data Início
+            </label>
             {(startDateFilter || endDateFilter) && (
-              <button 
-                onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }} 
+              <button
+                onClick={() => {
+                  setStartDateFilter("");
+                  setEndDateFilter("");
+                }}
                 className="text-[10px] text-red-500 font-bold hover:underline"
               >
                 Limpar
               </button>
             )}
           </div>
-          <input 
-            type="date" 
+          <input
+            type="date"
             value={startDateFilter}
-            onChange={e => setStartDateFilter(e.target.value)}
+            onChange={(e) => setStartDateFilter(e.target.value)}
             className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
           />
         </div>
         <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Data Fim</label>
-          <input 
-            type="date" 
+          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+            Data Fim
+          </label>
+          <input
+            type="date"
             value={endDateFilter}
-            onChange={e => setEndDateFilter(e.target.value)}
+            onChange={(e) => setEndDateFilter(e.target.value)}
             className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredData.map(action => (
-          <motion.div 
+        {filteredData.map((action) => (
+          <motion.div
             layout
-            key={action.id} 
+            key={action.id}
             className={cn(
               "bg-white p-6 rounded-3xl shadow-sm border transition-all",
-              action.concluida ? "border-emerald-100 bg-emerald-50/10" : "border-slate-100"
+              action.concluida
+                ? "border-emerald-100 bg-emerald-50/10"
+                : "border-slate-100",
             )}
           >
             <div className="flex justify-between items-start mb-4">
-              <div className={cn(
-                "p-2 rounded-xl",
-                action.concluida ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"
-              )}>
+              <div
+                className={cn(
+                  "p-2 rounded-xl",
+                  action.concluida
+                    ? "bg-emerald-100 text-emerald-600"
+                    : "bg-blue-100 text-blue-600",
+                )}
+              >
                 <Calendar size={20} />
               </div>
               <div className="flex space-x-1">
-                <button 
+                <button
                   onClick={() => {
                     setEditingAction(action);
                     setNewAction({
@@ -7991,18 +11523,31 @@ function CalendarioAcoesView({
                       local: action.local,
                       observacao: action.observacao,
                       concluida: action.concluida,
-                      fotos: [...(action.fotos || []), '', '', ''].slice(0, 3),
-                      metaBoletos: action.metaBoletos !== undefined ? action.metaBoletos : '',
-                      metaInscritos: action.metaInscritos !== undefined ? action.metaInscritos : '',
+                      fotos: [...(action.fotos || []), "", "", ""].slice(0, 3),
+                      metaBoletos:
+                        action.metaBoletos !== undefined
+                          ? action.metaBoletos
+                          : "",
+                      metaInscritos:
+                        action.metaInscritos !== undefined
+                          ? action.metaInscritos
+                          : "",
                       precisaPromotor: !!action.precisaPromotor,
-                      promotoresSelecionados: action.promotoresSelecionados || [],
-                      valorPromotor: action.valorPromotor !== undefined ? action.valorPromotor : '',
-                      valorOrcado: action.valorOrcado !== undefined ? action.valorOrcado : '',
-                      colaboradorId: action.colaboradorId || '',
-                      colaboradorNome: action.colaboradorNome || '',
-                      tipoAtividade: action.tipoAtividade || 'Ação',
-                      empresaParceiraId: action.empresaParceiraId || '',
-                      empresaParceiraNome: action.empresaParceiraNome || ''
+                      promotoresSelecionados:
+                        action.promotoresSelecionados || [],
+                      valorPromotor:
+                        action.valorPromotor !== undefined
+                          ? action.valorPromotor
+                          : "",
+                      valorOrcado:
+                        action.valorOrcado !== undefined
+                          ? action.valorOrcado
+                          : "",
+                      colaboradorId: action.colaboradorId || "",
+                      colaboradorNome: action.colaboradorNome || "",
+                      tipoAtividade: action.tipoAtividade || "Ação",
+                      empresaParceiraId: action.empresaParceiraId || "",
+                      empresaParceiraNome: action.empresaParceiraNome || "",
                     });
                     setIsAdding(true);
                   }}
@@ -8010,7 +11555,7 @@ function CalendarioAcoesView({
                 >
                   <Edit2 size={16} />
                 </button>
-                <button 
+                <button
                   onClick={() => handleDelete(action.id)}
                   className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-all"
                 >
@@ -8020,13 +11565,15 @@ function CalendarioAcoesView({
             </div>
 
             <div className="flex flex-wrap gap-1.5 mb-2 shrink-0">
-              <span className={cn(
-                "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border",
-                action.tipoAtividade === 'Visita'
-                  ? "bg-amber-50 text-amber-600 border-amber-200/60"
-                  : "bg-indigo-50 text-indigo-600 border-indigo-200/60"
-              )}>
-                {action.tipoAtividade || 'Ação'}
+              <span
+                className={cn(
+                  "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border",
+                  action.tipoAtividade === "Visita"
+                    ? "bg-amber-50 text-amber-600 border-amber-200/60"
+                    : "bg-indigo-50 text-indigo-600 border-indigo-200/60",
+                )}
+              >
+                {action.tipoAtividade || "Ação"}
               </span>
               {action.empresaParceiraNome && (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200/60 flex items-center gap-1">
@@ -8036,7 +11583,9 @@ function CalendarioAcoesView({
               )}
             </div>
 
-            <h3 className="text-lg font-bold text-slate-900 mb-1">{action.nome}</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">
+              {action.nome}
+            </h3>
             {action.colaboradorNome && (
               <div className="flex items-center space-x-1.5 text-slate-600 text-xs mb-2 bg-blue-50/55 p-1 px-2 rounded-lg inline-flex">
                 <span className="font-bold text-blue-700">Colaborador:</span>
@@ -8053,20 +11602,32 @@ function CalendarioAcoesView({
                 <span>Período</span>
               </div>
               <p className="text-xs font-bold text-slate-700">
-                {formatLocalDateString(action.dataInicio)} {action.dataFim !== action.dataInicio && `- ${formatLocalDateString(action.dataFim)}`}
+                {formatLocalDateString(action.dataInicio)}{" "}
+                {action.dataFim !== action.dataInicio &&
+                  `- ${formatLocalDateString(action.dataFim)}`}
               </p>
             </div>
 
             {/* Metas da Ação */}
-            {((action.metaBoletos !== undefined && action.metaBoletos > 0) || (action.metaInscritos !== undefined && action.metaInscritos > 0)) && (
+            {((action.metaBoletos !== undefined && action.metaBoletos > 0) ||
+              (action.metaInscritos !== undefined &&
+                action.metaInscritos > 0)) && (
               <div className="grid grid-cols-2 gap-2 mb-4 bg-slate-50 p-3 rounded-2xl">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Meta Boletos</span>
-                  <span className="text-xs font-bold text-slate-700">{action.metaBoletos || 0}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                    Meta Boletos
+                  </span>
+                  <span className="text-xs font-bold text-slate-700">
+                    {action.metaBoletos || 0}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Meta Inscritos</span>
-                  <span className="text-xs font-bold text-slate-700">{action.metaInscritos || 0}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                    Meta Inscritos
+                  </span>
+                  <span className="text-xs font-bold text-slate-700">
+                    {action.metaInscritos || 0}
+                  </span>
                 </div>
               </div>
             )}
@@ -8074,43 +11635,75 @@ function CalendarioAcoesView({
             {/* Promotores e Presenças */}
             {action.precisaPromotor && (
               <div className="bg-slate-50 p-3 rounded-2xl mb-4 border border-slate-100">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Promotores Escala</span>
-                {(!action.promotoresSelecionados || action.promotoresSelecionados.length === 0) ? (
-                  <span className="text-xs text-slate-400 italic">Nenhum promotor escalado</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase block mb-2">
+                  Promotores Escala
+                </span>
+                {!action.promotoresSelecionados ||
+                action.promotoresSelecionados.length === 0 ? (
+                  <span className="text-xs text-slate-400 italic">
+                    Nenhum promotor escalado
+                  </span>
                 ) : (
                   <div className="space-y-2">
-                    {action.promotoresSelecionados.map(pUid => {
-                      const promoterObj = (users || []).find(u => u.uid === pUid);
-                      const isPresent = !!(action.presencaPromotores?.[pUid]);
-                      const details = action.dadosPresencaPromotores?.[pUid] || { empresa: 'GR15', horas: 4 };
+                    {action.promotoresSelecionados.map((pUid) => {
+                      const promoterObj = (users || []).find(
+                        (u) => u.uid === pUid,
+                      );
+                      const isPresent = !!action.presencaPromotores?.[pUid];
+                      const details = action.dadosPresencaPromotores?.[
+                        pUid
+                      ] || { empresa: "GR15", horas: 4 };
 
                       return (
-                        <div key={pUid} className="p-2.5 rounded-xl border border-slate-100 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-2">
+                        <div
+                          key={pUid}
+                          className="p-2.5 rounded-xl border border-slate-100 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-2"
+                        >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2 overflow-hidden mr-1">
-                              <div className={cn(
-                                "w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0",
-                                isPresent ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"
-                              )}>
-                                {promoterObj ? promoterObj.name.charAt(0).toUpperCase() : '?'}
+                              <div
+                                className={cn(
+                                  "w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0",
+                                  isPresent
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : "bg-slate-100 text-slate-500",
+                                )}
+                              >
+                                {promoterObj
+                                  ? promoterObj.name.charAt(0).toUpperCase()
+                                  : "?"}
                               </div>
                               <div className="flex flex-col overflow-hidden">
-                                <span className="text-xs font-bold text-slate-700 truncate">{promoterObj ? promoterObj.name : 'Promotor Removido'}</span>
-                                <span className="text-[9px] text-slate-400 font-medium truncate">{promoterObj ? promoterObj.role : ''}</span>
+                                <span className="text-xs font-bold text-slate-700 truncate">
+                                  {promoterObj
+                                    ? promoterObj.name
+                                    : "Promotor Removido"}
+                                </span>
+                                <span className="text-[9px] text-slate-400 font-medium truncate">
+                                  {promoterObj ? promoterObj.role : ""}
+                                </span>
                               </div>
                             </div>
-                            
+
                             <button
-                              onClick={() => togglePromoterAttendance(action, pUid)}
+                              onClick={() =>
+                                togglePromoterAttendance(action, pUid)
+                              }
                               className={cn(
                                 "text-[10px] px-2.5 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 shrink-0 transition-colors cursor-pointer",
                                 isPresent
                                   ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                  : "bg-slate-100 text-slate-500 hover:bg-slate-200",
                               )}
                             >
-                              {isPresent ? <CheckSquare size={13} /> : <Square size={13} />}
-                              <span>{isPresent ? "Participou" : "Ausente"}</span>
+                              {isPresent ? (
+                                <CheckSquare size={13} />
+                              ) : (
+                                <Square size={13} />
+                              )}
+                              <span>
+                                {isPresent ? "Participou" : "Ausente"}
+                              </span>
                             </button>
                           </div>
 
@@ -8118,18 +11711,27 @@ function CalendarioAcoesView({
                             <div className="mt-2 text-[11px] pt-2 border-t border-dashed border-slate-100 space-y-2">
                               {/* Empresa Selector */}
                               <div className="flex items-center justify-between">
-                                <span className="font-semibold text-slate-500">Pagas por:</span>
+                                <span className="font-semibold text-slate-500">
+                                  Pagas por:
+                                </span>
                                 <div className="flex space-x-1">
-                                  {(['GR15', 'RP7'] as const).map(emp => (
+                                  {(["GR15", "RP7"] as const).map((emp) => (
                                     <button
                                       type="button"
                                       key={emp}
-                                      onClick={() => updatePromoterPresenceDetails(action, pUid, emp, details.horas)}
+                                      onClick={() =>
+                                        updatePromoterPresenceDetails(
+                                          action,
+                                          pUid,
+                                          emp,
+                                          details.horas,
+                                        )
+                                      }
                                       className={cn(
                                         "px-2 py-0.5 rounded-md font-bold transition-all text-[10px] cursor-pointer",
                                         details.empresa === emp
                                           ? "bg-blue-600 text-white shadow-sm"
-                                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                          : "bg-slate-100 text-slate-600 hover:bg-slate-200",
                                       )}
                                     >
                                       {emp}
@@ -8140,32 +11742,49 @@ function CalendarioAcoesView({
 
                               {/* Horas de Atuação Selector */}
                               <div className="flex items-center justify-between">
-                                <span className="font-semibold text-slate-500">Horas de atuação:</span>
+                                <span className="font-semibold text-slate-500">
+                                  Horas de atuação:
+                                </span>
                                 <div className="flex items-center space-x-1">
-                                  {([4, 6, 8, 10] as const).map(hr => (
+                                  {([4, 6, 8, 10] as const).map((hr) => (
                                     <button
                                       type="button"
                                       key={hr}
-                                      onClick={() => updatePromoterPresenceDetails(action, pUid, details.empresa as 'GR15' | 'RP7', hr)}
+                                      onClick={() =>
+                                        updatePromoterPresenceDetails(
+                                          action,
+                                          pUid,
+                                          details.empresa as "GR15" | "RP7",
+                                          hr,
+                                        )
+                                      }
                                       className={cn(
                                         "px-1.5 py-0.5 rounded-md font-bold transition-all text-[10px] cursor-pointer",
                                         details.horas === hr
                                           ? "bg-indigo-600 text-white shadow-sm"
-                                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                          : "bg-slate-100 text-slate-600 hover:bg-slate-200",
                                       )}
                                     >
                                       {hr}h
                                     </button>
                                   ))}
-                                  
+
                                   <input
                                     type="number"
                                     min="1"
                                     max="100"
-                                    value={details.horas || ''}
-                                    onChange={e => {
-                                      const val = e.target.value === '' ? 0 : Number(e.target.value);
-                                      updatePromoterPresenceDetails(action, pUid, details.empresa as 'GR15' | 'RP7', val);
+                                    value={details.horas || ""}
+                                    onChange={(e) => {
+                                      const val =
+                                        e.target.value === ""
+                                          ? 0
+                                          : Number(e.target.value);
+                                      updatePromoterPresenceDetails(
+                                        action,
+                                        pUid,
+                                        details.empresa as "GR15" | "RP7",
+                                        val,
+                                      );
                                     }}
                                     className="w-10 px-1 py-0.5 border border-slate-200 rounded-md text-[10px] text-center font-bold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                                     placeholder="Outro"
@@ -8185,11 +11804,19 @@ function CalendarioAcoesView({
             {action.fotos && action.fotos.length > 0 && (
               <div className="grid grid-cols-3 gap-2 mb-4">
                 {action.fotos.map((foto, idx) => (
-                  <div key={idx} className="aspect-square rounded-xl overflow-hidden bg-slate-100 border border-slate-200 relative group">
-                    <img src={foto} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    <a 
-                      href={foto} 
-                      download={`foto_${idx+1}.jpg`}
+                  <div
+                    key={idx}
+                    className="aspect-square rounded-xl overflow-hidden bg-slate-100 border border-slate-200 relative group"
+                  >
+                    <img
+                      src={foto}
+                      alt={`Foto ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <a
+                      href={foto}
+                      download={`foto_${idx + 1}.jpg`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
@@ -8204,18 +11831,22 @@ function CalendarioAcoesView({
 
             {action.observacao && (
               <div className="mb-4">
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Observações</p>
-                <p className="text-xs text-slate-600 leading-relaxed">{action.observacao}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                  Observações
+                </p>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {action.observacao}
+                </p>
               </div>
             )}
 
-            <button 
+            <button
               onClick={() => toggleStatus(action)}
               className={cn(
                 "w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center space-x-2",
-                action.concluida 
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700" 
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                action.concluida
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200",
               )}
             >
               {action.concluida ? (
@@ -8237,31 +11868,48 @@ function CalendarioAcoesView({
             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
               <Calendar size={40} />
             </div>
-            <p className="text-slate-400 italic">Nenhuma ação encontrada para os filtros aplicados.</p>
+            <p className="text-slate-400 italic">
+              Nenhuma ação encontrada para os filtros aplicados.
+            </p>
           </div>
         )}
       </div>
 
       {isAdding && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
             <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
-              <h3 className="text-xl font-bold text-slate-900">{editingAction ? 'Editar Ação' : 'Nova Ação'}</h3>
-              <button onClick={() => { setIsAdding(false); setEditingAction(null); }} className="text-slate-400 hover:bg-slate-50 p-2 rounded-lg">
+              <h3 className="text-xl font-bold text-slate-900">
+                {editingAction ? "Editar Ação" : "Nova Ação"}
+              </h3>
+              <button
+                onClick={() => {
+                  setIsAdding(false);
+                  setEditingAction(null);
+                }}
+                className="text-slate-400 hover:bg-slate-50 p-2 rounded-lg"
+              >
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+            <form
+              onSubmit={handleSubmit}
+              className="p-6 space-y-4 overflow-y-auto flex-1"
+            >
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Nome da Ação / Visita *</label>
-                <input 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Nome da Ação / Visita *
+                </label>
+                <input
                   required
                   value={newAction.nome}
-                  onChange={e => setNewAction({...newAction, nome: e.target.value})}
+                  onChange={(e) =>
+                    setNewAction({ ...newAction, nome: e.target.value })
+                  }
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                   placeholder="Ex: Blitz no Centro ou Visita Institucional"
                 />
@@ -8269,10 +11917,17 @@ function CalendarioAcoesView({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Tipo de Atividade *</label>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Tipo de Atividade *
+                  </label>
                   <select
                     value={newAction.tipoAtividade}
-                    onChange={e => setNewAction({...newAction, tipoAtividade: e.target.value as 'Ação' | 'Visita'})}
+                    onChange={(e) =>
+                      setNewAction({
+                        ...newAction,
+                        tipoAtividade: e.target.value as "Ação" | "Visita",
+                      })
+                    }
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white font-semibold text-slate-700"
                   >
                     <option value="Ação">Ação</option>
@@ -8280,111 +11935,157 @@ function CalendarioAcoesView({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Empresa Vinculada (Opcional)</label>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Empresa Vinculada (Opcional)
+                  </label>
                   <select
                     value={newAction.empresaParceiraId}
-                    onChange={e => {
+                    onChange={(e) => {
                       const selId = e.target.value;
-                      const selEmp = empresasParceiras.find(emp => emp.id === selId);
+                      const selEmp = empresasParceiras.find(
+                        (emp) => emp.id === selId,
+                      );
                       setNewAction({
                         ...newAction,
                         empresaParceiraId: selId,
-                        empresaParceiraNome: selEmp ? selEmp.nome : '',
-                        local: selEmp ? (selEmp.endereco || newAction.local) : newAction.local
+                        empresaParceiraNome: selEmp ? selEmp.nome : "",
+                        local: selEmp
+                          ? selEmp.endereco || newAction.local
+                          : newAction.local,
                       });
                     }}
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white text-slate-700 font-medium"
                   >
                     <option value="">Nenhuma (Não vincular)</option>
-                    {empresasParceiras.map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.nome}</option>
+                    {empresasParceiras.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.nome}
+                      </option>
                     ))}
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Data Início *</label>
-                  <input 
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Data Início *
+                  </label>
+                  <input
                     type="date"
                     required
                     value={newAction.dataInicio}
-                    onChange={e => setNewAction({...newAction, dataInicio: e.target.value})}
+                    onChange={(e) =>
+                      setNewAction({ ...newAction, dataInicio: e.target.value })
+                    }
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Data Fim *</label>
-                  <input 
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Data Fim *
+                  </label>
+                  <input
                     type="date"
                     required
                     value={newAction.dataFim}
-                    onChange={e => setNewAction({...newAction, dataFim: e.target.value})}
+                    onChange={(e) =>
+                      setNewAction({ ...newAction, dataFim: e.target.value })
+                    }
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Local *</label>
-                <input 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Local *
+                </label>
+                <input
                   required
                   value={newAction.local}
-                  onChange={e => setNewAction({...newAction, local: e.target.value})}
+                  onChange={(e) =>
+                    setNewAction({ ...newAction, local: e.target.value })
+                  }
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                   placeholder="Ex: Praça Central"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Observações</label>
-                <textarea 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Observações
+                </label>
+                <textarea
                   value={newAction.observacao}
-                  onChange={e => setNewAction({...newAction, observacao: e.target.value})}
+                  onChange={(e) =>
+                    setNewAction({ ...newAction, observacao: e.target.value })
+                  }
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm min-h-[100px]"
                   placeholder="O que será feito?"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Colaborador / FDV Responsável</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Colaborador / FDV Responsável
+                </label>
                 <select
                   value={newAction.colaboradorId}
-                  onChange={e => {
+                  onChange={(e) => {
                     const selectedId = e.target.value;
-                    const selectedUser = colaboradoresDisponiveis.find(u => u.uid === selectedId);
+                    const selectedUser = colaboradoresDisponiveis.find(
+                      (u) => u.uid === selectedId,
+                    );
                     setNewAction({
                       ...newAction,
                       colaboradorId: selectedId,
-                      colaboradorNome: selectedUser ? selectedUser.name : ''
+                      colaboradorNome: selectedUser ? selectedUser.name : "",
                     });
                   }}
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
                 >
                   <option value="">Nenhum (Sem colaborador designado)</option>
-                  {colaboradoresDisponiveis.map(u => (
-                    <option key={u.uid} value={u.uid}>{u.name} ({u.role})</option>
+                  {colaboradoresDisponiveis.map((u) => (
+                    <option key={u.uid} value={u.uid}>
+                      {u.name} ({u.role})
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Meta de Boletos da Ação</label>
-                  <input 
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Meta de Boletos da Ação
+                  </label>
+                  <input
                     type="number"
                     min="0"
                     value={newAction.metaBoletos}
-                    onChange={e => setNewAction({...newAction, metaBoletos: e.target.value === '' ? '' : Number(e.target.value)})}
+                    onChange={(e) =>
+                      setNewAction({
+                        ...newAction,
+                        metaBoletos:
+                          e.target.value === "" ? "" : Number(e.target.value),
+                      })
+                    }
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                     placeholder="Ex: 5"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Meta de Inscritos da Ação</label>
-                  <input 
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Meta de Inscritos da Ação
+                  </label>
+                  <input
                     type="number"
                     min="0"
                     value={newAction.metaInscritos}
-                    onChange={e => setNewAction({...newAction, metaInscritos: e.target.value === '' ? '' : Number(e.target.value)})}
+                    onChange={(e) =>
+                      setNewAction({
+                        ...newAction,
+                        metaInscritos:
+                          e.target.value === "" ? "" : Number(e.target.value),
+                      })
+                    }
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                     placeholder="Ex: 20"
                   />
@@ -8393,26 +12094,44 @@ function CalendarioAcoesView({
 
               <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Valor Diário do Promotor (R$)</label>
-                  <select 
+                  <label className="block text-xs font-bold text-slate-600 mb-1">
+                    Valor Diário do Promotor (R$)
+                  </label>
+                  <select
                     value={newAction.valorPromotor}
-                    onChange={e => setNewAction({...newAction, valorPromotor: e.target.value === '' ? '' : Number(e.target.value)})}
+                    onChange={(e) =>
+                      setNewAction({
+                        ...newAction,
+                        valorPromotor:
+                          e.target.value === "" ? "" : Number(e.target.value),
+                      })
+                    }
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
                   >
                     <option value="">Selecione...</option>
-                    {[60, 70, 80, 90, 100, 120, 150].map(val => (
-                      <option key={val} value={val}>R$ {val.toFixed(2).replace('.', ',')}</option>
+                    {[60, 70, 80, 90, 100, 120, 150].map((val) => (
+                      <option key={val} value={val}>
+                        R$ {val.toFixed(2).replace(".", ",")}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Valor Orçado Total (R$)</label>
-                  <input 
+                  <label className="block text-xs font-bold text-slate-600 mb-1">
+                    Valor Orçado Total (R$)
+                  </label>
+                  <input
                     type="number"
                     min="0"
                     step="0.01"
                     value={newAction.valorOrcado}
-                    onChange={e => setNewAction({...newAction, valorOrcado: e.target.value === '' ? '' : Number(e.target.value)})}
+                    onChange={(e) =>
+                      setNewAction({
+                        ...newAction,
+                        valorOrcado:
+                          e.target.value === "" ? "" : Number(e.target.value),
+                      })
+                    }
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
                     placeholder="Ex: R$ 500,00"
                   />
@@ -8422,55 +12141,89 @@ function CalendarioAcoesView({
               {/* Se vai precisar de Promotor */}
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
+                  <input
                     type="checkbox"
                     checked={newAction.precisaPromotor}
-                    onChange={e => setNewAction({...newAction, precisaPromotor: e.target.checked})}
+                    onChange={(e) =>
+                      setNewAction({
+                        ...newAction,
+                        precisaPromotor: e.target.checked,
+                      })
+                    }
                     className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                   />
                   <div>
-                    <span className="text-sm font-bold text-slate-800">Precisa de Promotores?</span>
-                    <span className="text-xs text-slate-400 block">Ative para atribuir promotores na ação</span>
+                    <span className="text-sm font-bold text-slate-800">
+                      Precisa de Promotores?
+                    </span>
+                    <span className="text-xs text-slate-400 block">
+                      Ative para atribuir promotores na ação
+                    </span>
                   </div>
                 </label>
 
                 {newAction.precisaPromotor && (
                   <div className="mt-4 border-t border-slate-200/60 pt-3 space-y-2">
-                    <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider mb-2">Selecione os Promotores Escalados:</span>
+                    <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider mb-2">
+                      Selecione os Promotores Escalados:
+                    </span>
                     {promotoresDisponiveis.length === 0 ? (
-                      <span className="text-xs text-slate-400 italic block">Nenhum promotor cadastrado neste servidor comercial ou principal.</span>
+                      <span className="text-xs text-slate-400 italic block">
+                        Nenhum promotor cadastrado neste servidor comercial ou
+                        principal.
+                      </span>
                     ) : (
                       <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
-                        {promotoresDisponiveis.map(promoter => {
-                          const isSelected = newAction.promotoresSelecionados.includes(promoter.uid);
+                        {promotoresDisponiveis.map((promoter) => {
+                          const isSelected =
+                            newAction.promotoresSelecionados.includes(
+                              promoter.uid,
+                            );
                           return (
                             <button
                               type="button"
                               key={promoter.uid}
                               onClick={() => {
-                                const isSel = newAction.promotoresSelecionados.includes(promoter.uid);
+                                const isSel =
+                                  newAction.promotoresSelecionados.includes(
+                                    promoter.uid,
+                                  );
                                 const updated = isSel
-                                  ? newAction.promotoresSelecionados.filter(id => id !== promoter.uid)
-                                  : [...newAction.promotoresSelecionados, promoter.uid];
-                                setNewAction({ ...newAction, promotoresSelecionados: updated });
+                                  ? newAction.promotoresSelecionados.filter(
+                                      (id) => id !== promoter.uid,
+                                    )
+                                  : [
+                                      ...newAction.promotoresSelecionados,
+                                      promoter.uid,
+                                    ];
+                                setNewAction({
+                                  ...newAction,
+                                  promotoresSelecionados: updated,
+                                });
                               }}
                               className={cn(
                                 "w-full flex items-center justify-between p-2 rounded-lg text-xs font-semibold text-left transition-colors border",
-                                isSelected 
-                                  ? "bg-blue-50/80 border-blue-200 text-blue-700" 
-                                  : "bg-white border-slate-100 hover:bg-slate-50 text-slate-600"
+                                isSelected
+                                  ? "bg-blue-50/80 border-blue-200 text-blue-700"
+                                  : "bg-white border-slate-100 hover:bg-slate-50 text-slate-600",
                               )}
                             >
                               <div className="flex items-center space-x-2">
-                                <div className={cn(
-                                  "w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px]",
-                                  isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
-                                )}>
+                                <div
+                                  className={cn(
+                                    "w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px]",
+                                    isSelected
+                                      ? "bg-blue-600 text-white"
+                                      : "bg-slate-100 text-slate-500",
+                                  )}
+                                >
                                   {promoter.name.charAt(0).toUpperCase()}
                                 </div>
                                 <span>{promoter.name}</span>
                               </div>
-                              <span className="text-[10px] text-slate-400 italic font-medium">{promoter.role}</span>
+                              <span className="text-[10px] text-slate-400 italic font-medium">
+                                {promoter.role}
+                              </span>
                             </button>
                           );
                         })}
@@ -8481,25 +12234,30 @@ function CalendarioAcoesView({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2">Fotos (até 3 URLs)</label>
+                <label className="block text-xs font-bold text-slate-500 mb-2">
+                  Fotos (até 3 URLs)
+                </label>
                 <div className="space-y-2">
                   {newAction.fotos.map((foto, idx) => (
-                    <input 
+                    <input
                       key={idx}
                       placeholder={`URL da Foto ${idx + 1}`}
                       value={foto}
-                      onChange={e => {
+                      onChange={(e) => {
                         const next = [...newAction.fotos];
                         next[idx] = e.target.value;
-                        setNewAction({...newAction, fotos: next});
+                        setNewAction({ ...newAction, fotos: next });
                       }}
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                     />
                   ))}
                 </div>
               </div>
-              <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
-                {editingAction ? 'Salvar Alterações' : 'Agendar Ação'}
+              <button
+                type="submit"
+                className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+              >
+                {editingAction ? "Salvar Alterações" : "Agendar Ação"}
               </button>
             </form>
           </motion.div>
@@ -8509,33 +12267,40 @@ function CalendarioAcoesView({
   );
 }
 
-function EmpresasParceirasView({ 
-  data, 
-  onToast, 
+function EmpresasParceirasView({
+  data,
+  onToast,
   onGenerateAction,
-  cursos = []
-}: { 
-  data: EmpresaParceira[], 
-  onToast: (m: string, t?: 'success' | 'error') => void,
-  onGenerateAction: (empresa: EmpresaParceira) => void,
-  cursos?: CursoDisponivel[]
+  cursos = [],
+}: {
+  data: EmpresaParceira[];
+  onToast: (m: string, t?: "success" | "error") => void;
+  onGenerateAction: (empresa: EmpresaParceira) => void;
+  cursos?: CursoDisponivel[];
 }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('Todas');
-  const [unidadeFilter, setUnidadeFilter] = useState<string>('Todas');
-  const [seguimentoFilter, setSeguimentoFilter] = useState<string>('Todos');
-  const [classificacaoFilter, setClassificacaoFilter] = useState<string>('Todas');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("Todas");
+  const [unidadeFilter, setUnidadeFilter] = useState<string>("Todas");
+  const [seguimentoFilter, setSeguimentoFilter] = useState<string>("Todos");
+  const [classificacaoFilter, setClassificacaoFilter] =
+    useState<string>("Todas");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingEmpresa, setEditingEmpresa] = useState<EmpresaParceira | null>(null);
+  const [editingEmpresa, setEditingEmpresa] = useState<EmpresaParceira | null>(
+    null,
+  );
   const [selectedUnidades, setSelectedUnidades] = useState<string[]>([]);
 
   const uniqueUnidades = useMemo(() => {
-    return Array.from(new Set((cursos || []).map(c => c.nomeUnidade).filter(Boolean)));
+    return Array.from(
+      new Set((cursos || []).map((c) => c.nomeUnidade).filter(Boolean)),
+    );
   }, [cursos]);
 
   const uniqueSeguimentos = useMemo(() => {
-    return Array.from(new Set(data.map(d => d.seguimento).filter(Boolean) as string[])).sort();
+    return Array.from(
+      new Set(data.map((d) => d.seguimento).filter(Boolean) as string[]),
+    ).sort();
   }, [data]);
 
   useEffect(() => {
@@ -8546,49 +12311,81 @@ function EmpresasParceirasView({
     }
   }, [editingEmpresa, isModalOpen]);
 
-  const filteredData = data.filter(emp => {
+  const filteredData = data.filter((emp) => {
     const term = searchTerm.toLowerCase();
-    const matchBusca = emp.nome.toLowerCase().includes(term) || (emp.cnpj || '').toLowerCase().includes(term);
-    const matchStatus = statusFilter === 'Todas' || emp.statusEmpresa === statusFilter;
-    const matchUnidade = unidadeFilter === 'Todas' || (emp.unidadesVinculadas || []).includes(unidadeFilter);
-    const matchSeguimento = seguimentoFilter === 'Todos' || emp.seguimento === seguimentoFilter;
-    const matchClassificacao = classificacaoFilter === 'Todas' || emp.classificacao === classificacaoFilter;
+    const matchBusca =
+      emp.nome.toLowerCase().includes(term) ||
+      (emp.cnpj || "").toLowerCase().includes(term);
+    const matchStatus =
+      statusFilter === "Todas" || emp.statusEmpresa === statusFilter;
+    const matchUnidade =
+      unidadeFilter === "Todas" ||
+      (emp.unidadesVinculadas || []).includes(unidadeFilter);
+    const matchSeguimento =
+      seguimentoFilter === "Todos" || emp.seguimento === seguimentoFilter;
+    const matchClassificacao =
+      classificacaoFilter === "Todas" ||
+      emp.classificacao === classificacaoFilter;
 
-    return matchBusca && matchStatus && matchUnidade && matchSeguimento && matchClassificacao;
+    return (
+      matchBusca &&
+      matchStatus &&
+      matchUnidade &&
+      matchSeguimento &&
+      matchClassificacao
+    );
   });
 
   // Calculate Dashboard metrics based on filtered output
   const kpiTotais = filteredData.length;
-  const statConveniada = filteredData.filter(e => e.statusEmpresa === 'Conveniada').length;
-  const statEmTratativa = filteredData.filter(e => e.statusEmpresa === 'Em tratativa').length;
-  const statCancelada = filteredData.filter(e => e.statusEmpresa === 'Cancelada').length;
-  const statNaoVisitada = filteredData.filter(e => e.statusEmpresa === 'Não visitada').length;
-  const classOuro = filteredData.filter(e => e.classificacao === 'Ouro').length;
-  const classPrata = filteredData.filter(e => e.classificacao === 'Prata').length;
-  const classBronze = filteredData.filter(e => e.classificacao === 'Bronze').length;
+  const statConveniada = filteredData.filter(
+    (e) => e.statusEmpresa === "Conveniada",
+  ).length;
+  const statEmTratativa = filteredData.filter(
+    (e) => e.statusEmpresa === "Em tratativa",
+  ).length;
+  const statCancelada = filteredData.filter(
+    (e) => e.statusEmpresa === "Cancelada",
+  ).length;
+  const statNaoVisitada = filteredData.filter(
+    (e) => e.statusEmpresa === "Não visitada",
+  ).length;
+  const classOuro = filteredData.filter(
+    (e) => e.classificacao === "Ouro",
+  ).length;
+  const classPrata = filteredData.filter(
+    (e) => e.classificacao === "Prata",
+  ).length;
+  const classBronze = filteredData.filter(
+    (e) => e.classificacao === "Bronze",
+  ).length;
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const payload = {
-      nome: formData.get('nome') as string,
-      responsavel: formData.get('responsavel') as string,
-      telefone: formData.get('telefone') as string,
-      telefoneResponsavel: formData.get('telefoneResponsavel') as string,
-      email: formData.get('email') as string,
-      endereco: formData.get('endereco') as string,
-      bairro: formData.get('bairro') as string,
-      linkMaps: formData.get('linkMaps') as string,
-      classificacao: formData.get('classificacao') as string,
-      seguimento: formData.get('seguimento') as string,
-      cnpj: formData.get('cnpj') as string,
-      statusEmpresa: formData.get('statusEmpresa') as string,
-      linkSales: formData.get('linkSales') as string,
+      nome: formData.get("nome") as string,
+      responsavel: formData.get("responsavel") as string,
+      telefone: formData.get("telefone") as string,
+      telefoneResponsavel: formData.get("telefoneResponsavel") as string,
+      email: formData.get("email") as string,
+      endereco: formData.get("endereco") as string,
+      bairro: formData.get("bairro") as string,
+      linkMaps: formData.get("linkMaps") as string,
+      classificacao: formData.get("classificacao") as string,
+      seguimento: formData.get("seguimento") as string,
+      cnpj: formData.get("cnpj") as string,
+      statusEmpresa: formData.get("statusEmpresa") as string,
+      linkSales: formData.get("linkSales") as string,
       unidadesVinculadas: selectedUnidades,
       updatedAt: serverTimestamp(),
     };
 
-    const isDuplicate = data.some(emp => emp.nome.toLowerCase() === payload.nome.toLowerCase() && emp.id !== editingEmpresa?.id);
+    const isDuplicate = data.some(
+      (emp) =>
+        emp.nome.toLowerCase() === payload.nome.toLowerCase() &&
+        emp.id !== editingEmpresa?.id,
+    );
     if (isDuplicate) {
       onToast("Já existe uma empresa cadastrada com este nome.", "error");
       return;
@@ -8596,48 +12393,58 @@ function EmpresasParceirasView({
 
     try {
       if (editingEmpresa) {
-        await updateDoc(doc(db, COLLECTIONS.EMPRESAS_PARCEIRAS, editingEmpresa.id), payload);
+        await updateDoc(
+          doc(db, COLLECTIONS.EMPRESAS_PARCEIRAS, editingEmpresa.id),
+          payload,
+        );
         onToast("Empresa atualizada!");
       } else {
-        await addDoc(collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS), { ...payload, createdAt: serverTimestamp() });
+        await addDoc(collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS), {
+          ...payload,
+          createdAt: serverTimestamp(),
+        });
         onToast("Empresa cadastrada!");
       }
       setIsModalOpen(false);
       setEditingEmpresa(null);
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.WRITE, COLLECTIONS.EMPRESAS_PARCEIRAS);
-      onToast("Erro ao salvar empresa.", 'error');
+      handleFirestoreError(
+        err,
+        OperationType.WRITE,
+        COLLECTIONS.EMPRESAS_PARCEIRAS,
+      );
+      onToast("Erro ao salvar empresa.", "error");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Deseja excluir esta empresa?')) {
+    if (window.confirm("Deseja excluir esta empresa?")) {
       try {
         await deleteDoc(doc(db, COLLECTIONS.EMPRESAS_PARCEIRAS, id));
         onToast("Empresa removida.");
       } catch (err: any) {
-        onToast("Erro ao excluir empresa.", 'error');
+        onToast("Erro ao excluir empresa.", "error");
       }
     }
   };
 
   const handleExport = () => {
-    const exportData = filteredData.map(emp => ({
+    const exportData = filteredData.map((emp) => ({
       Nome: emp.nome,
-      CNPJ: emp.cnpj || '',
+      CNPJ: emp.cnpj || "",
       Responsável: emp.responsavel,
       Telefone: emp.telefone,
-      'Telefone Responsável': emp.telefoneResponsavel || '',
+      "Telefone Responsável": emp.telefoneResponsavel || "",
       Email: emp.email,
       Endereço: emp.endereco,
-      Bairro: emp.bairro || '',
-      Seguimento: emp.seguimento || '',
-      Classificação: emp.classificacao || '',
-      Status: emp.statusEmpresa || '',
-      'Link Maps': emp.linkMaps,
-      'Link Sales': emp.linkSales || ''
+      Bairro: emp.bairro || "",
+      Seguimento: emp.seguimento || "",
+      Classificação: emp.classificacao || "",
+      Status: emp.statusEmpresa || "",
+      "Link Maps": emp.linkMaps,
+      "Link Sales": emp.linkSales || "",
     }));
-    exportToExcel(exportData, 'Empresas_Parceiras');
+    exportToExcel(exportData, "Empresas_Parceiras");
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -8646,28 +12453,34 @@ function EmpresasParceirasView({
 
     importFromExcel(file, async (importData) => {
       try {
-        const batch = importData.map(item => ({
-          nome: item.Nome || item.nome || '',
-          cnpj: item.CNPJ || item.cnpj || '',
-          responsavel: item.Responsável || item.responsavel || '',
-          telefone: String(item.Telefone || item.telefone || '').replace(/\D/g, ''),
-          telefoneResponsavel: String(item['Telefone Responsável'] || item.telefoneResponsavel || '').replace(/\D/g, ''),
-          email: item.Email || item.email || '',
-          endereco: item.Endereço || item.endereco || '',
-          bairro: item.Bairro || item.bairro || '',
-          seguimento: item.Seguimento || item.seguimento || '',
-          classificacao: item.Classificação || item.classificacao || '',
-          statusEmpresa: item.Status || item.statusEmpresa || '',
-          linkMaps: item['Link Maps'] || item.linkMaps || '',
-          linkSales: item['Link Sales'] || item.linkSales || '',
-          createdAt: serverTimestamp()
+        const batch = importData.map((item) => ({
+          nome: item.Nome || item.nome || "",
+          cnpj: item.CNPJ || item.cnpj || "",
+          responsavel: item.Responsável || item.responsavel || "",
+          telefone: String(item.Telefone || item.telefone || "").replace(
+            /\D/g,
+            "",
+          ),
+          telefoneResponsavel: String(
+            item["Telefone Responsável"] || item.telefoneResponsavel || "",
+          ).replace(/\D/g, ""),
+          email: item.Email || item.email || "",
+          endereco: item.Endereço || item.endereco || "",
+          bairro: item.Bairro || item.bairro || "",
+          seguimento: item.Seguimento || item.seguimento || "",
+          classificacao: item.Classificação || item.classificacao || "",
+          statusEmpresa: item.Status || item.statusEmpresa || "",
+          linkMaps: item["Link Maps"] || item.linkMaps || "",
+          linkSales: item["Link Sales"] || item.linkSales || "",
+          createdAt: serverTimestamp(),
         }));
 
         let imported = 0;
         let skipped = 0;
         const inserted = new Set();
         for (const entry of batch) {
-          const isDup = data.some(e => e.nome === entry.nome) || inserted.has(entry.nome);
+          const isDup =
+            data.some((e) => e.nome === entry.nome) || inserted.has(entry.nome);
           if (!isDup) {
             await addDoc(collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS), entry);
             inserted.add(entry.nome);
@@ -8676,9 +12489,11 @@ function EmpresasParceirasView({
             skipped++;
           }
         }
-        onToast(`${imported} empresas importadas! ${skipped > 0 ? `${skipped} ignoradas.` : ''}`);
+        onToast(
+          `${imported} empresas importadas! ${skipped > 0 ? `${skipped} ignoradas.` : ""}`,
+        );
       } catch (err: any) {
-        onToast("Erro ao importar empresas.", 'error');
+        onToast("Erro ao importar empresas.", "error");
       }
     });
   };
@@ -8691,13 +12506,20 @@ function EmpresasParceirasView({
             <Building2 size={24} />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Empresas Parceiras</h2>
-            <p className="text-slate-500 text-sm">Gestão de parcerias e convênios</p>
+            <h2 className="text-2xl font-bold text-slate-900">
+              Empresas Parceiras
+            </h2>
+            <p className="text-slate-500 text-sm">
+              Gestão de parcerias e convênios
+            </p>
           </div>
         </div>
         <div className="flex space-x-2">
-          <button 
-            onClick={() => { setEditingEmpresa(null); setIsModalOpen(true); }}
+          <button
+            onClick={() => {
+              setEditingEmpresa(null);
+              setIsModalOpen(true);
+            }}
             className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center space-x-2"
           >
             <Plus size={20} />
@@ -8706,9 +12528,14 @@ function EmpresasParceirasView({
           <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
             <Upload size={18} />
             <span>Importar</span>
-            <input type="file" accept=".xlsx, .xls" onChange={handleImport} className="hidden" />
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleImport}
+              className="hidden"
+            />
           </label>
-          <button 
+          <button
             onClick={handleExport}
             className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
           >
@@ -8730,29 +12557,69 @@ function EmpresasParceirasView({
         </div>
 
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 col-span-2 lg:col-span-3 space-y-2">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Por Status</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            Por Status
+          </p>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex justify-between items-center"><span className="text-emerald-600 font-medium text-xs">Conveniada</span><span className="font-bold text-slate-700">{statConveniada}</span></div>
-            <div className="flex justify-between items-center"><span className="text-amber-600 font-medium text-xs">Em Tratativa</span><span className="font-bold text-slate-700">{statEmTratativa}</span></div>
-            <div className="flex justify-between items-center"><span className="text-rose-600 font-medium text-xs">Cancelada</span><span className="font-bold text-slate-700">{statCancelada}</span></div>
-            <div className="flex justify-between items-center"><span className="text-slate-500 font-medium text-xs">Não Visitada</span><span className="font-bold text-slate-700">{statNaoVisitada}</span></div>
+            <div className="flex justify-between items-center">
+              <span className="text-emerald-600 font-medium text-xs">
+                Conveniada
+              </span>
+              <span className="font-bold text-slate-700">{statConveniada}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-amber-600 font-medium text-xs">
+                Em Tratativa
+              </span>
+              <span className="font-bold text-slate-700">
+                {statEmTratativa}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-rose-600 font-medium text-xs">
+                Cancelada
+              </span>
+              <span className="font-bold text-slate-700">{statCancelada}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-500 font-medium text-xs">
+                Não Visitada
+              </span>
+              <span className="font-bold text-slate-700">
+                {statNaoVisitada}
+              </span>
+            </div>
           </div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 col-span-2 lg:col-span-3 space-y-2">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Por Classificação</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            Por Classificação
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
             <div className="bg-amber-100/50 p-2 rounded-lg flex flex-col items-center">
-              <span className="text-amber-700 font-bold text-xs uppercase">Ouro</span>
-              <span className="text-lg font-black text-amber-900">{classOuro}</span>
+              <span className="text-amber-700 font-bold text-xs uppercase">
+                Ouro
+              </span>
+              <span className="text-lg font-black text-amber-900">
+                {classOuro}
+              </span>
             </div>
             <div className="bg-slate-100/80 p-2 rounded-lg flex flex-col items-center">
-              <span className="text-slate-600 font-bold text-xs uppercase">Prata</span>
-              <span className="text-lg font-black text-slate-800">{classPrata}</span>
+              <span className="text-slate-600 font-bold text-xs uppercase">
+                Prata
+              </span>
+              <span className="text-lg font-black text-slate-800">
+                {classPrata}
+              </span>
             </div>
             <div className="bg-orange-100/50 p-2 rounded-lg flex flex-col items-center">
-              <span className="text-orange-800 font-bold text-xs uppercase">Bronze</span>
-              <span className="text-lg font-black text-orange-900">{classBronze}</span>
+              <span className="text-orange-800 font-bold text-xs uppercase">
+                Bronze
+              </span>
+              <span className="text-lg font-black text-orange-900">
+                {classBronze}
+              </span>
             </div>
           </div>
         </div>
@@ -8760,20 +12627,29 @@ function EmpresasParceirasView({
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Buscar por nome da empresa ou CNPJ..." 
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            size={18}
+          />
+          <input
+            type="text"
+            placeholder="Buscar por nome da empresa ou CNPJ..."
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
           />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</label>
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Status
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+            >
               <option value="Todas">Todos</option>
               <option value="Conveniada">Conveniada</option>
               <option value="Em tratativa">Em Tratativa</option>
@@ -8782,8 +12658,14 @@ function EmpresasParceirasView({
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Classificação</label>
-            <select value={classificacaoFilter} onChange={e => setClassificacaoFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Classificação
+            </label>
+            <select
+              value={classificacaoFilter}
+              onChange={(e) => setClassificacaoFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+            >
               <option value="Todas">Todas</option>
               <option value="Ouro">Ouro</option>
               <option value="Prata">Prata</option>
@@ -8791,56 +12673,100 @@ function EmpresasParceirasView({
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Unidade Vinculada</label>
-            <select value={unidadeFilter} onChange={e => setUnidadeFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Unidade Vinculada
+            </label>
+            <select
+              value={unidadeFilter}
+              onChange={(e) => setUnidadeFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+            >
               <option value="Todas">Todas</option>
-              {uniqueUnidades.map(u => <option key={u} value={u}>{u}</option>)}
+              {uniqueUnidades.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Seguimento</label>
-            <select value={seguimentoFilter} onChange={e => setSeguimentoFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Seguimento
+            </label>
+            <select
+              value={seguimentoFilter}
+              onChange={(e) => setSeguimentoFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+            >
               <option value="Todos">Todos</option>
-              {uniqueSeguimentos.map(s => <option key={s} value={s}>{s}</option>)}
+              {uniqueSeguimentos.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredData.map(emp => (
-          <div key={emp.id} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between hover:border-blue-200 transition-all group relative">
-            
+        {filteredData.map((emp) => (
+          <div
+            key={emp.id}
+            className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between hover:border-blue-200 transition-all group relative"
+          >
             {emp.classificacao && (
-              <div className={cn("absolute -top-3 -right-3 text-[10px] font-black uppercase tracking-wider py-1 px-3 rounded-full shadow-sm border", 
-                emp.classificacao === 'Ouro' ? 'bg-amber-100 text-amber-800 border-amber-200' : 
-                emp.classificacao === 'Prata' ? 'bg-slate-100 text-slate-700 border-slate-300' : 
-                'bg-orange-100 text-orange-800 border-orange-200')}
+              <div
+                className={cn(
+                  "absolute -top-3 -right-3 text-[10px] font-black uppercase tracking-wider py-1 px-3 rounded-full shadow-sm border",
+                  emp.classificacao === "Ouro"
+                    ? "bg-amber-100 text-amber-800 border-amber-200"
+                    : emp.classificacao === "Prata"
+                      ? "bg-slate-100 text-slate-700 border-slate-300"
+                      : "bg-orange-100 text-orange-800 border-orange-200",
+                )}
               >
                 {emp.classificacao}
               </div>
             )}
-            
+
             <div>
               <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors pr-8">{emp.nome}</h3>
+                <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors pr-8">
+                  {emp.nome}
+                </h3>
                 <div className="flex space-x-1 shrink-0">
-                  <button onClick={() => { setEditingEmpresa(emp); setIsModalOpen(true); }} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all">
+                  <button
+                    onClick={() => {
+                      setEditingEmpresa(emp);
+                      setIsModalOpen(true);
+                    }}
+                    className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all"
+                  >
                     <Edit2 size={16} />
                   </button>
-                  <button onClick={() => handleDelete(emp.id)} className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-all">
+                  <button
+                    onClick={() => handleDelete(emp.id)}
+                    className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-all"
+                  >
                     <Trash2 size={16} />
                   </button>
                 </div>
               </div>
-              
+
               <div className="flex space-x-2 mb-4">
                 {emp.statusEmpresa && (
-                  <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", 
-                    emp.statusEmpresa === 'Conveniada' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
-                    emp.statusEmpresa === 'Em tratativa' ? 'bg-amber-50 text-amber-600 border-amber-200' :
-                    emp.statusEmpresa === 'Cancelada' ? 'bg-rose-50 text-rose-600 border-rose-200' :
-                    'bg-slate-50 text-slate-500 border-slate-200')}
+                  <span
+                    className={cn(
+                      "text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                      emp.statusEmpresa === "Conveniada"
+                        ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                        : emp.statusEmpresa === "Em tratativa"
+                          ? "bg-amber-50 text-amber-600 border-amber-200"
+                          : emp.statusEmpresa === "Cancelada"
+                            ? "bg-rose-50 text-rose-600 border-rose-200"
+                            : "bg-slate-50 text-slate-500 border-slate-200",
+                    )}
                   >
                     {emp.statusEmpresa}
                   </span>
@@ -8851,10 +12777,10 @@ function EmpresasParceirasView({
                   </span>
                 )}
               </div>
-              
+
               <div className="space-y-3 mb-6">
                 {emp.cnpj && (
-                   <div className="flex items-center space-x-3 text-sm text-slate-600">
+                  <div className="flex items-center space-x-3 text-sm text-slate-600">
                     <Briefcase size={16} className="text-slate-400" />
                     <span className="font-mono text-xs">{emp.cnpj}</span>
                   </div>
@@ -8865,19 +12791,26 @@ function EmpresasParceirasView({
                       <Phone size={16} className="text-slate-400" />
                       <span>{formatPhone(emp.telefone)}</span>
                     </div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase">Empresa</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">
+                      Empresa
+                    </span>
                   </div>
                   {emp.telefoneResponsavel && (
                     <div className="flex items-center justify-between text-sm text-slate-600 pr-1">
                       <div className="flex items-center space-x-3">
-                        <Phone size={16} className="text-slate-400 opacity-50" />
+                        <Phone
+                          size={16}
+                          className="text-slate-400 opacity-50"
+                        />
                         <span>{formatPhone(emp.telefoneResponsavel)}</span>
                       </div>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">Resp.</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">
+                        Resp.
+                      </span>
                     </div>
                   )}
                 </div>
-                
+
                 <div className="flex items-center space-x-3 text-sm text-slate-600">
                   <Users size={16} className="text-slate-400" />
                   <span>{emp.responsavel}</span>
@@ -8900,10 +12833,16 @@ function EmpresasParceirasView({
 
               {emp.unidadesVinculadas && emp.unidadesVinculadas.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-slate-100 mb-4">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">Unidades Vinculadas</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
+                    Unidades Vinculadas
+                  </span>
                   <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
-                    {emp.unidadesVinculadas.map(uni => (
-                      <span key={uni} className="text-[9px] font-bold bg-indigo-50/60 text-indigo-600 border border-indigo-100/40 p-1 px-2 rounded-md truncate max-w-[150px]" title={uni}>
+                    {emp.unidadesVinculadas.map((uni) => (
+                      <span
+                        key={uni}
+                        className="text-[9px] font-bold bg-indigo-50/60 text-indigo-600 border border-indigo-100/40 p-1 px-2 rounded-md truncate max-w-[150px]"
+                        title={uni}
+                      >
                         {uni}
                       </span>
                     ))}
@@ -8915,9 +12854,9 @@ function EmpresasParceirasView({
             <div className="flex flex-col space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 {emp.linkMaps && (
-                  <a 
-                    href={emp.linkMaps} 
-                    target="_blank" 
+                  <a
+                    href={emp.linkMaps}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center space-x-2 w-full py-2 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-100 transition-all border border-slate-200"
                   >
@@ -8926,9 +12865,9 @@ function EmpresasParceirasView({
                   </a>
                 )}
                 {emp.linkSales && (
-                  <a 
-                    href={emp.linkSales} 
-                    target="_blank" 
+                  <a
+                    href={emp.linkSales}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center space-x-2 w-full py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-all border border-blue-200"
                   >
@@ -8937,7 +12876,7 @@ function EmpresasParceirasView({
                   </a>
                 )}
               </div>
-              <button 
+              <button
                 onClick={() => onGenerateAction(emp)}
                 className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center space-x-2"
               >
@@ -8952,7 +12891,7 @@ function EmpresasParceirasView({
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -8960,30 +12899,58 @@ function EmpresasParceirasView({
             >
               <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
                 <h3 className="text-xl font-bold text-slate-900">
-                  {editingEmpresa ? 'Editar Empresa' : 'Nova Empresa Parceira'}
+                  {editingEmpresa ? "Editar Empresa" : "Nova Empresa Parceira"}
                 </h3>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
                   <X size={24} />
                 </button>
               </div>
-              
+
               <div className="overflow-y-auto flex-1">
-                <form id="empresaForm" onSubmit={handleSave} className="p-6 space-y-5">
+                <form
+                  id="empresaForm"
+                  onSubmit={handleSave}
+                  className="p-6 space-y-5"
+                >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Nome da Empresa</label>
-                      <input name="nome" defaultValue={editingEmpresa?.nome} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Nome da Empresa
+                      </label>
+                      <input
+                        name="nome"
+                        defaultValue={editingEmpresa?.nome}
+                        required
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">CNPJ</label>
-                      <input name="cnpj" defaultValue={editingEmpresa?.cnpj} placeholder="00.000.000/0000-00" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        CNPJ
+                      </label>
+                      <input
+                        name="cnpj"
+                        defaultValue={editingEmpresa?.cnpj}
+                        placeholder="00.000.000/0000-00"
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
                     </div>
                   </div>
 
                   <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Status</label>
-                      <select name="statusEmpresa" defaultValue={editingEmpresa?.statusEmpresa || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Status
+                      </label>
+                      <select
+                        name="statusEmpresa"
+                        defaultValue={editingEmpresa?.statusEmpresa || ""}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
                         <option value="">Selecione...</option>
                         <option value="Conveniada">Conveniada</option>
                         <option value="Em tratativa">Em Tratativa</option>
@@ -8992,8 +12959,14 @@ function EmpresasParceirasView({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Classificação</label>
-                      <select name="classificacao" defaultValue={editingEmpresa?.classificacao || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Classificação
+                      </label>
+                      <select
+                        name="classificacao"
+                        defaultValue={editingEmpresa?.classificacao || ""}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
                         <option value="">Nenhuma</option>
                         <option value="Ouro">Ouro</option>
                         <option value="Prata">Prata</option>
@@ -9001,62 +12974,134 @@ function EmpresasParceirasView({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Seguimento</label>
-                      <input name="seguimento" defaultValue={editingEmpresa?.seguimento} placeholder="Ex: Educação, Varejo" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Seguimento
+                      </label>
+                      <input
+                        name="seguimento"
+                        defaultValue={editingEmpresa?.seguimento}
+                        placeholder="Ex: Educação, Varejo"
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Responsável pela Parceria</label>
-                      <input name="responsavel" defaultValue={editingEmpresa?.responsavel} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Responsável pela Parceria
+                      </label>
+                      <input
+                        name="responsavel"
+                        defaultValue={editingEmpresa?.responsavel}
+                        required
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Email</label>
-                      <input name="email" type="email" defaultValue={editingEmpresa?.email} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Email
+                      </label>
+                      <input
+                        name="email"
+                        type="email"
+                        defaultValue={editingEmpresa?.email}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Telefone Principal (Empresa)</label>
-                      <input name="telefone" defaultValue={editingEmpresa?.telefone} onChange={e => { e.target.value = formatPhone(e.target.value) }} required className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Telefone Principal (Empresa)
+                      </label>
+                      <input
+                        name="telefone"
+                        defaultValue={editingEmpresa?.telefone}
+                        onChange={(e) => {
+                          e.target.value = formatPhone(e.target.value);
+                        }}
+                        required
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Telefone do Responsável</label>
-                      <input name="telefoneResponsavel" defaultValue={editingEmpresa?.telefoneResponsavel} onChange={e => { e.target.value = formatPhone(e.target.value) }} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Telefone do Responsável
+                      </label>
+                      <input
+                        name="telefoneResponsavel"
+                        defaultValue={editingEmpresa?.telefoneResponsavel}
+                        onChange={(e) => {
+                          e.target.value = formatPhone(e.target.value);
+                        }}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Endereço</label>
-                      <input name="endereco" defaultValue={editingEmpresa?.endereco} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Endereço
+                      </label>
+                      <input
+                        name="endereco"
+                        defaultValue={editingEmpresa?.endereco}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Bairro</label>
-                      <input name="bairro" defaultValue={editingEmpresa?.bairro} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Bairro
+                      </label>
+                      <input
+                        name="bairro"
+                        defaultValue={editingEmpresa?.bairro}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Link no Maps</label>
-                      <input name="linkMaps" defaultValue={editingEmpresa?.linkMaps} placeholder="https://goo.gl/maps/..." className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Link no Maps
+                      </label>
+                      <input
+                        name="linkMaps"
+                        defaultValue={editingEmpresa?.linkMaps}
+                        placeholder="https://goo.gl/maps/..."
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Link do Sales de Vínculo</label>
-                      <input name="linkSales" defaultValue={editingEmpresa?.linkSales} placeholder="https://sales..." className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Link do Sales de Vínculo
+                      </label>
+                      <input
+                        name="linkSales"
+                        defaultValue={editingEmpresa?.linkSales}
+                        placeholder="https://sales..."
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
                     </div>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Unidades Vinculadas</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                      Unidades Vinculadas
+                    </label>
                     {uniqueUnidades.length === 0 ? (
-                      <span className="text-xs text-slate-400 italic block">Nenhuma unidade cadastrada em Cursos Disponíveis.</span>
+                      <span className="text-xs text-slate-400 italic block">
+                        Nenhuma unidade cadastrada em Cursos Disponíveis.
+                      </span>
                     ) : (
                       <div className="space-y-1.5 max-h-36 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50">
                         <label className="flex items-center space-x-2 pb-1.5 mb-1.5 border-b border-slate-200 cursor-pointer text-xs font-bold text-blue-600">
                           <input
                             type="checkbox"
-                            checked={selectedUnidades.length === uniqueUnidades.length}
+                            checked={
+                              selectedUnidades.length === uniqueUnidades.length
+                            }
                             onChange={(e) => {
                               if (e.target.checked) {
                                 setSelectedUnidades(uniqueUnidades);
@@ -9066,18 +13111,25 @@ function EmpresasParceirasView({
                             }}
                             className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                           />
-                          <span>Selecionar Todas ({uniqueUnidades.length})</span>
+                          <span>
+                            Selecionar Todas ({uniqueUnidades.length})
+                          </span>
                         </label>
-                        {uniqueUnidades.map(unidade => {
+                        {uniqueUnidades.map((unidade) => {
                           const isChecked = selectedUnidades.includes(unidade);
                           return (
-                            <label key={unidade} className="flex items-center space-x-2 text-xs font-medium text-slate-700 cursor-pointer py-0.5 hover:text-slate-900">
+                            <label
+                              key={unidade}
+                              className="flex items-center space-x-2 text-xs font-medium text-slate-700 cursor-pointer py-0.5 hover:text-slate-900"
+                            >
                               <input
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={() => {
-                                  const next = isChecked 
-                                    ? selectedUnidades.filter(u => u !== unidade)
+                                  const next = isChecked
+                                    ? selectedUnidades.filter(
+                                        (u) => u !== unidade,
+                                      )
                                     : [...selectedUnidades, unidade];
                                   setSelectedUnidades(next);
                                 }}
@@ -9094,8 +13146,12 @@ function EmpresasParceirasView({
               </div>
 
               <div className="p-6 border-t border-slate-100 shrink-0 bg-slate-50">
-                <button type="submit" form="empresaForm" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">
-                  {editingEmpresa ? 'Salvar Alterações' : 'Cadastrar Empresa'}
+                <button
+                  type="submit"
+                  form="empresaForm"
+                  className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+                >
+                  {editingEmpresa ? "Salvar Alterações" : "Cadastrar Empresa"}
                 </button>
               </div>
             </motion.div>
@@ -9107,37 +13163,48 @@ function EmpresasParceirasView({
 }
 
 function CalculoRemuneracaoView() {
-  const [salario, setSalario] = useState<string>('');
-  const [multiplo, setMultiplo] = useState<string>('');
+  const [salario, setSalario] = useState<string>("");
+  const [multiplo, setMultiplo] = useState<string>("");
 
   const resultado = useMemo(() => {
-    const vSalario = parseFloat(salario.replace(',', '.')) || 0;
-    const vMultiplo = parseFloat(multiplo.replace(',', '.')) || 0;
-    
+    const vSalario = parseFloat(salario.replace(",", ".")) || 0;
+    const vMultiplo = parseFloat(multiplo.replace(",", ".")) || 0;
+
     // Formula: Salário Base * Múltiplo da RV
     return vSalario * vMultiplo;
   }, [salario, multiplo]);
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(val);
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold text-slate-900">Cálculo de Remuneração</h2>
-        <p className="text-slate-500">Preencha os campos abaixo para calcular a remuneração total</p>
+        <h2 className="text-3xl font-bold text-slate-900">
+          Cálculo de Remuneração
+        </h2>
+        <p className="text-slate-500">
+          Preencha os campos abaixo para calcular a remuneração total
+        </p>
       </div>
 
       <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
         <div className="p-8 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-700">Salário Base</label>
+              <label className="block text-sm font-bold text-slate-700">
+                Salário Base
+              </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R$</span>
-                <input 
-                  type="text" 
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+                  R$
+                </span>
+                <input
+                  type="text"
                   value={salario}
                   onChange={(e) => setSalario(e.target.value)}
                   placeholder="0,00"
@@ -9147,9 +13214,11 @@ function CalculoRemuneracaoView() {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-700">Múltiplo da RV</label>
-              <input 
-                type="text" 
+              <label className="block text-sm font-bold text-slate-700">
+                Múltiplo da RV
+              </label>
+              <input
+                type="text"
                 value={multiplo}
                 onChange={(e) => setMultiplo(e.target.value)}
                 placeholder="Ex: 1.5"
@@ -9160,7 +13229,9 @@ function CalculoRemuneracaoView() {
 
           <div className="pt-8 border-t border-slate-100">
             <div className="bg-blue-600 rounded-3xl p-8 text-white text-center space-y-2 shadow-lg shadow-blue-200">
-              <span className="text-blue-100 text-sm font-bold uppercase tracking-wider">Remuneração Total Estimada</span>
+              <span className="text-blue-100 text-sm font-bold uppercase tracking-wider">
+                Remuneração Total Estimada
+              </span>
               <div className="text-4xl md:text-5xl font-black">
                 {formatCurrency(resultado)}
               </div>
@@ -9175,85 +13246,157 @@ function CalculoRemuneracaoView() {
       <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-start space-x-3">
         <AlertCircle className="text-amber-500 shrink-0" size={20} />
         <p className="text-xs text-amber-700 leading-relaxed">
-          Este cálculo é uma estimativa baseada nos valores informados. 
-          Consulte as regras vigentes de sua unidade para confirmação dos valores finais.
+          Este cálculo é uma estimativa baseada nos valores informados. Consulte
+          as regras vigentes de sua unidade para confirmação dos valores finais.
         </p>
       </div>
     </div>
   );
 }
 
-function AdminView({ users, links, onToast, leads, bases, gap, planner, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras, botConfig, botStatuses, setBotStatuses, callBotApi, metaDia }: { 
-  users: UserProfile[], 
-  links: LinkUtil[], 
-  onToast: (m: string, t?: 'success' | 'error') => void,
-  leads: Lead[],
-  bases: BaseEntry[],
-  gap: GapEntry[],
-  planner: PlannerTask[],
-  campanhas: Campanha[],
-  bomDia: BomDiaCaptacao[],
-  forecast: ForecastCaptacao[],
-  periodos: PeriodoCaptacao[],
-  whatsappMessages: WhatsAppMessage[],
-  empresasParceiras: EmpresaParceira[],
-  botConfig: BotConfig,
-  botStatuses: Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>,
-  setBotStatuses: React.Dispatch<React.SetStateAction<Record<string, { status: string, pairingCode?: string, qrCode?: string, qrUrl?: string, active?: boolean }>>>,
-  callBotApi: (path: string, options?: { method?: 'GET'|'POST', body?: any }) => Promise<any>,
-  metaDia: MetaDia[]
+function AdminView({
+  users,
+  links,
+  onToast,
+  leads,
+  bases,
+  gap,
+  planner,
+  campanhas,
+  bomDia,
+  forecast,
+  periodos,
+  whatsappMessages,
+  empresasParceiras,
+  botConfig,
+  botStatuses,
+  setBotStatuses,
+  callBotApi,
+  metaDia,
+}: {
+  users: UserProfile[];
+  links: LinkUtil[];
+  onToast: (m: string, t?: "success" | "error") => void;
+  leads: Lead[];
+  bases: BaseEntry[];
+  gap: GapEntry[];
+  planner: PlannerTask[];
+  campanhas: Campanha[];
+  bomDia: BomDiaCaptacao[];
+  forecast: ForecastCaptacao[];
+  periodos: PeriodoCaptacao[];
+  whatsappMessages: WhatsAppMessage[];
+  empresasParceiras: EmpresaParceira[];
+  botConfig: BotConfig;
+  botStatuses: Record<
+    string,
+    {
+      status: string;
+      pairingCode?: string;
+      qrCode?: string;
+      qrUrl?: string;
+      active?: boolean;
+    }
+  >;
+  setBotStatuses: React.Dispatch<
+    React.SetStateAction<
+      Record<
+        string,
+        {
+          status: string;
+          pairingCode?: string;
+          qrCode?: string;
+          qrUrl?: string;
+          active?: boolean;
+        }
+      >
+    >
+  >;
+  callBotApi: (
+    path: string,
+    options?: { method?: "GET" | "POST"; body?: any },
+  ) => Promise<any>;
+  metaDia: MetaDia[];
 }) {
-  const [activeTab, setActiveTab] = useState<'usuarios' | 'bomDia' | 'forecast' | 'planner' | 'periodo' | 'links' | 'whatsapp' | 'backup' | 'treinamento' | 'metaDia' | 'folgas' | 'logo' | 'funcionarios'>('usuarios');
+  const [activeTab, setActiveTab] = useState<
+    | "usuarios"
+    | "bomDia"
+    | "forecast"
+    | "planner"
+    | "periodo"
+    | "links"
+    | "whatsapp"
+    | "backup"
+    | "treinamento"
+    | "metaDia"
+    | "folgas"
+    | "logo"
+    | "funcionarios"
+  >("usuarios");
   const [adminRequests, setAdminRequests] = useState<SolicitacaoFolga[]>([]);
   const [loadingAdminRequests, setLoadingAdminRequests] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'Todos' | 'Pendente' | 'Aprovado' | 'Recusado'>('Todos');
+  const [statusFilter, setStatusFilter] = useState<
+    "Todos" | "Pendente" | "Aprovado" | "Recusado"
+  >("Todos");
 
   // Subscribe to all folga requests in AdminView
   useEffect(() => {
-    if (activeTab !== 'folgas') return;
+    if (activeTab !== "folgas") return;
 
     setLoadingAdminRequests(true);
     const q = collection(db, COLLECTIONS.SOLICITACAO_FOLGA);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as SolicitacaoFolga[];
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as SolicitacaoFolga[];
 
-      // Sort descending by createdAt
-      list.sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
-        return timeB - timeA;
-      });
+        // Sort descending by createdAt
+        list.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          return timeB - timeA;
+        });
 
-      setAdminRequests(list);
-      setLoadingAdminRequests(false);
-    }, (error) => {
-      console.error("Error loading admin folgas:", error);
-      setLoadingAdminRequests(false);
-    });
+        setAdminRequests(list);
+        setLoadingAdminRequests(false);
+      },
+      (error) => {
+        console.error("Error loading admin folgas:", error);
+        setLoadingAdminRequests(false);
+      },
+    );
 
     return () => unsubscribe();
   }, [activeTab]);
 
-  const handleDecideRequest = async (request: SolicitacaoFolga, status: 'Aprovado' | 'Recusado') => {
+  const handleDecideRequest = async (
+    request: SolicitacaoFolga,
+    status: "Aprovado" | "Recusado",
+  ) => {
     try {
       if (!auth.currentUser) return;
       const currentUserUid = auth.currentUser.uid;
-      const decider = users.find(u => u.uid === currentUserUid);
-      const deciderName = decider ? decider.name : auth.currentUser.email || 'Admin';
+      const decider = users.find((u) => u.uid === currentUserUid);
+      const deciderName = decider
+        ? decider.name
+        : auth.currentUser.email || "Admin";
 
       const requestRef = doc(db, COLLECTIONS.SOLICITACAO_FOLGA, request.id);
       await updateDoc(requestRef, {
         status,
         aprovadoPorId: currentUserUid,
         aprovadoPorNome: deciderName,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
-      
-      onToast(`Solicitação de ${request.solicitanteNome} foi ${status === 'Aprovado' ? 'aprovada' : 'recusada'}.`, 'success');
+
+      onToast(
+        `Solicitação de ${request.solicitanteNome} foi ${status === "Aprovado" ? "aprovada" : "recusada"}.`,
+        "success",
+      );
     } catch (err: any) {
       console.error("Error deciding request:", err);
       onToast("Erro ao processar decisão.", "error");
@@ -9266,47 +13409,56 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== 'application/pdf') {
+    if (file.type !== "application/pdf") {
       onToast("Por favor, selecione um arquivo PDF.", "error");
       return;
     }
 
     setIsProcessingPdf(true);
     try {
-      const pdfjsLib = await import('pdfjs-dist');
+      const pdfjsLib = await import("pdfjs-dist");
       pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let text = '';
+      let text = "";
 
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-        const pageText = content.items.map((item: any) => item.str).join(' ');
-        text += `\n--- Página ${i} ---\n` + pageText + '\n';
+        const pageText = content.items.map((item: any) => item.str).join(" ");
+        text += `\n--- Página ${i} ---\n` + pageText + "\n";
       }
 
-      const currentContext = botConfig.trainingContext || '';
-      const newContext = currentContext + (currentContext ? '\n\n' : '') + `=== Conteúdo do Arquivo: ${file.name} ===\n` + text;
-      
-      await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
-        trainingContext: newContext,
-        updatedAt: serverTimestamp() 
-      }, { merge: true });
-      
+      const currentContext = botConfig.trainingContext || "";
+      const newContext =
+        currentContext +
+        (currentContext ? "\n\n" : "") +
+        `=== Conteúdo do Arquivo: ${file.name} ===\n` +
+        text;
+
+      await setDoc(
+        doc(db, COLLECTIONS.BOT_CONFIG, "main"),
+        {
+          trainingContext: newContext,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+
       onToast("PDF processado e adicionado ao contexto com sucesso!");
-      
     } catch (err: any) {
       console.error(err);
-      onToast(`Erro ao processar PDF: ${err.message}`, 'error');
+      onToast(`Erro ao processar PDF: ${err.message}`, "error");
     } finally {
       setIsProcessingPdf(false);
-      e.target.value = '';
+      e.target.value = "";
     }
   };
 
-  const [logoPreview, setLogoPreview] = useState<string | null>(botConfig?.loginLogo || null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(
+    botConfig?.loginLogo || null,
+  );
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   useEffect(() => {
@@ -9318,8 +13470,8 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
   }, [botConfig?.loginLogo]);
 
   const handleLogoUploadProcess = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      onToast("Por favor, envie apenas arquivos de imagem.", 'error');
+    if (!file.type.startsWith("image/")) {
+      onToast("Por favor, envie apenas arquivos de imagem.", "error");
       return;
     }
 
@@ -9332,7 +13484,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
           reader.onload = (event) => {
             const img = new Image();
             img.onload = () => {
-              const canvas = document.createElement('canvas');
+              const canvas = document.createElement("canvas");
               const MAX_WIDTH = 400;
               const MAX_HEIGHT = 400;
               let width = img.width;
@@ -9351,10 +13503,10 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
               }
               canvas.width = width;
               canvas.height = height;
-              const ctx = canvas.getContext('2d');
+              const ctx = canvas.getContext("2d");
               if (ctx) {
                 ctx.drawImage(img, 0, 0, width, height);
-                const dataUrl = canvas.toDataURL('image/png', 0.85);
+                const dataUrl = canvas.toDataURL("image/png", 0.85);
                 resolve(dataUrl);
               } else {
                 resolve(event.target?.result as string);
@@ -9370,53 +13522,64 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
       const base64Image = await compressImage(file);
       setLogoPreview(base64Image);
 
-      await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), {
-        loginLogo: base64Image,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      await setDoc(
+        doc(db, COLLECTIONS.BOT_CONFIG, "main"),
+        {
+          loginLogo: base64Image,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
 
       onToast("Logotipo atualizado com sucesso!");
     } catch (err: any) {
       console.error(err);
-      onToast(`Erro ao enviar logotipo: ${err.message}`, 'error');
+      onToast(`Erro ao enviar logotipo: ${err.message}`, "error");
     } finally {
       setIsUploadingLogo(false);
     }
   };
 
-  const [newLink, setNewLink] = useState({ nome: '', url: '' });
-  const [newPlanner, setNewPlanner] = useState({ atendenteName: '', baseName: '', dayOfWeek: 'Segunda-feira' });
+  const [newLink, setNewLink] = useState({ nome: "", url: "" });
+  const [newPlanner, setNewPlanner] = useState({
+    atendenteName: "",
+    baseName: "",
+    dayOfWeek: "Segunda-feira",
+  });
   const [newPeriodo, setNewPeriodo] = useState({
-    nome: '',
-    inicioInscricao: '',
-    fimInscricao: '',
-    inicioMatFin: '',
-    fimMatFin: '',
-    inicioMatAcad: '',
-    fimMatAcad: ''
+    nome: "",
+    inicioInscricao: "",
+    fimInscricao: "",
+    inicioMatFin: "",
+    fimMatFin: "",
+    inicioMatAcad: "",
+    fimMatAcad: "",
   });
   const [newBomDia, setNewBomDia] = useState({
-    titulo: '',
+    titulo: "",
     metaFinal: { insc: 0, matFin: 0, matAcad: 0 },
     metaDia: { insc: 0, matFin: 0, matAcad: 0 },
     anoAnterior: { insc: 0, matFin: 0, matAcad: 0 },
-    real: { insc: 0, matFin: 0, matAcad: 0 }
+    real: { insc: 0, matFin: 0, matAcad: 0 },
   });
-  const [newForecast, setNewForecast] = useState({ 
-    nome: '', 
-    dataInicio: new Date().toISOString().split('T')[0], 
-    dataFim: new Date().toISOString().split('T')[0], 
-    metaDiaYTD: 0, 
-    realizado: 0, 
-    metaFechamento: 0 
+  const [newForecast, setNewForecast] = useState({
+    nome: "",
+    dataInicio: new Date().toISOString().split("T")[0],
+    dataFim: new Date().toISOString().split("T")[0],
+    metaDiaYTD: 0,
+    realizado: 0,
+    metaFechamento: 0,
   });
 
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-  const [editingBomDia, setEditingBomDia] = useState<BomDiaCaptacao | null>(null);
-  const [editingForecast, setEditingForecast] = useState<ForecastCaptacao | null>(null);
+  const [editingBomDia, setEditingBomDia] = useState<BomDiaCaptacao | null>(
+    null,
+  );
+  const [editingForecast, setEditingForecast] =
+    useState<ForecastCaptacao | null>(null);
   const [editingMetaDia, setEditingMetaDia] = useState<MetaDia | null>(null);
   const [newMetaDia, setNewMetaDia] = useState({
-    data: new Date().toISOString().split('T')[0],
+    data: new Date().toISOString().split("T")[0],
     aaPresencial: 0,
     ytdPresencial: 0,
     realizadoPresencial: 0,
@@ -9446,19 +13609,22 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
       };
 
       if (editingMetaDia) {
-        await updateDoc(doc(db, COLLECTIONS.META_DIA, editingMetaDia.id), payload);
+        await updateDoc(
+          doc(db, COLLECTIONS.META_DIA, editingMetaDia.id),
+          payload,
+        );
         onToast("Meta Diária atualizada com sucesso!");
         setEditingMetaDia(null);
       } else {
         await addDoc(collection(db, COLLECTIONS.META_DIA), {
           ...payload,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         });
         onToast("Meta Diária cadastrada com sucesso!");
       }
 
       setNewMetaDia({
-        data: new Date().toISOString().split('T')[0],
+        data: new Date().toISOString().split("T")[0],
         aaPresencial: 0,
         ytdPresencial: 0,
         realizadoPresencial: 0,
@@ -9470,7 +13636,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
         realizadoDigital: 0,
       });
     } catch (err: any) {
-      onToast(`Erro ao salvar Meta Diária: ${err.message}`, 'error');
+      onToast(`Erro ao salvar Meta Diária: ${err.message}`, "error");
     }
   };
 
@@ -9478,23 +13644,31 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
     try {
       await updateDoc(doc(db, COLLECTIONS.USERS, uid), {
         ...data,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
       onToast("Usuário atualizado!");
       setEditingUser(null);
     } catch (err: any) {
-      onToast(err.message, 'error');
+      onToast(err.message, "error");
     }
   };
 
   const handleDeleteUser = async (uid: string) => {
-    if (window.confirm('Deseja excluir permanentemente este usuário? Esta ação não pode ser desfeita.')) {
+    if (
+      window.confirm(
+        "Deseja excluir permanentemente este usuário? Esta ação não pode ser desfeita.",
+      )
+    ) {
       try {
         await deleteDoc(doc(db, COLLECTIONS.USERS, uid));
         onToast("Usuário excluído com sucesso.");
       } catch (err: any) {
-        handleFirestoreError(err, OperationType.DELETE, `${COLLECTIONS.USERS}/${uid}`);
-        onToast("Erro ao excluir usuário.", 'error');
+        handleFirestoreError(
+          err,
+          OperationType.DELETE,
+          `${COLLECTIONS.USERS}/${uid}`,
+        );
+        onToast("Erro ao excluir usuário.", "error");
       }
     }
   };
@@ -9504,9 +13678,9 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
     try {
       await addDoc(collection(db, COLLECTIONS.LINKS), newLink);
       onToast("Link adicionado!");
-      setNewLink({ nome: '', url: '' });
+      setNewLink({ nome: "", url: "" });
     } catch (err: any) {
-      onToast(err.message, 'error');
+      onToast(err.message, "error");
     }
   };
 
@@ -9516,27 +13690,27 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
       if (editingBomDia) {
         await updateDoc(doc(db, COLLECTIONS.BOM_DIA, editingBomDia.id), {
           ...newBomDia,
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         });
         onToast("Bom Dia atualizado!");
         setEditingBomDia(null);
       } else {
         await addDoc(collection(db, COLLECTIONS.BOM_DIA), {
           ...newBomDia,
-          data: new Date().toISOString().split('T')[0],
-          createdAt: serverTimestamp()
+          data: new Date().toISOString().split("T")[0],
+          createdAt: serverTimestamp(),
         });
         onToast("Bom Dia adicionado!");
       }
       setNewBomDia({
-        titulo: '',
+        titulo: "",
         metaFinal: { insc: 0, matFin: 0, matAcad: 0 },
         metaDia: { insc: 0, matFin: 0, matAcad: 0 },
         anoAnterior: { insc: 0, matFin: 0, matAcad: 0 },
-        real: { insc: 0, matFin: 0, matAcad: 0 }
+        real: { insc: 0, matFin: 0, matAcad: 0 },
       });
     } catch (err: any) {
-      onToast("Erro ao salvar Bom Dia.", 'error');
+      onToast("Erro ao salvar Bom Dia.", "error");
     }
   };
 
@@ -9546,27 +13720,27 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
       if (editingForecast) {
         await updateDoc(doc(db, COLLECTIONS.FORECAST, editingForecast.id), {
           ...newForecast,
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         });
         onToast("Forecast atualizado!");
         setEditingForecast(null);
       } else {
         await addDoc(collection(db, COLLECTIONS.FORECAST), {
           ...newForecast,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         });
         onToast("Forecast criado!");
       }
-      setNewForecast({ 
-        nome: '', 
-        dataInicio: new Date().toISOString().split('T')[0], 
-        dataFim: new Date().toISOString().split('T')[0], 
-        metaDiaYTD: 0, 
-        realizado: 0, 
-        metaFechamento: 0 
+      setNewForecast({
+        nome: "",
+        dataInicio: new Date().toISOString().split("T")[0],
+        dataFim: new Date().toISOString().split("T")[0],
+        metaDiaYTD: 0,
+        realizado: 0,
+        metaFechamento: 0,
       });
     } catch (err: any) {
-      onToast("Erro ao salvar Forecast.", 'error');
+      onToast("Erro ao salvar Forecast.", "error");
     }
   };
 
@@ -9575,12 +13749,16 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
     try {
       await addDoc(collection(db, COLLECTIONS.PLANNER), {
         ...newPlanner,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
       onToast("Planner adicionado!");
-      setNewPlanner({ atendenteName: '', baseName: '', dayOfWeek: 'Segunda-feira' });
+      setNewPlanner({
+        atendenteName: "",
+        baseName: "",
+        dayOfWeek: "Segunda-feira",
+      });
     } catch (err: any) {
-      onToast("Erro ao salvar Planner.", 'error');
+      onToast("Erro ao salvar Planner.", "error");
     }
   };
 
@@ -9589,30 +13767,45 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
     try {
       await addDoc(collection(db, COLLECTIONS.PERIODO_CAPTACAO), {
         ...newPeriodo,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
       onToast("Período adicionado!");
       setNewPeriodo({
-        nome: '',
-        inicioInscricao: '',
-        fimInscricao: '',
-        inicioMatFin: '',
-        fimMatFin: '',
-        inicioMatAcad: '',
-        fimMatAcad: ''
+        nome: "",
+        inicioInscricao: "",
+        fimInscricao: "",
+        inicioMatFin: "",
+        fimMatFin: "",
+        inicioMatAcad: "",
+        fimMatAcad: "",
       });
     } catch (err: any) {
-      onToast("Erro ao salvar Período.", 'error');
+      onToast("Erro ao salvar Período.", "error");
     }
   };
 
   const handleBackup = () => {
-    const data = { leads, bases, gap, planner, links, users, campanhas, bomDia, forecast, periodos, whatsappMessages, empresasParceiras };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const data = {
+      leads,
+      bases,
+      gap,
+      planner,
+      links,
+      users,
+      campanhas,
+      bomDia,
+      forecast,
+      periodos,
+      whatsappMessages,
+      empresasParceiras,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `backup_angra_leads_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `backup_angra_leads_${new Date().toISOString().split("T")[0]}.json`;
     a.click();
     onToast("Backup gerado com sucesso!");
   };
@@ -9621,27 +13814,27 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
     <div className="space-y-8 pb-12">
       <div className="flex overflow-x-auto space-x-2 border-b border-slate-200 pb-4 mb-6 scrollbar-hide">
         {[
-          { id: 'usuarios', label: 'Usuários' },
-          { id: 'funcionarios', label: 'Funcionários (Insumos)' },
-          { id: 'folgas', label: 'Folgas e Férias' },
-          { id: 'bomDia', label: 'Bom Dia Captação' },
-          { id: 'forecast', label: 'Forecast' },
-          { id: 'metaDia', label: 'Meta Dia' },
-          { id: 'planner', label: 'Planner da Semana' },
-          { id: 'periodo', label: 'Período da Captação' },
-          { id: 'whatsapp', label: 'Gestão WhatsApp' },
-          { id: 'treinamento', label: 'Treinamento Bot' },
-          { id: 'links', label: 'Links Úteis' },
-          { id: 'logo', label: 'Logotipo do Login' },
-          { id: 'backup', label: 'Backup e Segurança' }
-        ].map(tab => (
+          { id: "usuarios", label: "Usuários" },
+          { id: "funcionarios", label: "Funcionários (Insumos)" },
+          { id: "folgas", label: "Folgas e Férias" },
+          { id: "bomDia", label: "Bom Dia Captação" },
+          { id: "forecast", label: "Forecast" },
+          { id: "metaDia", label: "Meta Dia" },
+          { id: "planner", label: "Planner da Semana" },
+          { id: "periodo", label: "Período da Captação" },
+          { id: "whatsapp", label: "Gestão WhatsApp" },
+          { id: "treinamento", label: "Treinamento Bot" },
+          { id: "links", label: "Links Úteis" },
+          { id: "logo", label: "Logotipo do Login" },
+          { id: "backup", label: "Backup e Segurança" },
+        ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
-              activeTab === tab.id 
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
-                : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              activeTab === tab.id
+                ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
             }`}
           >
             {tab.label}
@@ -9649,11 +13842,13 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
         ))}
       </div>
 
-      {activeTab === 'usuarios' && (
+      {activeTab === "usuarios" && (
         <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-            <h3 className="text-xl font-bold text-slate-900">Gerenciar Usuários</h3>
-            <button 
+            <h3 className="text-xl font-bold text-slate-900">
+              Gerenciar Usuários
+            </h3>
+            <button
               onClick={() => setIsAddingUser(true)}
               className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center space-x-2 text-sm"
             >
@@ -9675,56 +13870,90 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {users.map(u => (
-                  <tr key={u.uid} className={cn("hover:bg-slate-50 transition-colors", u.blocked && "bg-rose-50/50")}>
+                {users.map((u) => (
+                  <tr
+                    key={u.uid}
+                    className={cn(
+                      "hover:bg-slate-50 transition-colors",
+                      u.blocked && "bg-rose-50/50",
+                    )}
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-xs">
                           {u.name.charAt(0)}
                         </div>
-                        <span className="font-bold text-slate-900">{u.name}</span>
+                        <span className="font-bold text-slate-900">
+                          {u.name}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-500">{u.email}</td>
-                    <td className="px-6 py-4 text-sm text-slate-500">{u.cpf || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-slate-500">{u.phone || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500">
+                      {u.email}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-500">
+                      {u.cpf || "-"}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-500">
+                      {u.phone || "-"}
+                    </td>
                     <td className="px-6 py-4">
-                      <select 
+                      <select
                         value={u.role}
-                        onChange={(e) => handleUpdateUser(u.uid, { role: e.target.value as UserRole })}
+                        onChange={(e) =>
+                          handleUpdateUser(u.uid, {
+                            role: e.target.value as UserRole,
+                          })
+                        }
                         className="text-xs font-bold border-none bg-transparent focus:ring-0 text-slate-700"
                       >
-                        {Object.values(ROLES).map(r => <option key={r} value={r}>{r}</option>)}
+                        {Object.values(ROLES).map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
                       </select>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
-                        u.blocked ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-600"
-                      )}>
-                        {u.blocked ? 'Bloqueado' : 'Ativo'}
+                      <span
+                        className={cn(
+                          "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
+                          u.blocked
+                            ? "bg-rose-100 text-rose-600"
+                            : "bg-emerald-100 text-emerald-600",
+                        )}
+                      >
+                        {u.blocked ? "Bloqueado" : "Ativo"}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
-                        <button 
+                        <button
                           onClick={() => setEditingUser(u)}
                           className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all"
                           title="Editar Perfil"
                         >
                           <Edit2 size={16} />
                         </button>
-                        <button 
-                          onClick={() => handleUpdateUser(u.uid, { blocked: !u.blocked })}
+                        <button
+                          onClick={() =>
+                            handleUpdateUser(u.uid, { blocked: !u.blocked })
+                          }
                           className={cn(
                             "p-2 rounded-lg transition-all",
-                            u.blocked ? "text-emerald-500 hover:bg-emerald-50" : "text-amber-500 hover:bg-amber-50"
+                            u.blocked
+                              ? "text-emerald-500 hover:bg-emerald-50"
+                              : "text-amber-500 hover:bg-amber-50",
                           )}
                           title={u.blocked ? "Desbloquear" : "Bloquear"}
                         >
-                          {u.blocked ? <Unlock size={16} /> : <Lock size={16} />}
+                          {u.blocked ? (
+                            <Unlock size={16} />
+                          ) : (
+                            <Lock size={16} />
+                          )}
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeleteUser(u.uid)}
                           className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
                           title="Excluir Usuário"
@@ -9741,41 +13970,48 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
 
           {editingUser && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
               >
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                  <h3 className="text-xl font-bold text-slate-900">Editar Perfil</h3>
-                  <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:bg-slate-50 p-2 rounded-lg">
+                  <h3 className="text-xl font-bold text-slate-900">
+                    Editar Perfil
+                  </h3>
+                  <button
+                    onClick={() => setEditingUser(null)}
+                    className="text-slate-400 hover:bg-slate-50 p-2 rounded-lg"
+                  >
                     <X size={20} />
                   </button>
                 </div>
-                <form 
+                <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     const formData = new FormData(e.currentTarget);
                     const updateData: any = {
-                      name: formData.get('name') as string,
-                      phone: formData.get('phone') as string,
-                      email: formData.get('email') as string,
-                      cpf: formData.get('cpf') as string,
-                      dataNascimento: formData.get('dataNascimento') as string,
-                      chavePix: formData.get('chavePix') as string,
-                      botNumber: formData.get('botNumber') as string,
-                      role: formData.get('role') as string,
+                      name: formData.get("name") as string,
+                      phone: formData.get("phone") as string,
+                      email: formData.get("email") as string,
+                      cpf: formData.get("cpf") as string,
+                      dataNascimento: formData.get("dataNascimento") as string,
+                      chavePix: formData.get("chavePix") as string,
+                      botNumber: formData.get("botNumber") as string,
+                      role: formData.get("role") as string,
                     };
                     if (updateData.role === ROLES.PROMOTOR_RUA) {
-                      updateData.linkadoA = formData.get('linkadoA') as string;
+                      updateData.linkadoA = formData.get("linkadoA") as string;
                     }
                     handleUpdateUser(editingUser.uid, updateData);
-                  }} 
+                  }}
                   className="p-6 space-y-4"
                 >
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Nome Completo</label>
-                    <input 
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Nome Completo
+                    </label>
+                    <input
                       name="name"
                       required
                       defaultValue={editingUser.name}
@@ -9783,8 +14019,10 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Email</label>
-                    <input 
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Email
+                    </label>
+                    <input
                       name="email"
                       type="email"
                       required
@@ -9793,78 +14031,134 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">CPF (Opcional)</label>
-                    <input 
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      CPF (Opcional)
+                    </label>
+                    <input
                       name="cpf"
-                      defaultValue={editingUser.cpf || ''}
-                      onChange={(e) => e.target.value = formatCPF(e.target.value)}
+                      defaultValue={editingUser.cpf || ""}
+                      onChange={(e) =>
+                        (e.target.value = formatCPF(e.target.value))
+                      }
                       placeholder="000.000.000-00"
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Data de Nascimento (Opcional)</label>
-                    <input 
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Data de Nascimento (Opcional)
+                    </label>
+                    <input
                       name="dataNascimento"
                       type="date"
-                      defaultValue={editingUser.dataNascimento || ''}
+                      defaultValue={editingUser.dataNascimento || ""}
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Telefone (Contato)</label>
-                    <input 
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Telefone (Contato)
+                    </label>
+                    <input
                       name="phone"
                       defaultValue={editingUser.phone}
-                      onChange={(e) => e.target.value = formatPhone(e.target.value)}
+                      onChange={(e) =>
+                        (e.target.value = formatPhone(e.target.value))
+                      }
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                       placeholder="(00) 00000-0000"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Telefone da IA (Multi-Device)</label>
-                    <input 
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Telefone da IA (Multi-Device)
+                    </label>
+                    <input
                       name="botNumber"
-                      defaultValue={editingUser.botNumber || ''}
+                      defaultValue={editingUser.botNumber || ""}
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                       placeholder="Ex: 5511999999999 (Somente números)"
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">Este será o número de WhatsApp usado pelo sistema para enviar mensagens desta conta.</p>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Este será o número de WhatsApp usado pelo sistema para
+                      enviar mensagens desta conta.
+                    </p>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Cargo</label>
-                    <select name="role" defaultValue={editingUser.role} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Cargo
+                    </label>
+                    <select
+                      name="role"
+                      defaultValue={editingUser.role}
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    >
                       {Object.values(ROLES)
-                        .filter(r => {
-                           const isComercial = localStorage.getItem('servidor_selected') === 'comercial';
-                           if (isComercial) {
-                             return ['Admin Master', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua', 'Financeiro'].includes(r);
-                           } else {
-                             return !['Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua'].includes(r);
-                           }
+                        .filter((r) => {
+                          const isComercial =
+                            localStorage.getItem("servidor_selected") ===
+                            "comercial";
+                          if (isComercial) {
+                            return [
+                              "Admin Master",
+                              "Gerente Comercial (Comercial)",
+                              "FDV (Comercial)",
+                              "Promotor/rua",
+                              "Financeiro",
+                            ].includes(r);
+                          } else {
+                            return ![
+                              "Gerente Comercial (Comercial)",
+                              "FDV (Comercial)",
+                              "Promotor/rua",
+                            ].includes(r);
+                          }
                         })
-                        .map(r => <option key={r} value={r}>{r}</option>)}
+                        .map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Linkado a (FDV - Apenas para Promotor/rua)</label>
-                    <select name="linkadoA" defaultValue={editingUser.linkadoA || ''} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Linkado a (FDV - Apenas para Promotor/rua)
+                    </label>
+                    <select
+                      name="linkadoA"
+                      defaultValue={editingUser.linkadoA || ""}
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    >
                       <option value="">Nenhum/Não se aplica</option>
-                      {users.filter(u => u.role === ROLES.FDV_COMERCIAL || u.role === ROLES.FDV).map(fdv => (
-                        <option key={fdv.uid} value={fdv.uid}>{fdv.name} ({fdv.email})</option>
-                      ))}
+                      {users
+                        .filter(
+                          (u) =>
+                            u.role === ROLES.FDV_COMERCIAL ||
+                            u.role === ROLES.FDV,
+                        )
+                        .map((fdv) => (
+                          <option key={fdv.uid} value={fdv.uid}>
+                            {fdv.name} ({fdv.email})
+                          </option>
+                        ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Chave PIX (Opcional)</label>
-                    <input 
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Chave PIX (Opcional)
+                    </label>
+                    <input
                       name="chavePix"
                       defaultValue={editingUser.chavePix}
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                       placeholder="CPF, Email, Telefone ou Chave Aleatória"
                     />
                   </div>
-                  <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                  >
                     Salvar Alterações
                   </button>
                 </form>
@@ -9874,55 +14168,75 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
 
           {isAddingUser && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
               >
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                  <h3 className="text-xl font-bold text-slate-900">Novo Usuário</h3>
-                  <button onClick={() => setIsAddingUser(false)} className="text-slate-400 hover:bg-slate-50 p-2 rounded-lg">
+                  <h3 className="text-xl font-bold text-slate-900">
+                    Novo Usuário
+                  </h3>
+                  <button
+                    onClick={() => setIsAddingUser(false)}
+                    className="text-slate-400 hover:bg-slate-50 p-2 rounded-lg"
+                  >
                     <X size={20} />
                   </button>
                 </div>
-                <form 
+                <form
                   onSubmit={async (e) => {
                     e.preventDefault();
                     const formData = new FormData(e.currentTarget);
-                    const email = formData.get('email') as string;
-                    const name = formData.get('name') as string;
-                    const role = formData.get('role') as UserRole;
-                    const linkadoA = formData.get('linkadoA')?.toString() || '';
-                    
+                    const email = formData.get("email") as string;
+                    const name = formData.get("name") as string;
+                    const role = formData.get("role") as UserRole;
+                    const linkadoA = formData.get("linkadoA")?.toString() || "";
+
                     try {
                       // Create user in Auth using secondary app to avoid signing out admin
-                      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, '123456');
-                      await updateProfile(userCredential.user, { displayName: name });
+                      const userCredential =
+                        await createUserWithEmailAndPassword(
+                          secondaryAuth,
+                          email,
+                          "123456",
+                        );
+                      await updateProfile(userCredential.user, {
+                        displayName: name,
+                      });
                       const newUid = userCredential.user.uid;
 
                       const profileData: any = {
                         uid: newUid,
                         name,
                         email,
-                        cpf: (formData.get('cpf') as string) || '',
-                        dataNascimento: (formData.get('dataNascimento') as string) || '',
+                        cpf: (formData.get("cpf") as string) || "",
+                        dataNascimento:
+                          (formData.get("dataNascimento") as string) || "",
                         role,
-                        servidor: localStorage.getItem('servidor_selected') || 'principal',
-                        phone: formData.get('phone') as string,
-                        chavePix: formData.get('chavePix') as string,
+                        servidor:
+                          localStorage.getItem("servidor_selected") ||
+                          "principal",
+                        phone: formData.get("phone") as string,
+                        chavePix: formData.get("chavePix") as string,
                         blocked: false,
                         mustChangePassword: true,
                         createdAt: serverTimestamp(),
-                        updatedAt: serverTimestamp()
+                        updatedAt: serverTimestamp(),
                       };
                       if (role === ROLES.PROMOTOR_RUA && linkadoA) {
                         profileData.linkadoA = linkadoA;
                       }
 
                       // Create profile in Firestore
-                      await setDoc(doc(db, COLLECTIONS.USERS, newUid), profileData);
+                      await setDoc(
+                        doc(db, COLLECTIONS.USERS, newUid),
+                        profileData,
+                      );
 
-                      onToast("Usuário criado com sucesso! Senha padrão: 123456");
+                      onToast(
+                        "Usuário criado com sucesso! Senha padrão: 123456",
+                      );
                       setIsAddingUser(false);
                       // Sign out from secondary auth to clean up
                       await signOut(secondaryAuth);
@@ -9930,66 +14244,149 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       console.error("Auth error details (UsersView):", {
                         code: err.code,
                         message: err.message,
-                        stack: err.stack
+                        stack: err.stack,
                       });
-                      onToast(err.message === 'Firebase: Error (auth/email-already-in-use).' 
-                        ? "Este email já está em uso." 
-                        : `Erro ao criar usuário: ${err.message}`, 'error');
+                      onToast(
+                        err.message ===
+                          "Firebase: Error (auth/email-already-in-use)."
+                          ? "Este email já está em uso."
+                          : `Erro ao criar usuário: ${err.message}`,
+                        "error",
+                      );
                     }
-                  }} 
+                  }}
                   className="p-6 space-y-4"
                 >
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Nome Completo</label>
-                    <input name="name" required className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Nome Completo
+                    </label>
+                    <input
+                      name="name"
+                      required
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Email (Google)</label>
-                    <input name="email" type="email" required className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Email (Google)
+                    </label>
+                    <input
+                      name="email"
+                      type="email"
+                      required
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">CPF (Opcional)</label>
-                    <input name="cpf" onChange={(e) => e.target.value = formatCPF(e.target.value)} placeholder="000.000.000-00" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      CPF (Opcional)
+                    </label>
+                    <input
+                      name="cpf"
+                      onChange={(e) =>
+                        (e.target.value = formatCPF(e.target.value))
+                      }
+                      placeholder="000.000.000-00"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Data de Nascimento (Opcional)</label>
-                    <input name="dataNascimento" type="date" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Data de Nascimento (Opcional)
+                    </label>
+                    <input
+                      name="dataNascimento"
+                      type="date"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Cargo</label>
-                    <select name="role" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Cargo
+                    </label>
+                    <select
+                      name="role"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    >
                       {Object.values(ROLES)
-                        .filter(r => {
-                           const isComercial = localStorage.getItem('servidor_selected') === 'comercial';
-                           if (isComercial) {
-                             return ['Admin Master', 'Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua', 'Financeiro'].includes(r);
-                           } else {
-                             return !['Gerente Comercial (Comercial)', 'FDV (Comercial)', 'Promotor/rua'].includes(r);
-                           }
+                        .filter((r) => {
+                          const isComercial =
+                            localStorage.getItem("servidor_selected") ===
+                            "comercial";
+                          if (isComercial) {
+                            return [
+                              "Admin Master",
+                              "Gerente Comercial (Comercial)",
+                              "FDV (Comercial)",
+                              "Promotor/rua",
+                              "Financeiro",
+                            ].includes(r);
+                          } else {
+                            return ![
+                              "Gerente Comercial (Comercial)",
+                              "FDV (Comercial)",
+                              "Promotor/rua",
+                            ].includes(r);
+                          }
                         })
-                        .map(r => <option key={r} value={r}>{r}</option>)}
+                        .map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Linkado a (FDV - Apenas para Promotor/rua)</label>
-                    <select name="linkadoA" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm">
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Linkado a (FDV - Apenas para Promotor/rua)
+                    </label>
+                    <select
+                      name="linkadoA"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                    >
                       <option value="">Nenhum</option>
-                      {users.filter(u => u.role === ROLES.FDV_COMERCIAL || u.role === ROLES.FDV).map(fdv => (
-                        <option key={fdv.uid} value={fdv.uid}>{fdv.name} ({fdv.email})</option>
-                      ))}
+                      {users
+                        .filter(
+                          (u) =>
+                            u.role === ROLES.FDV_COMERCIAL ||
+                            u.role === ROLES.FDV,
+                        )
+                        .map((fdv) => (
+                          <option key={fdv.uid} value={fdv.uid}>
+                            {fdv.name} ({fdv.email})
+                          </option>
+                        ))}
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1">Telefone</label>
-                      <input name="phone" onChange={(e) => e.target.value = formatPhone(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" placeholder="(00) 00000-0000" />
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Telefone
+                      </label>
+                      <input
+                        name="phone"
+                        onChange={(e) =>
+                          (e.target.value = formatPhone(e.target.value))
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                        placeholder="(00) 00000-0000"
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1">Chave PIX</label>
-                      <input name="chavePix" className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" />
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Chave PIX
+                      </label>
+                      <input
+                        name="chavePix"
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
                     </div>
                   </div>
-                  <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                  >
                     Criar Usuário
                   </button>
                 </form>
@@ -9999,17 +14396,21 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
         </section>
       )}
 
-      {activeTab === 'metaDia' && (
+      {activeTab === "metaDia" && (
         <div className="space-y-8">
           <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 max-w-4xl mx-auto">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-slate-900">{editingMetaDia ? 'Editar Registro de Meta Dia' : 'Adicionar Novo Registro de Meta Dia'}</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                {editingMetaDia
+                  ? "Editar Registro de Meta Dia"
+                  : "Adicionar Novo Registro de Meta Dia"}
+              </h3>
               {editingMetaDia && (
-                <button 
+                <button
                   onClick={() => {
                     setEditingMetaDia(null);
                     setNewMetaDia({
-                      data: new Date().toISOString().split('T')[0],
+                      data: new Date().toISOString().split("T")[0],
                       aaPresencial: 0,
                       ytdPresencial: 0,
                       realizadoPresencial: 0,
@@ -10027,7 +14428,7 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 </button>
               )}
             </div>
-            
+
             <form onSubmit={handleAddMetaDia} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -10035,92 +14436,134 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     <Calendar size={14} className="text-blue-600" />
                     <span>Data *</span>
                   </label>
-                  <input 
+                  <input
                     type="date"
-                    required 
+                    required
                     value={newMetaDia.data}
-                    onChange={e => setNewMetaDia({...newMetaDia, data: e.target.value})}
+                    onChange={(e) =>
+                      setNewMetaDia({ ...newMetaDia, data: e.target.value })
+                    }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                   />
                 </div>
                 <div className="flex bg-slate-50 items-center justify-around rounded-xl p-3 border border-slate-100/80">
                   <div className="text-center">
-                    <span className="block text-[10px] font-bold text-slate-400 uppercase">Total A.A</span>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase">
+                      Total A.A
+                    </span>
                     <span className="text-sm font-extrabold text-slate-700">
-                      {Number(newMetaDia.aaPresencial) + Number(newMetaDia.aaSemipresencial) + Number(newMetaDia.aaDigital)}
+                      {Number(newMetaDia.aaPresencial) +
+                        Number(newMetaDia.aaSemipresencial) +
+                        Number(newMetaDia.aaDigital)}
                     </span>
                   </div>
                   <div className="text-center border-x border-slate-200 px-6">
-                    <span className="block text-[10px] font-bold text-slate-400 uppercase">Total YTD</span>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase">
+                      Total YTD
+                    </span>
                     <span className="text-sm font-extrabold text-blue-600">
-                      {Number(newMetaDia.ytdPresencial) + Number(newMetaDia.ytdSemipresencial) + Number(newMetaDia.ytdDigital)}
+                      {Number(newMetaDia.ytdPresencial) +
+                        Number(newMetaDia.ytdSemipresencial) +
+                        Number(newMetaDia.ytdDigital)}
                     </span>
                   </div>
                   <div className="text-center">
-                    <span className="block text-[10px] font-bold text-slate-400 uppercase">Total Realizado</span>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase">
+                      Total Realizado
+                    </span>
                     <span className="text-sm font-extrabold text-emerald-600">
-                      {Number(newMetaDia.realizadoPresencial) + Number(newMetaDia.realizadoSemipresencial) + Number(newMetaDia.realizadoDigital)}
+                      {Number(newMetaDia.realizadoPresencial) +
+                        Number(newMetaDia.realizadoSemipresencial) +
+                        Number(newMetaDia.realizadoDigital)}
                     </span>
                   </div>
                 </div>
               </div>
 
               {[
-                { 
-                  key: 'Presencial', 
-                  label: 'Modalidade Presencial', 
-                  color: 'border-blue-100 bg-blue-50/10',
-                  aa: 'aaPresencial',
-                  ytd: 'ytdPresencial',
-                  realizado: 'realizadoPresencial'
+                {
+                  key: "Presencial",
+                  label: "Modalidade Presencial",
+                  color: "border-blue-100 bg-blue-50/10",
+                  aa: "aaPresencial",
+                  ytd: "ytdPresencial",
+                  realizado: "realizadoPresencial",
                 },
-                { 
-                  key: 'Semipresencial', 
-                  label: 'Modalidade Semipresencial', 
-                  color: 'border-orange-100 bg-orange-50/10',
-                  aa: 'aaSemipresencial',
-                  ytd: 'ytdSemipresencial',
-                  realizado: 'realizadoSemipresencial'
+                {
+                  key: "Semipresencial",
+                  label: "Modalidade Semipresencial",
+                  color: "border-orange-100 bg-orange-50/10",
+                  aa: "aaSemipresencial",
+                  ytd: "ytdSemipresencial",
+                  realizado: "realizadoSemipresencial",
                 },
-                { 
-                  key: 'Digital', 
-                  label: 'Modalidade Digital', 
-                  color: 'border-indigo-100 bg-indigo-50/10',
-                  aa: 'aaDigital',
-                  ytd: 'ytdDigital',
-                  realizado: 'realizadoDigital'
-                }
+                {
+                  key: "Digital",
+                  label: "Modalidade Digital",
+                  color: "border-indigo-100 bg-indigo-50/10",
+                  aa: "aaDigital",
+                  ytd: "ytdDigital",
+                  realizado: "realizadoDigital",
+                },
               ].map((modal) => (
-                <div key={modal.key} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/30">
-                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-4">{modal.label}</h4>
+                <div
+                  key={modal.key}
+                  className="p-4 rounded-2xl border border-slate-100 bg-slate-50/30"
+                >
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-4">
+                    {modal.label}
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">A.A (Ano Anterior) *</label>
-                      <input 
-                        type="number" 
-                        required 
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        A.A (Ano Anterior) *
+                      </label>
+                      <input
+                        type="number"
+                        required
                         value={newMetaDia[modal.aa as keyof typeof newMetaDia]}
-                        onChange={e => setNewMetaDia({...newMetaDia, [modal.aa]: Number(e.target.value)})}
+                        onChange={(e) =>
+                          setNewMetaDia({
+                            ...newMetaDia,
+                            [modal.aa]: Number(e.target.value),
+                          })
+                        }
                         className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">YTD (Meta Dia) *</label>
-                      <input 
-                        type="number" 
-                        required 
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        YTD (Meta Dia) *
+                      </label>
+                      <input
+                        type="number"
+                        required
                         value={newMetaDia[modal.ytd as keyof typeof newMetaDia]}
-                        onChange={e => setNewMetaDia({...newMetaDia, [modal.ytd]: Number(e.target.value)})}
+                        onChange={(e) =>
+                          setNewMetaDia({
+                            ...newMetaDia,
+                            [modal.ytd]: Number(e.target.value),
+                          })
+                        }
                         className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Realizado no Dia *</label>
-                      <input 
-                        type="number" 
-                        required 
-                        value={newMetaDia[modal.realizado as keyof typeof newMetaDia]}
-                        onChange={e => setNewMetaDia({...newMetaDia, [modal.realizado]: Number(e.target.value)})}
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        Realizado no Dia *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        value={
+                          newMetaDia[modal.realizado as keyof typeof newMetaDia]
+                        }
+                        onChange={(e) =>
+                          setNewMetaDia({
+                            ...newMetaDia,
+                            [modal.realizado]: Number(e.target.value),
+                          })
+                        }
                         className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
@@ -10128,11 +14571,15 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 </div>
               ))}
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-100 flex items-center justify-center space-x-2 text-sm"
               >
-                <span>{editingMetaDia ? 'Salvar Alterações' : 'Salvar Registro de Meta Dia'}</span>
+                <span>
+                  {editingMetaDia
+                    ? "Salvar Alterações"
+                    : "Salvar Registro de Meta Dia"}
+                </span>
               </button>
             </form>
           </section>
@@ -10140,82 +14587,149 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
           {/* Table display */}
           <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-900">Histórico de Metas Diárias</h3>
-              <p className="text-xs text-slate-400 font-medium">Registrados: {metaDia.length}</p>
+              <h3 className="text-lg font-bold text-slate-900">
+                Histórico de Metas Diárias
+              </h3>
+              <p className="text-xs text-slate-400 font-medium">
+                Registrados: {metaDia.length}
+              </p>
             </div>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase text-slate-400 tracking-wider">
                     <th className="p-4">Data</th>
-                    <th className="p-4 text-center text-blue-600">Presencial (A.A / YTD / Real)</th>
-                    <th className="p-4 text-center text-orange-600">Semipresencial (A.A / YTD / Real)</th>
-                    <th className="p-4 text-center text-indigo-600">Digital (A.A / YTD / Real)</th>
-                    <th className="p-4 text-center bg-slate-50/50">Total (A.A / YTD / Real)</th>
+                    <th className="p-4 text-center text-blue-600">
+                      Presencial (A.A / YTD / Real)
+                    </th>
+                    <th className="p-4 text-center text-orange-600">
+                      Semipresencial (A.A / YTD / Real)
+                    </th>
+                    <th className="p-4 text-center text-indigo-600">
+                      Digital (A.A / YTD / Real)
+                    </th>
+                    <th className="p-4 text-center bg-slate-50/50">
+                      Total (A.A / YTD / Real)
+                    </th>
                     <th className="p-4 text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
                   {metaDia.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-slate-400 italic">
+                      <td
+                        colSpan={6}
+                        className="p-8 text-center text-slate-400 italic"
+                      >
                         Nenhum registro de Meta Diária encontrado.
                       </td>
                     </tr>
                   ) : (
                     [...metaDia]
-                      .sort((a,b) => b.data.localeCompare(a.data))
+                      .sort((a, b) => b.data.localeCompare(a.data))
                       .map((item) => {
-                        const totAA = item.aaPresencial + item.aaSemipresencial + item.aaDigital;
-                        const totYTD = item.ytdPresencial + item.ytdSemipresencial + item.ytdDigital;
-                        const totReal = item.realizadoPresencial + item.realizadoSemipresencial + item.realizadoDigital;
+                        const totAA =
+                          item.aaPresencial +
+                          item.aaSemipresencial +
+                          item.aaDigital;
+                        const totYTD =
+                          item.ytdPresencial +
+                          item.ytdSemipresencial +
+                          item.ytdDigital;
+                        const totReal =
+                          item.realizadoPresencial +
+                          item.realizadoSemipresencial +
+                          item.realizadoDigital;
 
                         // Function to get color class comparison Realizado vs YTD
                         const getColorClass = (real: number, ytd: number) => {
-                          if (real > ytd) return "text-emerald-600 font-extrabold";
+                          if (real > ytd)
+                            return "text-emerald-600 font-extrabold";
                           if (real < ytd) return "text-rose-600 font-extrabold";
                           return "text-blue-600 font-extrabold";
                         };
 
                         return (
-                          <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
+                          <tr
+                            key={item.id}
+                            className="hover:bg-slate-50/30 transition-colors"
+                          >
                             <td className="p-4 font-bold text-slate-800 whitespace-nowrap">
-                              {new Date(item.data + 'T00:00:00').toLocaleDateString('pt-BR')}
+                              {new Date(
+                                item.data + "T00:00:00",
+                              ).toLocaleDateString("pt-BR")}
                             </td>
                             <td className="p-4 text-center">
-                              <span className="text-slate-400">{item.aaPresencial}</span>
+                              <span className="text-slate-400">
+                                {item.aaPresencial}
+                              </span>
                               <span className="mx-1 text-slate-300">/</span>
-                              <span className="text-slate-600 font-semibold">{item.ytdPresencial}</span>
+                              <span className="text-slate-600 font-semibold">
+                                {item.ytdPresencial}
+                              </span>
                               <span className="mx-1 text-slate-300">/</span>
-                              <span className={cn(getColorClass(item.realizadoPresencial, item.ytdPresencial))}>
+                              <span
+                                className={cn(
+                                  getColorClass(
+                                    item.realizadoPresencial,
+                                    item.ytdPresencial,
+                                  ),
+                                )}
+                              >
                                 {item.realizadoPresencial}
                               </span>
                             </td>
                             <td className="p-4 text-center">
-                              <span className="text-slate-400">{item.aaSemipresencial}</span>
+                              <span className="text-slate-400">
+                                {item.aaSemipresencial}
+                              </span>
                               <span className="mx-1 text-slate-300">/</span>
-                              <span className="text-slate-600 font-semibold">{item.ytdSemipresencial}</span>
+                              <span className="text-slate-600 font-semibold">
+                                {item.ytdSemipresencial}
+                              </span>
                               <span className="mx-1 text-slate-300">/</span>
-                              <span className={cn(getColorClass(item.realizadoSemipresencial, item.ytdSemipresencial))}>
+                              <span
+                                className={cn(
+                                  getColorClass(
+                                    item.realizadoSemipresencial,
+                                    item.ytdSemipresencial,
+                                  ),
+                                )}
+                              >
                                 {item.realizadoSemipresencial}
                               </span>
                             </td>
                             <td className="p-4 text-center">
-                              <span className="text-slate-400">{item.aaDigital}</span>
+                              <span className="text-slate-400">
+                                {item.aaDigital}
+                              </span>
                               <span className="mx-1 text-slate-300">/</span>
-                              <span className="text-slate-600 font-semibold">{item.ytdDigital}</span>
+                              <span className="text-slate-600 font-semibold">
+                                {item.ytdDigital}
+                              </span>
                               <span className="mx-1 text-slate-300">/</span>
-                              <span className={cn(getColorClass(item.realizadoDigital, item.ytdDigital))}>
+                              <span
+                                className={cn(
+                                  getColorClass(
+                                    item.realizadoDigital,
+                                    item.ytdDigital,
+                                  ),
+                                )}
+                              >
                                 {item.realizadoDigital}
                               </span>
                             </td>
                             <td className="p-4 text-center bg-slate-50/20 font-bold">
                               <span className="text-slate-400">{totAA}</span>
                               <span className="mx-1 text-slate-300">/</span>
-                              <span className="text-slate-600 font-semibold">{totYTD}</span>
+                              <span className="text-slate-600 font-semibold">
+                                {totYTD}
+                              </span>
                               <span className="mx-1 text-slate-300">/</span>
-                              <span className={cn(getColorClass(totReal, totYTD))}>
+                              <span
+                                className={cn(getColorClass(totReal, totYTD))}
+                              >
                                 {totReal}
                               </span>
                             </td>
@@ -10228,16 +14742,21 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                       data: item.data,
                                       aaPresencial: item.aaPresencial,
                                       ytdPresencial: item.ytdPresencial,
-                                      realizadoPresencial: item.realizadoPresencial,
+                                      realizadoPresencial:
+                                        item.realizadoPresencial,
                                       aaSemipresencial: item.aaSemipresencial,
                                       ytdSemipresencial: item.ytdSemipresencial,
-                                      realizadoSemipresencial: item.realizadoSemipresencial,
+                                      realizadoSemipresencial:
+                                        item.realizadoSemipresencial,
                                       aaDigital: item.aaDigital,
                                       ytdDigital: item.ytdDigital,
                                       realizadoDigital: item.realizadoDigital,
                                     });
                                     // Scroll to form smoothly
-                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    window.scrollTo({
+                                      top: 0,
+                                      behavior: "smooth",
+                                    });
                                   }}
                                   className="p-1 px-2.5 text-blue-600 hover:bg-blue-50 rounded-lg font-bold hover:scale-105 transition-all text-xs"
                                 >
@@ -10245,12 +14764,27 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                 </button>
                                 <button
                                   onClick={async () => {
-                                    if (window.confirm("Deseja excluir permanentemente este registro de Meta Diária?")) {
+                                    if (
+                                      window.confirm(
+                                        "Deseja excluir permanentemente este registro de Meta Diária?",
+                                      )
+                                    ) {
                                       try {
-                                        await deleteDoc(doc(db, COLLECTIONS.META_DIA, item.id));
-                                        onToast("Registro de Meta Diária excluído.");
+                                        await deleteDoc(
+                                          doc(
+                                            db,
+                                            COLLECTIONS.META_DIA,
+                                            item.id,
+                                          ),
+                                        );
+                                        onToast(
+                                          "Registro de Meta Diária excluído.",
+                                        );
                                       } catch (err: any) {
-                                        onToast("Erro ao excluir registro.", "error");
+                                        onToast(
+                                          "Erro ao excluir registro.",
+                                          "error",
+                                        );
                                       }
                                     }
                                   }}
@@ -10271,228 +14805,308 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
         </div>
       )}
 
-      {activeTab === 'folgas' && (() => {
-        const currentUserUid = auth.currentUser?.uid;
-        const userProfile = users.find(u => u.uid === currentUserUid);
+      {activeTab === "folgas" &&
+        (() => {
+          const currentUserUid = auth.currentUser?.uid;
+          const userProfile = users.find((u) => u.uid === currentUserUid);
 
-        const filteredRequests = adminRequests.filter(req => {
-          if (!userProfile) return false;
-          if (userProfile.role === 'Admin Master') return true;
-          if (userProfile.role === 'Líder/FDV') {
-            return req.solicitanteRole === 'Sala de Matrícula' || (req.solicitanteRole === 'Líder/FDV' && req.solicitanteId !== userProfile.uid);
-          }
-          if (userProfile.role === 'Gestor Comercial' || userProfile.role === 'Gerente Comercial (Comercial)') {
-            return req.solicitanteRole === 'FDV' || req.solicitanteRole === 'FDV (Comercial)';
-          }
-          return false;
-        });
+          const filteredRequests = adminRequests.filter((req) => {
+            if (!userProfile) return false;
+            if (userProfile.role === "Admin Master") return true;
+            if (userProfile.role === "Líder/FDV") {
+              return (
+                req.solicitanteRole === "Sala de Matrícula" ||
+                (req.solicitanteRole === "Líder/FDV" &&
+                  req.solicitanteId !== userProfile.uid)
+              );
+            }
+            if (
+              userProfile.role === "Gestor Comercial" ||
+              userProfile.role === "Gerente Comercial (Comercial)"
+            ) {
+              return (
+                req.solicitanteRole === "FDV" ||
+                req.solicitanteRole === "FDV (Comercial)"
+              );
+            }
+            return false;
+          });
 
-        const pendingCount = filteredRequests.filter(r => r.status === 'Pendente').length;
-        const approvedCount = filteredRequests.filter(r => r.status === 'Aprovado').length;
-        const rejectedCount = filteredRequests.filter(r => r.status === 'Recusado').length;
+          const pendingCount = filteredRequests.filter(
+            (r) => r.status === "Pendente",
+          ).length;
+          const approvedCount = filteredRequests.filter(
+            (r) => r.status === "Aprovado",
+          ).length;
+          const rejectedCount = filteredRequests.filter(
+            (r) => r.status === "Recusado",
+          ).length;
 
-        return (
-          <div id="admin-folgas-section" className="space-y-6">
-            {/* Header Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
-                <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
-                  <Clock size={24} />
+          return (
+            <div id="admin-folgas-section" className="space-y-6">
+              {/* Header Stats */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                  <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
+                    <Clock size={24} />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">
+                      Pendentes
+                    </span>
+                    <span className="text-2xl font-black text-slate-800">
+                      {pendingCount}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">Pendentes</span>
-                  <span className="text-2xl font-black text-slate-800">
-                    {pendingCount}
-                  </span>
+
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                  <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
+                    <CheckCircle2 size={24} />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">
+                      Aprovados
+                    </span>
+                    <span className="text-2xl font-black text-slate-800">
+                      {approvedCount}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                  <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
+                    <XCircle size={24} />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">
+                      Recusados
+                    </span>
+                    <span className="text-2xl font-black text-slate-800">
+                      {rejectedCount}
+                    </span>
+                  </div>
                 </div>
               </div>
-              
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
-                <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
-                  <CheckCircle2 size={24} />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">Aprovados</span>
-                  <span className="text-2xl font-black text-slate-800">
-                    {approvedCount}
-                  </span>
-                </div>
-              </div>
 
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
-                <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
-                  <XCircle size={24} />
+              <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">
+                      Solicitações de Folgas e Férias
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Líder/FDV aprova para Sala de Matrícula e outros
+                      Líderes/FDV | Gestores aprovam para FDV / FDV Comercial
+                    </p>
+                  </div>
+
+                  {/* Filter controls */}
+                  <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-xl font-bold text-xs">
+                    {(
+                      ["Todos", "Pendente", "Aprovado", "Recusado"] as const
+                    ).map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => setStatusFilter(f)}
+                        className={`px-3 py-1.5 rounded-lg transition-all ${
+                          statusFilter === f
+                            ? "bg-blue-600 text-white shadow-sm font-semibold"
+                            : "text-slate-500 hover:text-slate-800 font-semibold"
+                        }`}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">Recusados</span>
-                  <span className="text-2xl font-black text-slate-800">
-                    {rejectedCount}
-                  </span>
-                </div>
-              </div>
+
+                {loadingAdminRequests ? (
+                  <div className="flex justify-center items-center py-12 text-slate-400">
+                    <RefreshCw
+                      size={28}
+                      className="animate-spin text-blue-600 mr-2"
+                    />
+                    <span className="font-semibold text-sm">
+                      Carregando solicitações...
+                    </span>
+                  </div>
+                ) : filteredRequests.length === 0 ? (
+                  <div className="p-12 text-center text-slate-400 text-sm">
+                    Nenhuma solicitação de folga ou férias para exibir sob sua
+                    responsabilidade de aprovação.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
+                          <th className="px-6 py-4">Funcionário / Cargo</th>
+                          <th className="px-6 py-4">Tipo</th>
+                          <th className="px-6 py-4">Período</th>
+                          <th className="px-6 py-4">Justificativa</th>
+                          <th className="px-6 py-4">Status</th>
+                          <th className="px-6 py-4">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                        {filteredRequests
+                          .filter(
+                            (r) =>
+                              statusFilter === "Todos" ||
+                              r.status === statusFilter,
+                          )
+                          .map((request) => {
+                            const isApproved = request.status === "Aprovado";
+                            const isRejected = request.status === "Recusado";
+                            const isPending = request.status === "Pendente";
+
+                            // Helper to format date with DD/MM/YYYY
+                            const formatBrDate = (d: string) => {
+                              if (!d) return "";
+                              const parts = d.split("-");
+                              return parts.length === 3
+                                ? `${parts[2]}/${parts[1]}/${parts[0]}`
+                                : d;
+                            };
+
+                            return (
+                              <tr
+                                key={request.id}
+                                className="hover:bg-slate-50/50 transition-colors"
+                              >
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-bold text-xs mt-0.5">
+                                      {request.solicitanteNome?.charAt(0) ||
+                                        "U"}
+                                    </div>
+                                    <div>
+                                      <span className="font-bold text-slate-900 block">
+                                        {request.solicitanteNome}
+                                      </span>
+                                      <span className="text-[10px] text-slate-400 font-medium block">
+                                        {request.solicitanteRole}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                <td className="px-6 py-4">
+                                  <span
+                                    className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                      request.tipo === "Férias"
+                                        ? "bg-purple-100 text-purple-700"
+                                        : "bg-blue-100 text-blue-700"
+                                    }`}
+                                  >
+                                    {request.tipo}
+                                  </span>
+                                </td>
+
+                                <td className="px-6 py-4 font-semibold text-slate-800">
+                                  <span className="text-blue-600 font-bold">
+                                    {formatBrDate(request.dataInicio)}
+                                  </span>
+                                  <span className="mx-1 text-slate-400">
+                                    até
+                                  </span>
+                                  <span className="text-blue-600 font-bold">
+                                    {formatBrDate(request.dataFim)}
+                                  </span>
+                                </td>
+
+                                <td className="px-6 py-4 max-w-xs truncate text-[11px] text-slate-500 italic">
+                                  {request.justificativa
+                                    ? `"${request.justificativa}"`
+                                    : "-"}
+                                </td>
+
+                                <td className="px-6 py-4">
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                      isApproved
+                                        ? "bg-green-100 text-green-700"
+                                        : isRejected
+                                          ? "bg-red-100 text-red-700"
+                                          : "bg-amber-100 text-amber-700"
+                                    }`}
+                                  >
+                                    {isApproved && <Check size={10} />}
+                                    {isRejected && <X size={10} />}
+                                    {isPending && <Clock size={10} />}
+                                    {request.status}
+                                  </span>
+                                  {request.aprovadoPorNome && (
+                                    <span className="block text-[9px] text-slate-400 mt-0.5 font-medium">
+                                      Por {request.aprovadoPorNome}
+                                    </span>
+                                  )}
+                                </td>
+
+                                <td className="px-6 py-4">
+                                  {isPending ? (
+                                    <div className="flex items-center space-x-2">
+                                      <button
+                                        onClick={() =>
+                                          handleDecideRequest(
+                                            request,
+                                            "Aprovado",
+                                          )
+                                        }
+                                        className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-[10px] flex items-center gap-1 transition-all"
+                                      >
+                                        <Check size={10} />
+                                        <span>Aprovar</span>
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleDecideRequest(
+                                            request,
+                                            "Recusado",
+                                          )
+                                        }
+                                        className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-[10px] flex items-center gap-1 transition-all"
+                                      >
+                                        <X size={10} />
+                                        <span>Recusar</span>
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-400 font-medium">
+                                      Decidido
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
             </div>
+          );
+        })()}
 
-            <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">Solicitações de Folgas e Férias</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Líder/FDV aprova para Sala de Matrícula e outros Líderes/FDV | Gestores aprovam para FDV / FDV Comercial
-                  </p>
-                </div>
-
-                {/* Filter controls */}
-                <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-xl font-bold text-xs">
-                  {(['Todos', 'Pendente', 'Aprovado', 'Recusado'] as const).map(f => (
-                    <button
-                      key={f}
-                      onClick={() => setStatusFilter(f)}
-                      className={`px-3 py-1.5 rounded-lg transition-all ${
-                        statusFilter === f 
-                          ? 'bg-blue-600 text-white shadow-sm font-semibold' 
-                          : 'text-slate-500 hover:text-slate-800 font-semibold'
-                      }`}
-                    >
-                      {f}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {loadingAdminRequests ? (
-                <div className="flex justify-center items-center py-12 text-slate-400">
-                  <RefreshCw size={28} className="animate-spin text-blue-600 mr-2" />
-                  <span className="font-semibold text-sm">Carregando solicitações...</span>
-                </div>
-              ) : filteredRequests.length === 0 ? (
-                <div className="p-12 text-center text-slate-400 text-sm">
-                  Nenhuma solicitação de folga ou férias para exibir sob sua responsabilidade de aprovação.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                        <th className="px-6 py-4">Funcionário / Cargo</th>
-                        <th className="px-6 py-4">Tipo</th>
-                        <th className="px-6 py-4">Período</th>
-                        <th className="px-6 py-4">Justificativa</th>
-                        <th className="px-6 py-4">Status</th>
-                        <th className="px-6 py-4">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                      {filteredRequests
-                        .filter(r => statusFilter === 'Todos' || r.status === statusFilter)
-                        .map((request) => {
-                          const isApproved = request.status === 'Aprovado';
-                          const isRejected = request.status === 'Recusado';
-                          const isPending = request.status === 'Pendente';
-                          
-                          // Helper to format date with DD/MM/YYYY
-                          const formatBrDate = (d: string) => {
-                            if (!d) return '';
-                            const parts = d.split('-');
-                            return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : d;
-                          };
-
-                          return (
-                            <tr key={request.id} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="px-6 py-4">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-bold text-xs mt-0.5">
-                                    {request.solicitanteNome?.charAt(0) || 'U'}
-                                  </div>
-                                  <div>
-                                    <span className="font-bold text-slate-900 block">{request.solicitanteNome}</span>
-                                    <span className="text-[10px] text-slate-400 font-medium block">{request.solicitanteRole}</span>
-                                  </div>
-                                </div>
-                              </td>
-
-                              <td className="px-6 py-4">
-                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                  request.tipo === 'Férias' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                                }`}>
-                                  {request.tipo}
-                                </span>
-                              </td>
-
-                              <td className="px-6 py-4 font-semibold text-slate-800">
-                                <span className="text-blue-600 font-bold">{formatBrDate(request.dataInicio)}</span>
-                                <span className="mx-1 text-slate-400">até</span>
-                                <span className="text-blue-600 font-bold">{formatBrDate(request.dataFim)}</span>
-                              </td>
-
-                              <td className="px-6 py-4 max-w-xs truncate text-[11px] text-slate-500 italic">
-                                {request.justificativa ? `"${request.justificativa}"` : '-'}
-                              </td>
-
-                              <td className="px-6 py-4">
-                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                  isApproved ? 'bg-green-100 text-green-700' : 
-                                  isRejected ? 'bg-red-100 text-red-700' : 
-                                  'bg-amber-100 text-amber-700'
-                                }`}>
-                                  {isApproved && <Check size={10} />}
-                                  {isRejected && <X size={10} />}
-                                  {isPending && <Clock size={10} />}
-                                  {request.status}
-                                </span>
-                                {request.aprovadoPorNome && (
-                                  <span className="block text-[9px] text-slate-400 mt-0.5 font-medium">Por {request.aprovadoPorNome}</span>
-                                )}
-                              </td>
-
-                              <td className="px-6 py-4">
-                                {isPending ? (
-                                  <div className="flex items-center space-x-2">
-                                    <button
-                                      onClick={() => handleDecideRequest(request, 'Aprovado')}
-                                      className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-[10px] flex items-center gap-1 transition-all"
-                                    >
-                                      <Check size={10} />
-                                      <span>Aprovar</span>
-                                    </button>
-                                    <button
-                                      onClick={() => handleDecideRequest(request, 'Recusado')}
-                                      className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-[10px] flex items-center gap-1 transition-all"
-                                    >
-                                      <X size={10} />
-                                      <span>Recusar</span>
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <span className="text-[10px] text-slate-400 font-medium">Decidido</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          </div>
-        );
-      })()}
-
-      {activeTab === 'bomDia' && (
+      {activeTab === "bomDia" && (
         <div className="space-y-8">
           <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 max-w-4xl mx-auto">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-slate-900">{editingBomDia ? 'Editar Card' : 'Adicionar Novo Card'}</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                {editingBomDia ? "Editar Card" : "Adicionar Novo Card"}
+              </h3>
               {editingBomDia && (
-                <button 
+                <button
                   onClick={() => {
                     setEditingBomDia(null);
                     setNewBomDia({
-                      titulo: '',
+                      titulo: "",
                       metaFinal: { insc: 0, matFin: 0, matAcad: 0 },
                       metaDia: { insc: 0, matFin: 0, matAcad: 0 },
                       anoAnterior: { insc: 0, matFin: 0, matAcad: 0 },
-                      real: { insc: 0, matFin: 0, matAcad: 0 }
+                      real: { insc: 0, matFin: 0, matAcad: 0 },
                     });
                   }}
                   className="text-slate-400 hover:text-slate-600 text-sm font-bold"
@@ -10507,67 +15121,119 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   <TrendingUp size={14} className="text-blue-600" />
                   <span>Título do Card *</span>
                 </label>
-                <input 
-                  required 
-                  placeholder="Ex: CAPTAÇÃO BU PRESENCIAL 25.1" 
+                <input
+                  required
+                  placeholder="Ex: CAPTAÇÃO BU PRESENCIAL 25.1"
                   value={newBomDia.titulo}
-                  onChange={e => setNewBomDia({...newBomDia, titulo: e.target.value})}
+                  onChange={(e) =>
+                    setNewBomDia({ ...newBomDia, titulo: e.target.value })
+                  }
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                 />
               </div>
 
               {[
-                { key: 'metaFinal', label: 'Meta Final', color: 'border-orange-200 bg-orange-50/30' },
-                { key: 'metaDia', label: 'Meta Dia', color: 'border-slate-200 bg-slate-50/30' },
-                { key: 'anoAnterior', label: 'Ano Anterior', color: 'border-slate-200 bg-slate-50/30' },
-                { key: 'real', label: 'Real', color: 'border-blue-200 bg-blue-50/30' }
+                {
+                  key: "metaFinal",
+                  label: "Meta Final",
+                  color: "border-orange-200 bg-orange-50/30",
+                },
+                {
+                  key: "metaDia",
+                  label: "Meta Dia",
+                  color: "border-slate-200 bg-slate-50/30",
+                },
+                {
+                  key: "anoAnterior",
+                  label: "Ano Anterior",
+                  color: "border-slate-200 bg-slate-50/30",
+                },
+                {
+                  key: "real",
+                  label: "Real",
+                  color: "border-blue-200 bg-blue-50/30",
+                },
               ].map((section) => (
-                <div key={section.key} className={cn("p-4 rounded-2xl border", section.color)}>
-                  <h4 className="text-sm font-bold text-slate-700 mb-4">{section.label}</h4>
+                <div
+                  key={section.key}
+                  className={cn("p-4 rounded-2xl border", section.color)}
+                >
+                  <h4 className="text-sm font-bold text-slate-700 mb-4">
+                    {section.label}
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">INSC *</label>
-                      <input 
-                        type="number" 
-                        required 
-                        value={newBomDia[section.key as keyof typeof newBomDia].insc}
-                        onChange={e => {
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        INSC *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        value={
+                          newBomDia[section.key as keyof typeof newBomDia].insc
+                        }
+                        onChange={(e) => {
                           const val = Number(e.target.value);
                           setNewBomDia({
                             ...newBomDia,
-                            [section.key]: { ...(newBomDia[section.key as keyof typeof newBomDia] as BomDiaMetrics), insc: val }
+                            [section.key]: {
+                              ...(newBomDia[
+                                section.key as keyof typeof newBomDia
+                              ] as BomDiaMetrics),
+                              insc: val,
+                            },
                           });
                         }}
                         className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">MAT FIN *</label>
-                      <input 
-                        type="number" 
-                        required 
-                        value={newBomDia[section.key as keyof typeof newBomDia].matFin}
-                        onChange={e => {
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        MAT FIN *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        value={
+                          newBomDia[section.key as keyof typeof newBomDia]
+                            .matFin
+                        }
+                        onChange={(e) => {
                           const val = Number(e.target.value);
                           setNewBomDia({
                             ...newBomDia,
-                            [section.key]: { ...(newBomDia[section.key as keyof typeof newBomDia] as BomDiaMetrics), matFin: val }
+                            [section.key]: {
+                              ...(newBomDia[
+                                section.key as keyof typeof newBomDia
+                              ] as BomDiaMetrics),
+                              matFin: val,
+                            },
                           });
                         }}
                         className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">MAT ACAD *</label>
-                      <input 
-                        type="number" 
-                        required 
-                        value={newBomDia[section.key as keyof typeof newBomDia].matAcad}
-                        onChange={e => {
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        MAT ACAD *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        value={
+                          newBomDia[section.key as keyof typeof newBomDia]
+                            .matAcad
+                        }
+                        onChange={(e) => {
                           const val = Number(e.target.value);
                           setNewBomDia({
                             ...newBomDia,
-                            [section.key]: { ...(newBomDia[section.key as keyof typeof newBomDia] as BomDiaMetrics), matAcad: val }
+                            [section.key]: {
+                              ...(newBomDia[
+                                section.key as keyof typeof newBomDia
+                              ] as BomDiaMetrics),
+                              matAcad: val,
+                            },
                           });
                         }}
                         className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
@@ -10577,7 +15243,10 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 </div>
               ))}
 
-              <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
+              <button
+                type="submit"
+                className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+              >
                 Salvar Card Bom Dia
               </button>
             </form>
@@ -10585,17 +15254,24 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
 
           <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-900">Cards Cadastrados</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                Cards Cadastrados
+              </h3>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {bomDia.map(card => (
-                <div key={card.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
+              {bomDia.map((card) => (
+                <div
+                  key={card.id}
+                  className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center"
+                >
                   <div>
                     <p className="font-bold text-slate-900">{card.titulo}</p>
-                    <p className="text-[10px] text-slate-500">{formatLocalDateString(card.data)}</p>
+                    <p className="text-[10px] text-slate-500">
+                      {formatLocalDateString(card.data)}
+                    </p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button 
+                    <button
                       onClick={() => {
                         setEditingBomDia(card);
                         setNewBomDia({
@@ -10603,54 +15279,62 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                           metaFinal: card.metaFinal,
                           metaDia: card.metaDia,
                           anoAnterior: card.anoAnterior,
-                          real: card.real
+                          real: card.real,
                         });
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                       className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
                     >
                       <Edit2 size={18} />
                     </button>
-                    <button 
+                    <button
                       onClick={async () => {
-                      if (window.confirm('Deseja excluir este card?')) {
-                        try {
-                          await deleteDoc(doc(db, COLLECTIONS.BOM_DIA, card.id));
-                          onToast("Card removido.");
-                        } catch (err: any) {
-                          onToast("Erro ao excluir card.", 'error');
+                        if (window.confirm("Deseja excluir este card?")) {
+                          try {
+                            await deleteDoc(
+                              doc(db, COLLECTIONS.BOM_DIA, card.id),
+                            );
+                            onToast("Card removido.");
+                          } catch (err: any) {
+                            onToast("Erro ao excluir card.", "error");
+                          }
                         }
-                      }
-                    }}
-                    className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-all"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                      }}
+                      className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-all"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-            {bomDia.length === 0 && <p className="col-span-full text-center text-slate-400 italic py-8">Nenhum card cadastrado.</p>}
-          </div>
+              ))}
+              {bomDia.length === 0 && (
+                <p className="col-span-full text-center text-slate-400 italic py-8">
+                  Nenhum card cadastrado.
+                </p>
+              )}
+            </div>
           </section>
         </div>
       )}
 
-      {activeTab === 'forecast' && (
+      {activeTab === "forecast" && (
         <div className="space-y-8">
           <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 max-w-4xl mx-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-slate-900">{editingForecast ? 'Editar Forecast' : 'Novo Forecast'}</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                {editingForecast ? "Editar Forecast" : "Novo Forecast"}
+              </h3>
               {editingForecast && (
-                <button 
+                <button
                   onClick={() => {
                     setEditingForecast(null);
-                    setNewForecast({ 
-                      nome: '', 
-                      dataInicio: new Date().toISOString().split('T')[0], 
-                      dataFim: new Date().toISOString().split('T')[0], 
-                      metaDiaYTD: 0, 
-                      realizado: 0, 
-                      metaFechamento: 0 
+                    setNewForecast({
+                      nome: "",
+                      dataInicio: new Date().toISOString().split("T")[0],
+                      dataFim: new Date().toISOString().split("T")[0],
+                      metaDiaYTD: 0,
+                      realizado: 0,
+                      metaFechamento: 0,
                     });
                   }}
                   className="text-slate-400 hover:text-slate-600 text-sm font-bold"
@@ -10659,68 +15343,110 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 </button>
               )}
             </div>
-            <form onSubmit={handleAddForecast} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <form
+              onSubmit={handleAddForecast}
+              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+            >
               <div className="md:col-span-3">
-                <label className="block text-xs font-bold text-slate-500 mb-1">Nome do Forecast</label>
-                <input 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Nome do Forecast
+                </label>
+                <input
                   required
-                  value={newForecast.nome} 
-                  onChange={e => setNewForecast({...newForecast, nome: e.target.value})} 
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" 
+                  value={newForecast.nome}
+                  onChange={(e) =>
+                    setNewForecast({ ...newForecast, nome: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                   placeholder="Ex: Captação 2024.2"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Data Início</label>
-                <input 
-                  type="date" 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Data Início
+                </label>
+                <input
+                  type="date"
                   required
-                  value={newForecast.dataInicio} 
-                  onChange={e => setNewForecast({...newForecast, dataInicio: e.target.value})} 
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" 
+                  value={newForecast.dataInicio}
+                  onChange={(e) =>
+                    setNewForecast({
+                      ...newForecast,
+                      dataInicio: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Data Final</label>
-                <input 
-                  type="date" 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Data Final
+                </label>
+                <input
+                  type="date"
                   required
-                  value={newForecast.dataFim} 
-                  onChange={e => setNewForecast({...newForecast, dataFim: e.target.value})} 
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" 
+                  value={newForecast.dataFim}
+                  onChange={(e) =>
+                    setNewForecast({ ...newForecast, dataFim: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Meta Dia (YTD)</label>
-                <input 
-                  type="number" 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Meta Dia (YTD)
+                </label>
+                <input
+                  type="number"
                   required
-                  value={newForecast.metaDiaYTD} 
-                  onChange={e => setNewForecast({...newForecast, metaDiaYTD: Number(e.target.value)})} 
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" 
+                  value={newForecast.metaDiaYTD}
+                  onChange={(e) =>
+                    setNewForecast({
+                      ...newForecast,
+                      metaDiaYTD: Number(e.target.value),
+                    })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Realizado</label>
-                <input 
-                  type="number" 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Realizado
+                </label>
+                <input
+                  type="number"
                   required
-                  value={newForecast.realizado} 
-                  onChange={e => setNewForecast({...newForecast, realizado: Number(e.target.value)})} 
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" 
+                  value={newForecast.realizado}
+                  onChange={(e) =>
+                    setNewForecast({
+                      ...newForecast,
+                      realizado: Number(e.target.value),
+                    })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Meta Fechamento</label>
-                <input 
-                  type="number" 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Meta Fechamento
+                </label>
+                <input
+                  type="number"
                   required
-                  value={newForecast.metaFechamento} 
-                  onChange={e => setNewForecast({...newForecast, metaFechamento: Number(e.target.value)})} 
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" 
+                  value={newForecast.metaFechamento}
+                  onChange={(e) =>
+                    setNewForecast({
+                      ...newForecast,
+                      metaFechamento: Number(e.target.value),
+                    })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                 />
               </div>
-              <button type="submit" className="md:col-span-3 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all">
+              <button
+                type="submit"
+                className="md:col-span-3 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all"
+              >
                 Criar Forecast
               </button>
             </form>
@@ -10728,7 +15454,9 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
 
           <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-900">Forecasts Ativos</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                Forecasts Ativos
+              </h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -10747,36 +15475,76 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {forecast.map(f => {
-                    const percYTD = f.metaDiaYTD > 0 ? ((f.realizado / f.metaDiaYTD) * 100).toFixed(1) : '0';
-                    const percFech = f.metaFechamento > 0 ? ((f.realizado / f.metaFechamento) * 100).toFixed(1) : '0';
+                  {forecast.map((f) => {
+                    const percYTD =
+                      f.metaDiaYTD > 0
+                        ? ((f.realizado / f.metaDiaYTD) * 100).toFixed(1)
+                        : "0";
+                    const percFech =
+                      f.metaFechamento > 0
+                        ? ((f.realizado / f.metaFechamento) * 100).toFixed(1)
+                        : "0";
                     const gapFech = f.realizado - f.metaFechamento;
-                    
+
                     const diasRestantes = getWorkingDaysRemaining(f.dataFim);
-                    const pacing = f.realizado >= f.metaFechamento ? '0' : (Math.abs(gapFech) / Math.max(1, diasRestantes)).toFixed(1);
+                    const pacing =
+                      f.realizado >= f.metaFechamento
+                        ? "0"
+                        : (
+                            Math.abs(gapFech) / Math.max(1, diasRestantes)
+                          ).toFixed(1);
 
                     return (
-                      <tr key={f.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-4 font-bold text-slate-900">{f.nome}</td>
-                        <td className="px-4 py-4 text-slate-500">
-                          {f.dataInicio.split('T')[0].split('-').reverse().join('/')} - {f.dataFim.split('T')[0].split('-').reverse().join('/')}
+                      <tr
+                        key={f.id}
+                        className="hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="px-4 py-4 font-bold text-slate-900">
+                          {f.nome}
                         </td>
-                        <td className="px-4 py-4 font-bold text-blue-600">{f.metaDiaYTD}</td>
-                        <td className="px-4 py-4 font-bold text-emerald-600">{f.realizado}</td>
+                        <td className="px-4 py-4 text-slate-500">
+                          {f.dataInicio
+                            .split("T")[0]
+                            .split("-")
+                            .reverse()
+                            .join("/")}{" "}
+                          -{" "}
+                          {f.dataFim
+                            .split("T")[0]
+                            .split("-")
+                            .reverse()
+                            .join("/")}
+                        </td>
+                        <td className="px-4 py-4 font-bold text-blue-600">
+                          {f.metaDiaYTD}
+                        </td>
+                        <td className="px-4 py-4 font-bold text-emerald-600">
+                          {f.realizado}
+                        </td>
                         <td className="px-4 py-4">
-                          <span className={`px-2 py-1 rounded-full font-bold ${Number(percYTD) >= 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                          <span
+                            className={`px-2 py-1 rounded-full font-bold ${Number(percYTD) >= 100 ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}`}
+                          >
                             {percYTD}%
                           </span>
                         </td>
-                        <td className="px-4 py-4 font-bold text-slate-700">{f.metaFechamento}</td>
-                        <td className="px-4 py-4 font-bold text-blue-600">{percFech}%</td>
-                        <td className={`px-4 py-4 font-bold ${gapFech >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        <td className="px-4 py-4 font-bold text-slate-700">
+                          {f.metaFechamento}
+                        </td>
+                        <td className="px-4 py-4 font-bold text-blue-600">
+                          {percFech}%
+                        </td>
+                        <td
+                          className={`px-4 py-4 font-bold ${gapFech >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                        >
                           {gapFech}
                         </td>
-                        <td className="px-4 py-4 font-bold text-slate-900">{pacing}/dia</td>
+                        <td className="px-4 py-4 font-bold text-slate-900">
+                          {pacing}/dia
+                        </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center space-x-1">
-                            <button 
+                            <button
                               onClick={() => {
                                 setEditingForecast(f);
                                 setNewForecast({
@@ -10785,22 +15553,31 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                                   dataFim: f.dataFim,
                                   metaDiaYTD: f.metaDiaYTD,
                                   realizado: f.realizado,
-                                  metaFechamento: f.metaFechamento
+                                  metaFechamento: f.metaFechamento,
                                 });
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                window.scrollTo({ top: 0, behavior: "smooth" });
                               }}
                               className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
                             >
                               <Edit2 size={16} />
                             </button>
-                            <button 
+                            <button
                               onClick={async () => {
-                                if (window.confirm('Deseja excluir este forecast?')) {
+                                if (
+                                  window.confirm(
+                                    "Deseja excluir este forecast?",
+                                  )
+                                ) {
                                   try {
-                                    await deleteDoc(doc(db, COLLECTIONS.FORECAST, f.id));
+                                    await deleteDoc(
+                                      doc(db, COLLECTIONS.FORECAST, f.id),
+                                    );
                                     onToast("Forecast removido.");
                                   } catch (err: any) {
-                                    onToast("Erro ao excluir forecast.", 'error');
+                                    onToast(
+                                      "Erro ao excluir forecast.",
+                                      "error",
+                                    );
                                   }
                                 }
                               }}
@@ -10820,42 +15597,74 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
         </div>
       )}
 
-      {activeTab === 'planner' && (
+      {activeTab === "planner" && (
         <div className="space-y-8">
           <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 max-w-4xl mx-auto">
-            <h3 className="text-xl font-bold text-slate-900 mb-4">Novo Planner</h3>
-            <form onSubmit={handleAddPlanner} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <h3 className="text-xl font-bold text-slate-900 mb-4">
+              Novo Planner
+            </h3>
+            <form
+              onSubmit={handleAddPlanner}
+              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+            >
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Nome do Atendente</label>
-                <input 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Nome do Atendente
+                </label>
+                <input
                   required
-                  value={newPlanner.atendenteName} 
-                  onChange={e => setNewPlanner({...newPlanner, atendenteName: e.target.value})} 
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" 
+                  value={newPlanner.atendenteName}
+                  onChange={(e) =>
+                    setNewPlanner({
+                      ...newPlanner,
+                      atendenteName: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Base a ser Trabalhada</label>
-                <input 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Base a ser Trabalhada
+                </label>
+                <input
                   required
-                  value={newPlanner.baseName} 
-                  onChange={e => setNewPlanner({...newPlanner, baseName: e.target.value})} 
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" 
+                  value={newPlanner.baseName}
+                  onChange={(e) =>
+                    setNewPlanner({ ...newPlanner, baseName: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Dia da Semana</label>
-                <select 
-                  value={newPlanner.dayOfWeek} 
-                  onChange={e => setNewPlanner({...newPlanner, dayOfWeek: e.target.value})} 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Dia da Semana
+                </label>
+                <select
+                  value={newPlanner.dayOfWeek}
+                  onChange={(e) =>
+                    setNewPlanner({ ...newPlanner, dayOfWeek: e.target.value })
+                  }
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                 >
-                  {["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"].map(d => (
-                    <option key={d} value={d}>{d}</option>
+                  {[
+                    "Segunda-feira",
+                    "Terça-feira",
+                    "Quarta-feira",
+                    "Quinta-feira",
+                    "Sexta-feira",
+                    "Sábado",
+                  ].map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
                   ))}
                 </select>
               </div>
-              <button type="submit" className="md:col-span-3 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all">
+              <button
+                type="submit"
+                className="md:col-span-3 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all"
+              >
                 Adicionar ao Planner
               </button>
             </form>
@@ -10863,7 +15672,9 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
 
           <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-900">Planner Configurado</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                Planner Configurado
+              </h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -10876,29 +15687,52 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {planner.sort((a, b) => {
-                    const days = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
-                    return days.indexOf(a.dayOfWeek) - days.indexOf(b.dayOfWeek);
-                  }).map(p => (
-                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-4 font-bold text-slate-900">{p.dayOfWeek}</td>
-                      <td className="px-4 py-4 text-slate-700">{p.atendenteName}</td>
-                      <td className="px-4 py-4 text-slate-500">{p.baseName}</td>
-                      <td className="px-4 py-4">
-                        <button 
-                          onClick={async () => {
-                            if (window.confirm('Deseja excluir este item?')) {
-                              await deleteDoc(doc(db, COLLECTIONS.PLANNER, p.id));
-                              onToast("Item removido.");
-                            }
-                          }}
-                          className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-all"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {planner
+                    .sort((a, b) => {
+                      const days = [
+                        "Segunda-feira",
+                        "Terça-feira",
+                        "Quarta-feira",
+                        "Quinta-feira",
+                        "Sexta-feira",
+                        "Sábado",
+                        "Domingo",
+                      ];
+                      return (
+                        days.indexOf(a.dayOfWeek) - days.indexOf(b.dayOfWeek)
+                      );
+                    })
+                    .map((p) => (
+                      <tr
+                        key={p.id}
+                        className="hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="px-4 py-4 font-bold text-slate-900">
+                          {p.dayOfWeek}
+                        </td>
+                        <td className="px-4 py-4 text-slate-700">
+                          {p.atendenteName}
+                        </td>
+                        <td className="px-4 py-4 text-slate-500">
+                          {p.baseName}
+                        </td>
+                        <td className="px-4 py-4">
+                          <button
+                            onClick={async () => {
+                              if (window.confirm("Deseja excluir este item?")) {
+                                await deleteDoc(
+                                  doc(db, COLLECTIONS.PLANNER, p.id),
+                                );
+                                onToast("Item removido.");
+                              }
+                            }}
+                            className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -10906,18 +15740,27 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
         </div>
       )}
 
-      {activeTab === 'periodo' && (
+      {activeTab === "periodo" && (
         <div className="space-y-8">
           <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 max-w-4xl mx-auto">
-            <h3 className="text-xl font-bold text-slate-900 mb-4">Novo Período de Captação</h3>
-            <form onSubmit={handleAddPeriodo} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <h3 className="text-xl font-bold text-slate-900 mb-4">
+              Novo Período de Captação
+            </h3>
+            <form
+              onSubmit={handleAddPeriodo}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            >
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-slate-500 mb-1">Nome do Período</label>
-                <input 
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Nome do Período
+                </label>
+                <input
                   required
-                  value={newPeriodo.nome} 
-                  onChange={e => setNewPeriodo({...newPeriodo, nome: e.target.value})} 
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm" 
+                  value={newPeriodo.nome}
+                  onChange={(e) =>
+                    setNewPeriodo({ ...newPeriodo, nome: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                   placeholder="Ex: 2024.2"
                 />
               </div>
@@ -10925,12 +15768,38 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 <h4 className="text-sm font-bold text-slate-700">Inscrição</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Início</label>
-                    <input type="date" required value={newPeriodo.inicioInscricao} onChange={e => setNewPeriodo({...newPeriodo, inicioInscricao: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs" />
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      Início
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={newPeriodo.inicioInscricao}
+                      onChange={(e) =>
+                        setNewPeriodo({
+                          ...newPeriodo,
+                          inicioInscricao: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs"
+                    />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Fim</label>
-                    <input type="date" required value={newPeriodo.fimInscricao} onChange={e => setNewPeriodo({...newPeriodo, fimInscricao: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs" />
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      Fim
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={newPeriodo.fimInscricao}
+                      onChange={(e) =>
+                        setNewPeriodo({
+                          ...newPeriodo,
+                          fimInscricao: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs"
+                    />
                   </div>
                 </div>
               </div>
@@ -10938,12 +15807,38 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 <h4 className="text-sm font-bold text-slate-700">Mat Fin</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Início</label>
-                    <input type="date" required value={newPeriodo.inicioMatFin} onChange={e => setNewPeriodo({...newPeriodo, inicioMatFin: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs" />
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      Início
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={newPeriodo.inicioMatFin}
+                      onChange={(e) =>
+                        setNewPeriodo({
+                          ...newPeriodo,
+                          inicioMatFin: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs"
+                    />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Fim</label>
-                    <input type="date" required value={newPeriodo.fimMatFin} onChange={e => setNewPeriodo({...newPeriodo, fimMatFin: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs" />
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      Fim
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={newPeriodo.fimMatFin}
+                      onChange={(e) =>
+                        setNewPeriodo({
+                          ...newPeriodo,
+                          fimMatFin: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs"
+                    />
                   </div>
                 </div>
               </div>
@@ -10951,16 +15846,45 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 <h4 className="text-sm font-bold text-slate-700">Mat Acad</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Início</label>
-                    <input type="date" required value={newPeriodo.inicioMatAcad} onChange={e => setNewPeriodo({...newPeriodo, inicioMatAcad: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs" />
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      Início
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={newPeriodo.inicioMatAcad}
+                      onChange={(e) =>
+                        setNewPeriodo({
+                          ...newPeriodo,
+                          inicioMatAcad: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs"
+                    />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Fim</label>
-                    <input type="date" required value={newPeriodo.fimMatAcad} onChange={e => setNewPeriodo({...newPeriodo, fimMatAcad: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs" />
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      Fim
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={newPeriodo.fimMatAcad}
+                      onChange={(e) =>
+                        setNewPeriodo({
+                          ...newPeriodo,
+                          fimMatAcad: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs"
+                    />
                   </div>
                 </div>
               </div>
-              <button type="submit" className="md:col-span-2 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all">
+              <button
+                type="submit"
+                className="md:col-span-2 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all"
+              >
                 Salvar Período
               </button>
             </form>
@@ -10968,7 +15892,9 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
 
           <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-900">Períodos Cadastrados</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                Períodos Cadastrados
+              </h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -10982,26 +15908,56 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {periodos.map(p => (
-                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-4 font-bold text-slate-900">{p.nome}</td>
-                      <td className="px-4 py-4">
-                        <p className="text-slate-700">{formatLocalDateString(p.inicioInscricao)} - {formatLocalDateString(p.fimInscricao)}</p>
-                        <p className="text-blue-600 font-bold">{getWorkingDaysBetween(p.inicioInscricao, p.fimInscricao)} dias úteis</p>
+                  {periodos.map((p) => (
+                    <tr
+                      key={p.id}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
+                      <td className="px-4 py-4 font-bold text-slate-900">
+                        {p.nome}
                       </td>
                       <td className="px-4 py-4">
-                        <p className="text-slate-700">{formatLocalDateString(p.inicioMatFin)} - {formatLocalDateString(p.fimMatFin)}</p>
-                        <p className="text-blue-600 font-bold">{getWorkingDaysBetween(p.inicioMatFin, p.fimMatFin)} dias úteis</p>
+                        <p className="text-slate-700">
+                          {formatLocalDateString(p.inicioInscricao)} -{" "}
+                          {formatLocalDateString(p.fimInscricao)}
+                        </p>
+                        <p className="text-blue-600 font-bold">
+                          {getWorkingDaysBetween(
+                            p.inicioInscricao,
+                            p.fimInscricao,
+                          )}{" "}
+                          dias úteis
+                        </p>
                       </td>
                       <td className="px-4 py-4">
-                        <p className="text-slate-700">{formatLocalDateString(p.inicioMatAcad)} - {formatLocalDateString(p.fimMatAcad)}</p>
-                        <p className="text-blue-600 font-bold">{getWorkingDaysBetween(p.inicioMatAcad, p.fimMatAcad)} dias úteis</p>
+                        <p className="text-slate-700">
+                          {formatLocalDateString(p.inicioMatFin)} -{" "}
+                          {formatLocalDateString(p.fimMatFin)}
+                        </p>
+                        <p className="text-blue-600 font-bold">
+                          {getWorkingDaysBetween(p.inicioMatFin, p.fimMatFin)}{" "}
+                          dias úteis
+                        </p>
                       </td>
                       <td className="px-4 py-4">
-                        <button 
+                        <p className="text-slate-700">
+                          {formatLocalDateString(p.inicioMatAcad)} -{" "}
+                          {formatLocalDateString(p.fimMatAcad)}
+                        </p>
+                        <p className="text-blue-600 font-bold">
+                          {getWorkingDaysBetween(p.inicioMatAcad, p.fimMatAcad)}{" "}
+                          dias úteis
+                        </p>
+                      </td>
+                      <td className="px-4 py-4">
+                        <button
                           onClick={async () => {
-                            if (window.confirm('Deseja excluir este período?')) {
-                              await deleteDoc(doc(db, COLLECTIONS.PERIODO_CAPTACAO, p.id));
+                            if (
+                              window.confirm("Deseja excluir este período?")
+                            ) {
+                              await deleteDoc(
+                                doc(db, COLLECTIONS.PERIODO_CAPTACAO, p.id),
+                              );
                               onToast("Período removido.");
                             }
                           }}
@@ -11019,53 +15975,76 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
         </div>
       )}
 
-      {activeTab === 'whatsapp' && (
+      {activeTab === "whatsapp" && (
         <div className="space-y-6">
           <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-900">Integração Bot ARGO'S</h3>
-              <p className="text-slate-500 text-sm">Configure a conexão com a inteligência artificial</p>
+              <h3 className="text-xl font-bold text-slate-900">
+                Integração Bot ARGO'S
+              </h3>
+              <p className="text-slate-500 text-sm">
+                Configure a conexão com a inteligência artificial
+              </p>
             </div>
             <div className="p-6">
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">URL do App Railway (API do Bot)</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    URL do App Railway (API do Bot)
+                  </label>
                   <div className="flex gap-2">
-                    <input 
+                    <input
                       type="text"
                       placeholder="https://seu-app-no-railway.app"
                       defaultValue={botConfig.url}
                       onBlur={async (e) => {
                         let newUrl = e.target.value.trim();
-                        if (newUrl && !newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
+                        if (
+                          newUrl &&
+                          !newUrl.startsWith("http://") &&
+                          !newUrl.startsWith("https://")
+                        ) {
                           newUrl = `https://${newUrl}`;
                           e.target.value = newUrl;
                         }
                         if (newUrl === botConfig.url) return;
                         try {
-                          await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
-                            url: newUrl,
-                            active: botConfig.active || false,
-                            updatedAt: serverTimestamp() 
-                          }, { merge: true });
+                          await setDoc(
+                            doc(db, COLLECTIONS.BOT_CONFIG, "main"),
+                            {
+                              url: newUrl,
+                              active: botConfig.active || false,
+                              updatedAt: serverTimestamp(),
+                            },
+                            { merge: true },
+                          );
                           onToast("URL do Bot atualizada!");
                         } catch (err: any) {
-                          onToast(`Erro ao salvar URL: ${err.message}`, 'error');
+                          onToast(
+                            `Erro ao salvar URL: ${err.message}`,
+                            "error",
+                          );
                         }
                       }}
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                     />
-                    <button 
+                    <button
                       onClick={async () => {
                         if (!botConfig.url) {
-                          onToast('Insira uma URL primeiro.', 'error');
+                          onToast("Insira uma URL primeiro.", "error");
                           return;
                         }
                         try {
-                          const data = await callBotApi('/api/status');
-                          onToast(`Servidor online! Status: ${data.name || 'OK'}`, 'success');
+                          const data = await callBotApi("/api/status");
+                          onToast(
+                            `Servidor online! Status: ${data.name || "OK"}`,
+                            "success",
+                          );
                         } catch (e: any) {
-                          onToast(`Falha de rede (CORS/Offline): O Railway pode estar reiniciando o bot ou o bot está quebrado. Erro: ${e.message}`, 'error');
+                          onToast(
+                            `Falha de rede (CORS/Offline): O Railway pode estar reiniciando o bot ou o bot está quebrado. Erro: ${e.message}`,
+                            "error",
+                          );
                         }
                       }}
                       className="bg-blue-100 text-blue-700 px-4 py-3 rounded-xl hover:bg-blue-200 transition-colors whitespace-nowrap text-sm font-bold"
@@ -11073,24 +16052,41 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       Testar Conexão
                     </button>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-1">Insira a URL base do servidor onde seu bot está rodando (ex: https://meubot.up.railway.app).</p>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Insira a URL base do servidor onde seu bot está rodando (ex:
+                    https://meubot.up.railway.app).
+                  </p>
                 </div>
                 <div className="pt-4 border-t border-slate-100">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-slate-800">Gestão de Sessões WhatsApp (Multi-Device)</h3>
+                    <h3 className="font-bold text-slate-800">
+                      Gestão de Sessões WhatsApp (Multi-Device)
+                    </h3>
                     <div className="flex gap-2">
                       <button
                         onClick={async () => {
-                           if (!botConfig.url) return;
-                           if (window.confirm('Tem certeza que deseja resetar TODAS as sessões criptografadas? (Esta ação apagará a pasta corrompida e solicitará nova conexão em todos os números)')) {
-                              try {
-                                 await callBotApi('/api/reset', { method: 'POST' });
-                                 onToast('A Rota Mágica de Reset foi ativada. Todas as sessões foram apagadas e o bot será reiniciado.', 'success');
-                                 setBotStatuses({});
-                              } catch (err: any) {
-                                 onToast(`Erro ao resetar: ${err.message}`, 'error');
-                              }
-                           }
+                          if (!botConfig.url) return;
+                          if (
+                            window.confirm(
+                              "Tem certeza que deseja resetar TODAS as sessões criptografadas? (Esta ação apagará a pasta corrompida e solicitará nova conexão em todos os números)",
+                            )
+                          ) {
+                            try {
+                              await callBotApi("/api/reset", {
+                                method: "POST",
+                              });
+                              onToast(
+                                "A Rota Mágica de Reset foi ativada. Todas as sessões foram apagadas e o bot será reiniciado.",
+                                "success",
+                              );
+                              setBotStatuses({});
+                            } catch (err: any) {
+                              onToast(
+                                `Erro ao resetar: ${err.message}`,
+                                "error",
+                              );
+                            }
+                          }
                         }}
                         className="bg-red-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-red-700 transition"
                       >
@@ -11098,30 +16094,42 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       </button>
                       <button
                         onClick={async () => {
-                           const num = prompt("Digite o número no formato 5511999999999:");
-                           if (num) {
-                              const botNumber = num.replace(/\D/g, '');
-                              if (!botNumber) return;
-                              if (!botConfig || !botConfig.url) {
-                                 onToast('Configura a URL do bot primeiro.', 'error'); return;
-                              }
-                              try {
-                                 await callBotApi('/api/connect', {
-                                    method: 'POST',
-                                    body: { botNumber }
-                                 });
-                                 onToast('Solicitação enviada! Aguarde alguns segundos o QR Code.');
-                                 // Force a status check after 3 seconds
-                                 setTimeout(async () => {
-                                    try {
-                                      const data = await callBotApi('/api/status');
-                                      if (data && data.bots) setBotStatuses(data.bots);
-                                    } catch (e) {}
-                                 }, 3000);
-                              } catch (err: any) {
-                                 onToast(`Servidor offline ou reiniciando... ${err.message}`, 'error');
-                              }
-                           }
+                          const num = prompt(
+                            "Digite o número no formato 5511999999999:",
+                          );
+                          if (num) {
+                            const botNumber = num.replace(/\D/g, "");
+                            if (!botNumber) return;
+                            if (!botConfig || !botConfig.url) {
+                              onToast(
+                                "Configura a URL do bot primeiro.",
+                                "error",
+                              );
+                              return;
+                            }
+                            try {
+                              await callBotApi("/api/connect", {
+                                method: "POST",
+                                body: { botNumber },
+                              });
+                              onToast(
+                                "Solicitação enviada! Aguarde alguns segundos o QR Code.",
+                              );
+                              // Force a status check after 3 seconds
+                              setTimeout(async () => {
+                                try {
+                                  const data = await callBotApi("/api/status");
+                                  if (data && data.bots)
+                                    setBotStatuses(data.bots);
+                                } catch (e) {}
+                              }, 3000);
+                            } catch (err: any) {
+                              onToast(
+                                `Servidor offline ou reiniciando... ${err.message}`,
+                                "error",
+                              );
+                            }
+                          }
                         }}
                         className="bg-green-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-green-700 transition"
                       >
@@ -11129,143 +16137,217 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       </button>
                     </div>
                   </div>
-                  
+
                   {Object.keys(botStatuses || {}).length === 0 ? (
-                    <p className="text-sm text-slate-500 italic">Nenhum número conectado ou conectando. Adicione um clicando no botão acima.</p>
+                    <p className="text-sm text-slate-500 italic">
+                      Nenhum número conectado ou conectando. Adicione um
+                      clicando no botão acima.
+                    </p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       {Object.entries(botStatuses || {}).map(([botNumber, info]) => {
-                         const userForBot = users.find(u => u.botNumber && u.botNumber.replace(/\D/g, '') === botNumber.replace(/\D/g, ''));
-                         const nameForBot = userForBot ? userForBot.name : (botConfig.botNames?.[botNumber] || '');
-                         
-                         return (
-                          <div key={botNumber} className="border border-slate-200 rounded-xl p-4 flex flex-col gap-2">
-                             <div className="flex items-center justify-between">
-                               <div className="flex flex-col">
-                                 <div className="font-bold text-slate-700 text-lg">{botNumber}</div>
-                                 <div className="flex items-center mt-1">
-                                    <span className="text-[10px] text-slate-500 mr-1 uppercase font-bold tracking-wider">Resp:</span>
+                      {Object.entries(botStatuses || {}).map(
+                        ([botNumber, info]) => {
+                          const userForBot = users.find(
+                            (u) =>
+                              u.botNumber &&
+                              u.botNumber.replace(/\D/g, "") ===
+                                botNumber.replace(/\D/g, ""),
+                          );
+                          const nameForBot = userForBot
+                            ? userForBot.name
+                            : botConfig.botNames?.[botNumber] || "";
+
+                          return (
+                            <div
+                              key={botNumber}
+                              className="border border-slate-200 rounded-xl p-4 flex flex-col gap-2"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                  <div className="font-bold text-slate-700 text-lg">
+                                    {botNumber}
+                                  </div>
+                                  <div className="flex items-center mt-1">
+                                    <span className="text-[10px] text-slate-500 mr-1 uppercase font-bold tracking-wider">
+                                      Resp:
+                                    </span>
                                     {userForBot ? (
-                                      <span className="text-xs font-bold text-blue-600 truncate max-w-[150px]">{userForBot.name} (Auto)</span>
+                                      <span className="text-xs font-bold text-blue-600 truncate max-w-[150px]">
+                                        {userForBot.name} (Auto)
+                                      </span>
                                     ) : (
-                                      <input 
-                                        type="text" 
+                                      <input
+                                        type="text"
                                         className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs w-32 focus:ring-1 focus:ring-blue-500 focus:outline-none text-slate-600"
                                         placeholder="Nome"
                                         defaultValue={nameForBot}
                                         onBlur={async (e) => {
                                           const newName = e.target.value;
                                           try {
-                                             await updateDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), {
-                                                [`botNames.${botNumber}`]: newName
-                                             });
-                                          } catch(err) {}
+                                            await updateDoc(
+                                              doc(
+                                                db,
+                                                COLLECTIONS.BOT_CONFIG,
+                                                "main",
+                                              ),
+                                              {
+                                                [`botNames.${botNumber}`]:
+                                                  newName,
+                                              },
+                                            );
+                                          } catch (err) {}
                                         }}
                                       />
                                     )}
-                                 </div>
-                               </div>
-                               <div className="flex items-center space-x-2">
-                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${info?.status === 'online' ? 'bg-green-100 text-green-700' : info?.status === 'pairing' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
-                                   {info?.status?.toUpperCase() || 'DESCONHECIDO'}
-                                </span>
-                                <button
-                                  onClick={async () => {
-                                    if (window.confirm(`Tem certeza que deseja apagar a sessão do bot ${botNumber}?`)) {
-                                      try {
-                                        await callBotApi('/api/reset', {
-                                           method: 'POST',
-                                           body: { botNumber }
-                                        });
-                                        onToast(`Sessão ${botNumber} apagada.`);
-                                        setTimeout(async () => {
-                                          try {
-                                            const data = await callBotApi('/api/status');
-                                            setBotStatuses(data.bots || {});
-                                          } catch(e) {}
-                                        }, 1000);
-                                      } catch (e: any) {
-                                        onToast(`Erro ao apagar sessão: ${e.message}`, 'error');
-                                      }
-                                    }
-                                  }}
-                                  className="text-red-500 hover:text-red-700 px-2 py-1 bg-red-50 rounded-lg transition"
-                                  title="Apagar sessão do Railway"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </div>
-                            
-                            {info?.status === 'pairing' && (info?.pairingCode || info?.qrUrl) && (
-                              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2 text-center flex flex-col gap-4 items-center">
-                                 {info?.qrUrl && (
-                                    <div>
-                                       <p className="text-xs text-slate-500 mb-2">Escaneie o QR Code:</p>
-                                       <img src={info.qrUrl} alt="QR Code WhatsApp" className="mx-auto rounded" />
-                                    </div>
-                                 )}
-                                 
-                                 {info?.pairingCode && (
-                                    <div>
-                                       <p className="text-xs text-slate-500 mb-1">{info?.qrUrl ? 'Ou use' : 'Use'} o Pairing Code:</p>
-                                       <p className="text-2xl tracking-widest font-mono font-bold text-slate-800">{info.pairingCode}</p>
-                                    </div>
-                                 )}
-                              </div>
-                            )}
-
-                            {info?.status === 'online' && (
-                              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                                <span className="text-xs font-bold text-slate-600">Auto-Reply (IA)</span>
+                                  </div>
+                                </div>
                                 <div className="flex items-center space-x-2">
+                                  <span
+                                    className={`px-2 py-1 rounded-full text-xs font-bold ${info?.status === "online" ? "bg-green-100 text-green-700" : info?.status === "pairing" ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"}`}
+                                  >
+                                    {info?.status?.toUpperCase() ||
+                                      "DESCONHECIDO"}
+                                  </span>
                                   <button
                                     onClick={async () => {
-                                      const currentActive = (info as any)?.isAutoReplyActive ?? (info as any)?.active ?? false;
-                                      const newActive = !currentActive;
-                                      
-                                      // Optimistic update
-                                      setBotStatuses(prev => ({
-                                        ...prev,
-                                        [botNumber]: {
-                                          ...prev[botNumber],
-                                          active: newActive,
-                                          isAutoReplyActive: newActive
+                                      if (
+                                        window.confirm(
+                                          `Tem certeza que deseja apagar a sessão do bot ${botNumber}?`,
+                                        )
+                                      ) {
+                                        try {
+                                          await callBotApi("/api/reset", {
+                                            method: "POST",
+                                            body: { botNumber },
+                                          });
+                                          onToast(
+                                            `Sessão ${botNumber} apagada.`,
+                                          );
+                                          setTimeout(async () => {
+                                            try {
+                                              const data =
+                                                await callBotApi("/api/status");
+                                              setBotStatuses(data.bots || {});
+                                            } catch (e) {}
+                                          }, 1000);
+                                        } catch (e: any) {
+                                          onToast(
+                                            `Erro ao apagar sessão: ${e.message}`,
+                                            "error",
+                                          );
                                         }
-                                      }));
-                                      
-                                      try {
-                                        await callBotApi('/api/toggle', {
-                                          method: 'POST',
-                                          body: { botNumber, active: newActive, isAutoReplyActive: newActive }
-                                        });
-                                        onToast(`IA para ${botNumber} alterada para ${newActive ? 'ON' : 'OFF'}`);
-                                      } catch (e: any) {
-                                        onToast(`Erro ao alterar IA para ${botNumber}: ${e.message}`, 'error');
-                                        // Revert back
-                                        setBotStatuses(prev => ({
+                                      }
+                                    }}
+                                    className="text-red-500 hover:text-red-700 px-2 py-1 bg-red-50 rounded-lg transition"
+                                    title="Apagar sessão do Railway"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {info?.status === "pairing" &&
+                                (info?.pairingCode || info?.qrUrl) && (
+                                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2 text-center flex flex-col gap-4 items-center">
+                                    {info?.qrUrl && (
+                                      <div>
+                                        <p className="text-xs text-slate-500 mb-2">
+                                          Escaneie o QR Code:
+                                        </p>
+                                        <img
+                                          src={info.qrUrl}
+                                          alt="QR Code WhatsApp"
+                                          className="mx-auto rounded"
+                                        />
+                                      </div>
+                                    )}
+
+                                    {info?.pairingCode && (
+                                      <div>
+                                        <p className="text-xs text-slate-500 mb-1">
+                                          {info?.qrUrl ? "Ou use" : "Use"} o
+                                          Pairing Code:
+                                        </p>
+                                        <p className="text-2xl tracking-widest font-mono font-bold text-slate-800">
+                                          {info.pairingCode}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                              {info?.status === "online" && (
+                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                                  <span className="text-xs font-bold text-slate-600">
+                                    Auto-Reply (IA)
+                                  </span>
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={async () => {
+                                        const currentActive =
+                                          (info as any)?.isAutoReplyActive ??
+                                          (info as any)?.active ??
+                                          false;
+                                        const newActive = !currentActive;
+
+                                        // Optimistic update
+                                        setBotStatuses((prev) => ({
                                           ...prev,
                                           [botNumber]: {
                                             ...prev[botNumber],
-                                            active: !newActive,
-                                            isAutoReplyActive: !newActive
-                                          }
+                                            active: newActive,
+                                            isAutoReplyActive: newActive,
+                                          },
                                         }));
-                                      }
-                                    }}
-                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${((info as any)?.isAutoReplyActive ?? (info as any)?.active ?? false) ? 'bg-blue-600' : 'bg-slate-200'}`}
-                                  >
-                                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${((info as any)?.isAutoReplyActive ?? (info as any)?.active ?? false) ? 'translate-x-5' : 'translate-x-1'}`} />
-                                  </button>
-                                  <span className="text-[10px] text-slate-500">
-                                     {((info as any)?.isAutoReplyActive ?? (info as any)?.active ?? false) ? 'ON' : 'OFF'}
-                                  </span>
+
+                                        try {
+                                          await callBotApi("/api/toggle", {
+                                            method: "POST",
+                                            body: {
+                                              botNumber,
+                                              active: newActive,
+                                              isAutoReplyActive: newActive,
+                                            },
+                                          });
+                                          onToast(
+                                            `IA para ${botNumber} alterada para ${newActive ? "ON" : "OFF"}`,
+                                          );
+                                        } catch (e: any) {
+                                          onToast(
+                                            `Erro ao alterar IA para ${botNumber}: ${e.message}`,
+                                            "error",
+                                          );
+                                          // Revert back
+                                          setBotStatuses((prev) => ({
+                                            ...prev,
+                                            [botNumber]: {
+                                              ...prev[botNumber],
+                                              active: !newActive,
+                                              isAutoReplyActive: !newActive,
+                                            },
+                                          }));
+                                        }
+                                      }}
+                                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${((info as any)?.isAutoReplyActive ?? (info as any)?.active ?? false) ? "bg-blue-600" : "bg-slate-200"}`}
+                                    >
+                                      <span
+                                        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${((info as any)?.isAutoReplyActive ?? (info as any)?.active ?? false) ? "translate-x-5" : "translate-x-1"}`}
+                                      />
+                                    </button>
+                                    <span className="text-[10px] text-slate-500">
+                                      {((info as any)?.isAutoReplyActive ??
+                                      (info as any)?.active ??
+                                      false)
+                                        ? "ON"
+                                        : "OFF"}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                         </div>
-                        );
-                       })}
+                              )}
+                            </div>
+                          );
+                        },
+                      )}
                     </div>
                   )}
                 </div>
@@ -11275,188 +16357,295 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
 
           <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-900">Mensagens Padrão do WhatsApp</h3>
-              <p className="text-slate-500 text-sm">Gerencie múltiplos modelos de mensagens para cada categoria</p>
+              <h3 className="text-xl font-bold text-slate-900">
+                Mensagens Padrão do WhatsApp
+              </h3>
+              <p className="text-slate-500 text-sm">
+                Gerencie múltiplos modelos de mensagens para cada categoria
+              </p>
             </div>
-          <div className="p-6 space-y-12">
-            {[
-              { id: 'historico', label: 'Histórico', multi: true },
-              { id: 'bases', label: 'Bases', multi: true },
-              { id: 'gap', label: 'GAP Acadêmico', multi: false, subLabels: ['Padrão', 'Matrícula Acadêmica OK'] },
-              { id: 'fiesProuni', label: 'Fies/Prouni', multi: false, subLabels: ['Padrão', 'Matrícula Acadêmica OK'] },
-              { id: 'bases_renovacao', label: 'Base Líquida', multi: true }
-            ].map(tipo => {
-              const messages = whatsappMessages.filter(m => m.tipo === tipo.id);
-              
-              if (tipo.multi) {
-                return (
-                  <div key={tipo.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
-                    <div className="flex justify-between items-center bg-slate-50 p-5 border-b border-slate-200">
-                      <div>
-                        <h4 className="text-base font-bold text-slate-800 uppercase tracking-wider">{tipo.label}</h4>
-                        <p className="text-xs text-slate-500 mt-1">Modelos de mensagens para {tipo.label.toLowerCase()}</p>
+            <div className="p-6 space-y-12">
+              {[
+                { id: "historico", label: "Histórico", multi: true },
+                { id: "bases", label: "Bases", multi: true },
+                {
+                  id: "gap",
+                  label: "GAP Acadêmico",
+                  multi: false,
+                  subLabels: ["Padrão", "Matrícula Acadêmica OK"],
+                },
+                {
+                  id: "fiesProuni",
+                  label: "Fies/Prouni",
+                  multi: false,
+                  subLabels: ["Padrão", "Matrícula Acadêmica OK"],
+                },
+                { id: "bases_renovacao", label: "Base Líquida", multi: true },
+              ].map((tipo) => {
+                const messages = whatsappMessages.filter(
+                  (m) => m.tipo === tipo.id,
+                );
+
+                if (tipo.multi) {
+                  return (
+                    <div
+                      key={tipo.id}
+                      className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8"
+                    >
+                      <div className="flex justify-between items-center bg-slate-50 p-5 border-b border-slate-200">
+                        <div>
+                          <h4 className="text-base font-bold text-slate-800 uppercase tracking-wider">
+                            {tipo.label}
+                          </h4>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Modelos de mensagens para {tipo.label.toLowerCase()}
+                          </p>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await addDoc(
+                                collection(db, COLLECTIONS.WHATSAPP_MESSAGES),
+                                {
+                                  tipo: tipo.id,
+                                  texto: "",
+                                  createdAt: serverTimestamp(),
+                                },
+                              );
+                              onToast("Novo modelo adicionado!");
+                            } catch (err: any) {
+                              onToast("Erro ao adicionar modelo.", "error");
+                            }
+                          }}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center space-x-2 shadow-sm transition-all"
+                        >
+                          <Plus size={16} />
+                          <span>Novo Modelo</span>
+                        </button>
                       </div>
-                      <button 
-                        onClick={async () => {
-                          try {
-                            await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), { 
-                              tipo: tipo.id, 
-                              texto: '', 
-                              createdAt: serverTimestamp() 
-                            });
-                            onToast("Novo modelo adicionado!");
-                          } catch (err: any) {
-                            onToast("Erro ao adicionar modelo.", 'error');
-                          }
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center space-x-2 shadow-sm transition-all"
-                      >
-                        <Plus size={16} />
-                        <span>Novo Modelo</span>
-                      </button>
+                      <div className="p-6 grid grid-cols-1 gap-6 bg-slate-50/50">
+                        {messages.map((msg, idx) => (
+                          <WhatsAppMessageEditor
+                            key={msg.id}
+                            msgId={msg.id}
+                            initialText={msg.texto}
+                            label={`MODELO ${idx + 1} - ${tipo.label}`}
+                            onUpdate={async (novoTexto) => {
+                              if (novoTexto === msg.texto) return;
+                              try {
+                                await updateDoc(
+                                  doc(
+                                    db,
+                                    COLLECTIONS.WHATSAPP_MESSAGES,
+                                    msg.id,
+                                  ),
+                                  {
+                                    texto: novoTexto,
+                                    updatedAt: serverTimestamp(),
+                                  },
+                                );
+                                onToast("Modelo atualizado!");
+                              } catch (err: any) {
+                                onToast("Erro ao salvar.", "error");
+                              }
+                            }}
+                            onDelete={async () => {
+                              if (window.confirm("Excluir este modelo?")) {
+                                await deleteDoc(
+                                  doc(
+                                    db,
+                                    COLLECTIONS.WHATSAPP_MESSAGES,
+                                    msg.id,
+                                  ),
+                                );
+                                onToast("Modelo removido.");
+                              }
+                            }}
+                          />
+                        ))}
+                        {messages.length === 0 && (
+                          <div className="text-center py-8 text-slate-400 text-sm border-2 border-dashed border-slate-200 rounded-xl">
+                            Nenhum modelo cadastrado. Clique em "Novo Modelo"
+                            para adicionar.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={tipo.id}
+                    className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8"
+                  >
+                    <div className="bg-slate-50 p-5 border-b border-slate-200 flex justify-between items-center">
+                      <div>
+                        <h4 className="text-base font-bold text-slate-800 uppercase tracking-wider">
+                          {tipo.label}
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Modelos de mensagens para {tipo.label.toLowerCase()}
+                        </p>
+                      </div>
                     </div>
                     <div className="p-6 grid grid-cols-1 gap-6 bg-slate-50/50">
-                      {messages.map((msg, idx) => (
-                        <WhatsAppMessageEditor
-                          key={msg.id}
-                          msgId={msg.id}
-                          initialText={msg.texto}
-                          label={`MODELO ${idx + 1} - ${tipo.label}`}
-                          onUpdate={async (novoTexto) => {
-                            if (novoTexto === msg.texto) return;
-                            try {
-                              await updateDoc(doc(db, COLLECTIONS.WHATSAPP_MESSAGES, msg.id), { texto: novoTexto, updatedAt: serverTimestamp() });
-                              onToast("Modelo atualizado!");
-                            } catch (err: any) {
-                              onToast("Erro ao salvar.", 'error');
-                            }
-                          }}
-                          onDelete={async () => {
-                            if (window.confirm('Excluir este modelo?')) {
-                              await deleteDoc(doc(db, COLLECTIONS.WHATSAPP_MESSAGES, msg.id));
-                              onToast("Modelo removido.");
-                            }
-                          }}
-                        />
-                      ))}
-                      {messages.length === 0 && (
-                        <div className="text-center py-8 text-slate-400 text-sm border-2 border-dashed border-slate-200 rounded-xl">
-                          Nenhum modelo cadastrado. Clique em "Novo Modelo" para adicionar.
-                        </div>
-                      )}
+                      {tipo.subLabels?.map((label, idx) => {
+                        const subtypeId = `${tipo.id}_${idx}`;
+                        const msg = whatsappMessages.find(
+                          (m) => m.tipo === subtypeId,
+                        );
+                        return (
+                          <WhatsAppMessageEditor
+                            key={subtypeId}
+                            msgId={msg?.id || subtypeId}
+                            initialText={msg?.texto || ""}
+                            label={`${tipo.label} - ${label}`}
+                            onUpdate={async (novoTexto) => {
+                              if (novoTexto === (msg?.texto || "")) return;
+                              try {
+                                if (msg) {
+                                  await updateDoc(
+                                    doc(
+                                      db,
+                                      COLLECTIONS.WHATSAPP_MESSAGES,
+                                      msg.id,
+                                    ),
+                                    {
+                                      texto: novoTexto,
+                                      updatedAt: serverTimestamp(),
+                                    },
+                                  );
+                                } else {
+                                  await addDoc(
+                                    collection(
+                                      db,
+                                      COLLECTIONS.WHATSAPP_MESSAGES,
+                                    ),
+                                    {
+                                      tipo: subtypeId,
+                                      texto: novoTexto,
+                                      createdAt: serverTimestamp(),
+                                    },
+                                  );
+                                }
+                                onToast("Mensagem atualizada!");
+                              } catch (err: any) {
+                                onToast("Erro ao salvar.", "error");
+                              }
+                            }}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 );
-              }
-
-              return (
-                <div key={tipo.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
-                  <div className="bg-slate-50 p-5 border-b border-slate-200 flex justify-between items-center">
-                    <div>
-                      <h4 className="text-base font-bold text-slate-800 uppercase tracking-wider">{tipo.label}</h4>
-                      <p className="text-xs text-slate-500 mt-1">Modelos de mensagens para {tipo.label.toLowerCase()}</p>
-                    </div>
-                  </div>
-                  <div className="p-6 grid grid-cols-1 gap-6 bg-slate-50/50">
-                    {tipo.subLabels?.map((label, idx) => {
-                      const subtypeId = `${tipo.id}_${idx}`;
-                      const msg = whatsappMessages.find(m => m.tipo === subtypeId);
-                      return (
-                        <WhatsAppMessageEditor
-                          key={subtypeId}
-                          msgId={msg?.id || subtypeId}
-                          initialText={msg?.texto || ''}
-                          label={`${tipo.label} - ${label}`}
-                          onUpdate={async (novoTexto) => {
-                            if (novoTexto === (msg?.texto || '')) return;
-                            try {
-                              if (msg) {
-                                await updateDoc(doc(db, COLLECTIONS.WHATSAPP_MESSAGES, msg.id), { texto: novoTexto, updatedAt: serverTimestamp() });
-                              } else {
-                                await addDoc(collection(db, COLLECTIONS.WHATSAPP_MESSAGES), { tipo: subtypeId, texto: novoTexto, createdAt: serverTimestamp() });
-                              }
-                              onToast("Mensagem atualizada!");
-                            } catch (err: any) {
-                              onToast("Erro ao salvar.", 'error');
-                            }
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+              })}
+            </div>
+          </section>
         </div>
       )}
 
-      {activeTab === 'treinamento' && (
+      {activeTab === "treinamento" && (
         <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden max-w-4xl mx-auto">
           <div className="p-6 border-b border-slate-100">
-            <h3 className="text-xl font-bold text-slate-900">Treinamento do Bot</h3>
-            <p className="text-slate-500 text-sm">Insira o texto sobre a sua empresa para refinar as respostas da IA.</p>
+            <h3 className="text-xl font-bold text-slate-900">
+              Treinamento do Bot
+            </h3>
+            <p className="text-slate-500 text-sm">
+              Insira o texto sobre a sua empresa para refinar as respostas da
+              IA.
+            </p>
           </div>
           <div className="p-6 space-y-6">
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Contexto da Empresa</label>
-              <textarea 
+              <label className="block text-sm font-bold text-slate-700 mb-2">
+                Contexto da Empresa
+              </label>
+              <textarea
                 placeholder="Insira aqui informações sobre preços, cursos, política da empresa..."
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm min-h-[300px]"
-                defaultValue={botConfig.trainingContext || ''}
+                defaultValue={botConfig.trainingContext || ""}
                 onBlur={async (e) => {
                   const newContext = e.target.value.trim();
                   if (newContext === botConfig.trainingContext) return;
                   try {
-                    await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), { 
-                      trainingContext: newContext,
-                      updatedAt: serverTimestamp() 
-                    }, { merge: true });
+                    await setDoc(
+                      doc(db, COLLECTIONS.BOT_CONFIG, "main"),
+                      {
+                        trainingContext: newContext,
+                        updatedAt: serverTimestamp(),
+                      },
+                      { merge: true },
+                    );
                     onToast("Treinamento do Bot atualizado!");
                   } catch (err: any) {
-                    onToast(`Erro ao salvar treinamento: ${err.message}`, 'error');
+                    onToast(
+                      `Erro ao salvar treinamento: ${err.message}`,
+                      "error",
+                    );
                   }
                 }}
               />
-              <p className="text-xs text-slate-400 mt-2">Dica: Quanto mais claro e objetivo for o texto, melhores serão as respostas da IA.</p>
+              <p className="text-xs text-slate-400 mt-2">
+                Dica: Quanto mais claro e objetivo for o texto, melhores serão
+                as respostas da IA.
+              </p>
             </div>
-            
+
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center">
-               <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
-                  {isProcessingPdf ? (
-                    <span className="animate-spin text-xl font-bold">...</span>
-                  ) : (
-                    <span className="font-bold text-xl">PDF</span>
-                  )}
-               </div>
-               <h4 className="font-bold text-slate-800 mb-2">Treinamento via PDF</h4>
-               <p className="text-xs text-slate-500 max-w-sm mb-4">Faça o upload de um arquivo PDF para extrair o texto automaticamente e anexá-lo ao contexto da empresa.</p>
-               <label className="cursor-pointer bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-colors">
-                 {isProcessingPdf ? "Processando..." : "Selecionar PDF"}
-                 <input type="file" accept=".pdf" className="hidden" onChange={handlePdfUpload} disabled={isProcessingPdf} />
-               </label>
+              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
+                {isProcessingPdf ? (
+                  <span className="animate-spin text-xl font-bold">...</span>
+                ) : (
+                  <span className="font-bold text-xl">PDF</span>
+                )}
+              </div>
+              <h4 className="font-bold text-slate-800 mb-2">
+                Treinamento via PDF
+              </h4>
+              <p className="text-xs text-slate-500 max-w-sm mb-4">
+                Faça o upload de um arquivo PDF para extrair o texto
+                automaticamente e anexá-lo ao contexto da empresa.
+              </p>
+              <label className="cursor-pointer bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                {isProcessingPdf ? "Processando..." : "Selecionar PDF"}
+                <input
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={handlePdfUpload}
+                  disabled={isProcessingPdf}
+                />
+              </label>
             </div>
           </div>
         </section>
       )}
 
-      {activeTab === 'logo' && (
+      {activeTab === "logo" && (
         <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden max-w-4xl mx-auto">
           <div className="p-6 border-b border-slate-100">
-            <h3 className="text-xl font-bold text-slate-900">Customizar Logotipo de Login</h3>
-            <p className="text-slate-500 text-sm">Faça o upload da imagem ou marca que aparecerá na tela de login de todos os usuários.</p>
+            <h3 className="text-xl font-bold text-slate-900">
+              Customizar Logotipo de Login
+            </h3>
+            <p className="text-slate-500 text-sm">
+              Faça o upload da imagem ou marca que aparecerá na tela de login de
+              todos os usuários.
+            </p>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Upload do Novo Logotipo</label>
-                
-                <div 
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Upload do Novo Logotipo
+                </label>
+
+                <div
                   className={`border-2 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
-                    isUploadingLogo 
-                      ? 'border-blue-300 bg-blue-50/50' 
-                      : 'border-slate-200 hover:border-blue-400 hover:bg-slate-50'
+                    isUploadingLogo
+                      ? "border-blue-300 bg-blue-50/50"
+                      : "border-slate-200 hover:border-blue-400 hover:bg-slate-50"
                   }`}
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -11471,14 +16660,14 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     }
                   }}
                   onClick={() => {
-                    document.getElementById('logo-file-input')?.click();
+                    document.getElementById("logo-file-input")?.click();
                   }}
                 >
-                  <input 
-                    type="file" 
-                    id="logo-file-input" 
-                    accept="image/*" 
-                    className="hidden" 
+                  <input
+                    type="file"
+                    id="logo-file-input"
+                    accept="image/*"
+                    className="hidden"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
@@ -11494,10 +16683,16 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                     )}
                   </div>
                   <h4 className="font-bold text-slate-800 text-sm mb-1">
-                    {isUploadingLogo ? "Processando imagem..." : "Arraste e solte o arquivo aqui"}
+                    {isUploadingLogo
+                      ? "Processando imagem..."
+                      : "Arraste e solte o arquivo aqui"}
                   </h4>
-                  <p className="text-xs text-slate-400">ou clique para navegar no seu computador</p>
-                  <p className="text-[10px] text-slate-400 mt-2 font-mono">Arquivos recomendados: PNG, JPG ou SVG (Max. 5MB)</p>
+                  <p className="text-xs text-slate-400">
+                    ou clique para navegar no seu computador
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-2 font-mono">
+                    Arquivos recomendados: PNG, JPG ou SVG (Max. 5MB)
+                  </p>
                 </div>
               </div>
 
@@ -11505,16 +16700,27 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 <div className="pt-2">
                   <button
                     onClick={async () => {
-                      if (window.confirm("Deseja realmente remover o logotipo personalizado e voltar ao ícone padrão?")) {
+                      if (
+                        window.confirm(
+                          "Deseja realmente remover o logotipo personalizado e voltar ao ícone padrão?",
+                        )
+                      ) {
                         setIsUploadingLogo(true);
                         try {
-                          await setDoc(doc(db, COLLECTIONS.BOT_CONFIG, 'main'), {
-                            loginLogo: ""
-                          }, { merge: true });
+                          await setDoc(
+                            doc(db, COLLECTIONS.BOT_CONFIG, "main"),
+                            {
+                              loginLogo: "",
+                            },
+                            { merge: true },
+                          );
                           setLogoPreview(null);
                           onToast("Logotipo removido com sucesso!");
                         } catch (err: any) {
-                          onToast(`Erro ao remover logotipo: ${err.message}`, 'error');
+                          onToast(
+                            `Erro ao remover logotipo: ${err.message}`,
+                            "error",
+                          );
                         } finally {
                           setIsUploadingLogo(false);
                         }
@@ -11538,9 +16744,9 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                 <div>
                   {logoPreview ? (
                     <div className="mb-4 flex">
-                      <img 
-                        src={logoPreview} 
-                        alt="Preview Logo" 
+                      <img
+                        src={logoPreview}
+                        alt="Preview Logo"
                         className="max-h-16 max-w-full rounded-xl object-contain drop-shadow-md border border-slate-700/50 p-1 bg-[#011a3c]"
                         referrerPolicy="no-referrer"
                       />
@@ -11550,8 +16756,12 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
                       <TrendingUp size={24} />
                     </div>
                   )}
-                  <h3 className="text-xl font-extrabold text-white tracking-tight">Gestão Oeste pro</h3>
-                  <p className="text-xs text-slate-400 mt-1">Bem-vindo de volta! Insira suas credenciais:</p>
+                  <h3 className="text-xl font-extrabold text-white tracking-tight">
+                    Gestão Oeste pro
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Bem-vindo de volta! Insira suas credenciais:
+                  </p>
                 </div>
 
                 <div className="space-y-2 pointer-events-none opacity-20">
@@ -11570,33 +16780,41 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
         </section>
       )}
 
-      {activeTab === 'links' && (
+      {activeTab === "links" && (
         <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 max-w-2xl mx-auto">
           <h3 className="text-xl font-bold text-slate-900 mb-4">Links Úteis</h3>
           <form onSubmit={handleAddLink} className="flex gap-2 mb-6">
-            <input 
-              placeholder="Nome" 
-              required 
+            <input
+              placeholder="Nome"
+              required
               value={newLink.nome}
-              onChange={e => setNewLink({...newLink, nome: e.target.value})}
+              onChange={(e) => setNewLink({ ...newLink, nome: e.target.value })}
               className="flex-1 px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
             />
-            <input 
-              placeholder="URL" 
-              required 
+            <input
+              placeholder="URL"
+              required
               value={newLink.url}
-              onChange={e => setNewLink({...newLink, url: e.target.value})}
+              onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
               className="flex-1 px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
             />
-            <button type="submit" className="bg-blue-600 text-white p-2 rounded-xl hover:bg-blue-700 transition-all">
+            <button
+              type="submit"
+              className="bg-blue-600 text-white p-2 rounded-xl hover:bg-blue-700 transition-all"
+            >
               <Plus size={20} />
             </button>
           </form>
           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-            {links.map(l => (
-              <div key={l.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <span className="text-sm font-bold text-slate-700">{l.nome}</span>
-                <button 
+            {links.map((l) => (
+              <div
+                key={l.id}
+                className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100"
+              >
+                <span className="text-sm font-bold text-slate-700">
+                  {l.nome}
+                </span>
+                <button
                   onClick={async () => {
                     await deleteDoc(doc(db, COLLECTIONS.LINKS, l.id));
                     onToast("Link removido.");
@@ -11611,29 +16829,28 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
         </section>
       )}
 
-
-      {activeTab === 'funcionarios' && (
+      {activeTab === "funcionarios" && (
         <AdminFuncionariosView onToast={onToast} />
       )}
 
-
-      {activeTab === 'backup' && (
+      {activeTab === "backup" && (
         <section className="bg-rose-50 p-6 rounded-3xl border border-rose-100 max-w-2xl mx-auto">
-          <h3 className="text-xl font-bold text-rose-900 mb-4">Backup e Segurança</h3>
+          <h3 className="text-xl font-bold text-rose-900 mb-4">
+            Backup e Segurança
+          </h3>
           <p className="text-sm text-rose-600 mb-6">
-            Gere um arquivo JSON contendo todos os dados do sistema para segurança ou migração.
+            Gere um arquivo JSON contendo todos os dados do sistema para
+            segurança ou migração.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <button 
+            <button
               onClick={handleBackup}
               className="flex-1 bg-white text-rose-600 border border-rose-200 font-bold py-3 rounded-2xl hover:bg-rose-100 transition-all flex items-center justify-center space-x-2"
             >
               <Download size={20} />
               <span>Gerar Backup</span>
             </button>
-            <button 
-              className="flex-1 bg-rose-600 text-white font-bold py-3 rounded-2xl hover:bg-rose-700 transition-all flex items-center justify-center space-x-2"
-            >
+            <button className="flex-1 bg-rose-600 text-white font-bold py-3 rounded-2xl hover:bg-rose-700 transition-all flex items-center justify-center space-x-2">
               <Upload size={20} />
               <span>Restaurar Dados</span>
             </button>
@@ -11648,20 +16865,29 @@ function AdminView({ users, links, onToast, leads, bases, gap, planner, campanha
 interface ControlePagamentosViewProps {
   calendarioAcoes: CalendarioAcao[];
   users: UserProfile[];
-  onToast: (m: string, t?: 'success' | 'error') => void;
+  onToast: (m: string, t?: "success" | "error") => void;
   profile?: UserProfile | null;
 }
 
-export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToast, profile }: ControlePagamentosViewProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [empresaFilter, setEmpresaFilter] = useState<'all' | 'GR15' | 'RP7'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'Agendada' | 'Recusada' | 'Realizada'>('all');
-  const [regionFilter, setRegionFilter] = useState('all');
+export function ControlePagamentosView({
+  calendarioAcoes = [],
+  users = [],
+  onToast,
+  profile,
+}: ControlePagamentosViewProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [empresaFilter, setEmpresaFilter] = useState<"all" | "GR15" | "RP7">(
+    "all",
+  );
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "Agendada" | "Recusada" | "Realizada"
+  >("all");
+  const [regionFilter, setRegionFilter] = useState("all");
 
   const getDiarias = (startStr: string, endStr: string) => {
     if (!startStr || !endStr) return 1;
-    const s = new Date(startStr + 'T00:00:00');
-    const e = new Date(endStr + 'T00:00:00');
+    const s = new Date(startStr + "T00:00:00");
+    const e = new Date(endStr + "T00:00:00");
     const diffTime = Math.abs(e.getTime() - s.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     return isNaN(diffDays) ? 1 : diffDays;
@@ -11669,17 +16895,21 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
 
   const paymentRows = useMemo(() => {
     const result: any[] = [];
-    calendarioAcoes.forEach(action => {
+    calendarioAcoes.forEach((action) => {
       if (!action.precisaPromotor || !action.promotoresSelecionados) return;
-      action.promotoresSelecionados.forEach(pUid => {
+      action.promotoresSelecionados.forEach((pUid) => {
         // Apenas promotores que compareceram (presenca === true)
         if (!action.presencaPromotores?.[pUid]) return;
 
-        const promoterObj = users.find(u => u.uid === pUid);
-        const creatorObj = users.find(u => u.uid === action.creatorId);
-        
-        const details = action.dadosPresencaPromotores?.[pUid] || { empresa: 'GR15', horas: 4 };
-        const statusPgt = action.statusPagamentoPromotores?.[pUid] || 'Agendada';
+        const promoterObj = users.find((u) => u.uid === pUid);
+        const creatorObj = users.find((u) => u.uid === action.creatorId);
+
+        const details = action.dadosPresencaPromotores?.[pUid] || {
+          empresa: "GR15",
+          horas: 4,
+        };
+        const statusPgt =
+          action.statusPagamentoPromotores?.[pUid] || "Agendada";
 
         const diarias = getDiarias(action.dataInicio, action.dataFim);
         const valorPromotor = action.valorPromotor || 0;
@@ -11688,21 +16918,30 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
         result.push({
           actionId: action.id,
           promoterUid: pUid,
-          empresa: details.empresa || 'GR15',
-          promoterName: promoterObj?.name || 'Não cadastrado',
-          promoterPhone: promoterObj?.phone || 'Sem celular',
-          promoterPix: promoterObj?.chavePix || 'Sem Pix cadastrado',
-          promoterUnit: promoterObj?.servidor ? (promoterObj.servidor.charAt(0).toUpperCase() + promoterObj.servidor.slice(1)) : 'Principal',
+          empresa: details.empresa || "GR15",
+          promoterName: promoterObj?.name || "Não cadastrado",
+          promoterPhone: promoterObj?.phone || "Sem celular",
+          promoterPix: promoterObj?.chavePix || "Sem Pix cadastrado",
+          promoterUnit: promoterObj?.servidor
+            ? promoterObj.servidor.charAt(0).toUpperCase() +
+              promoterObj.servidor.slice(1)
+            : "Principal",
           diarias,
           horas: details.horas || 4,
-          solicitante: action.colaboradorNome || (action.colaboradorId ? (users.find(u => u.uid === action.colaboradorId)?.name) : null) || creatorObj?.name || 'Gestor Comercial',
+          solicitante:
+            action.colaboradorNome ||
+            (action.colaboradorId
+              ? users.find((u) => u.uid === action.colaboradorId)?.name
+              : null) ||
+            creatorObj?.name ||
+            "Gestor Comercial",
           tipoAcao: action.nome,
           dataInicio: action.dataInicio,
           dataFim: action.dataFim,
           valorPromotor,
           custoTotal,
           valorOrcado: action.valorOrcado || 0,
-          statusPagamento: statusPgt
+          statusPagamento: statusPgt,
         });
       });
     });
@@ -11712,7 +16951,7 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
   // Regiões disponíveis de atuação para o filtro
   const uniqueRegions = useMemo(() => {
     const set = new Set<string>();
-    paymentRows.forEach(r => {
+    paymentRows.forEach((r) => {
       if (r.promoterUnit) set.add(r.promoterUnit);
     });
     return Array.from(set);
@@ -11720,20 +16959,26 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
 
   // Dados filtrados
   const filteredRows = useMemo(() => {
-    return paymentRows.filter(row => {
-      const matchSearch = row.promoterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          row.tipoAcao.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          row.solicitante.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchEmpresa = empresaFilter === 'all' ? true : row.empresa === empresaFilter;
-      const matchStatus = statusFilter === 'all' ? true : row.statusPagamento === statusFilter;
-      const matchRegion = regionFilter === 'all' ? true : row.promoterUnit === regionFilter;
+    return paymentRows.filter((row) => {
+      const matchSearch =
+        row.promoterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row.tipoAcao.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row.solicitante.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchEmpresa =
+        empresaFilter === "all" ? true : row.empresa === empresaFilter;
+      const matchStatus =
+        statusFilter === "all" ? true : row.statusPagamento === statusFilter;
+      const matchRegion =
+        regionFilter === "all" ? true : row.promoterUnit === regionFilter;
 
       return matchSearch && matchEmpresa && matchStatus && matchRegion;
     });
   }, [paymentRows, searchTerm, empresaFilter, statusFilter, regionFilter]);
 
-  const isReadOnly = profile?.role === ROLES.FDV_COMERCIAL || profile?.role === ROLES.SALA_MATRICULA;
+  const isReadOnly =
+    profile?.role === ROLES.FDV_COMERCIAL ||
+    profile?.role === ROLES.SALA_MATRICULA;
 
   // Métricas acumuladas
   const metrics = useMemo(() => {
@@ -11742,11 +16987,11 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
     let totalAgendado = 0;
     let totalRecusado = 0;
 
-    filteredRows.forEach(row => {
+    filteredRows.forEach((row) => {
       totalCusto += row.custoTotal;
-      if (row.statusPagamento === 'Realizada') {
+      if (row.statusPagamento === "Realizada") {
         totalRealizado += row.custoTotal;
-      } else if (row.statusPagamento === 'Agendada') {
+      } else if (row.statusPagamento === "Agendada") {
         totalAgendado += row.custoTotal;
       } else {
         totalRecusado += row.custoTotal;
@@ -11758,21 +17003,25 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
       totalRealizado,
       totalAgendado,
       totalRecusado,
-      count: filteredRows.length
+      count: filteredRows.length,
     };
   }, [filteredRows]);
 
-  const updatePaymentStatus = async (actionId: string, promoterUid: string, status: 'Agendada' | 'Recusada' | 'Realizada') => {
+  const updatePaymentStatus = async (
+    actionId: string,
+    promoterUid: string,
+    status: "Agendada" | "Recusada" | "Realizada",
+  ) => {
     try {
-      const action = calendarioAcoes.find(a => a.id === actionId);
+      const action = calendarioAcoes.find((a) => a.id === actionId);
       if (!action) return;
       const currentStatus = action.statusPagamentoPromotores || {};
       const updatedStatus = {
         ...currentStatus,
-        [promoterUid]: status
+        [promoterUid]: status,
       };
       await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, actionId), {
-        statusPagamentoPromotores: updatedStatus
+        statusPagamentoPromotores: updatedStatus,
       });
       onToast("Status de pagamento atualizado com sucesso!", "success");
     } catch (err) {
@@ -11782,28 +17031,35 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
 
   const handleExportExcel = () => {
     try {
-      const dataToExport = filteredRows.map(r => ({
-        'Empresa': r.empresa,
-        'Nome do Promotor': r.promoterName,
-        'Telefone': r.promoterPhone,
-        'PIX': r.promoterPix,
-        'Diárias': r.diarias,
-        'Horas de Atuação': `${r.horas} Horas`,
-        'Solicitante': r.solicitante,
-        'Região de Atuação': r.promoterUnit,
-        'Tipo de Ação': r.tipoAcao,
-        'Data de Início': r.dataInicio,
-        'Data Final': r.dataFim,
-        'Valor Promotor (R$)': r.valorPromotor,
-        'Custo Total (R$)': r.custoTotal,
-        'Valor Orçado (R$)': r.valorOrcado,
-        'Status de Pagamento': r.statusPagamento
+      const dataToExport = filteredRows.map((r) => ({
+        Empresa: r.empresa,
+        "Nome do Promotor": r.promoterName,
+        Telefone: r.promoterPhone,
+        PIX: r.promoterPix,
+        Diárias: r.diarias,
+        "Horas de Atuação": `${r.horas} Horas`,
+        Solicitante: r.solicitante,
+        "Região de Atuação": r.promoterUnit,
+        "Tipo de Ação": r.tipoAcao,
+        "Data de Início": r.dataInicio,
+        "Data Final": r.dataFim,
+        "Valor Promotor (R$)": r.valorPromotor,
+        "Custo Total (R$)": r.custoTotal,
+        "Valor Orçado (R$)": r.valorOrcado,
+        "Status de Pagamento": r.statusPagamento,
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Controle de Pagamentos');
-      XLSX.writeFile(workbook, `Controle_Pagamentos_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        "Controle de Pagamentos",
+      );
+      XLSX.writeFile(
+        workbook,
+        `Controle_Pagamentos_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
       onToast("Relatório exportado para Excel com sucesso!", "success");
     } catch (err) {
       onToast("Erro ao exportar relatório.", "error");
@@ -11815,8 +17071,12 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Controle de Pagamentos</h2>
-          <p className="text-sm text-slate-500">Gestão e liquidação financeira diária de promotores de ações</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+            Controle de Pagamentos
+          </h2>
+          <p className="text-sm text-slate-500">
+            Gestão e liquidação financeira diária de promotores de ações
+          </p>
         </div>
         <button
           onClick={handleExportExcel}
@@ -11830,46 +17090,67 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
       {/* Métricas / KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm space-y-2">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Registros Elegíveis</span>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+            Registros Elegíveis
+          </span>
           <div className="flex items-baseline space-x-2">
-            <span className="text-3xl font-extrabold text-slate-800">{metrics.count}</span>
+            <span className="text-3xl font-extrabold text-slate-800">
+              {metrics.count}
+            </span>
             <span className="text-xs text-slate-400">atuações</span>
           </div>
         </div>
 
         <div className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm space-y-2">
-          <span className="text-xs font-bold text-amber-500 uppercase tracking-wider block">Total Pendente / Agendado</span>
+          <span className="text-xs font-bold text-amber-500 uppercase tracking-wider block">
+            Total Pendente / Agendado
+          </span>
           <div className="flex items-baseline space-x-2">
-            <span className="text-3xl font-extrabold text-amber-600">R$ {metrics.totalAgendado.toFixed(2).replace('.', ',')}</span>
+            <span className="text-3xl font-extrabold text-amber-600">
+              R$ {metrics.totalAgendado.toFixed(2).replace(".", ",")}
+            </span>
           </div>
         </div>
 
         <div className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm space-y-2">
-          <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider block">Total Realizado / Pago</span>
+          <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider block">
+            Total Realizado / Pago
+          </span>
           <div className="flex items-baseline space-x-2">
-            <span className="text-3xl font-extrabold text-emerald-600">R$ {metrics.totalRealizado.toFixed(2).replace('.', ',')}</span>
+            <span className="text-3xl font-extrabold text-emerald-600">
+              R$ {metrics.totalRealizado.toFixed(2).replace(".", ",")}
+            </span>
           </div>
         </div>
 
         <div className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm space-y-2">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-bold">Custo de Diárias Total</span>
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-bold">
+            Custo de Diárias Total
+          </span>
           <div className="flex items-baseline space-x-2">
-            <span className="text-3xl font-extrabold text-slate-700">R$ {metrics.totalCusto.toFixed(2).replace('.', ',')}</span>
+            <span className="text-3xl font-extrabold text-slate-700">
+              R$ {metrics.totalCusto.toFixed(2).replace(".", ",")}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Filtros */}
       <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4">
-        <span className="text-sm font-bold text-slate-700 block uppercase tracking-wider">Filtros de Pesquisa</span>
+        <span className="text-sm font-bold text-slate-700 block uppercase tracking-wider">
+          Filtros de Pesquisa
+        </span>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Buscar por Promotor, Ação ou Solicitante..."
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-slate-300 transition-all border-none outline-none"
             />
           </div>
@@ -11877,7 +17158,7 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
           <div>
             <select
               value={empresaFilter}
-              onChange={e => setEmpresaFilter(e.target.value as any)}
+              onChange={(e) => setEmpresaFilter(e.target.value as any)}
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 appearance-none focus:bg-white focus:ring-2 focus:ring-slate-300 transition-all border-none outline-none cursor-pointer"
             >
               <option value="all">Todas as Empresas (GR15 / RP7)</option>
@@ -11889,7 +17170,7 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
           <div>
             <select
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 appearance-none focus:bg-white focus:ring-2 focus:ring-slate-300 transition-all border-none outline-none cursor-pointer"
             >
               <option value="all">Todos os Status de Pagamento</option>
@@ -11902,12 +17183,14 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
           <div>
             <select
               value={regionFilter}
-              onChange={e => setRegionFilter(e.target.value)}
+              onChange={(e) => setRegionFilter(e.target.value)}
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 appearance-none focus:bg-white focus:ring-2 focus:ring-slate-300 transition-all border-none outline-none cursor-pointer"
             >
               <option value="all">Todas as Regiões de Atuação</option>
-              {uniqueRegions.map(region => (
-                <option key={region} value={region}>{region}</option>
+              {uniqueRegions.map((region) => (
+                <option key={region} value={region}>
+                  {region}
+                </option>
               ))}
             </select>
           </div>
@@ -11918,9 +17201,13 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
       <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden whitespace-normal">
         {filteredRows.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <span className="text-slate-400 text-lg block">Nenhum registro de pagamento qualificado.</span>
+            <span className="text-slate-400 text-lg block">
+              Nenhum registro de pagamento qualificado.
+            </span>
             <span className="text-slate-400 text-xs block max-w-md mx-auto">
-              Certifique-se de que os promotores estão escalados nas ações do Plano de Ação e marque o comparecimento deles como confirmado ("Compareceu").
+              Certifique-se de que os promotores estão escalados nas ações do
+              Plano de Ação e marque o comparecimento deles como confirmado
+              ("Compareceu").
             </span>
           </div>
         ) : (
@@ -11939,50 +17226,70 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
                   <th className="px-5 py-4">Ação</th>
                   <th className="px-5 py-4">Datas</th>
                   <th className="px-5 py-4 text-right">Valor Promotor</th>
-                  <th className="px-5 py-4 text-right bg-slate-50 font-bold text-slate-600">Custo Total</th>
+                  <th className="px-5 py-4 text-right bg-slate-50 font-bold text-slate-600">
+                    Custo Total
+                  </th>
                   <th className="px-5 py-4 text-right">Valor Orçado</th>
-                  <th className="px-5 py-4 text-center min-w-[200px]">Status Pagamento</th>
+                  <th className="px-5 py-4 text-center min-w-[200px]">
+                    Status Pagamento
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-600 font-medium">
                 {filteredRows.map((row, idx) => {
                   const d = new Date();
                   const year = d.getFullYear();
-                  const month = String(d.getMonth() + 1).padStart(2, '0');
-                  const day = String(d.getDate()).padStart(2, '0');
+                  const month = String(d.getMonth() + 1).padStart(2, "0");
+                  const day = String(d.getDate()).padStart(2, "0");
                   const todayStr = `${year}-${month}-${day}`;
-                  const isOverdue = row.dataFim < todayStr && row.statusPagamento === 'Agendada';
+                  const isOverdue =
+                    row.dataFim < todayStr &&
+                    row.statusPagamento === "Agendada";
 
                   return (
-                    <tr key={`${row.actionId}-${row.promoterUid}-${idx}`} className={cn(
-                      "hover:bg-slate-50/50 transition-colors",
-                      isOverdue && "bg-rose-50/25"
-                    )}>
+                    <tr
+                      key={`${row.actionId}-${row.promoterUid}-${idx}`}
+                      className={cn(
+                        "hover:bg-slate-50/50 transition-colors",
+                        isOverdue && "bg-rose-50/25",
+                      )}
+                    >
                       {/* Empresa */}
                       <td className="px-5 py-4 font-bold">
-                        <span className={cn(
-                          "px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wide",
-                          row.empresa === 'GR15' 
-                            ? "bg-purple-100 text-purple-700" 
-                            : "bg-amber-100 text-amber-700"
-                        )}>
+                        <span
+                          className={cn(
+                            "px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wide",
+                            row.empresa === "GR15"
+                              ? "bg-purple-100 text-purple-700"
+                              : "bg-amber-100 text-amber-700",
+                          )}
+                        >
                           {row.empresa}
                         </span>
                       </td>
 
                       {/* Promotor */}
-                      <td className="px-5 py-4 font-semibold text-slate-800">{row.promoterName}</td>
+                      <td className="px-5 py-4 font-semibold text-slate-800">
+                        {row.promoterName}
+                      </td>
 
                       {/* Telefone */}
-                      <td className="px-5 py-4 font-mono">{row.promoterPhone}</td>
+                      <td className="px-5 py-4 font-mono">
+                        {row.promoterPhone}
+                      </td>
 
                       {/* Chave Pix */}
-                      <td className="px-5 py-4 font-mono select-all truncate max-w-[120px]" title={row.promoterPix}>
+                      <td
+                        className="px-5 py-4 font-mono select-all truncate max-w-[120px]"
+                        title={row.promoterPix}
+                      >
                         {row.promoterPix}
                       </td>
 
                       {/* Diárias */}
-                      <td className="px-5 py-4 text-center font-bold">{row.diarias}</td>
+                      <td className="px-5 py-4 text-center font-bold">
+                        {row.diarias}
+                      </td>
 
                       {/* Horas */}
                       <td className="px-5 py-4 text-center">{row.horas}h</td>
@@ -11998,7 +17305,10 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
                       </td>
 
                       {/* Ação */}
-                      <td className="px-5 py-4 font-semibold text-slate-700 truncate max-w-[150px]" title={row.tipoAcao}>
+                      <td
+                        className="px-5 py-4 font-semibold text-slate-700 truncate max-w-[150px]"
+                        title={row.tipoAcao}
+                      >
                         {row.tipoAcao}
                       </td>
 
@@ -12006,16 +17316,25 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
                       <td className="px-5 py-4 font-mono text-[10px]">
                         <div className="flex items-center space-x-1.5">
                           <div className="flex-1">
-                            <div>{row.dataInicio.split('-').reverse().join('/')}</div>
-                            <div className={cn(
-                              "text-[9px]",
-                              isOverdue ? "text-rose-500 font-bold" : "text-slate-400"
-                            )}>
-                              até {row.dataFim.split('-').reverse().join('/')}
+                            <div>
+                              {row.dataInicio.split("-").reverse().join("/")}
+                            </div>
+                            <div
+                              className={cn(
+                                "text-[9px]",
+                                isOverdue
+                                  ? "text-rose-500 font-bold"
+                                  : "text-slate-400",
+                              )}
+                            >
+                              até {row.dataFim.split("-").reverse().join("/")}
                             </div>
                           </div>
                           {isOverdue && (
-                            <span className="text-rose-500 animate-pulse shrink-0" title="Período da ação finalizado">
+                            <span
+                              className="text-rose-500 animate-pulse shrink-0"
+                              title="Período da ação finalizado"
+                            >
                               <AlertCircle size={15} />
                             </span>
                           )}
@@ -12024,35 +17343,45 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
 
                       {/* Valor Promotor */}
                       <td className="px-5 py-4 text-right font-mono font-bold">
-                        R$ {row.valorPromotor.toFixed(2).replace('.', ',')}
+                        R$ {row.valorPromotor.toFixed(2).replace(".", ",")}
                       </td>
 
                       {/* Custo Total */}
                       <td className="px-5 py-4 text-right font-mono font-extrabold bg-slate-50 text-slate-800 text-sm">
-                        R$ {row.custoTotal.toFixed(2).replace('.', ',')}
+                        R$ {row.custoTotal.toFixed(2).replace(".", ",")}
                       </td>
 
                       {/* Valor Orçado */}
                       <td className="px-5 py-4 text-right font-mono">
-                        R$ {row.valorOrcado.toFixed(2).replace('.', ',')}
+                        R$ {row.valorOrcado.toFixed(2).replace(".", ",")}
                       </td>
 
                       {/* Status de Pagamento */}
                       <td className="px-5 py-4 text-center">
                         <div className="flex items-center justify-center space-x-2">
                           <div className="flex items-center justify-center space-x-1.5 bg-slate-50/80 p-1.5 rounded-full border border-slate-100 w-fit">
-                            {(['Agendada', 'Recusada', 'Realizada'] as const).map(st => {
+                            {(
+                              ["Agendada", "Recusada", "Realizada"] as const
+                            ).map((st) => {
                               const isSelected = row.statusPagamento === st;
-                              let btnClass = "px-2 py-1 rounded-full text-[9px] font-bold uppercase transition-all ";
-                              
+                              let btnClass =
+                                "px-2 py-1 rounded-full text-[9px] font-bold uppercase transition-all ";
+
                               if (isSelected) {
-                                if (st === 'Realizada') btnClass += "bg-emerald-600 text-white shadow-sm";
-                                else if (st === 'Agendada') btnClass += "bg-amber-500 text-white shadow-sm";
-                                else btnClass += "bg-rose-500 text-white shadow-sm";
+                                if (st === "Realizada")
+                                  btnClass +=
+                                    "bg-emerald-600 text-white shadow-sm";
+                                else if (st === "Agendada")
+                                  btnClass +=
+                                    "bg-amber-500 text-white shadow-sm";
+                                else
+                                  btnClass +=
+                                    "bg-rose-500 text-white shadow-sm";
                               } else {
-                                btnClass += "text-slate-400 hover:text-slate-600 hover:bg-slate-200/50";
+                                btnClass +=
+                                  "text-slate-400 hover:text-slate-600 hover:bg-slate-200/50";
                               }
-                              
+
                               if (isReadOnly && !isSelected) {
                                 btnClass += " opacity-50 cursor-not-allowed";
                               }
@@ -12060,17 +17389,31 @@ export function ControlePagamentosView({ calendarioAcoes = [], users = [], onToa
                               return (
                                 <button
                                   key={st}
-                                  onClick={() => !isReadOnly && updatePaymentStatus(row.actionId, row.promoterUid, st)}
+                                  onClick={() =>
+                                    !isReadOnly &&
+                                    updatePaymentStatus(
+                                      row.actionId,
+                                      row.promoterUid,
+                                      st,
+                                    )
+                                  }
                                   disabled={isReadOnly}
                                   className={btnClass}
                                 >
-                                  {st === 'Realizada' ? 'Paga' : st === 'Agendada' ? 'Agendada' : 'Recusada'}
+                                  {st === "Realizada"
+                                    ? "Paga"
+                                    : st === "Agendada"
+                                      ? "Agendada"
+                                      : "Recusada"}
                                 </button>
                               );
                             })}
                           </div>
                           {isOverdue && (
-                            <div className="flex items-center space-x-1 bg-rose-50 text-rose-700 px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase border border-rose-200 animate-pulse shrink-0" title="Alerta: Ação concluída, pagamento ainda pendente!">
+                            <div
+                              className="flex items-center space-x-1 bg-rose-50 text-rose-700 px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase border border-rose-200 animate-pulse shrink-0"
+                              title="Alerta: Ação concluída, pagamento ainda pendente!"
+                            >
                               <AlertCircle size={12} className="shrink-0" />
                               <span>Atrasado</span>
                             </div>
