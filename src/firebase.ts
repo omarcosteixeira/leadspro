@@ -1,6 +1,6 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore } from 'firebase/firestore';
 import firebaseConfigPrincipal from '../firebase-applet-config.json';
 
 export { firebaseConfigPrincipal };
@@ -21,7 +21,15 @@ const activeConfig = savedServidor === 'comercial' ? firebaseConfigComercial : f
 
 const app = initializeApp(activeConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app, (activeConfig as any).firestoreDatabaseId || undefined);
+
+// Enable robust native offline persistence for Android and PWA standalone apps
+export const db = typeof window !== 'undefined'
+  ? initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    }, (activeConfig as any).firestoreDatabaseId || undefined)
+  : getFirestore(app, (activeConfig as any).firestoreDatabaseId || undefined);
 
 // Secondary app for creating users without signing out the current admin
 export const secondaryApp = getApps().length > 1 

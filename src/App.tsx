@@ -88,7 +88,9 @@ import {
   Coins,
   BookOpen,
   Briefcase,
-  Boxes
+  Boxes,
+  Smartphone,
+  Chrome
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, COLLECTIONS, handleFirestoreError, OperationType, secondaryAuth, firebaseConfigPrincipal, firebaseConfigComercial } from './firebase';
@@ -2083,6 +2085,21 @@ export default function App() {
   });
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Data States
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -2208,6 +2225,93 @@ export default function App() {
         body: { botNumber: safeBotNumber, number: rawPhone, message, force: true, manual: true }
       });
       showToast('Mensagem enviada com sucesso pelo Bot ARGO\'S!');
+
+      // Automatic Status Transition Logic upon message sent
+      try {
+        const phonesMatch = (p1?: string, p2?: string): boolean => {
+          if (!p1 || !p2) return false;
+          const c1 = p1.replace(/\D/g, '');
+          const c2 = p2.replace(/\D/g, '');
+          if (c1 === c2) return true;
+          const s1 = c1.startsWith('55') ? c1.substring(2) : (c1.startsWith('0') ? c1.substring(1) : c1);
+          const s2 = c2.startsWith('55') ? c2.substring(2) : (c2.startsWith('0') ? c2.substring(1) : c2);
+          if (s1 === s2) return true;
+          if (s1.length >= 8 && s2.length >= 8) {
+            const last8_1 = s1.slice(-8);
+            const last8_2 = s2.slice(-8);
+            const ddd1 = s1.substring(0, 2);
+            const ddd2 = s2.substring(0, 2);
+            if (last8_1 === last8_2 && ddd1 === ddd2) return true;
+          }
+          return false;
+        };
+
+        const matchedLeads = leads.filter(item => phonesMatch(item.telefone, telefone));
+        const matchedBases = bases.filter(item => phonesMatch(item.telefone, telefone));
+        const matchedBasesRenovacao = basesRenovacao.filter(item => phonesMatch(item.telefone, telefone));
+        const matchedFiesProuni = fiesProuni.filter(item => phonesMatch(item.telefone, telefone));
+
+        const existsInGap = gap.some(g => {
+          if (phonesMatch(g.telefone, telefone)) return true;
+          const matchedCpf = matchedLeads.find(l => l.cpf)?.cpf || 
+                             matchedBases.find(b => b.cpf)?.cpf || 
+                             matchedBasesRenovacao.find(br => br.cpf)?.cpf ||
+                             matchedFiesProuni.find(fp => fp.cpf)?.cpf;
+          if (matchedCpf && g.cpf) {
+            const c1 = matchedCpf.replace(/\D/g, '');
+            const c2 = g.cpf.replace(/\D/g, '');
+            if (c1 && c1 === c2) return true;
+          }
+          return false;
+        });
+
+        // 1. Process matched LEADS
+        for (const lead of matchedLeads) {
+          if (existsInGap) {
+            if (lead.status !== 'Convertido') {
+              await updateDoc(doc(db, COLLECTIONS.LEADS, lead.id), { status: 'Convertido' });
+            }
+          } else if (lead.status.toLowerCase() === 'pendente') {
+            await updateDoc(doc(db, COLLECTIONS.LEADS, lead.id), { status: 'Sem retorno' });
+          }
+        }
+
+        // 2. Process matched BASES
+        for (const entry of matchedBases) {
+          if (existsInGap) {
+            if (entry.status !== 'Convertido') {
+              await updateDoc(doc(db, COLLECTIONS.BASES, entry.id), { status: 'Convertido' });
+            }
+          } else if (entry.status.toLowerCase() === 'pendente') {
+            await updateDoc(doc(db, COLLECTIONS.BASES, entry.id), { status: 'Sem retorno' });
+          }
+        }
+
+        // 3. Process matched BASES_RENOVACAO
+        for (const entry of matchedBasesRenovacao) {
+          if (existsInGap) {
+            if (entry.status !== 'Convertido') {
+              await updateDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, entry.id), { status: 'Convertido' });
+            }
+          } else if (entry.status.toLowerCase() === 'pendente') {
+            await updateDoc(doc(db, COLLECTIONS.BASES_RENOVACAO, entry.id), { status: 'Sem retorno' });
+          }
+        }
+
+        // 4. Process matched FIES_PROUNI
+        for (const entry of matchedFiesProuni) {
+          if (existsInGap) {
+            if (entry.status !== 'Convertido') {
+              await updateDoc(doc(db, COLLECTIONS.FIES_PROUNI, entry.id), { status: 'Convertido' });
+            }
+          } else if (entry.status && entry.status.toLowerCase() === 'pendente') {
+            await updateDoc(doc(db, COLLECTIONS.FIES_PROUNI, entry.id), { status: 'Sem retorno' });
+          }
+        }
+      } catch (statusErr: any) {
+        console.error('[Auto Status Update] Failed to update statuses:', statusErr);
+      }
+
     } catch (err: any) {
       showToast(`Erro ao enviar mensagem: ${err.message}`, 'error');
     }
@@ -2961,13 +3065,24 @@ export default function App() {
           >
             <Menu size={24} />
           </button>
-          <div className="flex-1 lg:flex-none flex items-center space-x-3">
+          <div className="flex-1 lg:flex-none flex items-center space-x-3 flex-wrap gap-y-1">
             <h2 className="text-lg font-bold text-white capitalize ml-2 lg:ml-0">
               {currentView.replace('-', ' ')}
             </h2>
             <span className="px-2.5 py-1 bg-gradient-to-r from-blue-600 to-sky-500 text-white text-[10px] font-extrabold rounded-md shadow-sm uppercase tracking-wider">
               Servidor: {localStorage.getItem('servidor_selected') === 'comercial' ? 'Comercial' : 'SM'}
             </span>
+            {isOnline ? (
+              <span className="flex items-center space-x-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold rounded-md border border-emerald-500/20 shadow-sm uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                <span>Online / Sincronizado</span>
+              </span>
+            ) : (
+              <span className="flex items-center space-x-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-400 text-[10px] font-extrabold rounded-md border border-amber-500/20 shadow-sm uppercase tracking-wider animate-pulse">
+                <span className="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                <span>Sem Conexão (Modo Cache Offline)</span>
+              </span>
+            )}
           </div>
           <div className="flex items-center space-x-4">
             <div className="hidden md:flex items-center space-x-2 text-sm text-slate-400">
@@ -3100,6 +3215,43 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
   const [name, setName] = useState('');
   const [servidor, setServidor] = useState<'principal' | 'comercial'>((localStorage.getItem('servidor_selected') as 'principal' | 'comercial') || 'principal');
   const [loading, setLoading] = useState(false);
+
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [isAppInstalled, setIsAppInstalled] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                        (window.navigator as any).standalone || 
+                        document.referrer.includes('android-app://');
+    setIsAppInstalled(isStandalone);
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult: { outcome: string }) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the PWA install prompt');
+          setIsAppInstalled(true);
+        }
+        setDeferredPrompt(null);
+      });
+    } else {
+      setShowInstallGuide(prev => !prev);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -3313,6 +3465,66 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
               {isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça login'}
             </button>
           </div>
+
+          {/* Android App Promotion Card on Login */}
+          {!isAppInstalled && (
+            <div className="mt-8 pt-6 border-t border-[#092e5c] space-y-4">
+              <div className="bg-[#032554]/60 p-5 rounded-2xl border border-sky-500/10 text-white relative overflow-hidden transition-all duration-300">
+                <div className="flex items-start space-x-3.5">
+                  <div className="p-2.5 bg-sky-950/80 rounded-xl border border-sky-500/20 text-emerald-400 flex items-center justify-center shadow shrink-0">
+                    <Smartphone size={24} />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-extrabold text-white leading-tight">
+                      Instalar Aplicativo (Android)
+                    </h4>
+                    <p className="text-xs text-slate-300 leading-relaxed font-semibold">
+                      Deseja usar no celular? Instale o App para usar <strong className="text-emerald-400 font-extrabold">com ou sem internet</strong>. Sincroniza automático ao conectar.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 mt-4">
+                  <button
+                    onClick={handleInstallClick}
+                    className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs rounded-lg shadow-md hover:scale-[1.01] transition-all cursor-pointer"
+                  >
+                    <Download size={14} />
+                    <span>Instalar no Aparelho</span>
+                  </button>
+                  <button
+                    onClick={() => setShowInstallGuide(!showInstallGuide)}
+                    className="px-3 py-2.5 bg-white/10 hover:bg-white/15 text-slate-100 font-bold text-xs rounded-lg transition-all cursor-pointer"
+                  >
+                    Instruções
+                  </button>
+                </div>
+
+                {showInstallGuide && (
+                  <div className="mt-4 pt-4 border-t border-[#092e5c] space-y-3 text-xs">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-black uppercase text-emerald-400">Passo 1:</span>
+                      <p className="text-slate-300 font-semibold leading-relaxed">
+                        Abra este endereço no <strong className="text-white font-bold">Google Chrome</strong> do seu Android.
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-black uppercase text-emerald-400">Passo 2:</span>
+                      <p className="text-slate-300 font-semibold leading-relaxed">
+                        Toque nos <strong className="text-white font-bold">três pontinhos (⋮)</strong> no canto superior direito.
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-black uppercase text-emerald-400">Passo 3:</span>
+                      <p className="text-slate-300 font-semibold leading-relaxed">
+                        Selecione <strong className="text-emerald-400 font-extrabold">"Instalar aplicativo"</strong> ou <strong className="text-emerald-400 font-extrabold">"Adicionar à tela inicial"</strong>.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Humble system credits info */}
@@ -3575,6 +3787,43 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
   users: UserProfile[]
 }) {
   const [isCustomizing, setIsCustomizing] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [isAppInstalled, setIsAppInstalled] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                        (window.navigator as any).standalone || 
+                        document.referrer.includes('android-app://');
+    setIsAppInstalled(isStandalone);
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult: { outcome: string }) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the PWA install prompt');
+          setIsAppInstalled(true);
+        }
+        setDeferredPrompt(null);
+      });
+    } else {
+      setShowInstallGuide(true);
+    }
+  };
+
   const widgets = profile.dashboardWidgets || { stats: false, links: true, planner: true, campanhas: false, bomDia: true, forecast: true, periodo: true, aniversarios: true };
 
   const currentMonthNum = new Date().getMonth() + 1; // 1-12
@@ -3642,6 +3891,105 @@ function DashboardView({ leads, planner, links, profile, onToast, campanhas, bom
           </button>
         </div>
       </div>
+
+      {/* Android App Promotion Card */}
+      {!isAppInstalled && (
+        <div id="android-app-prompt-card" className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-6 rounded-3xl text-white shadow-xl relative overflow-hidden border border-slate-700/60 transition-all duration-300">
+          {/* Decorative design bubbles */}
+          <div className="absolute -top-16 -right-16 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl"></div>
+          <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl"></div>
+
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+            <div className="flex items-start space-x-4">
+              <div className="p-3.5 bg-slate-800/80 rounded-2xl border border-slate-700/80 flex items-center justify-center shadow-lg transform hover:scale-105 transition-all shrink-0">
+                <img src="/icon.svg" alt="Gestão Oeste" className="w-12 h-12 rounded-xl object-contain" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider rounded-md border border-emerald-500/30">
+                    Instalação Android
+                  </span>
+                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                    Suporte Offline Completo
+                  </span>
+                </div>
+                <h3 className="text-xl font-black tracking-tight leading-none text-white">
+                  Instalar Aplicativo Gestão Oeste no Android
+                </h3>
+                <p className="text-sm text-slate-300 max-w-2xl mt-1.5 leading-relaxed font-semibold">
+                  Trabalhe de qualquer lugar! Faça pedidos de insumos e visualize dados <strong className="text-emerald-400 font-bold">com ou sem internet</strong>. Ao voltar a ter conexão, o sistema sincroniza automaticamente com o servidor.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3 shrink-0 self-end md:self-center">
+              <button
+                onClick={handleInstallClick}
+                className="flex items-center space-x-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-600 active:transform active:scale-95 text-slate-950 font-extrabold text-sm rounded-xl shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+              >
+                <Smartphone size={18} />
+                <span>Instalar Aplicativo</span>
+              </button>
+              <button
+                onClick={() => setShowInstallGuide(!showInstallGuide)}
+                className="flex items-center space-x-2 px-4 py-3 bg-white/10 hover:bg-white/15 text-slate-100 font-bold text-sm rounded-xl transition-all cursor-pointer"
+              >
+                <span>Instruções</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Expanded Step-by-Step Installation Guide */}
+          {showInstallGuide && (
+            <div className="mt-6 pt-6 border-t border-slate-700/60 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm animate-fade-in">
+              <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-700/40 space-y-2">
+                <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold flex items-center justify-center text-xs">
+                  1
+                </span>
+                <h4 className="font-extrabold text-white flex items-center gap-1.5 text-xs uppercase tracking-wider">
+                  <Chrome size={14} className="text-emerald-400" /> No Google Chrome
+                </h4>
+                <p className="text-slate-300 text-xs leading-relaxed font-semibold">
+                  Abra este site no seu aparelho Android utilizando o navegador <strong className="text-emerald-400 font-bold">Google Chrome</strong>.
+                </p>
+              </div>
+
+              <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-700/40 space-y-2">
+                <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold flex items-center justify-center text-xs">
+                  2
+                </span>
+                <h4 className="font-extrabold text-white flex items-center gap-1.5 text-xs uppercase tracking-wider">
+                  <Smartphone size={14} className="text-emerald-400" /> Menu de Opções
+                </h4>
+                <p className="text-slate-300 text-xs leading-relaxed font-semibold">
+                  Toque nos <strong className="text-white font-bold">três pontinhos (⋮)</strong> localizados no canto superior direito do navegador Chrome.
+                </p>
+              </div>
+
+              <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-700/40 space-y-2">
+                <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold flex items-center justify-center text-xs">
+                  3
+                </span>
+                <h4 className="font-extrabold text-white flex items-center gap-1.5 text-xs uppercase tracking-wider">
+                  <Download size={14} className="text-emerald-400" /> Instalar App
+                </h4>
+                <p className="text-slate-300 text-xs leading-relaxed font-semibold">
+                  Selecione <strong className="text-emerald-400 font-bold">"Instalar aplicativo"</strong> ou <strong className="text-emerald-400 font-bold">"Adicionar à tela de início"</strong>. Um atalho oficial será criado no seu telefone!
+                </p>
+              </div>
+
+              <div className="col-span-1 md:col-span-3 flex justify-end mt-2 animate-fade-in">
+                <button
+                  onClick={() => setShowInstallGuide(false)}
+                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg hover:text-white transition-all font-bold cursor-pointer border border-slate-700"
+                >
+                  Fechar Instruções
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {activeMeta && (
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
