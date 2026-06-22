@@ -3218,6 +3218,7 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
 
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [showApkModal, setShowApkModal] = useState(false);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
 
   useEffect(() => {
@@ -3498,6 +3499,12 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
                   >
                     Instruções
                   </button>
+                  <button
+                    onClick={() => setShowApkModal(true)}
+                    className="px-3 py-2.5 bg-white/10 hover:bg-white/15 text-slate-100 font-bold text-xs rounded-lg transition-all cursor-pointer"
+                  >
+                    Arquivo .APK
+                  </button>
                 </div>
 
                 {showInstallGuide && (
@@ -3769,6 +3776,57 @@ function AuthScreen({ onToast, botConfig }: { onToast: (m: string, t?: 'success'
           )}
         </div>
       </div>
+
+      {/* APK Information Modal */}
+      {showApkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
+            {/* Header / Icon */}
+            <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
+              <Download size={32} className="text-blue-600" />
+            </div>
+            
+            <h3 className="text-xl font-black text-slate-800 text-center mb-2">Download do Arquivo APK</h3>
+            <p className="text-sm text-slate-500 text-center font-medium leading-relaxed mb-6">
+              O projeto nativo Android foi gerado e configurado usando Capacitor.
+            </p>
+
+            <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-100 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg shrink-0 mt-0.5">
+                  <Smartphone size={18} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800">1. Instalação Imediata (Via Chrome)</h4>
+                  <p className="text-xs text-slate-600 mt-1 font-medium">Recomendado: Feche esta aba e clique em <strong className="text-emerald-600">"Instalar no Aparelho"</strong> na tela de login (usando o Google Chrome no seu celular) para instalação automática PWA/WebAPK direta no aparelho.</p>
+                </div>
+              </div>
+
+              <div className="w-full h-px bg-slate-200"></div>
+
+              <div className="flex items-start gap-3">
+                <div className="bg-amber-100 text-amber-600 p-1.5 rounded-lg shrink-0 mt-0.5">
+                  <Download size={18} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800">2. Desenvolvedores (Compilação Nativa)</h4>
+                  <p className="text-xs text-slate-600 mt-1 font-medium">Devido as limitações do ambiente Cloud, o arquivo <strong className="font-bold">.apk</strong> real precisa ser compilado localmente: Exporte os arquivos do app, abra a pasta <code className="bg-slate-200 px-1 py-0.5 rounded font-mono text-amber-800">android/</code> no Android Studio e compile o APK.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowApkModal(false)}
+                className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all cursor-pointer"
+              >
+                Voltar à Tela Inicial
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
