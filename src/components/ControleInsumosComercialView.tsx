@@ -63,7 +63,9 @@ export function ControleInsumosComercialView({
   profile,
   onToast,
 }: ControleInsumosComercialViewProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "pedidos" | "estoque">("dashboard");
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "pedidos" | "estoque"
+  >("dashboard");
   const [isAddingPedido, setIsAddingPedido] = useState(false);
   const [isAddingEstoque, setIsAddingEstoque] = useState(false);
   const [editingEstoque, setEditingEstoque] =
@@ -71,9 +73,12 @@ export function ControleInsumosComercialView({
 
   // Commercial Material Discard / Baixa States
   const [baixaModalOpen, setBaixaModalOpen] = useState(false);
-  const [selectedStockItem, setSelectedStockItem] = useState<InsumoEstoqueComercial | null>(null);
+  const [selectedStockItem, setSelectedStockItem] =
+    useState<InsumoEstoqueComercial | null>(null);
   const [baixaQuantidade, setBaixaQuantidade] = useState<number>(1);
-  const [baixaMotivo, setBaixaMotivo] = useState<'Uso em aula' | 'Uso no setor' | 'Material vencido(lixo)'>('Uso em aula');
+  const [baixaMotivo, setBaixaMotivo] = useState<
+    "Uso em aula" | "Uso no setor" | "Material vencido(lixo)"
+  >("Uso em aula");
   const [baixas, setBaixas] = useState<InsumoBaixa[]>([]);
 
   // New Request Form State
@@ -83,7 +88,9 @@ export function ControleInsumosComercialView({
   ]);
 
   // Type qualification & fields
-  const [tipoSolicitante, setTipoSolicitante] = useState<'docente' | 'administrativo' | null>(null);
+  const [tipoSolicitante, setTipoSolicitante] = useState<
+    "docente" | "administrativo" | null
+  >(null);
   const [professorName, setProfessorName] = useState("");
   const [courseName, setCourseName] = useState("");
   const [subjectName, setSubjectName] = useState("");
@@ -93,27 +100,34 @@ export function ControleInsumosComercialView({
 
   // Sync employees
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, COLLECTIONS.FUNCIONARIOS), (snap) => {
-      const list: any[] = [];
-      snap.forEach(d => {
-        list.push({ id: d.id, ...d.data() });
-      });
-      setFuncionarios(list);
-    });
+    const unsub = onSnapshot(
+      collection(db, COLLECTIONS.FUNCIONARIOS),
+      (snap) => {
+        const list: any[] = [];
+        snap.forEach((d) => {
+          list.push({ id: d.id, ...d.data() });
+        });
+        setFuncionarios(list);
+      },
+    );
     return () => unsub();
   }, []);
 
   // Sync commercial write-offs (baixas)
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, COLLECTIONS.INSUMOS_BAIXAS_COMERCIAL), (snap) => {
-      const list: InsumoBaixa[] = [];
-      snap.forEach(d => {
-        list.push({ id: d.id, ...d.data() } as InsumoBaixa);
-      });
-      setBaixas(list);
-    }, (error) => {
-      console.error("Erro ao sincronizar baixas comerciais: ", error);
-    });
+    const unsub = onSnapshot(
+      collection(db, COLLECTIONS.INSUMOS_BAIXAS_COMERCIAL),
+      (snap) => {
+        const list: InsumoBaixa[] = [];
+        snap.forEach((d) => {
+          list.push({ id: d.id, ...d.data() } as InsumoBaixa);
+        });
+        setBaixas(list);
+      },
+      (error) => {
+        console.error("Erro ao sincronizar baixas comerciais: ", error);
+      },
+    );
     return () => unsub();
   }, []);
 
@@ -131,12 +145,12 @@ export function ControleInsumosComercialView({
 
   // Email notifications
   const [emailAlertas, setEmailAlertas] = useState<string>(
-    localStorage.getItem('insumos_comercial_email_alertas') || ''
+    localStorage.getItem("insumos_comercial_email_alertas") || "",
   );
 
   const handleEmailAlertasChange = (val: string) => {
     setEmailAlertas(val);
-    localStorage.setItem('insumos_comercial_email_alertas', val);
+    localStorage.setItem("insumos_comercial_email_alertas", val);
   };
 
   // "apenas o gerente comercial vai validar se foi aceito ou não o pedido e vai mudar os status"
@@ -167,9 +181,12 @@ export function ControleInsumosComercialView({
     const updated = [...pedidoItens];
     if (field === "quantidade") {
       let qty = Math.max(1, parseInt(value) || 1);
-      if (tipoSolicitante === 'administrativo' && qty > 10) {
+      if (tipoSolicitante === "administrativo" && qty > 10) {
         qty = 10;
-        onToast("O limite máximo para solicitação administrativa é de 10 unidades por item.", "error");
+        onToast(
+          "O limite máximo para solicitação administrativa é de 10 unidades por item.",
+          "error",
+        );
       }
       updated[index].quantidade = qty;
     } else {
@@ -182,7 +199,7 @@ export function ControleInsumosComercialView({
   const handleSubmitPedido = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (tipoSolicitante === 'docente') {
+    if (tipoSolicitante === "docente") {
       if (!professorName || !courseName || !subjectName || !motivoUso) {
         onToast("Por favor, preencha todos os campos obrigatórios.", "error");
         return;
@@ -203,10 +220,13 @@ export function ControleInsumosComercialView({
       return;
     }
 
-    if (tipoSolicitante === 'administrativo') {
-      const overLimit = filteredItens.some(it => it.quantidade > 10);
+    if (tipoSolicitante === "administrativo") {
+      const overLimit = filteredItens.some((it) => it.quantidade > 10);
       if (overLimit) {
-        onToast("Um ou mais materiais ultrapassam o limite de 10 unidades para solicitar como administrativo.", "error");
+        onToast(
+          "Um ou mais materiais ultrapassam o limite de 10 unidades para solicitar como administrativo.",
+          "error",
+        );
         return;
       }
     }
@@ -220,9 +240,10 @@ export function ControleInsumosComercialView({
         solicitanteNome: profile.name,
         professorNome: professorName,
         cursoNome: courseName,
-        disciplinaNome: tipoSolicitante === 'docente' ? subjectName : 'Administrativo',
+        disciplinaNome:
+          tipoSolicitante === "docente" ? subjectName : "Administrativo",
         tipoFicha: tipoSolicitante,
-        matricula: matricula || '',
+        matricula: matricula || "",
         createdAt: new Date().toISOString(),
       };
 
@@ -282,7 +303,10 @@ export function ControleInsumosComercialView({
         if (stockQuantidade < stockMinimo) {
           onToast(`⚠️ Nível crítico atingido para: ${stockMaterial}`, "error");
           if (emailAlertas) {
-            onToast(`✉️ Alerta enviado para o e-mail: ${emailAlertas}`, "success");
+            onToast(
+              `✉️ Alerta enviado para o e-mail: ${emailAlertas}`,
+              "success",
+            );
           }
         }
       } else {
@@ -347,16 +371,23 @@ export function ControleInsumosComercialView({
       return;
     }
     if (baixaQuantidade > selectedStockItem.quantidade) {
-      onToast(`A quantidade a baixar (${baixaQuantidade}) excede o estoque disponível (${selectedStockItem.quantidade}).`, "error");
+      onToast(
+        `A quantidade a baixar (${baixaQuantidade}) excede o estoque disponível (${selectedStockItem.quantidade}).`,
+        "error",
+      );
       return;
     }
 
     try {
-      const itemRef = doc(db, COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL, selectedStockItem.id);
+      const itemRef = doc(
+        db,
+        COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL,
+        selectedStockItem.id,
+      );
       const newQty = selectedStockItem.quantidade - baixaQuantidade;
       await updateDoc(itemRef, {
         quantidade: newQty,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
 
       const newBaixa: any = {
@@ -365,20 +396,33 @@ export function ControleInsumosComercialView({
         quantidade: baixaQuantidade,
         motivo: baixaMotivo,
         realizadoPor: profile.name,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
-      await addDoc(collection(db, COLLECTIONS.INSUMOS_BAIXAS_COMERCIAL), newBaixa);
+      await addDoc(
+        collection(db, COLLECTIONS.INSUMOS_BAIXAS_COMERCIAL),
+        newBaixa,
+      );
 
-      onToast(`Baixa de ${baixaQuantidade} ${selectedStockItem.unidadeMedida || 'UN'} de "${selectedStockItem.material}" registrada com sucesso!`, "success");
-      
+      onToast(
+        `Baixa de ${baixaQuantidade} ${selectedStockItem.unidadeMedida || "UN"} de "${selectedStockItem.material}" registrada com sucesso!`,
+        "success",
+      );
+
       if (newQty < (selectedStockItem.estoqueMinimo ?? 5)) {
-        onToast(`Atenção: O estoque de "${selectedStockItem.material}" está abaixo do mínimo! (Estoque atual: ${newQty})`, "error");
+        onToast(
+          `Atenção: O estoque de "${selectedStockItem.material}" está abaixo do mínimo! (Estoque atual: ${newQty})`,
+          "error",
+        );
       }
 
       setBaixaModalOpen(false);
       setSelectedStockItem(null);
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL);
+      handleFirestoreError(
+        err,
+        OperationType.WRITE,
+        COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL,
+      );
       onToast("Erro ao registrar a baixa do material.", "error");
     }
   };
@@ -673,7 +717,11 @@ export function ControleInsumosComercialView({
 
       {/* Tab: DASHBOARD */}
       {activeTab === "dashboard" && (
-        <InsumosDashboard pedidos={pedidos} baixas={baixas} title="Indicadores de Insumos - Comercial" />
+        <InsumosDashboard
+          pedidos={pedidos}
+          baixas={baixas}
+          title="Indicadores de Insumos - Comercial"
+        />
       )}
 
       {/* Tab: PEDIDOS */}
@@ -986,8 +1034,9 @@ export function ControleInsumosComercialView({
                   <span>Notificações de Nível Crítico</span>
                 </h4>
                 <p className="text-xs text-slate-600 mb-4 max-w-2xl">
-                  Sempre que o seu estoque atingir o nível mínimo definido, um alerta interno será gerado no sistema. 
-                  Insira um e-mail abaixo se desejar enviar notificações também por e-mail.
+                  Sempre que o seu estoque atingir o nível mínimo definido, um
+                  alerta interno será gerado no sistema. Insira um e-mail abaixo
+                  se desejar enviar notificações também por e-mail.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 items-center">
                   <input
@@ -998,7 +1047,12 @@ export function ControleInsumosComercialView({
                     className="px-4 py-2.5 text-xs font-medium border border-slate-200 rounded-xl w-full sm:w-80 focus:ring-2 focus:ring-amber-500 outline-none bg-white shadow-sm"
                   />
                   <button
-                    onClick={() => onToast('Preferências de notificação de estoque salvas.', 'success')}
+                    onClick={() =>
+                      onToast(
+                        "Preferências de notificação de estoque salvas.",
+                        "success",
+                      )
+                    }
                     className="bg-amber-600 hover:bg-amber-700 transition-colors text-white font-bold px-5 py-2.5 rounded-xl text-xs whitespace-nowrap shadow-sm cursor-pointer w-full sm:w-auto"
                   >
                     Salvar E-mail
@@ -1083,7 +1137,7 @@ export function ControleInsumosComercialView({
                                   onClick={() => {
                                     setSelectedStockItem(item);
                                     setBaixaQuantidade(1);
-                                    setBaixaMotivo('Uso em aula');
+                                    setBaixaMotivo("Uso em aula");
                                     setBaixaModalOpen(true);
                                   }}
                                   className="text-amber-700 hover:text-amber-850 font-bold text-xs uppercase px-2 py-1 bg-amber-50 rounded mr-1"
@@ -1130,7 +1184,9 @@ export function ControleInsumosComercialView({
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-5 text-white flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-black">Nova Solicitação de Insumos</h3>
+                <h3 className="text-xl font-black">
+                  Nova Solicitação de Insumos
+                </h3>
                 <p className="text-emerald-100 text-xs mt-1">
                   Preencha os dados da requisição conforme o perfil.
                 </p>
@@ -1156,41 +1212,52 @@ export function ControleInsumosComercialView({
                 <h3 className="text-center font-bold text-slate-700 text-base mb-2">
                   Qual é o perfil do solicitante?
                 </h3>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* DOCENTE CARD */}
                   <button
                     type="button"
-                    onClick={() => setTipoSolicitante('docente')}
+                    onClick={() => setTipoSolicitante("docente")}
                     className="flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-emerald-55 hover:border-emerald-300 hover:shadow-lg transition-all text-center group cursor-pointer"
                   >
                     <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                       <Users size={24} />
                     </div>
-                    <h4 className="font-bold text-slate-800 text-sm mb-1">Docente / Professor</h4>
+                    <h4 className="font-bold text-slate-800 text-sm mb-1">
+                      Docente / Professor
+                    </h4>
                     <p className="text-xs text-slate-500 max-w-xs">
-                      Materiais de apoio para disciplinas acadêmicas, aulas práticas ou laboratórios.
+                      Materiais de apoio para disciplinas acadêmicas, aulas
+                      práticas ou laboratórios.
                     </p>
                   </button>
 
                   {/* ADMINISTRATIVO CARD */}
                   <button
                     type="button"
-                    onClick={() => setTipoSolicitante('administrativo')}
+                    onClick={() => setTipoSolicitante("administrativo")}
                     className="flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-amber-50 hover:border-amber-300 hover:shadow-lg transition-all text-center group cursor-pointer"
                   >
                     <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                       <Building2 size={24} />
                     </div>
-                    <h4 className="font-bold text-slate-800 text-sm mb-1">Administrativo</h4>
+                    <h4 className="font-bold text-slate-800 text-sm mb-1">
+                      Administrativo
+                    </h4>
                     <p className="text-xs text-slate-500 max-w-xs">
-                      Corporativo, escritórios ou backoffice. <span className="font-bold text-amber-700">(Máximo de 10 unidades por item)</span>
+                      Corporativo, escritórios ou backoffice.{" "}
+                      <span className="font-bold text-amber-700">
+                        (Máximo de 10 unidades por item)
+                      </span>
                     </p>
                   </button>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmitPedido} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              <form
+                onSubmit={handleSubmitPedido}
+                className="p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+              >
                 <div className="flex justify-between items-center mb-2">
                   <button
                     type="button"
@@ -1204,17 +1271,28 @@ export function ControleInsumosComercialView({
                     className="inline-flex items-center space-x-1 text-xs text-slate-500 hover:text-slate-800 font-bold transition-all"
                   >
                     <ChevronLeft size={16} />
-                    <span>Mudar Perfil ({tipoSolicitante === 'docente' ? 'Docente' : 'Administrativo'})</span>
+                    <span>
+                      Mudar Perfil (
+                      {tipoSolicitante === "docente"
+                        ? "Docente"
+                        : "Administrativo"}
+                      )
+                    </span>
                   </button>
                 </div>
 
-                {tipoSolicitante === 'docente' ? (
+                {tipoSolicitante === "docente" ? (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome do Professor *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Nome do Professor *
+                        </label>
                         <div className="relative">
-                          <User className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <User
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1227,9 +1305,14 @@ export function ControleInsumosComercialView({
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome do Curso *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Nome do Curso *
+                        </label>
                         <div className="relative">
-                          <Book className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <Book
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1244,9 +1327,14 @@ export function ControleInsumosComercialView({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome da Disciplina *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Nome da Disciplina *
+                        </label>
                         <div className="relative">
-                          <Book className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <Book
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1259,9 +1347,14 @@ export function ControleInsumosComercialView({
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Motivo do Uso / Justificativa *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Motivo do Uso / Justificativa *
+                        </label>
                         <div className="relative">
-                          <FileText className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <FileText
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1278,9 +1371,14 @@ export function ControleInsumosComercialView({
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="relative">
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome do Funcionário *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Nome do Funcionário *
+                        </label>
                         <div className="relative">
-                          <User className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <User
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1289,7 +1387,7 @@ export function ControleInsumosComercialView({
                             onFocus={() => setShowAutocomplete(true)}
                             onChange={(e) => {
                               setProfessorName(e.target.value);
-                              setMatricula('');
+                              setMatricula("");
                               setShowAutocomplete(true);
                             }}
                             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
@@ -1297,35 +1395,47 @@ export function ControleInsumosComercialView({
                         </div>
 
                         {/* Autocomplete list */}
-                        {showAutocomplete && professorName.trim().length > 0 && (
-                          <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-[150px] overflow-y-auto divide-y divide-slate-50">
-                            {funcionarios
-                              .filter(f => f.tipo === 'administrativo' && (f.nome || '').toLowerCase().includes(professorName.toLowerCase()))
-                              .map(f => (
-                                <button
-                                  type="button"
-                                  key={f.id}
-                                  onClick={() => {
-                                    setProfessorName(f.nome);
-                                    setMatricula(f.matricula);
-                                    setShowAutocomplete(false);
-                                  }}
-                                  className="w-full p-2.5 text-left text-xs text-slate-700 hover:bg-slate-50 font-bold transition-all flex justify-between items-center"
-                                >
-                                  <span>{f.nome}</span>
-                                  <span className="text-[10px] font-mono font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                                    Matrícula: {f.matricula}
-                                  </span>
-                                </button>
-                              ))}
-                          </div>
-                        )}
+                        {showAutocomplete &&
+                          professorName.trim().length > 0 && (
+                            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-[150px] overflow-y-auto divide-y divide-slate-50">
+                              {funcionarios
+                                .filter(
+                                  (f) =>
+                                    f.tipo === "administrativo" &&
+                                    (f.nome || "")
+                                      .toLowerCase()
+                                      .includes(professorName.toLowerCase()),
+                                )
+                                .map((f) => (
+                                  <button
+                                    type="button"
+                                    key={f.id}
+                                    onClick={() => {
+                                      setProfessorName(f.nome);
+                                      setMatricula(f.matricula);
+                                      setShowAutocomplete(false);
+                                    }}
+                                    className="w-full p-2.5 text-left text-xs text-slate-700 hover:bg-slate-50 font-bold transition-all flex justify-between items-center"
+                                  >
+                                    <span>{f.nome}</span>
+                                    <span className="text-[10px] font-mono font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                                      Matrícula: {f.matricula}
+                                    </span>
+                                  </button>
+                                ))}
+                            </div>
+                          )}
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Matrícula (Automática) *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Matrícula (Automática) *
+                        </label>
                         <div className="relative">
-                          <FileText className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <FileText
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1340,9 +1450,14 @@ export function ControleInsumosComercialView({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Setor *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Setor *
+                        </label>
                         <div className="relative">
-                          <Building2 className="absolute left-3.5 top-3.5 text-slate-400" size={14} />
+                          <Building2
+                            className="absolute left-3.5 top-3.5 text-slate-400"
+                            size={14}
+                          />
                           <select
                             required
                             value={courseName}
@@ -1352,7 +1467,9 @@ export function ControleInsumosComercialView({
                             <option value="">Selecione o Setor</option>
                             <option value="Gestão">Gestão</option>
                             <option value="Secretaria">Secretaria</option>
-                            <option value="Sala de Matrícula">Sala de Matrícula</option>
+                            <option value="Sala de Matrícula">
+                              Sala de Matrícula
+                            </option>
                             <option value="Acadêmico">Acadêmico</option>
                             <option value="Vigia">Vigia</option>
                             <option value="Manutenção">Manutenção</option>
@@ -1362,9 +1479,14 @@ export function ControleInsumosComercialView({
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Motivo / Justificativa *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Motivo / Justificativa *
+                        </label>
                         <div className="relative">
-                          <FileText className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <FileText
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1397,13 +1519,22 @@ export function ControleInsumosComercialView({
 
                   <div className="space-y-3">
                     {pedidoItens.map((it, index) => (
-                      <div key={index} className="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                      <div
+                        key={index}
+                        className="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-100"
+                      >
                         <div className="flex-1">
                           <input
                             type="text"
                             placeholder="Nome do material/item (Ex: Caneta azul)"
                             value={it.material}
-                            onChange={(e) => handleRequestItemChange(index, 'material', e.target.value)}
+                            onChange={(e) =>
+                              handleRequestItemChange(
+                                index,
+                                "material",
+                                e.target.value,
+                              )
+                            }
                             className="w-full px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 text-xs bg-white text-slate-750 font-bold"
                             required
                           />
@@ -1412,14 +1543,24 @@ export function ControleInsumosComercialView({
                           <input
                             type="number"
                             min="1"
-                            max={tipoSolicitante === 'administrativo' ? 10 : undefined}
+                            max={
+                              tipoSolicitante === "administrativo"
+                                ? 10
+                                : undefined
+                            }
                             placeholder="Qtd"
                             value={it.quantidade}
-                            onChange={(e) => handleRequestItemChange(index, 'quantidade', e.target.value)}
+                            onChange={(e) =>
+                              handleRequestItemChange(
+                                index,
+                                "quantidade",
+                                e.target.value,
+                              )
+                            }
                             className="w-full pl-3 pr-8 py-1.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 text-xs text-center font-mono bg-white font-bold"
                             required
                           />
-                          {tipoSolicitante === 'administrativo' && (
+                          {tipoSolicitante === "administrativo" && (
                             <span className="absolute right-1 top-2 text-[9px] font-bold text-amber-600 select-none bg-amber-50 px-1 border border-amber-100 rounded">
                               Max 10
                             </span>
@@ -1585,17 +1726,29 @@ export function ControleInsumosComercialView({
                 <AlertTriangle size={20} />
               </div>
               <div>
-                <h4 className="text-lg font-black text-slate-800">Registrar Baixa</h4>
-                <p className="text-xs text-slate-500">Deduzir quantidade do estoque comercial</p>
+                <h4 className="text-lg font-black text-slate-800">
+                  Registrar Baixa
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Deduzir quantidade do estoque comercial
+                </p>
               </div>
             </div>
 
             <form onSubmit={handleConfirmBaixa} className="space-y-4">
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Material</span>
-                <span className="font-bold text-slate-800 text-sm mt-0.5 block">{selectedStockItem.material}</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Material
+                </span>
+                <span className="font-bold text-slate-800 text-sm mt-0.5 block">
+                  {selectedStockItem.material}
+                </span>
                 <span className="text-xs font-mono font-bold text-slate-500 mt-1 block">
-                  Disponível em Estoque: <span className="text-emerald-600">{selectedStockItem.quantidade} {selectedStockItem.unidadeMedida || 'UN'}</span>
+                  Disponível em Estoque:{" "}
+                  <span className="text-emerald-600">
+                    {selectedStockItem.quantidade}{" "}
+                    {selectedStockItem.unidadeMedida || "UN"}
+                  </span>
                 </span>
               </div>
 
@@ -1610,11 +1763,18 @@ export function ControleInsumosComercialView({
                     max={selectedStockItem.quantidade}
                     required
                     value={baixaQuantidade}
-                    onChange={(e) => setBaixaQuantidade(Math.min(selectedStockItem.quantidade, Math.max(1, parseInt(e.target.value) || 1)))}
+                    onChange={(e) =>
+                      setBaixaQuantidade(
+                        Math.min(
+                          selectedStockItem.quantidade,
+                          Math.max(1, parseInt(e.target.value) || 1),
+                        ),
+                      )
+                    }
                     className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-sm font-mono font-bold text-center"
                   />
                   <span className="absolute right-4 top-2 text-xs font-bold text-slate-400 font-mono">
-                    {selectedStockItem.unidadeMedida || 'UN'}
+                    {selectedStockItem.unidadeMedida || "UN"}
                   </span>
                 </div>
               </div>
@@ -1625,9 +1785,12 @@ export function ControleInsumosComercialView({
                 </label>
                 <div className="space-y-2">
                   {[
-                    { id: 'Uso em aula', label: 'Uso em aula' },
-                    { id: 'Uso no setor', label: 'Uso no setor' },
-                    { id: 'Material vencido(lixo)', label: 'Material vencido / Descartado (lixo)' }
+                    { id: "Uso em aula", label: "Uso em aula" },
+                    { id: "Uso no setor", label: "Uso no setor" },
+                    {
+                      id: "Material vencido(lixo)",
+                      label: "Material vencido / Descartado (lixo)",
+                    },
                   ].map((option) => (
                     <label
                       key={option.id}
@@ -1635,7 +1798,7 @@ export function ControleInsumosComercialView({
                         "flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer text-xs font-black",
                         baixaMotivo === option.id
                           ? "bg-amber-50/50 border-amber-200 text-amber-800"
-                          : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+                          : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600",
                       )}
                     >
                       <input

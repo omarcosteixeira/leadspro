@@ -1,5 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { Clock, Send, ShoppingCart, TrendingUp, AlertCircle, FileText, Calendar, RefreshCcw } from 'lucide-react';
+import React, { useState, useMemo } from "react";
+import {
+  Clock,
+  Send,
+  ShoppingCart,
+  TrendingUp,
+  AlertCircle,
+  FileText,
+  Calendar,
+  RefreshCcw,
+} from "lucide-react";
 
 interface InsumosDashboardProps {
   pedidos: any[];
@@ -7,23 +16,27 @@ interface InsumosDashboardProps {
   title?: string;
 }
 
-export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insumos' }: InsumosDashboardProps) {
+export function InsumosDashboard({
+  pedidos,
+  baixas,
+  title = "Indicadores de Insumos",
+}: InsumosDashboardProps) {
   // Filters State
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Clear filters
   const handleClearFilters = () => {
-    setStartDate('');
-    setEndDate('');
-    setSearchQuery('');
+    setStartDate("");
+    setEndDate("");
+    setSearchQuery("");
   };
 
   // Helper to check if a date is within selected range
   const isWithinDateRange = (createdAtStr: any) => {
     if (!createdAtStr) return true;
-    const dateStr = String(createdAtStr).split('T')[0];
+    const dateStr = String(createdAtStr).split("T")[0];
     if (startDate && dateStr < startDate) return false;
     if (endDate && dateStr > endDate) return false;
     return true;
@@ -31,25 +44,28 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
 
   // Calculate top purchased products
   const topPurchased = useMemo(() => {
-    const counts: { [key: string]: { qty: number, count: number } } = {};
-    
+    const counts: { [key: string]: { qty: number; count: number } } = {};
+
     // Filter and process pedidos
-    pedidos.forEach(p => {
-      // Typically consider any pending/approved/delivered as "compras/requisições" 
+    pedidos.forEach((p) => {
+      // Typically consider any pending/approved/delivered as "compras/requisições"
       if (!isWithinDateRange(p.createdAt)) return;
 
       const items = p.itens || [];
       items.forEach((item: any) => {
-        const name = String(item.material || '').trim();
+        const name = String(item.material || "").trim();
         if (!name) return;
-        
+
         // Filter by search query if present
-        if (searchQuery && !name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        if (
+          searchQuery &&
+          !name.toLowerCase().includes(searchQuery.toLowerCase())
+        ) {
           return;
         }
 
         const qty = parseInt(item.quantidade) || 0;
-        
+
         if (!counts[name]) {
           counts[name] = { qty: 0, count: 0 };
         }
@@ -63,7 +79,7 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
       .map(([name, data]) => ({
         name,
         qty: data.qty,
-        count: data.count
+        count: data.count,
       }))
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 10);
@@ -71,25 +87,38 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
 
   // Calculate top write-offs per reason
   const topBaixasByReason = useMemo(() => {
-    const reasons = ['Uso em aula', 'Uso no setor', 'Material vencido(lixo)'] as const;
-    const result: { [key in typeof reasons[number]]: { name: string, qty: number, count: number }[] } = {
-      'Uso em aula': [],
-      'Uso no setor': [],
-      'Material vencido(lixo)': []
+    const reasons = [
+      "Uso em aula",
+      "Uso no setor",
+      "Material vencido(lixo)",
+    ] as const;
+    const result: {
+      [key in (typeof reasons)[number]]: {
+        name: string;
+        qty: number;
+        count: number;
+      }[];
+    } = {
+      "Uso em aula": [],
+      "Uso no setor": [],
+      "Material vencido(lixo)": [],
     };
 
-    reasons.forEach(reason => {
-      const counts: { [key: string]: { qty: number, count: number } } = {};
+    reasons.forEach((reason) => {
+      const counts: { [key: string]: { qty: number; count: number } } = {};
 
-      baixas.forEach(b => {
+      baixas.forEach((b) => {
         if (b.motivo !== reason) return;
         if (!isWithinDateRange(b.createdAt)) return;
-        
-        const name = String(b.materialNome || b.material || '').trim();
+
+        const name = String(b.materialNome || b.material || "").trim();
         if (!name) return;
 
         // Filter by search query if present
-        if (searchQuery && !name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        if (
+          searchQuery &&
+          !name.toLowerCase().includes(searchQuery.toLowerCase())
+        ) {
           return;
         }
 
@@ -105,7 +134,7 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
         .map(([name, data]) => ({
           name,
           qty: data.qty,
-          count: data.count
+          count: data.count,
         }))
         .sort((a, b) => b.qty - a.qty)
         .slice(0, 5);
@@ -121,26 +150,26 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
     let totalBaixadosQty = 0;
     let totalBaixadosCount = 0;
 
-    pedidos.forEach(p => {
+    pedidos.forEach((p) => {
       if (!isWithinDateRange(p.createdAt)) return;
       totalPedidosCount++;
       const items = p.itens || [];
       items.forEach((item: any) => {
-        totalItemsRequested += (parseInt(item.quantidade) || 0);
+        totalItemsRequested += parseInt(item.quantidade) || 0;
       });
     });
 
-    baixas.forEach(b => {
+    baixas.forEach((b) => {
       if (!isWithinDateRange(b.createdAt)) return;
       totalBaixadosCount++;
-      totalBaixadosQty += (parseInt(b.quantidade) || 0);
+      totalBaixadosQty += parseInt(b.quantidade) || 0;
     });
 
     return {
       totalItemsRequested,
       totalPedidosCount,
       totalBaixadosQty,
-      totalBaixadosCount
+      totalBaixadosCount,
     };
   }, [pedidos, baixas, startDate, endDate]);
 
@@ -155,10 +184,11 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
               <span>{title}</span>
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Visualize estatísticas, insumos solicitados e motivos de descarte/baixa física.
+              Visualize estatísticas, insumos solicitados e motivos de
+              descarte/baixa física.
             </p>
           </div>
-          
+
           {(startDate || endDate || searchQuery) && (
             <button
               onClick={handleClearFilters}
@@ -177,7 +207,10 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
               Data de Início
             </label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 text-slate-400" size={14} />
+              <Calendar
+                className="absolute left-3 top-2.5 text-slate-400"
+                size={14}
+              />
               <input
                 type="date"
                 value={startDate}
@@ -192,7 +225,10 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
               Data de Término
             </label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 text-slate-400" size={14} />
+              <Calendar
+                className="absolute left-3 top-2.5 text-slate-400"
+                size={14}
+              />
               <input
                 type="date"
                 value={endDate}
@@ -224,9 +260,15 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
             <ShoppingCart size={22} />
           </div>
           <div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Itens Solicitados</span>
-            <span className="text-2xl font-black text-slate-800 font-mono mt-0.5 block">{summary.totalItemsRequested}</span>
-            <span className="text-[10px] text-slate-500 font-medium">{summary.totalPedidosCount} fichas enviadas</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+              Itens Solicitados
+            </span>
+            <span className="text-2xl font-black text-slate-800 font-mono mt-0.5 block">
+              {summary.totalItemsRequested}
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium">
+              {summary.totalPedidosCount} fichas enviadas
+            </span>
           </div>
         </div>
 
@@ -235,9 +277,15 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
             <FileText size={22} />
           </div>
           <div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Materiais Baixados</span>
-            <span className="text-2xl font-black text-slate-800 font-mono mt-0.5 block">{summary.totalBaixadosQty}</span>
-            <span className="text-[10px] text-slate-500 font-medium">{summary.totalBaixadosCount} registros de baixa</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+              Materiais Baixados
+            </span>
+            <span className="text-2xl font-black text-slate-800 font-mono mt-0.5 block">
+              {summary.totalBaixadosQty}
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium">
+              {summary.totalBaixadosCount} registros de baixa
+            </span>
           </div>
         </div>
 
@@ -246,9 +294,15 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
             <TrendingUp size={22} />
           </div>
           <div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Produtos Únicos</span>
-            <span className="text-2xl font-black text-slate-800 font-mono mt-0.5 block">{topPurchased.length}</span>
-            <span className="text-[10px] text-slate-500 font-medium">produtos no relatório</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+              Produtos Únicos
+            </span>
+            <span className="text-2xl font-black text-slate-800 font-mono mt-0.5 block">
+              {topPurchased.length}
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium">
+              produtos no relatório
+            </span>
           </div>
         </div>
 
@@ -257,16 +311,22 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
             <Clock size={22} />
           </div>
           <div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Período Relatório</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+              Período Relatório
+            </span>
             <span className="text-xs font-black text-slate-700 mt-1.5 block leading-tight">
               {startDate || endDate ? (
                 <>
-                  {startDate ? String(startDate).split('-').reverse().join('/') : 'Início'} 
-                  <span className="text-slate-400 mx-1">➜</span> 
-                  {endDate ? String(endDate).split('-').reverse().join('/') : 'Fim'}
+                  {startDate
+                    ? String(startDate).split("-").reverse().join("/")
+                    : "Início"}
+                  <span className="text-slate-400 mx-1">➜</span>
+                  {endDate
+                    ? String(endDate).split("-").reverse().join("/")
+                    : "Fim"}
                 </>
               ) : (
-                'Todo o histórico'
+                "Todo o histórico"
               )}
             </span>
           </div>
@@ -275,7 +335,6 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
 
       {/* DETAILED RESULTS GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
         {/* PRODUTOS MAIS COMPRADOS / REQUISITADOS */}
         <div className="bg-white rounded-3xl border border-slate-150 p-6 shadow-sm lg:col-span-12 xl:col-span-5">
           <h4 className="font-black text-slate-800 text-sm mb-4 uppercase tracking-wider flex items-center gap-2">
@@ -286,7 +345,9 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
           {topPurchased.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-center">
               <AlertCircle size={28} className="mb-2 text-slate-300" />
-              <p className="text-xs font-bold font-mono">Sem dados no período filtrado</p>
+              <p className="text-xs font-bold font-mono">
+                Sem dados no período filtrado
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -303,11 +364,13 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
                         </span>
                         <span className="truncate">{item.name}</span>
                       </div>
-                      <span className="font-mono text-blue-600 font-bold shrink-0">{item.qty} un</span>
+                      <span className="font-mono text-blue-600 font-bold shrink-0">
+                        {item.qty} un
+                      </span>
                     </div>
-                    
+
                     <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="bg-blue-500 h-full rounded-full transition-all duration-500"
                         style={{ width: `${percentage}%` }}
                       />
@@ -334,17 +397,27 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
             {/* MOTIVO: USO EM AULA */}
             <div className="space-y-3">
               <div className="bg-emerald-50 rounded-xl p-2.5 text-center border border-emerald-100">
-                <span className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block">Uso em Aula</span>
+                <span className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block">
+                  Uso em Aula
+                </span>
               </div>
-              
-              {topBaixasByReason['Uso em aula'].length === 0 ? (
-                <p className="text-[10px] text-slate-400 italic text-center py-6">Sem baixas registradas</p>
+
+              {topBaixasByReason["Uso em aula"].length === 0 ? (
+                <p className="text-[10px] text-slate-400 italic text-center py-6">
+                  Sem baixas registradas
+                </p>
               ) : (
                 <div className="space-y-2">
-                  {topBaixasByReason['Uso em aula'].map((item, idx) => (
-                    <div key={idx} className="bg-slate-50 p-2 rounded-lg border border-slate-100/50">
+                  {topBaixasByReason["Uso em aula"].map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-slate-50 p-2 rounded-lg border border-slate-100/50"
+                    >
                       <div className="flex justify-between items-start gap-1">
-                        <span className="text-[10px] font-bold text-slate-700 truncate max-w-[100px]" title={item.name}>
+                        <span
+                          className="text-[10px] font-bold text-slate-700 truncate max-w-[100px]"
+                          title={item.name}
+                        >
                           {item.name}
                         </span>
                         <span className="text-[10px] font-black font-mono text-emerald-700 bg-white px-1.5 py-0.5 rounded shadow-xs shrink-0">
@@ -363,17 +436,27 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
             {/* MOTIVO: USO NO SETOR */}
             <div className="space-y-3">
               <div className="bg-blue-50 rounded-xl p-2.5 text-center border border-blue-105">
-                <span className="text-[10px] font-black text-blue-800 uppercase tracking-wider block">Uso no Setor</span>
+                <span className="text-[10px] font-black text-blue-800 uppercase tracking-wider block">
+                  Uso no Setor
+                </span>
               </div>
-              
-              {topBaixasByReason['Uso no setor'].length === 0 ? (
-                <p className="text-[10px] text-slate-400 italic text-center py-6">Sem baixas registradas</p>
+
+              {topBaixasByReason["Uso no setor"].length === 0 ? (
+                <p className="text-[10px] text-slate-400 italic text-center py-6">
+                  Sem baixas registradas
+                </p>
               ) : (
                 <div className="space-y-2">
-                  {topBaixasByReason['Uso no setor'].map((item, idx) => (
-                    <div key={idx} className="bg-slate-50 p-2 rounded-lg border border-slate-100/50">
+                  {topBaixasByReason["Uso no setor"].map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-slate-50 p-2 rounded-lg border border-slate-100/50"
+                    >
                       <div className="flex justify-between items-start gap-1">
-                        <span className="text-[10px] font-bold text-slate-700 truncate max-w-[100px]" title={item.name}>
+                        <span
+                          className="text-[10px] font-bold text-slate-700 truncate max-w-[100px]"
+                          title={item.name}
+                        >
                           {item.name}
                         </span>
                         <span className="text-[10px] font-black font-mono text-blue-700 bg-white px-1.5 py-0.5 rounded shadow-xs shrink-0">
@@ -392,34 +475,45 @@ export function InsumosDashboard({ pedidos, baixas, title = 'Indicadores de Insu
             {/* MOTIVO: VENCIDO / LIXO */}
             <div className="space-y-3">
               <div className="bg-rose-50 rounded-xl p-2.5 text-center border border-rose-105">
-                <span className="text-[10px] font-black text-rose-800 uppercase tracking-wider block">Material Vencido</span>
+                <span className="text-[10px] font-black text-rose-800 uppercase tracking-wider block">
+                  Material Vencido
+                </span>
               </div>
-              
-              {topBaixasByReason['Material vencido(lixo)'].length === 0 ? (
-                <p className="text-[10px] text-slate-400 italic text-center py-6">Sem baixas registradas</p>
+
+              {topBaixasByReason["Material vencido(lixo)"].length === 0 ? (
+                <p className="text-[10px] text-slate-400 italic text-center py-6">
+                  Sem baixas registradas
+                </p>
               ) : (
                 <div className="space-y-2">
-                  {topBaixasByReason['Material vencido(lixo)'].map((item, idx) => (
-                    <div key={idx} className="bg-slate-50 p-2 rounded-lg border border-slate-100/50">
-                      <div className="flex justify-between items-start gap-1">
-                        <span className="text-[10px] font-bold text-slate-700 truncate max-w-[100px]" title={item.name}>
-                          {item.name}
-                        </span>
-                        <span className="text-[10px] font-black font-mono text-rose-700 bg-white px-1.5 py-0.5 rounded shadow-xs shrink-0">
-                          {item.qty}
-                        </span>
+                  {topBaixasByReason["Material vencido(lixo)"].map(
+                    (item, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-slate-50 p-2 rounded-lg border border-slate-100/50"
+                      >
+                        <div className="flex justify-between items-start gap-1">
+                          <span
+                            className="text-[10px] font-bold text-slate-700 truncate max-w-[100px]"
+                            title={item.name}
+                          >
+                            {item.name}
+                          </span>
+                          <span className="text-[10px] font-black font-mono text-rose-700 bg-white px-1.5 py-0.5 rounded shadow-xs shrink-0">
+                            {item.qty}
+                          </span>
+                        </div>
+                        <div className="text-[8px] text-slate-400 mt-0.5 font-mono">
+                          {item.count} ocorrências
+                        </div>
                       </div>
-                      <div className="text-[8px] text-slate-400 mt-0.5 font-mono">
-                        {item.count} ocorrências
-                      </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
               )}
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

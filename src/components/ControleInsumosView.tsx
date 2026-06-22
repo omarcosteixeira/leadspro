@@ -1,20 +1,39 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { InsumoPedido, InsumoEstoque, InsumoItem, UserProfile, InsumoBaixa } from '../types';
-import { db, COLLECTIONS, handleFirestoreError, OperationType } from '../firebase';
-import { InsumosDashboard } from './InsumosDashboard';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot } from 'firebase/firestore';
-import { 
-  Plus, 
-  Trash2, 
-  Check, 
-  X, 
-  ClipboardList, 
-  Layers, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Send, 
-  User, 
-  Book, 
+import React, { useState, useMemo, useEffect } from "react";
+import {
+  InsumoPedido,
+  InsumoEstoque,
+  InsumoItem,
+  UserProfile,
+  InsumoBaixa,
+} from "../types";
+import {
+  db,
+  COLLECTIONS,
+  handleFirestoreError,
+  OperationType,
+} from "../firebase";
+import { InsumosDashboard } from "./InsumosDashboard";
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+} from "firebase/firestore";
+import {
+  Plus,
+  Trash2,
+  Check,
+  X,
+  ClipboardList,
+  Layers,
+  AlertTriangle,
+  CheckCircle2,
+  Send,
+  User,
+  Book,
   FileText,
   Boxes,
   RotateCcw,
@@ -26,89 +45,115 @@ import {
   Download,
   ChevronLeft,
   Building2,
-  Users
-} from 'lucide-react';
-import { cn } from '../lib/utils';
-import { ROLES } from '../App';
-import * as XLSX from 'xlsx';
+  Users,
+} from "lucide-react";
+import { cn } from "../lib/utils";
+import { ROLES } from "../App";
+import * as XLSX from "xlsx";
 
 interface ControleInsumosViewProps {
   pedidos: InsumoPedido[];
   estoque: InsumoEstoque[];
   profile: UserProfile;
-  onToast: (m: string, t?: 'success' | 'error') => void;
+  onToast: (m: string, t?: "success" | "error") => void;
 }
 
-export function ControleInsumosView({ pedidos, estoque, profile, onToast }: ControleInsumosViewProps) {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'pedidos' | 'estoque' | 'compras'>('dashboard');
+export function ControleInsumosView({
+  pedidos,
+  estoque,
+  profile,
+  onToast,
+}: ControleInsumosViewProps) {
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "pedidos" | "estoque" | "compras"
+  >("dashboard");
   const [isAddingPedido, setIsAddingPedido] = useState(false);
   const [isAddingEstoque, setIsAddingEstoque] = useState(false);
-  const [editingEstoque, setEditingEstoque] = useState<InsumoEstoque | null>(null);
+  const [editingEstoque, setEditingEstoque] = useState<InsumoEstoque | null>(
+    null,
+  );
 
   // Material Discard / Baixa States
   const [baixaModalOpen, setBaixaModalOpen] = useState(false);
-  const [selectedStockItem, setSelectedStockItem] = useState<InsumoEstoque | null>(null);
+  const [selectedStockItem, setSelectedStockItem] =
+    useState<InsumoEstoque | null>(null);
   const [baixaQuantidade, setBaixaQuantidade] = useState<number>(1);
-  const [baixaMotivo, setBaixaMotivo] = useState<'Uso em aula' | 'Uso no setor' | 'Material vencido(lixo)'>('Uso em aula');
+  const [baixaMotivo, setBaixaMotivo] = useState<
+    "Uso em aula" | "Uso no setor" | "Material vencido(lixo)"
+  >("Uso em aula");
   const [baixas, setBaixas] = useState<InsumoBaixa[]>([]);
 
   // New Request Form State
-  const [tipoSolicitante, setTipoSolicitante] = useState<'docente' | 'administrativo' | null>(null);
-  const [professorName, setProfessorName] = useState('');
-  const [courseName, setCourseName] = useState('');
-  const [subjectName, setSubjectName] = useState('');
-  const [motivoUso, setMotivoUso] = useState('');
-  const [matricula, setMatricula] = useState('');
-  const [pedidoItens, setPedidoItens] = useState<InsumoItem[]>([{ material: '', quantidade: 1 }]);
+  const [tipoSolicitante, setTipoSolicitante] = useState<
+    "docente" | "administrativo" | null
+  >(null);
+  const [professorName, setProfessorName] = useState("");
+  const [courseName, setCourseName] = useState("");
+  const [subjectName, setSubjectName] = useState("");
+  const [motivoUso, setMotivoUso] = useState("");
+  const [matricula, setMatricula] = useState("");
+  const [pedidoItens, setPedidoItens] = useState<InsumoItem[]>([
+    { material: "", quantidade: 1 },
+  ]);
   const [funcionarios, setFuncionarios] = useState<any[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
 
   // Load registered employees for autocomplete
   useEffect(() => {
     const q = collection(db, COLLECTIONS.FUNCIONARIOS);
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setFuncionarios(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      console.error("Erro ao sincronizar funcionários: ", error);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        setFuncionarios(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+        );
+      },
+      (error) => {
+        console.error("Erro ao sincronizar funcionários: ", error);
+      },
+    );
     return () => unsubscribe();
   }, []);
 
   // Load regular baixas
   useEffect(() => {
     const q = collection(db, COLLECTIONS.INSUMOS_BAIXAS);
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list: InsumoBaixa[] = [];
-      snapshot.forEach(doc => {
-        list.push({ id: doc.id, ...doc.data() } as InsumoBaixa);
-      });
-      setBaixas(list);
-    }, (error) => {
-      console.error("Erro ao sincronizar baixas: ", error);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const list: InsumoBaixa[] = [];
+        snapshot.forEach((doc) => {
+          list.push({ id: doc.id, ...doc.data() } as InsumoBaixa);
+        });
+        setBaixas(list);
+      },
+      (error) => {
+        console.error("Erro ao sincronizar baixas: ", error);
+      },
+    );
     return () => unsubscribe();
   }, []);
 
   // New Stock Form State
-  const [stockMaterial, setStockMaterial] = useState('');
+  const [stockMaterial, setStockMaterial] = useState("");
   const [stockQuantidade, setStockQuantidade] = useState<number>(0);
-  const [stockUnidade, setStockUnidade] = useState('UN');
+  const [stockUnidade, setStockUnidade] = useState("UN");
   const [stockMinimo, setStockMinimo] = useState<number>(5);
-  const [stockDescricao, setStockDescricao] = useState('');
+  const [stockDescricao, setStockDescricao] = useState("");
 
   // Search & Filters
-  const [pedidoStatusFilter, setPedidoStatusFilter] = useState<string>('Todos');
-  const [pedidoSearch, setPedidoSearch] = useState('');
-  const [stockSearch, setStockSearch] = useState('');
+  const [pedidoStatusFilter, setPedidoStatusFilter] = useState<string>("Todos");
+  const [pedidoSearch, setPedidoSearch] = useState("");
+  const [stockSearch, setStockSearch] = useState("");
 
   // Email notifications
   const [emailAlertas, setEmailAlertas] = useState<string>(
-    localStorage.getItem('insumos_email_alertas') || ''
+    localStorage.getItem("insumos_email_alertas") || "",
   );
 
   const handleEmailAlertasChange = (val: string) => {
     setEmailAlertas(val);
-    localStorage.setItem('insumos_email_alertas', val);
+    localStorage.setItem("insumos_email_alertas", val);
   };
 
   // Rules:
@@ -116,9 +161,9 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
   const isAcadOrTec = useMemo(() => {
     return (
       profile.role === ROLES.ADMIN_MASTER ||
-      profile.role === 'Admin Master' ||
-      profile.role === 'Acadêmico' ||
-      profile.role === 'Técnico'
+      profile.role === "Admin Master" ||
+      profile.role === "Acadêmico" ||
+      profile.role === "Técnico"
     );
   }, [profile.role]);
 
@@ -126,24 +171,29 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
   const canManageStock = useMemo(() => {
     return (
       profile.role === ROLES.ADMIN_MASTER ||
-      profile.role === 'Admin Master' ||
-      profile.role === 'Acadêmico' ||
-      profile.role === 'Técnico' ||
-      profile.role === 'Financeiro'
+      profile.role === "Admin Master" ||
+      profile.role === "Acadêmico" ||
+      profile.role === "Técnico" ||
+      profile.role === "Financeiro"
     );
   }, [profile.role]);
 
   // "A aprovação das requisições do docente e feita pelo perfil Academico ou tecnico, mais a aprovação das requisições dos administrativos e feita pelo perfil Financeiro."
   const canApprovePedido = (pedido: InsumoPedido) => {
-    const isSuper = profile.role === ROLES.ADMIN_MASTER || profile.role === 'Admin Master';
+    const isSuper =
+      profile.role === ROLES.ADMIN_MASTER || profile.role === "Admin Master";
     if (isSuper) return true;
 
-    const tipo = pedido.tipoFicha || (pedido.disciplinaNome === 'Administrativo' ? 'administrativo' : 'docente');
+    const tipo =
+      pedido.tipoFicha ||
+      (pedido.disciplinaNome === "Administrativo"
+        ? "administrativo"
+        : "docente");
 
-    if (tipo === 'docente') {
-      return profile.role === 'Acadêmico' || profile.role === 'Técnico';
-    } else if (tipo === 'administrativo') {
-      return profile.role === 'Financeiro';
+    if (tipo === "docente") {
+      return profile.role === "Acadêmico" || profile.role === "Técnico";
+    } else if (tipo === "administrativo") {
+      return profile.role === "Financeiro";
     }
     return false;
   };
@@ -152,14 +202,14 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
   const isFin = useMemo(() => {
     return (
       profile.role === ROLES.ADMIN_MASTER ||
-      profile.role === 'Admin Master' ||
-      profile.role === 'Financeiro'
+      profile.role === "Admin Master" ||
+      profile.role === "Financeiro"
     );
   }, [profile.role]);
 
   // Handle adding list row in requisition
   const handleAddRequestItem = () => {
-    setPedidoItens([...pedidoItens, { material: '', quantidade: 1 }]);
+    setPedidoItens([...pedidoItens, { material: "", quantidade: 1 }]);
   };
 
   const handleRemoveRequestItem = (index: number) => {
@@ -167,13 +217,20 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
     setPedidoItens(pedidoItens.filter((_, i) => i !== index));
   };
 
-  const handleRequestItemChange = (index: number, field: keyof InsumoItem, value: any) => {
+  const handleRequestItemChange = (
+    index: number,
+    field: keyof InsumoItem,
+    value: any,
+  ) => {
     const updated = [...pedidoItens];
-    if (field === 'quantidade') {
+    if (field === "quantidade") {
       let qty = parseInt(value) || 1;
-      if (tipoSolicitante === 'administrativo' && qty > 10) {
+      if (tipoSolicitante === "administrativo" && qty > 10) {
         qty = 10;
-        onToast("Quantidade máxima permitida para o administrativo é de 10 unidades por material.", "error");
+        onToast(
+          "Quantidade máxima permitida para o administrativo é de 10 unidades por material.",
+          "error",
+        );
       }
       updated[index].quantidade = Math.max(1, qty);
     } else {
@@ -186,7 +243,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
   const handleSubmitPedido = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (tipoSolicitante === 'docente') {
+    if (tipoSolicitante === "docente") {
       if (!professorName || !courseName || !subjectName || !motivoUso) {
         onToast("Por favor, preencha todos os campos obrigatórios.", "error");
         return;
@@ -198,16 +255,22 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
       }
     }
 
-    const filteredItens = pedidoItens.filter(it => it.material.trim() !== '');
+    const filteredItens = pedidoItens.filter((it) => it.material.trim() !== "");
     if (filteredItens.length === 0) {
-      onToast("Por favor, adicione ao menos um material para requisitar.", "error");
+      onToast(
+        "Por favor, adicione ao menos um material para requisitar.",
+        "error",
+      );
       return;
     }
 
-    if (tipoSolicitante === 'administrativo') {
-      const overLimit = filteredItens.some(it => it.quantidade > 10);
+    if (tipoSolicitante === "administrativo") {
+      const overLimit = filteredItens.some((it) => it.quantidade > 10);
       if (overLimit) {
-        onToast("Um ou mais materiais ultrapassam o limite de 10 unidades para solicitar como administrativo.", "error");
+        onToast(
+          "Um ou mais materiais ultrapassam o limite de 10 unidades para solicitar como administrativo.",
+          "error",
+        );
         return;
       }
     }
@@ -216,32 +279,40 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
       const newPedido: any = {
         professorNome: professorName,
         cursoNome: courseName,
-        disciplinaNome: tipoSolicitante === 'docente' ? subjectName : 'Administrativo',
+        disciplinaNome:
+          tipoSolicitante === "docente" ? subjectName : "Administrativo",
         motivoUso: motivoUso,
         itens: filteredItens,
-        status: 'Pendente',
+        status: "Pendente",
         solicitanteId: profile.uid,
         solicitanteNome: profile.name,
         tipoFicha: tipoSolicitante,
-        matricula: matricula || '',
-        createdAt: new Date().toISOString()
+        matricula: matricula || "",
+        createdAt: new Date().toISOString(),
       };
 
       await addDoc(collection(db, COLLECTIONS.INSUMOS_PEDIDOS), newPedido);
       onToast("Solicitação de insumos enviada com sucesso!", "success");
-      
+
       // Reset form
-      setProfessorName('');
-      setCourseName('');
-      setSubjectName('');
-      setMotivoUso('');
-      setMatricula('');
+      setProfessorName("");
+      setCourseName("");
+      setSubjectName("");
+      setMotivoUso("");
+      setMatricula("");
       setTipoSolicitante(null);
-      setPedidoItens([{ material: '', quantidade: 1 }]);
+      setPedidoItens([{ material: "", quantidade: 1 }]);
       setIsAddingPedido(false);
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, COLLECTIONS.INSUMOS_PEDIDOS);
-      onToast("Erro ao salvar solicitação. Verifique suas permissões.", "error");
+      handleFirestoreError(
+        err,
+        OperationType.CREATE,
+        COLLECTIONS.INSUMOS_PEDIDOS,
+      );
+      onToast(
+        "Erro ao salvar solicitação. Verifique suas permissões.",
+        "error",
+      );
     }
   };
 
@@ -262,51 +333,63 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
           unidadeMedida: stockUnidade,
           estoqueMinimo: stockMinimo,
           descricao: stockDescricao,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         });
         onToast("Item de estoque atualizado com sucesso!", "success");
 
         if (stockQuantidade < stockMinimo) {
           onToast(`⚠️ Nível crítico atingido para: ${stockMaterial}`, "error");
           if (emailAlertas) {
-            onToast(`✉️ Alerta enviado para o e-mail: ${emailAlertas}`, "success");
+            onToast(
+              `✉️ Alerta enviado para o e-mail: ${emailAlertas}`,
+              "success",
+            );
           }
         }
       } else {
-        const newEstoque: Omit<InsumoEstoque, 'id'> = {
+        const newEstoque: Omit<InsumoEstoque, "id"> = {
           material: stockMaterial,
           quantidade: stockQuantidade,
           unidadeMedida: stockUnidade,
           estoqueMinimo: stockMinimo,
           descricao: stockDescricao,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         };
         await addDoc(collection(db, COLLECTIONS.INSUMOS_ESTOQUE), newEstoque);
         onToast("Novo item adicionado ao estoque!", "success");
       }
 
       // Reset
-      setStockMaterial('');
+      setStockMaterial("");
       setStockQuantidade(0);
-      setStockUnidade('UN');
+      setStockUnidade("UN");
       setStockMinimo(5);
-      setStockDescricao('');
+      setStockDescricao("");
       setIsAddingEstoque(false);
       setEditingEstoque(null);
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, COLLECTIONS.INSUMOS_ESTOQUE);
+      handleFirestoreError(
+        err,
+        OperationType.WRITE,
+        COLLECTIONS.INSUMOS_ESTOQUE,
+      );
       onToast("Erro ao salvar no estoque. Verifique suas permissões.", "error");
     }
   };
 
   // Delete Stock Item
   const handleDeleteEstoque = async (id: string) => {
-    if (!window.confirm("Deseja realmente remover este item do estoque?")) return;
+    if (!window.confirm("Deseja realmente remover este item do estoque?"))
+      return;
     try {
       await deleteDoc(doc(db, COLLECTIONS.INSUMOS_ESTOQUE, id));
       onToast("Item removido do estoque com sucesso.", "success");
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, COLLECTIONS.INSUMOS_ESTOQUE);
+      handleFirestoreError(
+        err,
+        OperationType.DELETE,
+        COLLECTIONS.INSUMOS_ESTOQUE,
+      );
       onToast("Erro ao remover item.", "error");
     }
   };
@@ -320,38 +403,55 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
       return;
     }
     if (baixaQuantidade > selectedStockItem.quantidade) {
-      onToast(`A quantidade a baixar (${baixaQuantidade}) excede o estoque disponível (${selectedStockItem.quantidade}).`, "error");
+      onToast(
+        `A quantidade a baixar (${baixaQuantidade}) excede o estoque disponível (${selectedStockItem.quantidade}).`,
+        "error",
+      );
       return;
     }
 
     try {
-      const itemRef = doc(db, COLLECTIONS.INSUMOS_ESTOQUE, selectedStockItem.id);
+      const itemRef = doc(
+        db,
+        COLLECTIONS.INSUMOS_ESTOQUE,
+        selectedStockItem.id,
+      );
       const newQty = selectedStockItem.quantidade - baixaQuantidade;
       await updateDoc(itemRef, {
         quantidade: newQty,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
 
-      const newBaixa: Omit<InsumoBaixa, 'id'> = {
+      const newBaixa: Omit<InsumoBaixa, "id"> = {
         materialId: selectedStockItem.id,
         materialNome: selectedStockItem.material,
         quantidade: baixaQuantidade,
         motivo: baixaMotivo,
         realizadoPor: profile.name,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
       await addDoc(collection(db, COLLECTIONS.INSUMOS_BAIXAS), newBaixa);
 
-      onToast(`Baixa de ${baixaQuantidade} ${selectedStockItem.unidadeMedida || 'UN'} de "${selectedStockItem.material}" registrada com sucesso!`, "success");
-      
+      onToast(
+        `Baixa de ${baixaQuantidade} ${selectedStockItem.unidadeMedida || "UN"} de "${selectedStockItem.material}" registrada com sucesso!`,
+        "success",
+      );
+
       if (newQty < (selectedStockItem.estoqueMinimo ?? 5)) {
-        onToast(`Atenção: O estoque de "${selectedStockItem.material}" está abaixo do mínimo! (Estoque atual: ${newQty})`, "error");
+        onToast(
+          `Atenção: O estoque de "${selectedStockItem.material}" está abaixo do mínimo! (Estoque atual: ${newQty})`,
+          "error",
+        );
       }
 
       setBaixaModalOpen(false);
       setSelectedStockItem(null);
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, COLLECTIONS.INSUMOS_ESTOQUE);
+      handleFirestoreError(
+        err,
+        OperationType.WRITE,
+        COLLECTIONS.INSUMOS_ESTOQUE,
+      );
       onToast("Erro ao registrar a baixa do material.", "error");
     }
   };
@@ -363,39 +463,69 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
       await deleteDoc(doc(db, COLLECTIONS.INSUMOS_PEDIDOS, id));
       onToast("Solicitação excluída com sucesso.", "success");
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, COLLECTIONS.INSUMOS_PEDIDOS);
+      handleFirestoreError(
+        err,
+        OperationType.DELETE,
+        COLLECTIONS.INSUMOS_PEDIDOS,
+      );
       onToast("Erro ao excluir solicitação.", "error");
     }
   };
 
   // Update Pedido Status and optionally auto-deduct/check stock
-  const handleUpdateStatus = async (pedido: InsumoPedido, newStatus: 'Pendente' | 'Aprovado' | 'Rejeitado' | 'Em Andamento' | 'Entregue') => {
+  const handleUpdateStatus = async (
+    pedido: InsumoPedido,
+    newStatus:
+      | "Pendente"
+      | "Aprovado"
+      | "Rejeitado"
+      | "Em Andamento"
+      | "Entregue",
+  ) => {
     try {
       const pedidoRef = doc(db, COLLECTIONS.INSUMOS_PEDIDOS, pedido.id);
-      
+
       // When marked as DELIVERED ('Entregue'), we can try to deduct matched items from our stock
-      if (newStatus === 'Entregue' && pedido.status !== 'Entregue') {
+      if (newStatus === "Entregue" && pedido.status !== "Entregue") {
         // Query current stocks to match items
-        const stockSnapshot = await getDocs(collection(db, COLLECTIONS.INSUMOS_ESTOQUE));
-        const currentStocks = stockSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InsumoEstoque));
+        const stockSnapshot = await getDocs(
+          collection(db, COLLECTIONS.INSUMOS_ESTOQUE),
+        );
+        const currentStocks = stockSnapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() }) as InsumoEstoque,
+        );
 
         for (const reqItem of pedido.itens) {
           // find match (case-insensitive)
           const matchedStock = currentStocks.find(
-            s => s.material.trim().toLowerCase() === reqItem.material.trim().toLowerCase()
+            (s) =>
+              s.material.trim().toLowerCase() ===
+              reqItem.material.trim().toLowerCase(),
           );
 
           if (matchedStock) {
-            const newQty = Math.max(0, matchedStock.quantidade - reqItem.quantidade);
-            await updateDoc(doc(db, COLLECTIONS.INSUMOS_ESTOQUE, matchedStock.id), {
-              quantidade: newQty,
-              updatedAt: new Date().toISOString()
-            });
+            const newQty = Math.max(
+              0,
+              matchedStock.quantidade - reqItem.quantidade,
+            );
+            await updateDoc(
+              doc(db, COLLECTIONS.INSUMOS_ESTOQUE, matchedStock.id),
+              {
+                quantidade: newQty,
+                updatedAt: new Date().toISOString(),
+              },
+            );
 
             if (newQty < (matchedStock.estoqueMinimo || 0)) {
-              onToast(`Atenção: O estoque de "${matchedStock.material}" está abaixo do mínimo! (Estoque atual: ${newQty})`, "error");
+              onToast(
+                `Atenção: O estoque de "${matchedStock.material}" está abaixo do mínimo! (Estoque atual: ${newQty})`,
+                "error",
+              );
               if (emailAlertas) {
-                onToast(`✉️ Alerta enviado para o e-mail: ${emailAlertas}`, "success");
+                onToast(
+                  `✉️ Alerta enviado para o e-mail: ${emailAlertas}`,
+                  "success",
+                );
               }
             }
           }
@@ -404,112 +534,145 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
 
       await updateDoc(pedidoRef, {
         status: newStatus,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
 
       onToast(`Pedido atualizado para "${newStatus}" com sucesso!`, "success");
     } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, COLLECTIONS.INSUMOS_PEDIDOS);
+      handleFirestoreError(
+        err,
+        OperationType.UPDATE,
+        COLLECTIONS.INSUMOS_PEDIDOS,
+      );
       onToast("Erro ao atualizar status do pedido.", "error");
     }
   };
 
   // Filter lists
   const filteredPedidos = useMemo(() => {
-    return pedidos.filter(p => {
-      const matchesStatus = pedidoStatusFilter === 'Todos' || p.status === pedidoStatusFilter;
-      const term = pedidoSearch.toLowerCase();
-      const matchesSearch = 
-        p.professorNome.toLowerCase().includes(term) ||
-        (p.cursoNome || '').toLowerCase().includes(term) ||
-        p.disciplinaNome.toLowerCase().includes(term) ||
-        p.itens.some(it => it.material.toLowerCase().includes(term));
-      return matchesStatus && matchesSearch;
-    }).sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
+    return pedidos
+      .filter((p) => {
+        const matchesStatus =
+          pedidoStatusFilter === "Todos" || p.status === pedidoStatusFilter;
+        const term = pedidoSearch.toLowerCase();
+        const matchesSearch =
+          p.professorNome.toLowerCase().includes(term) ||
+          (p.cursoNome || "").toLowerCase().includes(term) ||
+          p.disciplinaNome.toLowerCase().includes(term) ||
+          p.itens.some((it) => it.material.toLowerCase().includes(term));
+        return matchesStatus && matchesSearch;
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt || "").getTime() -
+          new Date(a.createdAt || "").getTime(),
+      );
   }, [pedidos, pedidoStatusFilter, pedidoSearch]);
 
   const filteredEstoque = useMemo(() => {
-    return estoque.filter(e => {
-      const term = stockSearch.toLowerCase();
-      return e.material.toLowerCase().includes(term) || (e.descricao || '').toLowerCase().includes(term);
-    }).sort((a, b) => a.material.localeCompare(b.material));
+    return estoque
+      .filter((e) => {
+        const term = stockSearch.toLowerCase();
+        return (
+          e.material.toLowerCase().includes(term) ||
+          (e.descricao || "").toLowerCase().includes(term)
+        );
+      })
+      .sort((a, b) => a.material.localeCompare(b.material));
   }, [estoque, stockSearch]);
 
   // Aggregate "Insumos para Compra" list based on outstanding (not rejected/delivered) requests
   const comprasList = useMemo(() => {
-    const outstandingPedidos = pedidos.filter(p => p.status === 'Pendente' || p.status === 'Aprovado' || p.status === 'Em Andamento');
-    const sums: Record<string, { material: string; requestedQty: number; details: string[] }> = {};
+    const outstandingPedidos = pedidos.filter(
+      (p) =>
+        p.status === "Pendente" ||
+        p.status === "Aprovado" ||
+        p.status === "Em Andamento",
+    );
+    const sums: Record<
+      string,
+      { material: string; requestedQty: number; details: string[] }
+    > = {};
 
-    outstandingPedidos.forEach(p => {
-      p.itens.forEach(it => {
+    outstandingPedidos.forEach((p) => {
+      p.itens.forEach((it) => {
         const key = it.material.trim().toLowerCase();
         if (!sums[key]) {
           sums[key] = {
             material: it.material,
             requestedQty: 0,
-            details: []
+            details: [],
           };
         }
         sums[key].requestedQty += it.quantidade;
-        sums[key].details.push(`Prof. ${p.professorNome} (${it.quantidade} UN)`);
+        sums[key].details.push(
+          `Prof. ${p.professorNome} (${it.quantidade} UN)`,
+        );
       });
     });
 
-    return Object.values(sums).map(item => {
-      const matchedStock = estoque.find(
-        e => e.material.trim().toLowerCase() === item.material.trim().toLowerCase()
-      );
-      const stockQty = matchedStock ? matchedStock.quantidade : 0;
-      const needToBuy = item.requestedQty - stockQty;
+    return (
+      Object.values(sums)
+        .map((item) => {
+          const matchedStock = estoque.find(
+            (e) =>
+              e.material.trim().toLowerCase() ===
+              item.material.trim().toLowerCase(),
+          );
+          const stockQty = matchedStock ? matchedStock.quantidade : 0;
+          const needToBuy = item.requestedQty - stockQty;
 
-      return {
-        ...item,
-        stockQty,
-        needToBuy: needToBuy > 0 ? needToBuy : 0,
-        hasSufficientStock: stockQty >= item.requestedQty
-      };
-    })
-    // "criar uma regra caso o produto requisitado esteja com a quantidade igual ou superior no estoque o mesmo não vai aparecer na listagem de insumos para compra."
-    .filter(item => !item.hasSufficientStock)
-    .sort((a, b) => b.needToBuy - a.needToBuy);
+          return {
+            ...item,
+            stockQty,
+            needToBuy: needToBuy > 0 ? needToBuy : 0,
+            hasSufficientStock: stockQty >= item.requestedQty,
+          };
+        })
+        // "criar uma regra caso o produto requisitado esteja com a quantidade igual ou superior no estoque o mesmo não vai aparecer na listagem de insumos para compra."
+        .filter((item) => !item.hasSufficientStock)
+        .sort((a, b) => b.needToBuy - a.needToBuy)
+    );
   }, [pedidos, estoque]);
 
   const handleExportExcel = () => {
     let dataToExport: any[] = [];
-    let fileName = `Controle_${activeTab}_${new Date().toISOString().split('T')[0]}`;
+    let fileName = `Controle_${activeTab}_${new Date().toISOString().split("T")[0]}`;
 
-    if (activeTab === 'pedidos') {
-      dataToExport = filteredPedidos.map(p => ({
-        'Status': p.status,
-        'Professor': p.professorNome,
-        'Curso': p.cursoNome || p.courseNome,
-        'Disciplina': p.disciplinaNome,
-        'Motivo': p.motivoUso,
-        'Itens': p.itens.map(i => `${i.quantidade}x ${i.material}`).join(', '),
-        'Solicitante': p.solicitanteNome,
-        'Data': new Date(p.createdAt || '').toLocaleDateString()
+    if (activeTab === "pedidos") {
+      dataToExport = filteredPedidos.map((p) => ({
+        Status: p.status,
+        Professor: p.professorNome,
+        Curso: p.cursoNome || p.courseNome,
+        Disciplina: p.disciplinaNome,
+        Motivo: p.motivoUso,
+        Itens: p.itens.map((i) => `${i.quantidade}x ${i.material}`).join(", "),
+        Solicitante: p.solicitanteNome,
+        Data: new Date(p.createdAt || "").toLocaleDateString(),
       }));
-    } else if (activeTab === 'estoque') {
-      dataToExport = filteredEstoque.map(e => ({
-        'Material': e.material,
-        'Quantidade': e.quantidade,
-        'Unidade': e.unidadeMedida || 'UN',
-        'Mínimo': e.estoqueMinimo || 5,
-        'Descrição': e.descricao,
-        'Última Atualização': e.updatedAt ? new Date(e.updatedAt).toLocaleDateString() : ''
+    } else if (activeTab === "estoque") {
+      dataToExport = filteredEstoque.map((e) => ({
+        Material: e.material,
+        Quantidade: e.quantidade,
+        Unidade: e.unidadeMedida || "UN",
+        Mínimo: e.estoqueMinimo || 5,
+        Descrição: e.descricao,
+        "Última Atualização": e.updatedAt
+          ? new Date(e.updatedAt).toLocaleDateString()
+          : "",
       }));
-    } else if (activeTab === 'compras') {
-      dataToExport = comprasList.map(c => ({
-        'Material': c.material,
-        'Estoque Atual': c.stockQty,
-        'Total Solicitado': c.requestedQty,
-        'Qtd para Comprar': c.needToBuy,
-        'Detalhes': c.details.join(' | ')
+    } else if (activeTab === "compras") {
+      dataToExport = comprasList.map((c) => ({
+        Material: c.material,
+        "Estoque Atual": c.stockQty,
+        "Total Solicitado": c.requestedQty,
+        "Qtd para Comprar": c.needToBuy,
+        Detalhes: c.details.join(" | "),
       }));
     }
 
     if (dataToExport.length === 0) {
-      onToast('Não há dados para exportar', 'error');
+      onToast("Não há dados para exportar", "error");
       return;
     }
 
@@ -517,16 +680,16 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, activeTab.toUpperCase());
     XLSX.writeFile(workbook, `${fileName}.xlsx`);
-    onToast(`Exportação concluída com sucesso.`, 'success');
+    onToast(`Exportação concluída com sucesso.`, "success");
   };
 
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (activeTab !== 'estoque') {
-      onToast('Importação de dados disponível apenas para o Estoque.', 'error');
-      e.target.value = '';
+    if (activeTab !== "estoque") {
+      onToast("Importação de dados disponível apenas para o Estoque.", "error");
+      e.target.value = "";
       return;
     }
 
@@ -534,7 +697,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
     reader.onload = async (evt) => {
       try {
         const bstr = evt.target?.result;
-        const workbook = XLSX.read(bstr, { type: 'binary' });
+        const workbook = XLSX.read(bstr, { type: "binary" });
         const worksheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[worksheetName];
         const rawData: any[] = XLSX.utils.sheet_to_json(worksheet);
@@ -543,12 +706,16 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
         for (const row of rawData) {
           if (!row.Material) continue;
 
-          const existing = estoque.find(es => es.material.trim().toLowerCase() === row.Material?.toString().trim().toLowerCase());
-          
-          const qty = parseInt(row.Quantidade || row.quantidade || '0', 10);
-          const min = parseInt(row.Mínimo || row.minimo || '5', 10);
-          const un = row.Unidade || row.unidade || 'UN';
-          const desc = row.Descrição || row.descricao || '';
+          const existing = estoque.find(
+            (es) =>
+              es.material.trim().toLowerCase() ===
+              row.Material?.toString().trim().toLowerCase(),
+          );
+
+          const qty = parseInt(row.Quantidade || row.quantidade || "0", 10);
+          const min = parseInt(row.Mínimo || row.minimo || "5", 10);
+          const un = row.Unidade || row.unidade || "UN";
+          const desc = row.Descrição || row.descricao || "";
 
           if (existing) {
             await updateDoc(doc(db, COLLECTIONS.INSUMOS_ESTOQUE, existing.id), {
@@ -556,7 +723,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
               unidadeMedida: un,
               estoqueMinimo: isNaN(min) ? existing.estoqueMinimo : min,
               descricao: desc,
-              updatedAt: new Date().toISOString()
+              updatedAt: new Date().toISOString(),
             });
           } else {
             await addDoc(collection(db, COLLECTIONS.INSUMOS_ESTOQUE), {
@@ -565,18 +732,24 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
               unidadeMedida: un,
               estoqueMinimo: isNaN(min) ? 5 : min,
               descricao: desc,
-              updatedAt: new Date().toISOString()
+              updatedAt: new Date().toISOString(),
             });
           }
           importsCount++;
         }
-        
-        onToast(`${importsCount} itens importados/atualizados com sucesso.`, 'success');
+
+        onToast(
+          `${importsCount} itens importados/atualizados com sucesso.`,
+          "success",
+        );
       } catch (err) {
         console.error("Erro importando excel:", err);
-        onToast("Erro ao ler o arquivo. Certifique-se que o formato está correto.", "error");
+        onToast(
+          "Erro ao ler o arquivo. Certifique-se que o formato está correto.",
+          "error",
+        );
       }
-      e.target.value = ''; // reset
+      e.target.value = ""; // reset
     };
     reader.readAsBinaryString(file);
   };
@@ -592,14 +765,21 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
               <Boxes size={14} className="text-blue-305" />
               <span>Gestão Operacional</span>
             </div>
-            <h2 className="text-2xl font-black tracking-tight mt-2">Controle de Insumos</h2>
+            <h2 className="text-2xl font-black tracking-tight mt-2">
+              Controle de Insumos
+            </h2>
             <p className="text-blue-100 text-sm mt-1 max-w-xl">
-              Central de pedidos de materiais pedagógicos, controle de níveis do inventário e balanço inteligente de compras.
+              Central de pedidos de materiais pedagógicos, controle de níveis do
+              inventário e balanço inteligente de compras.
             </p>
           </div>
           <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/15 shadow-sm">
-            <span className="text-[10px] text-blue-200 block font-bold uppercase tracking-wider">Acesso Logado</span>
-            <span className="text-sm font-black block text-white">{profile.role}</span>
+            <span className="text-[10px] text-blue-200 block font-bold uppercase tracking-wider">
+              Acesso Logado
+            </span>
+            <span className="text-sm font-black block text-white">
+              {profile.role}
+            </span>
           </div>
         </div>
       </div>
@@ -607,12 +787,12 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
       {/* Tabs */}
       <div className="flex flex-wrap gap-1.5 p-1 bg-slate-150 rounded-2xl w-full sm:w-fit">
         <button
-          onClick={() => setActiveTab('dashboard')}
+          onClick={() => setActiveTab("dashboard")}
           className={cn(
             "flex items-center space-x-2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all w-full sm:w-auto justify-center cursor-pointer",
-            activeTab === 'dashboard'
+            activeTab === "dashboard"
               ? "bg-white text-blue-800 shadow-sm border border-slate-200/50"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
           )}
         >
           <Gauge size={16} className="text-blue-600" />
@@ -620,30 +800,30 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
         </button>
 
         <button
-          onClick={() => setActiveTab('pedidos')}
+          onClick={() => setActiveTab("pedidos")}
           className={cn(
             "flex items-center space-x-2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all w-full sm:w-auto justify-center cursor-pointer",
-            activeTab === 'pedidos'
+            activeTab === "pedidos"
               ? "bg-white text-blue-800 shadow-sm border border-slate-200/50"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
           )}
         >
           <ClipboardList size={16} />
           <span>Solicitações ({pedidos.length})</span>
-          {pedidos.filter(p => p.status === 'Pendente').length > 0 && (
+          {pedidos.filter((p) => p.status === "Pendente").length > 0 && (
             <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-black">
-              {pedidos.filter(p => p.status === 'Pendente').length}
+              {pedidos.filter((p) => p.status === "Pendente").length}
             </span>
           )}
         </button>
 
         <button
-          onClick={() => setActiveTab('estoque')}
+          onClick={() => setActiveTab("estoque")}
           className={cn(
             "flex items-center space-x-2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all w-full sm:w-auto justify-center cursor-pointer",
-            activeTab === 'estoque'
+            activeTab === "estoque"
               ? "bg-white text-blue-800 shadow-sm border border-slate-200/50"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
           )}
         >
           <Layers size={16} />
@@ -651,12 +831,12 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
         </button>
 
         <button
-          onClick={() => setActiveTab('compras')}
+          onClick={() => setActiveTab("compras")}
           className={cn(
             "flex items-center space-x-2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all w-full sm:w-auto justify-center cursor-pointer relative",
-            activeTab === 'compras'
+            activeTab === "compras"
               ? "bg-white text-blue-800 shadow-sm border border-slate-200/50"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-200",
           )}
         >
           <ShoppingCart size={16} />
@@ -670,17 +850,24 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
       </div>
 
       {/* Tab: DASHBOARD */}
-      {activeTab === 'dashboard' && (
+      {activeTab === "dashboard" && (
         <InsumosDashboard pedidos={pedidos} baixas={baixas} />
       )}
 
       {/* Tab: PEDIDOS */}
-      {activeTab === 'pedidos' && (
+      {activeTab === "pedidos" && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
               <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                {['Todos', 'Pendente', 'Aprovado', 'Em Andamento', 'Rejeitado', 'Entregue'].map((status) => (
+                {[
+                  "Todos",
+                  "Pendente",
+                  "Aprovado",
+                  "Em Andamento",
+                  "Rejeitado",
+                  "Entregue",
+                ].map((status) => (
                   <button
                     key={status}
                     onClick={() => setPedidoStatusFilter(status)}
@@ -688,7 +875,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                       "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer",
                       pedidoStatusFilter === status
                         ? "bg-blue-600 text-white"
-                        : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                        : "bg-slate-50 text-slate-600 hover:bg-slate-100",
                     )}
                   >
                     {status}
@@ -704,7 +891,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                   onChange={(e) => setPedidoSearch(e.target.value)}
                   className="px-4 py-2 text-xs border border-slate-200 rounded-xl max-w-xs focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-64 bg-slate-50/50"
                 />
-                
+
                 <button
                   onClick={handleExportExcel}
                   className="flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md w-full sm:w-auto cursor-pointer"
@@ -713,7 +900,9 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                   <span>Exportar</span>
                 </button>
 
-                {(profile.role === 'Acadêmico' || profile.role === 'Admin Master' || profile.role === ROLES.ADMIN_MASTER) && (
+                {(profile.role === "Acadêmico" ||
+                  profile.role === "Admin Master" ||
+                  profile.role === ROLES.ADMIN_MASTER) && (
                   <button
                     onClick={() => setIsAddingPedido(true)}
                     className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md cursor-pointer"
@@ -728,16 +917,23 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
             {/* List */}
             {filteredPedidos.length === 0 ? (
               <div className="text-center py-16 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                <ClipboardList size={40} className="mx-auto mb-2.5 text-slate-350" />
-                <p className="font-bold text-slate-750 text-sm">Nenhum pedido de insumos cadastrado</p>
-                <p className="text-xs text-slate-450 mt-1">Insira novas solicitações ou mude a classificação das abas.</p>
+                <ClipboardList
+                  size={40}
+                  className="mx-auto mb-2.5 text-slate-350"
+                />
+                <p className="font-bold text-slate-750 text-sm">
+                  Nenhum pedido de insumos cadastrado
+                </p>
+                <p className="text-xs text-slate-450 mt-1">
+                  Insira novas solicitações ou mude a classificação das abas.
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4">
                 {filteredPedidos.map((pedido) => {
                   return (
-                    <div 
-                      key={pedido.id} 
+                    <div
+                      key={pedido.id}
                       className="border border-slate-150 hover:border-slate-200 rounded-2xl p-5 bg-white shadow-sm hover:shadow-md transition-all duration-200"
                     >
                       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
@@ -746,23 +942,33 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                             <span className="text-sm font-bold text-slate-800 block">
                               Prof. {pedido.professorNome}
                             </span>
-                            <span className={cn(
-                              "px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border",
-                              pedido.status === 'Pendente' && "bg-amber-50 text-amber-700 border-amber-250",
-                              pedido.status === 'Aprovado' && "bg-blue-50 text-blue-700 border-blue-250",
-                              pedido.status === 'Em Andamento' && "bg-indigo-50 text-indigo-700 border-indigo-250",
-                              pedido.status === 'Rejeitado' && "bg-rose-50 text-rose-700 border-rose-250",
-                              pedido.status === 'Entregue' && "bg-teal-50 text-teal-700 border-teal-250"
-                            )}>
-                              {pedido.status === 'Em Andamento' ? 'Em Compra / Andamento' : pedido.status}
+                            <span
+                              className={cn(
+                                "px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border",
+                                pedido.status === "Pendente" &&
+                                  "bg-amber-50 text-amber-700 border-amber-250",
+                                pedido.status === "Aprovado" &&
+                                  "bg-blue-50 text-blue-700 border-blue-250",
+                                pedido.status === "Em Andamento" &&
+                                  "bg-indigo-50 text-indigo-700 border-indigo-250",
+                                pedido.status === "Rejeitado" &&
+                                  "bg-rose-50 text-rose-700 border-rose-250",
+                                pedido.status === "Entregue" &&
+                                  "bg-teal-50 text-teal-700 border-teal-250",
+                              )}
+                            >
+                              {pedido.status === "Em Andamento"
+                                ? "Em Compra / Andamento"
+                                : pedido.status}
                             </span>
                           </div>
-                          
+
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
                             <span className="flex items-center space-x-1">
                               <Book size={12} className="text-slate-400" />
                               <span className="font-medium text-slate-600">
-                                {pedido.courseNome || pedido.cursoNome} &bull; {pedido.disciplinaNome}
+                                {pedido.courseNome || pedido.cursoNome} &bull;{" "}
+                                {pedido.disciplinaNome}
                               </span>
                             </span>
                             <span className="text-slate-300">|</span>
@@ -774,46 +980,72 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                         </div>
 
                         <div className="text-slate-400 text-[10px] font-medium font-mono self-start sm:self-center">
-                          {new Date(pedido.createdAt).toLocaleDateString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                          {new Date(pedido.createdAt).toLocaleDateString(
+                            "pt-BR",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}
                         </div>
                       </div>
 
                       {/* Content details */}
                       <div className="bg-slate-50/50 rounded-xl p-4 mb-4 border border-slate-100">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Objetivo / Justificativa</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Objetivo / Justificativa
+                        </p>
                         <p className="text-xs text-slate-700 leading-relaxed mb-4 italic">
                           "{pedido.motivoUso}"
                         </p>
 
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Materiais Requisitados</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                          Materiais Requisitados
+                        </p>
                         <div className="divide-y divide-slate-100 bg-white rounded-lg border border-slate-150 p-2 space-y-1">
                           {pedido.itens.map((it, idx) => {
                             // Find matching stock item
                             const match = estoque.find(
-                              e => e.material.trim().toLowerCase() === it.material.trim().toLowerCase()
+                              (e) =>
+                                e.material.trim().toLowerCase() ===
+                                it.material.trim().toLowerCase(),
                             );
-                            const hasEnough = match ? match.quantidade >= it.quantidade : false;
+                            const hasEnough = match
+                              ? match.quantidade >= it.quantidade
+                              : false;
 
                             return (
-                              <div key={idx} className="flex justify-between items-center py-2 text-xs">
+                              <div
+                                key={idx}
+                                className="flex justify-between items-center py-2 text-xs"
+                              >
                                 <div className="space-y-0.5">
-                                  <span className="font-bold text-slate-750">{it.material}</span>
+                                  <span className="font-bold text-slate-750">
+                                    {it.material}
+                                  </span>
                                   <div className="flex items-center space-x-1.5">
                                     {match ? (
-                                      <span className={cn(
-                                        "text-[10px] font-bold",
-                                        hasEnough ? "text-emerald-600" : "text-amber-600"
-                                      )}>
-                                        Estoque: {match.quantidade} {match.unidadeMedida || 'UN'} {hasEnough ? '(Suficiente ✓)' : '(Insuficiente ➜ Compra)'}
+                                      <span
+                                        className={cn(
+                                          "text-[10px] font-bold",
+                                          hasEnough
+                                            ? "text-emerald-600"
+                                            : "text-amber-600",
+                                        )}
+                                      >
+                                        Estoque: {match.quantidade}{" "}
+                                        {match.unidadeMedida || "UN"}{" "}
+                                        {hasEnough
+                                          ? "(Suficiente ✓)"
+                                          : "(Insuficiente ➜ Compra)"}
                                       </span>
                                     ) : (
-                                      <span className="text-[10px] font-bold text-rose-500">Sem Registro em Estoque (➜ Compra)</span>
+                                      <span className="text-[10px] font-bold text-rose-500">
+                                        Sem Registro em Estoque (➜ Compra)
+                                      </span>
                                     )}
                                   </div>
                                 </div>
@@ -830,7 +1062,9 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                       <div className="flex justify-between items-center flex-wrap gap-2 pt-3 border-t border-slate-100">
                         <div>
                           {/* Creators or Admins can delete requests */}
-                          {(profile.uid === pedido.solicitanteId || profile.role === 'Admin Master' || profile.role === ROLES.ADMIN_MASTER) && (
+                          {(profile.uid === pedido.solicitanteId ||
+                            profile.role === "Admin Master" ||
+                            profile.role === ROLES.ADMIN_MASTER) && (
                             <button
                               onClick={() => handleDeletePedido(pedido.id)}
                               className="flex items-center space-x-1.5 text-rose-600 hover:text-rose-700 p-2 text-xs font-bold transition-all rounded-lg hover:bg-rose-50 cursor-pointer"
@@ -844,37 +1078,46 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                         {/* Workflow action buttons */}
                         <div className="flex items-center space-x-2">
                           {/* "O técnico e o Academico vão poder... fazer o flag de pedido aprovado ou Rejeitado." */}
-                          {pedido.status === 'Pendente' && canApprovePedido(pedido) && (
-                            <>
-                              <button
-                                onClick={() => handleUpdateStatus(pedido, 'Rejeitado')}
-                                className="flex items-center space-x-1 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 font-bold px-3 py-2 rounded-xl text-xs transition-all cursor-pointer"
-                              >
-                                <X size={14} />
-                                <span>Rejeitar</span>
-                              </button>
-                              <button
-                                onClick={() => handleUpdateStatus(pedido, 'Aprovado')}
-                                className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm cursor-pointer"
-                              >
-                                <Check size={14} />
-                                <span>Aprovar Pedido</span>
-                              </button>
-                            </>
-                          )}
+                          {pedido.status === "Pendente" &&
+                            canApprovePedido(pedido) && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleUpdateStatus(pedido, "Rejeitado")
+                                  }
+                                  className="flex items-center space-x-1 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 font-bold px-3 py-2 rounded-xl text-xs transition-all cursor-pointer"
+                                >
+                                  <X size={14} />
+                                  <span>Rejeitar</span>
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleUpdateStatus(pedido, "Aprovado")
+                                  }
+                                  className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm cursor-pointer"
+                                >
+                                  <Check size={14} />
+                                  <span>Aprovar Pedido</span>
+                                </button>
+                              </>
+                            )}
 
                           {/* "A opção de Entrega do Pedido será acionada pelo perfil Financeiro quando realizar a entrega, se ele já fez a compra e não chegou ele vai por a opção de em andamento." */}
-                          {pedido.status === 'Aprovado' && isFin && (
+                          {pedido.status === "Aprovado" && isFin && (
                             <>
                               <button
-                                onClick={() => handleUpdateStatus(pedido, 'Em Andamento')}
+                                onClick={() =>
+                                  handleUpdateStatus(pedido, "Em Andamento")
+                                }
                                 className="flex items-center space-x-1 bg-indigo-100 hover:bg-indigo-150 text-indigo-700 font-bold px-3 py-2 rounded-xl text-xs transition-all cursor-pointer"
                               >
                                 <Clock size={14} />
                                 <span>Compra Em Andamento</span>
                               </button>
                               <button
-                                onClick={() => handleUpdateStatus(pedido, 'Entregue')}
+                                onClick={() =>
+                                  handleUpdateStatus(pedido, "Entregue")
+                                }
                                 className="flex items-center space-x-1 bg-teal-600 hover:bg-teal-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm cursor-pointer"
                               >
                                 <CheckCircle2 size={14} />
@@ -883,9 +1126,11 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                             </>
                           )}
 
-                          {pedido.status === 'Em Andamento' && isFin && (
+                          {pedido.status === "Em Andamento" && isFin && (
                             <button
-                              onClick={() => handleUpdateStatus(pedido, 'Entregue')}
+                              onClick={() =>
+                                handleUpdateStatus(pedido, "Entregue")
+                              }
                               className="flex items-center space-x-1 bg-teal-600 hover:bg-teal-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm cursor-pointer"
                             >
                               <CheckCircle2 size={14} />
@@ -894,36 +1139,39 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                           )}
 
                           {/* Status visualization when no permissions to interact */}
-                          {pedido.status === 'Aprovado' && !isFin && (
+                          {pedido.status === "Aprovado" && !isFin && (
                             <span className="text-blue-600 text-xs font-bold leading-none flex items-center space-x-1">
                               <CheckCircle2 size={14} />
                               <span>Aprovado (Aguardando Financeiro)</span>
                             </span>
                           )}
 
-                          {pedido.status === 'Em Andamento' && !isFin && (
+                          {pedido.status === "Em Andamento" && !isFin && (
                             <span className="text-indigo-600 text-xs font-bold leading-none flex items-center space-x-1">
                               <Clock size={14} />
                               <span>Em Compra pelo Financeiro</span>
                             </span>
                           )}
 
-                          {pedido.status === 'Entregue' && (
+                          {pedido.status === "Entregue" && (
                             <span className="text-teal-600 text-xs font-black flex items-center space-x-1 bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-150">
                               <CheckCircle2 size={14} />
                               <span>Material Entregue✓</span>
                             </span>
                           )}
 
-                          {pedido.status === 'Rejeitado' && canApprovePedido(pedido) && (
-                            <button
-                              onClick={() => handleUpdateStatus(pedido, 'Pendente')}
-                              className="flex items-center space-x-1 bg-slate-50 hover:bg-slate-100 text-slate-650 font-bold px-3.5 py-1.5 rounded-xl text-xs transition-all border border-slate-200 cursor-pointer"
-                            >
-                              <RotateCcw size={14} />
-                              <span>Redefinir para Pendente</span>
-                            </button>
-                          )}
+                          {pedido.status === "Rejeitado" &&
+                            canApprovePedido(pedido) && (
+                              <button
+                                onClick={() =>
+                                  handleUpdateStatus(pedido, "Pendente")
+                                }
+                                className="flex items-center space-x-1 bg-slate-50 hover:bg-slate-100 text-slate-650 font-bold px-3.5 py-1.5 rounded-xl text-xs transition-all border border-slate-200 cursor-pointer"
+                              >
+                                <RotateCcw size={14} />
+                                <span>Redefinir para Pendente</span>
+                              </button>
+                            )}
                         </div>
                       </div>
                     </div>
@@ -936,7 +1184,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
       )}
 
       {/* Tab: ESTOQUE */}
-      {activeTab === 'estoque' && (
+      {activeTab === "estoque" && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -968,17 +1216,22 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                     <label className="flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md w-full sm:w-auto cursor-pointer">
                       <Upload size={16} />
                       <span>Importar</span>
-                      <input type="file" accept=".xlsx, .xls" onChange={handleImportExcel} className="hidden" />
+                      <input
+                        type="file"
+                        accept=".xlsx, .xls"
+                        onChange={handleImportExcel}
+                        className="hidden"
+                      />
                     </label>
 
                     <button
                       onClick={() => {
                         setEditingEstoque(null);
-                        setStockMaterial('');
+                        setStockMaterial("");
                         setStockQuantidade(0);
-                        setStockUnidade('UN');
+                        setStockUnidade("UN");
                         setStockMinimo(5);
-                        setStockDescricao('');
+                        setStockDescricao("");
                         setIsAddingEstoque(true);
                       }}
                       className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md w-full sm:w-auto cursor-pointer"
@@ -995,27 +1248,48 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 flex items-center justify-between">
                 <div>
-                  <span className="text-emerald-700 text-[10px] font-bold block uppercase tracking-wider">Estoque em Dia</span>
+                  <span className="text-emerald-700 text-[10px] font-bold block uppercase tracking-wider">
+                    Estoque em Dia
+                  </span>
                   <span className="text-2xl font-black text-slate-850">
-                    {estoque.filter(e => e.quantidade >= (e.estoqueMinimo || 5)).length} Itens
+                    {
+                      estoque.filter(
+                        (e) => e.quantidade >= (e.estoqueMinimo || 5),
+                      ).length
+                    }{" "}
+                    Itens
                   </span>
                 </div>
                 <Gauge className="text-emerald-500 opacity-60" size={32} />
               </div>
               <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 flex items-center justify-between">
                 <div>
-                  <span className="text-amber-700 text-[10px] font-bold block uppercase tracking-wider">Estoque Baixo</span>
+                  <span className="text-amber-700 text-[10px] font-bold block uppercase tracking-wider">
+                    Estoque Baixo
+                  </span>
                   <span className="text-2xl font-black text-slate-850">
-                    {estoque.filter(e => e.quantidade > 0 && e.quantidade < (e.estoqueMinimo || 5)).length} Itens
+                    {
+                      estoque.filter(
+                        (e) =>
+                          e.quantidade > 0 &&
+                          e.quantidade < (e.estoqueMinimo || 5),
+                      ).length
+                    }{" "}
+                    Itens
                   </span>
                 </div>
-                <AlertTriangle className="text-amber-500 opacity-60" size={32} />
+                <AlertTriangle
+                  className="text-amber-500 opacity-60"
+                  size={32}
+                />
               </div>
               <div className="bg-rose-50 rounded-2xl p-4 border border-rose-100 flex items-center justify-between">
                 <div>
-                  <span className="text-rose-700 text-[10px] font-bold block uppercase tracking-wider">Esgotado</span>
+                  <span className="text-rose-700 text-[10px] font-bold block uppercase tracking-wider">
+                    Esgotado
+                  </span>
                   <span className="text-2xl font-black text-slate-855">
-                    {estoque.filter(e => e.quantidade === 0).length} Itens
+                    {estoque.filter((e) => e.quantidade === 0).length} Itens
                   </span>
                 </div>
                 <X className="text-rose-500 opacity-60" size={32} />
@@ -1034,8 +1308,9 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                     <span>Notificações de Nível Crítico</span>
                   </h4>
                   <p className="text-xs text-slate-600 mb-4 max-w-2xl">
-                    Sempre que o estoque atingir o nível mínimo definido, um alerta interno será gerado no sistema. 
-                    Insira um e-mail abaixo se desejar enviar notificações também por e-mail.
+                    Sempre que o estoque atingir o nível mínimo definido, um
+                    alerta interno será gerado no sistema. Insira um e-mail
+                    abaixo se desejar enviar notificações também por e-mail.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 items-center">
                     <input
@@ -1046,7 +1321,12 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                       className="px-4 py-2.5 text-xs font-medium border border-slate-200 rounded-xl w-full sm:w-80 focus:ring-2 focus:ring-amber-500 outline-none bg-white shadow-sm"
                     />
                     <button
-                      onClick={() => onToast('Preferências de notificação de estoque salvas.', 'success')}
+                      onClick={() =>
+                        onToast(
+                          "Preferências de notificação de estoque salvas.",
+                          "success",
+                        )
+                      }
                       className="bg-amber-600 hover:bg-amber-700 transition-colors text-white font-bold px-5 py-2.5 rounded-xl text-xs whitespace-nowrap shadow-sm cursor-pointer w-full sm:w-auto"
                     >
                       Salvar E-mail
@@ -1060,19 +1340,34 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
             {filteredEstoque.length === 0 ? (
               <div className="text-center py-16 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                 <Boxes size={40} className="mx-auto mb-2.5 text-slate-350" />
-                <p className="font-bold text-sm text-slate-755">Nenhum estoque cadastrado</p>
-                <p className="text-xs text-slate-455 mt-1">Os itens criados pela equipe operacional aparecerão nesta tabela.</p>
+                <p className="font-bold text-sm text-slate-755">
+                  Nenhum estoque cadastrado
+                </p>
+                <p className="text-xs text-slate-455 mt-1">
+                  Os itens criados pela equipe operacional aparecerão nesta
+                  tabela.
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-slate-150">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-150">
-                      <th className="p-4 text-[10px] font-bold text-slate-500 uppercase">Descrição do Material</th>
-                      <th className="p-4 text-[10px] font-bold text-slate-500 uppercase text-center">Físico Disponível</th>
-                      <th className="p-4 text-[10px] font-bold text-slate-500 uppercase text-center">Estoque Alerta (Mínimo)</th>
-                      <th className="p-4 text-[10px] font-bold text-slate-500 uppercase">Observações</th>
-                      <th className="p-4 text-[10px] font-bold text-slate-500 uppercase text-right">Ações</th>
+                      <th className="p-4 text-[10px] font-bold text-slate-500 uppercase">
+                        Descrição do Material
+                      </th>
+                      <th className="p-4 text-[10px] font-bold text-slate-500 uppercase text-center">
+                        Físico Disponível
+                      </th>
+                      <th className="p-4 text-[10px] font-bold text-slate-500 uppercase text-center">
+                        Estoque Alerta (Mínimo)
+                      </th>
+                      <th className="p-4 text-[10px] font-bold text-slate-500 uppercase">
+                        Observações
+                      </th>
+                      <th className="p-4 text-[10px] font-bold text-slate-500 uppercase text-right">
+                        Ações
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-150">
@@ -1081,26 +1376,44 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                       const isOut = item.quantidade === 0;
 
                       return (
-                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                        <tr
+                          key={item.id}
+                          className="hover:bg-slate-50/50 transition-colors"
+                        >
                           <td className="p-4">
-                            <span className="font-bold text-slate-800 text-sm block">{item.material}</span>
-                            <span className="text-[10px] text-slate-400 block mt-0.5 font-mono">ID: {item.id.substring(0, 8).toUpperCase()}</span>
+                            <span className="font-bold text-slate-800 text-sm block">
+                              {item.material}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5 font-mono">
+                              ID: {item.id.substring(0, 8).toUpperCase()}
+                            </span>
                           </td>
                           <td className="p-4 text-center">
-                            <span className={cn(
-                              "px-3 py-1 rounded-full text-xs font-black font-mono inline-block min-w-16",
-                              isOut && "bg-rose-150 text-rose-800 border border-rose-200",
-                              !isOut && isLow && "bg-amber-150 text-amber-800 border border-amber-200",
-                              !isLow && "bg-emerald-150 text-emerald-800 border border-emerald-200"
-                            )}>
-                              {item.quantidade} {item.unidadeMedida || 'UN'}
+                            <span
+                              className={cn(
+                                "px-3 py-1 rounded-full text-xs font-black font-mono inline-block min-w-16",
+                                isOut &&
+                                  "bg-rose-150 text-rose-800 border border-rose-200",
+                                !isOut &&
+                                  isLow &&
+                                  "bg-amber-150 text-amber-800 border border-amber-200",
+                                !isLow &&
+                                  "bg-emerald-150 text-emerald-800 border border-emerald-200",
+                              )}
+                            >
+                              {item.quantidade} {item.unidadeMedida || "UN"}
                             </span>
                           </td>
                           <td className="p-4 text-center font-bold text-slate-500 font-mono text-xs">
-                            {item.estoqueMinimo ?? 5} {item.unidadeMedida || 'UN'}
+                            {item.estoqueMinimo ?? 5}{" "}
+                            {item.unidadeMedida || "UN"}
                           </td>
                           <td className="p-4 text-slate-600 text-xs max-w-xs truncate">
-                            {item.descricao || <span className="text-slate-350 italic text-[11px]">Sem anotações</span>}
+                            {item.descricao || (
+                              <span className="text-slate-350 italic text-[11px]">
+                                Sem anotações
+                              </span>
+                            )}
                           </td>
                           <td className="p-4 text-right">
                             {canManageStock ? (
@@ -1109,7 +1422,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                                   onClick={() => {
                                     setSelectedStockItem(item);
                                     setBaixaQuantidade(1);
-                                    setBaixaMotivo('Uso em aula');
+                                    setBaixaMotivo("Uso em aula");
                                     setBaixaModalOpen(true);
                                   }}
                                   className="p-1 px-3 text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 rounded-lg transition-all font-bold cursor-pointer"
@@ -1121,9 +1434,9 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                                     setEditingEstoque(item);
                                     setStockMaterial(item.material);
                                     setStockQuantidade(item.quantidade);
-                                    setStockUnidade(item.unidadeMedida || 'UN');
+                                    setStockUnidade(item.unidadeMedida || "UN");
                                     setStockMinimo(item.estoqueMinimo ?? 5);
-                                    setStockDescricao(item.descricao || '');
+                                    setStockDescricao(item.descricao || "");
                                     setIsAddingEstoque(true);
                                   }}
                                   className="p-1 px-3 text-xs text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all font-bold cursor-pointer"
@@ -1138,7 +1451,9 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                                 </button>
                               </div>
                             ) : (
-                              <span className="text-slate-350 text-xs italic">Não disponível</span>
+                              <span className="text-slate-350 text-xs italic">
+                                Não disponível
+                              </span>
                             )}
                           </td>
                         </tr>
@@ -1153,7 +1468,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
       )}
 
       {/* Tab: COMPRAS (Necessidades Calculadas de Aquisição) */}
-      {activeTab === 'compras' && (
+      {activeTab === "compras" && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
             <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -1163,7 +1478,9 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                   <span>Balanço Inteligente de Compras</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Regra automatizada: Itens cuja quantidade em estoque atenda ou supere o total requisitado por professores são omitidos desta lista de compra.
+                  Regra automatizada: Itens cuja quantidade em estoque atenda ou
+                  supere o total requisitado por professores são omitidos desta
+                  lista de compra.
                 </p>
               </div>
 
@@ -1178,20 +1495,35 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
 
             {comprasList.length === 0 ? (
               <div className="text-center py-20 bg-teal-50/50 rounded-2xl border border-dashed border-teal-200 p-8">
-                <CheckCircle2 size={44} className="mx-auto mb-3.5 text-teal-605 animate-bounce" />
-                <h4 className="font-bold text-teal-850 text-base">Tudo Abastecido!</h4>
+                <CheckCircle2
+                  size={44}
+                  className="mx-auto mb-3.5 text-teal-605 animate-bounce"
+                />
+                <h4 className="font-bold text-teal-850 text-base">
+                  Tudo Abastecido!
+                </h4>
                 <p className="text-xs text-teal-700 mt-1 max-w-md mx-auto">
-                  Atualmente, todos os produtos requisitados em suas solicitações ativas estão com quantidades IGUAIS OU SUPERIORES no estoque. Não há necessidade de compras pendentes.
+                  Atualmente, todos os produtos requisitados em suas
+                  solicitações ativas estão com quantidades IGUAIS OU SUPERIORES
+                  no estoque. Não há necessidade de compras pendentes.
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="bg-amber-50 rounded-2xl border border-amber-200/80 p-4 flex items-start space-x-3 text-amber-800">
-                  <AlertTriangle className="shrink-0 mt-0.5 text-amber-600 animate-pulse" size={18} />
+                  <AlertTriangle
+                    className="shrink-0 mt-0.5 text-amber-600 animate-pulse"
+                    size={18}
+                  />
                   <div>
-                    <span className="font-bold text-xs uppercase tracking-wider block">Insuficiência de Estoque</span>
+                    <span className="font-bold text-xs uppercase tracking-wider block">
+                      Insuficiência de Estoque
+                    </span>
                     <p className="text-xs mt-1 leading-relaxed">
-                      Os materiais abaixo foram requisitados por docentes em solicitações pendentes de atendimento, porém o estoque atual está insuficiente (ou zerado). Recomenda-se realizar a compra das quantidades recomendadas.
+                      Os materiais abaixo foram requisitados por docentes em
+                      solicitações pendentes de atendimento, porém o estoque
+                      atual está insuficiente (ou zerado). Recomenda-se realizar
+                      a compra das quantidades recomendadas.
                     </p>
                   </div>
                 </div>
@@ -1200,18 +1532,33 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-150">
-                        <th className="p-4 text-[10px] font-bold text-slate-500 uppercase">Insumo Requisitado</th>
-                        <th className="p-4 text-[10px] font-bold text-slate-500 uppercase text-center">Físico em Estoque</th>
-                        <th className="p-4 text-[10px] font-bold text-slate-500 uppercase text-center">Total Solicitado</th>
-                        <th className="p-4 text-[10px] font-bold text-slate-500 uppercase text-center">Carência (Comprar Mínimo)</th>
-                        <th className="p-4 text-[10px] font-bold text-slate-500 uppercase">Aulas Vinculadas (Origem do Pedido)</th>
+                        <th className="p-4 text-[10px] font-bold text-slate-500 uppercase">
+                          Insumo Requisitado
+                        </th>
+                        <th className="p-4 text-[10px] font-bold text-slate-500 uppercase text-center">
+                          Físico em Estoque
+                        </th>
+                        <th className="p-4 text-[10px] font-bold text-slate-500 uppercase text-center">
+                          Total Solicitado
+                        </th>
+                        <th className="p-4 text-[10px] font-bold text-slate-500 uppercase text-center">
+                          Carência (Comprar Mínimo)
+                        </th>
+                        <th className="p-4 text-[10px] font-bold text-slate-500 uppercase">
+                          Aulas Vinculadas (Origem do Pedido)
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-150 bg-white">
                       {comprasList.map((item, index) => (
-                        <tr key={index} className="hover:bg-slate-50/50 transition-colors">
+                        <tr
+                          key={index}
+                          className="hover:bg-slate-50/50 transition-colors"
+                        >
                           <td className="p-4">
-                            <span className="font-bold text-slate-800 text-sm block">{item.material}</span>
+                            <span className="font-bold text-slate-800 text-sm block">
+                              {item.material}
+                            </span>
                           </td>
                           <td className="p-4 text-center font-mono font-bold text-slate-500 text-xs">
                             {item.stockQty} UN
@@ -1227,7 +1574,10 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                           <td className="p-4">
                             <div className="flex flex-wrap gap-1">
                               {item.details.map((det, idx) => (
-                                <span key={idx} className="bg-slate-100 text-slate-600 font-medium text-[10px] px-2 py-0.5 rounded">
+                                <span
+                                  key={idx}
+                                  className="bg-slate-100 text-slate-600 font-medium text-[10px] px-2 py-0.5 rounded"
+                                >
                                   {det}
                                 </span>
                               ))}
@@ -1253,15 +1603,15 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                 <ClipboardList size={20} />
                 <span>Nova Solicitação de Insumos</span>
               </h3>
-              <button 
+              <button
                 onClick={() => {
                   setIsAddingPedido(false);
                   setTipoSolicitante(null);
-                  setProfessorName('');
-                  setCourseName('');
-                  setSubjectName('');
-                  setMatricula('');
-                  setPedidoItens([{ material: '', quantidade: 1 }]);
+                  setProfessorName("");
+                  setCourseName("");
+                  setSubjectName("");
+                  setMatricula("");
+                  setPedidoItens([{ material: "", quantidade: 1 }]);
                 }}
                 className="p-1.5 hover:bg-white/10 rounded-full transition-all text-white/80 hover:text-white"
               >
@@ -1274,65 +1624,87 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                 <h3 className="text-center font-bold text-slate-700 text-base mb-2">
                   Qual é o perfil do solicitante?
                 </h3>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* DOCENTE CARD */}
                   <button
                     type="button"
-                    onClick={() => setTipoSolicitante('docente')}
+                    onClick={() => setTipoSolicitante("docente")}
                     className="flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-lg transition-all text-center group cursor-pointer"
                   >
                     <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                       <Users size={24} />
                     </div>
-                    <h4 className="font-bold text-slate-800 text-sm mb-1">Docente / Professor</h4>
+                    <h4 className="font-bold text-slate-800 text-sm mb-1">
+                      Docente / Professor
+                    </h4>
                     <p className="text-xs text-slate-500 max-w-xs">
-                      Materiais de apoio para disciplinas acadêmicas, aulas práticas ou laboratórios.
+                      Materiais de apoio para disciplinas acadêmicas, aulas
+                      práticas ou laboratórios.
                     </p>
                   </button>
 
                   {/* ADMINISTRATIVO CARD */}
                   <button
                     type="button"
-                    onClick={() => setTipoSolicitante('administrativo')}
+                    onClick={() => setTipoSolicitante("administrativo")}
                     className="flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-amber-50 hover:border-amber-300 hover:shadow-lg transition-all text-center group cursor-pointer"
                   >
                     <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                       <Building2 size={24} />
                     </div>
-                    <h4 className="font-bold text-slate-800 text-sm mb-1">Administrativo</h4>
+                    <h4 className="font-bold text-slate-800 text-sm mb-1">
+                      Administrativo
+                    </h4>
                     <p className="text-xs text-slate-500 max-w-xs">
-                      Corporativo, escritórios ou backoffice. <span className="font-bold text-amber-700">(Máximo de 10 unidades por item)</span>
+                      Corporativo, escritórios ou backoffice.{" "}
+                      <span className="font-bold text-amber-700">
+                        (Máximo de 10 unidades por item)
+                      </span>
                     </p>
                   </button>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmitPedido} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              <form
+                onSubmit={handleSubmitPedido}
+                className="p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+              >
                 <div className="flex justify-between items-center mb-2">
                   <button
                     type="button"
                     onClick={() => {
                       setTipoSolicitante(null);
-                      setProfessorName('');
-                      setCourseName('');
-                      setSubjectName('');
-                      setMatricula('');
+                      setProfessorName("");
+                      setCourseName("");
+                      setSubjectName("");
+                      setMatricula("");
                     }}
                     className="inline-flex items-center space-x-1 text-xs text-slate-500 hover:text-slate-800 font-bold transition-all"
                   >
                     <ChevronLeft size={16} />
-                    <span>Mudar Perfil ({tipoSolicitante === 'docente' ? 'Docente' : 'Administrativo'})</span>
+                    <span>
+                      Mudar Perfil (
+                      {tipoSolicitante === "docente"
+                        ? "Docente"
+                        : "Administrativo"}
+                      )
+                    </span>
                   </button>
                 </div>
 
-                {tipoSolicitante === 'docente' ? (
+                {tipoSolicitante === "docente" ? (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome do Professor *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Nome do Professor *
+                        </label>
                         <div className="relative">
-                          <User className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <User
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1345,9 +1717,14 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome do Curso *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Nome do Curso *
+                        </label>
                         <div className="relative">
-                          <Book className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <Book
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1362,9 +1739,14 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome da Disciplina *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Nome da Disciplina *
+                        </label>
                         <div className="relative">
-                          <Book className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <Book
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1377,9 +1759,14 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Motivo do Uso / Justificativa *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Motivo do Uso / Justificativa *
+                        </label>
                         <div className="relative">
-                          <FileText className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <FileText
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1396,9 +1783,14 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="relative">
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome do Funcionário *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Nome do Funcionário *
+                        </label>
                         <div className="relative">
-                          <User className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <User
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1407,7 +1799,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                             onFocus={() => setShowAutocomplete(true)}
                             onChange={(e) => {
                               setProfessorName(e.target.value);
-                              setMatricula('');
+                              setMatricula("");
                               setShowAutocomplete(true);
                             }}
                             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -1415,35 +1807,47 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                         </div>
 
                         {/* Autocomplete list */}
-                        {showAutocomplete && professorName.trim().length > 0 && (
-                          <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-[150px] overflow-y-auto divide-y divide-slate-50">
-                            {funcionarios
-                              .filter(f => f.tipo === 'administrativo' && (f.nome || '').toLowerCase().includes(professorName.toLowerCase()))
-                              .map(f => (
-                                <button
-                                  type="button"
-                                  key={f.id}
-                                  onClick={() => {
-                                    setProfessorName(f.nome);
-                                    setMatricula(f.matricula);
-                                    setShowAutocomplete(false);
-                                  }}
-                                  className="w-full p-2.5 text-left text-xs text-slate-700 hover:bg-slate-50 font-bold transition-all flex justify-between items-center"
-                                >
-                                  <span>{f.nome}</span>
-                                  <span className="text-[10px] font-mono font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                                    Matrícula: {f.matricula}
-                                  </span>
-                                </button>
-                              ))}
-                          </div>
-                        )}
+                        {showAutocomplete &&
+                          professorName.trim().length > 0 && (
+                            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-[150px] overflow-y-auto divide-y divide-slate-50">
+                              {funcionarios
+                                .filter(
+                                  (f) =>
+                                    f.tipo === "administrativo" &&
+                                    (f.nome || "")
+                                      .toLowerCase()
+                                      .includes(professorName.toLowerCase()),
+                                )
+                                .map((f) => (
+                                  <button
+                                    type="button"
+                                    key={f.id}
+                                    onClick={() => {
+                                      setProfessorName(f.nome);
+                                      setMatricula(f.matricula);
+                                      setShowAutocomplete(false);
+                                    }}
+                                    className="w-full p-2.5 text-left text-xs text-slate-700 hover:bg-slate-50 font-bold transition-all flex justify-between items-center"
+                                  >
+                                    <span>{f.nome}</span>
+                                    <span className="text-[10px] font-mono font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                                      Matrícula: {f.matricula}
+                                    </span>
+                                  </button>
+                                ))}
+                            </div>
+                          )}
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Matrícula (Automática) *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Matrícula (Automática) *
+                        </label>
                         <div className="relative">
-                          <FileText className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <FileText
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1458,9 +1862,14 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Setor *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Setor *
+                        </label>
                         <div className="relative">
-                          <Building2 className="absolute left-3.5 top-3.5 text-slate-400" size={14} />
+                          <Building2
+                            className="absolute left-3.5 top-3.5 text-slate-400"
+                            size={14}
+                          />
                           <select
                             required
                             value={courseName}
@@ -1470,7 +1879,9 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                             <option value="">Selecione o Setor</option>
                             <option value="Gestão">Gestão</option>
                             <option value="Secretaria">Secretaria</option>
-                            <option value="Sala de Matrícula">Sala de Matrícula</option>
+                            <option value="Sala de Matrícula">
+                              Sala de Matrícula
+                            </option>
                             <option value="Acadêmico">Acadêmico</option>
                             <option value="Vigia">Vigia</option>
                             <option value="Manutenção">Manutenção</option>
@@ -1480,9 +1891,14 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Motivo / Justificativa *</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Motivo / Justificativa *
+                        </label>
                         <div className="relative">
-                          <FileText className="absolute left-3 top-3 text-slate-400" size={16} />
+                          <FileText
+                            className="absolute left-3 top-3 text-slate-400"
+                            size={16}
+                          />
                           <input
                             type="text"
                             required
@@ -1515,13 +1931,22 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
 
                   <div className="space-y-3">
                     {pedidoItens.map((it, index) => (
-                      <div key={index} className="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                      <div
+                        key={index}
+                        className="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-100"
+                      >
                         <div className="flex-1">
                           <input
                             type="text"
                             placeholder="Nome do material/item (Ex: Caneta azul)"
                             value={it.material}
-                            onChange={(e) => handleRequestItemChange(index, 'material', e.target.value)}
+                            onChange={(e) =>
+                              handleRequestItemChange(
+                                index,
+                                "material",
+                                e.target.value,
+                              )
+                            }
                             className="w-full px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-xs bg-white text-slate-750 font-bold animate-none"
                             required
                           />
@@ -1530,14 +1955,24 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                           <input
                             type="number"
                             min="1"
-                            max={tipoSolicitante === 'administrativo' ? 10 : undefined}
+                            max={
+                              tipoSolicitante === "administrativo"
+                                ? 10
+                                : undefined
+                            }
                             placeholder="Qtd"
                             value={it.quantidade}
-                            onChange={(e) => handleRequestItemChange(index, 'quantidade', e.target.value)}
+                            onChange={(e) =>
+                              handleRequestItemChange(
+                                index,
+                                "quantidade",
+                                e.target.value,
+                              )
+                            }
                             className="w-full pl-3 pr-8 py-1.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-xs text-center font-mono bg-white font-bold"
                             required
                           />
-                          {tipoSolicitante === 'administrativo' && (
+                          {tipoSolicitante === "administrativo" && (
                             <span className="absolute right-1 top-2 text-[9px] font-bold text-amber-600 select-none bg-amber-50 px-1 border border-amber-100 rounded">
                               Max 10
                             </span>
@@ -1562,11 +1997,11 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                     onClick={() => {
                       setIsAddingPedido(false);
                       setTipoSolicitante(null);
-                      setProfessorName('');
-                      setCourseName('');
-                      setSubjectName('');
-                      setMatricula('');
-                      setPedidoItens([{ material: '', quantidade: 1 }]);
+                      setProfessorName("");
+                      setCourseName("");
+                      setSubjectName("");
+                      setMatricula("");
+                      setPedidoItens([{ material: "", quantidade: 1 }]);
                     }}
                     className="px-5 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition-all cursor-pointer"
                   >
@@ -1593,9 +2028,13 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
             <div className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-5 flex justify-between items-center">
               <h3 className="font-bold text-lg flex items-center space-x-2">
                 <Boxes size={20} />
-                <span>{editingEstoque ? "Editar Item de Estoque" : "Novo Item de Estoque"}</span>
+                <span>
+                  {editingEstoque
+                    ? "Editar Item de Estoque"
+                    : "Novo Item de Estoque"}
+                </span>
               </h3>
-              <button 
+              <button
                 onClick={() => {
                   setIsAddingEstoque(false);
                   setEditingEstoque(null);
@@ -1608,7 +2047,9 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
 
             <form onSubmit={handleSubmitEstoque} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome do Material *</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Nome do Material *
+                </label>
                 <input
                   type="text"
                   required
@@ -1621,19 +2062,27 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Quantidade em Estoque</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Quantidade em Estoque
+                  </label>
                   <input
                     type="number"
                     min="0"
                     placeholder="Ex: 50"
                     value={stockQuantidade}
-                    onChange={(e) => setStockQuantidade(Math.max(0, parseInt(e.target.value) || 0))}
+                    onChange={(e) =>
+                      setStockQuantidade(
+                        Math.max(0, parseInt(e.target.value) || 0),
+                      )
+                    }
                     className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono text-center font-bold"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Unidade Medida</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Unidade Medida
+                  </label>
                   <select
                     value={stockUnidade}
                     onChange={(e) => setStockUnidade(e.target.value)}
@@ -1650,19 +2099,25 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ponto de Alerta (Mínimo)</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Ponto de Alerta (Mínimo)
+                </label>
                 <input
                   type="number"
                   min="0"
                   placeholder="Ex: 5"
                   value={stockMinimo}
-                  onChange={(e) => setStockMinimo(Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) =>
+                    setStockMinimo(Math.max(0, parseInt(e.target.value) || 0))
+                  }
                   className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono text-center font-bold"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Notas / Descrição</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Notas / Descrição
+                </label>
                 <textarea
                   placeholder="Observações úteis sobre o material..."
                   value={stockDescricao}
@@ -1703,17 +2158,29 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                 <AlertTriangle size={20} />
               </div>
               <div>
-                <h4 className="text-lg font-black text-slate-800">Registrar Baixa</h4>
-                <p className="text-xs text-slate-500">Deduzir quantidade do estoque físico</p>
+                <h4 className="text-lg font-black text-slate-800">
+                  Registrar Baixa
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Deduzir quantidade do estoque físico
+                </p>
               </div>
             </div>
 
             <form onSubmit={handleConfirmBaixa} className="space-y-4">
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Material</span>
-                <span className="font-bold text-slate-800 text-sm mt-0.5 block">{selectedStockItem.material}</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Material
+                </span>
+                <span className="font-bold text-slate-800 text-sm mt-0.5 block">
+                  {selectedStockItem.material}
+                </span>
                 <span className="text-xs font-mono font-bold text-slate-500 mt-1 block">
-                  Disponível em Estoque: <span className="text-emerald-600">{selectedStockItem.quantidade} {selectedStockItem.unidadeMedida || 'UN'}</span>
+                  Disponível em Estoque:{" "}
+                  <span className="text-emerald-600">
+                    {selectedStockItem.quantidade}{" "}
+                    {selectedStockItem.unidadeMedida || "UN"}
+                  </span>
                 </span>
               </div>
 
@@ -1728,11 +2195,18 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                     max={selectedStockItem.quantidade}
                     required
                     value={baixaQuantidade}
-                    onChange={(e) => setBaixaQuantidade(Math.min(selectedStockItem.quantidade, Math.max(1, parseInt(e.target.value) || 1)))}
+                    onChange={(e) =>
+                      setBaixaQuantidade(
+                        Math.min(
+                          selectedStockItem.quantidade,
+                          Math.max(1, parseInt(e.target.value) || 1),
+                        ),
+                      )
+                    }
                     className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-sm font-mono font-bold text-center"
                   />
                   <span className="absolute right-4 top-2 text-xs font-bold text-slate-400 font-mono">
-                    {selectedStockItem.unidadeMedida || 'UN'}
+                    {selectedStockItem.unidadeMedida || "UN"}
                   </span>
                 </div>
               </div>
@@ -1743,9 +2217,12 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                 </label>
                 <div className="space-y-2">
                   {[
-                    { id: 'Uso em aula', label: 'Uso em aula' },
-                    { id: 'Uso no setor', label: 'Uso no setor' },
-                    { id: 'Material vencido(lixo)', label: 'Material vencido / Descartado (lixo)' }
+                    { id: "Uso em aula", label: "Uso em aula" },
+                    { id: "Uso no setor", label: "Uso no setor" },
+                    {
+                      id: "Material vencido(lixo)",
+                      label: "Material vencido / Descartado (lixo)",
+                    },
                   ].map((option) => (
                     <label
                       key={option.id}
@@ -1753,7 +2230,7 @@ export function ControleInsumosView({ pedidos, estoque, profile, onToast }: Cont
                         "flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer text-xs font-black",
                         baixaMotivo === option.id
                           ? "bg-amber-50/50 border-amber-200 text-amber-800"
-                          : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+                          : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600",
                       )}
                     >
                       <input
