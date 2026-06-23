@@ -673,8 +673,9 @@ export function ControleInsumosView({
           };
         }
         sums[key].requestedQty += it.quantidade;
+        const isAdm = p.tipoFicha === "administrativo" || p.disciplinaNome === "Administrativo";
         sums[key].details.push(
-          `${p.tipoFicha === "administrativo" ? p.professorNome : "Prof. " + p.professorNome} (${it.quantidade} UN)`,
+          `${isAdm ? p.professorNome : "Prof. " + p.professorNome} (${it.quantidade} UN)`,
         );
       });
     });
@@ -1008,7 +1009,7 @@ export function ControleInsumosView({
                         <div>
                           <div className="flex flex-wrap items-center gap-2 mb-1.5">
                             <span className="text-sm font-bold text-slate-800 block">
-                              {pedido.tipoSolicitante === "administrativo" ? pedido.professorNome : `Prof. ${pedido.professorNome}`}
+                              {(pedido.tipoFicha === "administrativo" || pedido.disciplinaNome === "Administrativo") ? pedido.professorNome : `Prof. ${pedido.professorNome}`}
                             </span>
                             <span
                               className={cn(
