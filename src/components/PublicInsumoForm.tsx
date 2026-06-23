@@ -43,6 +43,8 @@ export function PublicInsumoForm({ onToast }: PublicInsumoFormProps) {
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [estoque, setEstoque] = useState<any[]>([]);
+  const [focusedItemIndex, setFocusedItemIndex] = useState<number | null>(null);
 
   // Load registered employees for autocomplete
   useEffect(() => {
@@ -56,6 +58,28 @@ export function PublicInsumoForm({ onToast }: PublicInsumoFormProps) {
       },
       (error) => {
         console.error("Erro ao sincronizar funcionários: ", error);
+      },
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // Load registered stock for autocomplete
+  useEffect(() => {
+    const isComercial = db.app.options.projectId === "gestaodeleadspro-d4230";
+    const targetStockColl = isComercial
+      ? COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL
+      : COLLECTIONS.INSUMOS_ESTOQUE;
+
+    const q = collection(db, targetStockColl);
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        setEstoque(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+        );
+      },
+      (error) => {
+        console.error("Erro ao sincronizar estoque: ", error);
       },
     );
     return () => unsubscribe();
@@ -128,11 +152,7 @@ export function PublicInsumoForm({ onToast }: PublicInsumoFormProps) {
 
     setLoading(true);
     try {
-      const isComercial =
-        db.app.options.projectId === "gestaodeleadspro-d4230" ||
-        localStorage.getItem("servidor_selected") === "comercial" ||
-        new URLSearchParams(window.location.search).get("servidor") ===
-          "comercial";
+      const isComercial = db.app.options.projectId === "gestaodeleadspro-d4230";
       const targetCollection = isComercial
         ? COLLECTIONS.INSUMOS_PEDIDOS_COMERCIAL
         : COLLECTIONS.INSUMOS_PEDIDOS;
@@ -568,7 +588,7 @@ export function PublicInsumoForm({ onToast }: PublicInsumoFormProps) {
                         key={index}
                         className="flex items-center space-x-3 bg-slate-50 p-3 rounded-xl border border-slate-100"
                       >
-                        <div className="flex-1">
+                        <div className="flex-1 relative">
                           <input
                             type="text"
                             placeholder="Descrição do material (Ex: Caneta Preta, Grampeador)"
@@ -580,9 +600,41 @@ export function PublicInsumoForm({ onToast }: PublicInsumoFormProps) {
                                 e.target.value,
                               )
                             }
+                            onFocus={() => setFocusedItemIndex(index)}
+                            onBlur={() => setTimeout(() => setFocusedItemIndex(null), 200)}
                             className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-xs bg-white text-slate-800 font-medium"
                             required
                           />
+                          {focusedItemIndex === index && it.material.trim() !== "" && (
+                            (() => {
+                              const filtered = estoque.filter((stockItem) =>
+                                stockItem.material &&
+                                stockItem.material.toLowerCase().includes(it.material.toLowerCase()) &&
+                                stockItem.quantidade > 0
+                              );
+                              if (filtered.length === 0) return null;
+                              return (
+                                <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-100">
+                                  {filtered.map((stockItem) => (
+                                    <button
+                                      key={stockItem.id}
+                                      type="button"
+                                      onMouseDown={() => {
+                                        handleItemChange(index, "material", stockItem.material);
+                                        setFocusedItemIndex(null);
+                                      }}
+                                      className="w-full text-left px-4 py-2.5 text-xs hover:bg-slate-50 text-slate-700 font-medium flex justify-between items-center cursor-pointer"
+                                    >
+                                      <span>{stockItem.material}</span>
+                                      <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-bold">
+                                        Em estoque: {stockItem.quantidade} {stockItem.unidadeMedida || 'un'}
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              );
+                            })()
+                          )}
                         </div>
                         <div className="w-28 relative">
                           <input

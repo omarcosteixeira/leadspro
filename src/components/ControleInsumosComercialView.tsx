@@ -97,6 +97,10 @@ export function ControleInsumosComercialView({
   const [matricula, setMatricula] = useState("");
   const [funcionarios, setFuncionarios] = useState<any[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [focusedItemIndex, setFocusedItemIndex] = useState<number | null>(null);
+  const [rejectingPedido, setRejectingPedido] = useState<any | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
 
   // Sync employees
   useEffect(() => {
@@ -362,6 +366,26 @@ export function ControleInsumosComercialView({
     }
   };
 
+  // Bulk delete selected stock items (Comercial)
+  const handleBulkDeleteStock = async () => {
+    if (selectedStockIds.length === 0) return;
+    if (!window.confirm(`Deseja realmente excluir os ${selectedStockIds.length} itens de estoque selecionados?`)) return;
+    try {
+      for (const id of selectedStockIds) {
+        await deleteDoc(doc(db, COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL, id));
+      }
+      setSelectedStockIds([]);
+      onToast("Itens excluídos em lote com sucesso.", "success");
+    } catch (err) {
+      handleFirestoreError(
+        err,
+        OperationType.DELETE,
+        COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL,
+      );
+      onToast("Erro ao excluir itens em massa.", "error");
+    }
+  };
+
   // Confirm Physical Stock Discard / Baixa (Comercial)
   const handleConfirmBaixa = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -452,6 +476,7 @@ export function ControleInsumosComercialView({
       | "Rejeitado"
       | "Em Andamento"
       | "Entregue",
+    observacao?: string,
   ) => {
     try {
       const pedidoRef = doc(
@@ -465,6 +490,7 @@ export function ControleInsumosComercialView({
       await updateDoc(pedidoRef, {
         status: newStatus,
         updatedAt: new Date().toISOString(),
+        ...(observacao ? { observacaoRejeicao: observacao } : {}),
       });
 
       onToast(`Pedido atualizado para "${newStatus}" com sucesso!`, "success");
@@ -828,6 +854,16 @@ export function ControleInsumosComercialView({
                           <div className="text-xs text-slate-500">
                             Motivo: {pedido.motivoUso}
                           </div>
+                          {pedido.status === "Rejeitado" && (pedido as any).observacaoRejeicao && (
+                            <div className="mt-2 bg-rose-50 border border-rose-100 rounded-xl p-3 text-xs w-full">
+                              <span className="font-bold text-rose-800 uppercase text-[9px] block mb-1">
+                                Motivo da Rejeição:
+                              </span>
+                              <p className="text-rose-700 italic font-medium">
+                                "{(pedido as any).observacaoRejeicao}"
+                              </p>
+                            </div>
+                          )}
                         </div>
 
                         <div className="text-slate-400 text-[10px] font-medium font-mono self-start sm:self-center">
@@ -888,9 +924,10 @@ export function ControleInsumosComercialView({
                               {pedido.status === "Pendente" && (
                                 <>
                                   <button
-                                    onClick={() =>
-                                      handleUpdateStatus(pedido, "Rejeitado")
-                                    }
+                                    onClick={() => {
+                                      setRejectingPedido(pedido);
+                                      setRejectionReason("");
+                                    }}
                                     className="flex items-center space-x-1 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 font-bold px-3 py-2 rounded-xl text-xs transition-all cursor-pointer"
                                   >
                                     <X size={14} />
@@ -1005,6 +1042,16 @@ export function ControleInsumosComercialView({
                   />
                 </label>
 
+                {selectedStockIds.length > 0 && (
+                  <button
+                    onClick={handleBulkDeleteStock}
+                    className="flex items-center justify-center space-x-2 bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md w-full sm:w-auto cursor-pointer animate-bounce"
+                  >
+                    <Trash2 size={16} />
+                    <span>Excluir Selecionados ({selectedStockIds.length})</span>
+                  </button>
+                )}
+
                 <button
                   onClick={() => {
                     setEditingEstoque(null);
@@ -1074,6 +1121,27 @@ export function ControleInsumosComercialView({
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-150">
+                      <th className="p-4 w-12 text-center">
+                        <input
+                          type="checkbox"
+                          checked={
+                            filteredEstoque.length > 0 &&
+                            filteredEstoque.every((item) =>
+                              selectedStockIds.includes(item.id)
+                            )
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedStockIds(
+                                filteredEstoque.map((item) => item.id)
+                              );
+                            } else {
+                              setSelectedStockIds([]);
+                            }
+                          }}
+                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4 cursor-pointer"
+                        />
+                      </th>
                       {isGerenteOrAdmin && (
                         <th className="p-4 text-[10px] font-bold text-slate-500 uppercase">
                           Responsável
@@ -1102,6 +1170,22 @@ export function ControleInsumosComercialView({
                           key={item.id}
                           className="hover:bg-slate-50/50 transition-colors"
                         >
+                          <td className="p-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedStockIds.includes(item.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedStockIds((prev) => [...prev, item.id]);
+                                } else {
+                                  setSelectedStockIds((prev) =>
+                                    prev.filter((id) => id !== item.id)
+                                  );
+                                }
+                              }}
+                              className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4 cursor-pointer"
+                            />
+                          </td>
                           {isGerenteOrAdmin && (
                             <td className="p-4">
                               <span className="font-bold text-slate-700 text-xs">
@@ -1174,6 +1258,67 @@ export function ControleInsumosComercialView({
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: MOTIVO DA REJEIÇÃO */}
+      {rejectingPedido && (
+        <div className="fixed inset-0 bg-slate-900/65 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-rose-600 to-red-700 text-white p-5 flex justify-between items-center">
+              <h3 className="font-bold text-base flex items-center space-x-2">
+                <AlertTriangle size={18} className="text-white animate-pulse" />
+                <span>Rejeitar Solicitação</span>
+              </h3>
+              <button
+                onClick={() => setRejectingPedido(null)}
+                className="p-1.5 hover:bg-white/10 rounded-full transition-all text-white/85 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                Por favor, informe abaixo o motivo pelo qual esta solicitação de insumos está sendo rejeitada. Este motivo será gravado no pedido para consulta do solicitante.
+              </p>
+              
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Motivo da Rejeição *
+              </label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Ex: Material indisponível em estoque ou quantidade solicitada acima do permitido."
+                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-rose-500 text-xs bg-white text-slate-800 font-medium min-h-[100px] resize-none"
+                required
+              />
+              
+              <div className="flex justify-end space-x-2.5 mt-5">
+                <button
+                  type="button"
+                  onClick={() => setRejectingPedido(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={!rejectionReason.trim()}
+                  onClick={async () => {
+                    if (rejectingPedido && rejectionReason.trim()) {
+                      await handleUpdateStatus(rejectingPedido, "Rejeitado", rejectionReason.trim());
+                      setRejectingPedido(null);
+                    }
+                  }}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-all shadow-sm cursor-pointer flex items-center space-x-1"
+                >
+                  <X size={14} />
+                  <span>Confirmar Rejeição</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1523,7 +1668,7 @@ export function ControleInsumosComercialView({
                         key={index}
                         className="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-100"
                       >
-                        <div className="flex-1">
+                        <div className="flex-1 relative">
                           <input
                             type="text"
                             placeholder="Nome do material/item (Ex: Caneta azul)"
@@ -1535,9 +1680,41 @@ export function ControleInsumosComercialView({
                                 e.target.value,
                               )
                             }
+                            onFocus={() => setFocusedItemIndex(index)}
+                            onBlur={() => setTimeout(() => setFocusedItemIndex(null), 200)}
                             className="w-full px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 text-xs bg-white text-slate-750 font-bold"
                             required
                           />
+                          {focusedItemIndex === index && it.material.trim() !== "" && (
+                            (() => {
+                              const filtered = (estoque || []).filter((stockItem) =>
+                                stockItem.material &&
+                                stockItem.material.toLowerCase().includes(it.material.toLowerCase()) &&
+                                stockItem.quantidade > 0
+                              );
+                              if (filtered.length === 0) return null;
+                              return (
+                                <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-100">
+                                  {filtered.map((stockItem) => (
+                                    <button
+                                      key={stockItem.id}
+                                      type="button"
+                                      onMouseDown={() => {
+                                        handleRequestItemChange(index, "material", stockItem.material);
+                                        setFocusedItemIndex(null);
+                                      }}
+                                      className="w-full text-left px-4 py-2.5 text-xs hover:bg-slate-50 text-slate-700 font-medium flex justify-between items-center cursor-pointer"
+                                    >
+                                      <span>{stockItem.material}</span>
+                                      <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-bold">
+                                        Em estoque: {stockItem.quantidade} {stockItem.unidadeMedida || 'un'}
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              );
+                            })()
+                          )}
                         </div>
                         <div className="w-28 relative">
                           <input
