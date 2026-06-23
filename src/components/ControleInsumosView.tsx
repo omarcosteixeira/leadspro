@@ -46,6 +46,8 @@ import {
   ChevronLeft,
   Building2,
   Users,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ROLES } from "../App";
@@ -101,6 +103,7 @@ export function ControleInsumosView({
   const [rejectingPedido, setRejectingPedido] = useState<InsumoPedido | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
+  const [isMatchingAI, setIsMatchingAI] = useState<number | null>(null);
 
   // Load registered employees for autocomplete
   useEffect(() => {
@@ -415,6 +418,45 @@ export function ControleInsumosView({
         COLLECTIONS.INSUMOS_ESTOQUE,
       );
       onToast("Erro ao excluir itens em massa.", "error");
+    }
+  };
+
+  // Fuzzy match material with current stock using Gemini AI
+  const handleAIMatch = async (index: number) => {
+    const item = pedidoItens[index];
+    if (!item || !item.material.trim()) return;
+
+    setIsMatchingAI(index);
+    try {
+      const stockMaterials = Array.from(
+        new Set((estoque || []).map((s) => s.material).filter(Boolean))
+      );
+
+      const response = await fetch("/api/match-material", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          typedText: item.material,
+          stockMaterials,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro na requisição ao servidor.");
+      }
+
+      const data = await response.json();
+      if (data.success && data.matched && data.suggestion) {
+        handleRequestItemChange(index, "material", data.suggestion);
+        onToast(`✨ Ajustado para "${data.suggestion}": ${data.reason}`, "success");
+      } else {
+        onToast(`✨ ${data.reason || "Nenhum material semelhante encontrado no estoque."}`, "error");
+      }
+    } catch (err: any) {
+      console.error("AI Match error:", err);
+      onToast("Erro ao comunicar com a inteligência artificial.", "error");
+    } finally {
+      setIsMatchingAI(null);
     }
   };
 
@@ -2084,7 +2126,7 @@ export function ControleInsumosView({
                         key={index}
                         className="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-100"
                       >
-                        <div className="flex-1 relative">
+                        <div className="flex-1 relative flex items-center">
                           <input
                             type="text"
                             placeholder="Nome do material/item (Ex: Caneta azul)"
@@ -2097,10 +2139,25 @@ export function ControleInsumosView({
                               )
                             }
                             onFocus={() => setFocusedItemIndex(index)}
-                            onBlur={() => setTimeout(() => setFocusedItemIndex(null), 200)}
-                            className="w-full px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-xs bg-white text-slate-750 font-bold animate-none"
+                            onBlur={() => setTimeout(() => setFocusedItemIndex(null), 250)}
+                            className="w-full pl-3 pr-10 py-1.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-xs bg-white text-slate-750 font-bold animate-none"
                             required
                           />
+                          {it.material.trim().length >= 3 && (
+                            <button
+                              type="button"
+                              onClick={() => handleAIMatch(index)}
+                              disabled={isMatchingAI === index}
+                              title="Ajustar escrita com IA (Goorq AI)"
+                              className="absolute right-2 text-blue-500 hover:text-blue-700 disabled:text-slate-300 cursor-pointer p-1 transition-all z-10"
+                            >
+                              {isMatchingAI === index ? (
+                                <Loader2 className="animate-spin" size={14} />
+                              ) : (
+                                <Sparkles size={14} className="animate-pulse" />
+                              )}
+                            </button>
+                          )}
                           {focusedItemIndex === index && it.material.trim() !== "" && (
                             (() => {
                               const filtered = (estoque || []).filter((stockItem) =>
@@ -2108,9 +2165,8 @@ export function ControleInsumosView({
                                 stockItem.material.toLowerCase().includes(it.material.toLowerCase()) &&
                                 stockItem.quantidade > 0
                               );
-                              if (filtered.length === 0) return null;
                               return (
-                                <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-100">
+                                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-56 overflow-y-auto divide-y divide-slate-100">
                                   {filtered.map((stockItem) => (
                                     <button
                                       key={stockItem.id}
@@ -2127,6 +2183,23 @@ export function ControleInsumosView({
                                       </span>
                                     </button>
                                   ))}
+                                  <button
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      handleAIMatch(index);
+                                    }}
+                                    className="w-full text-left px-4 py-2.5 text-xs bg-slate-50 hover:bg-blue-50 text-blue-600 font-semibold flex items-center space-x-1.5 cursor-pointer border-t border-slate-100"
+                                  >
+                                    {isMatchingAI === index ? (
+                                      <Loader2 className="animate-spin text-blue-500" size={13} />
+                                    ) : (
+                                      <Sparkles size={13} className="text-blue-500" />
+                                    )}
+                                    <span>
+                                      {isMatchingAI === index ? "Buscando com Goorq AI..." : "Buscar equivalente com Goorq AI..."}
+                                    </span>
+                                  </button>
                                 </div>
                               );
                             })()

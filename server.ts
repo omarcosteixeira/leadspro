@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import { GoogleGenAI, Type } from "@google/genai";
 
 async function startServer() {
   const app = express();
@@ -235,6 +236,109 @@ async function startServer() {
       return res.json({ success: true, statuses: results });
     } catch (err) {
       return res.status(500).json({ success: false });
+    }
+  });
+
+  // API endpoint to fuzzy match typed material with current stock materials using Gemini
+  app.post("/api/match-material", async (req, res) => {
+    try {
+      const { typedText, stockMaterials } = req.body;
+
+      if (!typedText || !typedText.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: "O parâmetro typedText é obrigatório."
+        });
+      }
+
+      if (!stockMaterials || !Array.isArray(stockMaterials) || stockMaterials.length === 0) {
+        return res.json({
+          success: true,
+          matched: false,
+          suggestion: null,
+          reason: "Nenhum material cadastrado em estoque para correspondência."
+        });
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({
+          success: false,
+          error: "A chave de API do Gemini (GEMINI_API_KEY) não está configurada no servidor."
+        });
+      }
+
+      // Initialize Gemini Client
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            "User-Agent": "aistudio-build",
+          },
+        },
+      });
+
+      const prompt = `Você é o assistente inteligente de almoxarifado do Goorq.
+Sua missão é analisar o texto digitado pelo usuário e identificar se existe algum item semanticamente equivalente no nosso estoque.
+
+Exemplos de correspondência de sinônimos/equivalências comuns:
+- "folha A4", "resma a4", "sulfite a4" -> "Papel A4" (se existir)
+- "caneta azul" -> "Caneta Esferográfica Azul" (ou correspondente)
+- "clips" -> "Clipe de papel"
+- "borracha" -> "Borracha Escolar"
+- "lapiseira" -> "Lápis Grafite"
+
+Itens Atualmente em Estoque Disponíveis:
+${stockMaterials.map((mat) => `- "${mat}"`).join("\n")}
+
+Texto digitado pelo usuário: "${typedText}"
+
+Se você encontrar um item na lista de estoque que seja semanticamente equivalente ou uma variação óbvia/sinônimo do texto digitado pelo usuário, retorne "matched": true, o "suggestion" contendo o nome EXATO do item na lista de estoque, e uma justificativa amigável em português em "reason".
+Caso contrário (se não houver correspondência lógica ou for um item completamente diferente), retorne "matched": false, "suggestion": null e explique brevemente em "reason" que não encontrou um item similar.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              matched: {
+                type: Type.BOOLEAN,
+                description: "Se foi encontrada uma correspondência semântica clara e confiável.",
+              },
+              suggestion: {
+                type: Type.STRING,
+                description: "O nome EXATO do item de estoque correspondente. Deve ser um dos itens da lista de estoque informada, ou null.",
+              },
+              reason: {
+                type: Type.STRING,
+                description: "Uma explicação curta e amigável em português sobre por que houve a correspondência ou o que foi analisado.",
+              },
+            },
+            required: ["matched", "reason"],
+          },
+        },
+      });
+
+      const responseText = response.text;
+      if (!responseText) {
+        throw new Error("Resposta vazia retornada pelo modelo Gemini.");
+      }
+
+      const result = JSON.parse(responseText.trim());
+      return res.json({
+        success: true,
+        ...result
+      });
+
+    } catch (err: any) {
+      console.error("Erro no match de material via Gemini:", err);
+      return res.status(500).json({
+        success: false,
+        error: `Erro ao processar inteligência artificial para correspondência: ${err.message}`
+      });
     }
   });
 
