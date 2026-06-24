@@ -14235,14 +14235,24 @@ function AdminView({
                             <p className="mt-1 text-red-800">
                               A API <strong>Google Identity Toolkit</strong> precisa ser ativada no seu projeto Google Cloud para permitir a alteração administrativa de senhas.
                             </p>
-                            <a
-                              href="https://console.developers.google.com/apis/api/identitytoolkit.googleapis.com/overview?project=395667924833"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center space-x-1 mt-2.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-[11px]"
-                            >
-                              <span>Ativar API no Google Cloud</span>
-                            </a>
+                            <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 mt-2.5">
+                              <a
+                                href="https://console.developers.google.com/apis/api/identitytoolkit.googleapis.com/overview?project=gestaopro-761e1"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center space-x-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-[11px]"
+                              >
+                                <span>Ativar no Principal (gestaopro-761e1)</span>
+                              </a>
+                              <a
+                                href="https://console.developers.google.com/apis/api/identitytoolkit.googleapis.com/overview?project=gestaodeleadspro-d4230"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center space-x-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors text-[11px]"
+                              >
+                                <span>Ativar no Comercial (gestaodeleadspro-d4230)</span>
+                              </a>
+                            </div>
                           </div>
                         )}
                       </div>
