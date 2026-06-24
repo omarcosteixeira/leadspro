@@ -151,6 +151,7 @@ import { WhatsAppMessageEditor } from "./components/WhatsAppMessageEditor";
 import { AdminFuncionariosView } from "./components/AdminFuncionariosView";
 import { RelatoriosView } from "./components/RelatoriosView";
 import { WhatsAppMessageSelector } from "./components/WhatsAppMessageSelector";
+import { MultiSelect } from "./components/MultiSelect";
 
 // --- Helpers ---
 export const replaceMessageVariables = (
@@ -7391,7 +7392,7 @@ function HistoricoView({
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [courseFilter, setCourseFilter] = useState("");
-  const [baseFilter, setBaseFilter] = useState("");
+  const [baseFilter, setBaseFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [promotorFilter, setPromotorFilter] = useState("");
   const [selectorOpen, setSelectorOpen] = useState(false);
@@ -7561,7 +7562,7 @@ function HistoricoView({
           l.acao.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCourse =
           !courseFilter || l.cursoInteresse === courseFilter;
-        const matchesBase = !baseFilter || l.acao === baseFilter;
+        const matchesBase = baseFilter.length === 0 || baseFilter.includes(l.acao);
         const matchesStatus = !statusFilter || l.status === statusFilter;
         const matchesPromotor =
           !promotorFilter || l.promotorName === promotorFilter;
@@ -7893,18 +7894,13 @@ function HistoricoView({
                 className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
               />
             </div>
-            <select
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 max-w-[180px] lg:max-w-[220px] truncate"
-              value={baseFilter}
-              onChange={(e) => setBaseFilter(e.target.value)}
-            >
-              <option value="">Todas as Origens / Ações</option>
-              {uniqueBases.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
+            <MultiSelect
+              options={uniqueBases}
+              selectedValues={baseFilter}
+              onChange={setBaseFilter}
+              placeholder="Todas as Origens / Ações"
+              allLabel="Todas as Origens"
+            />
             <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 max-w-[150px] lg:max-w-[200px] truncate"
               value={courseFilter}
@@ -8346,7 +8342,7 @@ function BasesView({
   });
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [baseFilter, setBaseFilter] = useState("");
+  const [baseFilter, setBaseFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [produtoFilter, setProdutoFilter] = useState("");
   const [cursoFilter, setCursoFilter] = useState("");
@@ -8414,7 +8410,7 @@ function BasesView({
     const matchesSearch = b.nome
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    const matchesBase = !baseFilter || b.nomeBase === baseFilter;
+    const matchesBase = baseFilter.length === 0 || baseFilter.includes(b.nomeBase);
     const matchesStatus = !statusFilter || b.status === statusFilter;
     const matchesProduto = !produtoFilter || b.produto === produtoFilter;
     const matchesCurso =
@@ -8926,18 +8922,13 @@ function BasesView({
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <select
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
-              value={baseFilter}
-              onChange={(e) => setBaseFilter(e.target.value)}
-            >
-              <option value="">Todas as Bases</option>
-              {uniqueBases.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
+            <MultiSelect
+              options={uniqueBases}
+              selectedValues={baseFilter}
+              onChange={setBaseFilter}
+              placeholder="Todas as Bases"
+              allLabel="Todas as Bases"
+            />
             <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={produtoFilter}
@@ -9266,7 +9257,7 @@ function BasesRenovacaoView({
   });
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [baseFilter, setBaseFilter] = useState("");
+  const [baseFilter, setBaseFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [produtoFilter, setProdutoFilter] = useState("");
   const [cursoFilter, setCursoFilter] = useState("");
@@ -9281,7 +9272,7 @@ function BasesRenovacaoView({
     const matchesSearch = b.nome
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    const matchesBase = !baseFilter || b.nomeBase === baseFilter;
+    const matchesBase = baseFilter.length === 0 || baseFilter.includes(b.nomeBase);
     const matchesStatus = !statusFilter || b.status === statusFilter;
     const matchesProduto = !produtoFilter || b.produto === produtoFilter;
     const matchesCurso =
@@ -9770,18 +9761,13 @@ function BasesRenovacaoView({
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <select
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
-              value={baseFilter}
-              onChange={(e) => setBaseFilter(e.target.value)}
-            >
-              <option value="">Todas as Bases</option>
-              {uniqueBases.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
+            <MultiSelect
+              options={uniqueBases}
+              selectedValues={baseFilter}
+              onChange={setBaseFilter}
+              placeholder="Todas as Bases"
+              allLabel="Todas as Bases"
+            />
             <select
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
               value={produtoFilter}
