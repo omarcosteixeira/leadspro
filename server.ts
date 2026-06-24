@@ -350,14 +350,14 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
       const { uid, newPassword } = req.body;
 
       if (!uid || !newPassword) {
-        return res.status(400).json({
+        return res.status(200).json({
           success: false,
           error: "Os parâmetros uid e newPassword são obrigatórios."
         });
       }
 
       if (newPassword.length < 6) {
-        return res.status(400).json({
+        return res.status(200).json({
           success: false,
           error: "A senha deve ter no mínimo 6 caracteres."
         });
@@ -374,13 +374,13 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
         password: newPassword
       });
 
-      return res.json({
+      return res.status(200).json({
         success: true,
         message: "Senha alterada com sucesso!"
       });
     } catch (err: any) {
       console.error("Erro ao alterar senha do usuário:", err);
-      return res.status(500).json({
+      return res.status(200).json({
         success: false,
         error: `Erro ao alterar senha do usuário: ${err.message}`
       });

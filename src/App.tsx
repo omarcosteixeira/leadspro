@@ -13554,6 +13554,7 @@ function AdminView({
   const [changingPasswordUser, setChangingPasswordUser] = useState<UserProfile | null>(null);
   const [newPasswordValue, setNewPasswordValue] = useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [editingBomDia, setEditingBomDia] = useState<BomDiaCaptacao | null>(
     null,
   );
@@ -13914,6 +13915,7 @@ function AdminView({
                           onClick={() => {
                             setChangingPasswordUser(u);
                             setNewPasswordValue("");
+                            setPasswordError(null);
                           }}
                           className="p-2 text-sky-500 hover:bg-sky-50 rounded-lg transition-all"
                           title="Alterar Senha"
@@ -14187,6 +14189,7 @@ function AdminView({
                   <form
                     onSubmit={async (e) => {
                       e.preventDefault();
+                      setPasswordError(null);
                       if (!newPasswordValue || newPasswordValue.length < 6) {
                         onToast("A senha deve ter pelo menos 6 caracteres.", "error");
                         return;
@@ -14210,9 +14213,11 @@ function AdminView({
                           onToast(`Senha de ${changingPasswordUser.name} alterada com sucesso!`, "success");
                           setChangingPasswordUser(null);
                         } else {
+                          setPasswordError(result.error);
                           onToast(`Erro: ${result.error}`, "error");
                         }
                       } catch (err: any) {
+                        setPasswordError(err.message);
                         onToast(`Erro ao alterar senha: ${err.message}`, "error");
                       } finally {
                         setIsUpdatingPassword(false);
@@ -14220,6 +14225,29 @@ function AdminView({
                     }}
                     className="space-y-4"
                   >
+                    {passwordError && (
+                      <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl space-y-1.5 leading-relaxed">
+                        <p className="font-semibold text-red-800">Erro ao alterar senha:</p>
+                        <p className="break-all">{passwordError}</p>
+                        {passwordError.includes("identitytoolkit") && (
+                          <div className="mt-2 pt-2 border-t border-red-100">
+                            <p className="font-bold text-red-950">Ação Necessária:</p>
+                            <p className="mt-1 text-red-800">
+                              A API <strong>Google Identity Toolkit</strong> precisa ser ativada no seu projeto Google Cloud para permitir a alteração administrativa de senhas.
+                            </p>
+                            <a
+                              href="https://console.developers.google.com/apis/api/identitytoolkit.googleapis.com/overview?project=395667924833"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center space-x-1 mt-2.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-[11px]"
+                            >
+                              <span>Ativar API no Google Cloud</span>
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-xs font-bold text-slate-500 mb-1.5">
                         Nova Senha
