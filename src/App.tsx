@@ -13551,6 +13551,9 @@ function AdminView({
   });
 
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [changingPasswordUser, setChangingPasswordUser] = useState<UserProfile | null>(null);
+  const [newPasswordValue, setNewPasswordValue] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [editingBomDia, setEditingBomDia] = useState<BomDiaCaptacao | null>(
     null,
   );
@@ -13908,18 +13911,12 @@ function AdminView({
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={async () => {
-                            if (window.confirm(`Deseja enviar um e-mail de redefinição de senha para ${u.name} (${u.email})?`)) {
-                              try {
-                                await sendPasswordResetEmail(auth, u.email);
-                                onToast("E-mail de redefinição enviado com sucesso!", "success");
-                              } catch (err) {
-                                onToast("Erro ao enviar e-mail de redefinição.", "error");
-                              }
-                            }
+                          onClick={() => {
+                            setChangingPasswordUser(u);
+                            setNewPasswordValue("");
                           }}
                           className="p-2 text-sky-500 hover:bg-sky-50 rounded-lg transition-all"
-                          title="Redefinir Senha"
+                          title="Alterar Senha"
                         >
                           <KeyRound size={16} />
                         </button>
@@ -14157,6 +14154,132 @@ function AdminView({
                     Salvar Alterações
                   </button>
                 </form>
+              </motion.div>
+            </div>
+          )}
+
+          {changingPasswordUser && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+              >
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Alterar Senha do Usuário
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Defina uma nova senha para {changingPasswordUser.name}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setChangingPasswordUser(null)}
+                    className="text-slate-400 hover:bg-slate-200 p-2 rounded-lg transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                
+                <div className="p-6 space-y-6">
+                  {/* Option 1: Direct Password Change */}
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!newPasswordValue || newPasswordValue.length < 6) {
+                        onToast("A senha deve ter pelo menos 6 caracteres.", "error");
+                        return;
+                      }
+                      
+                      setIsUpdatingPassword(true);
+                      try {
+                        const response = await fetch("/api/admin/change-password", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json"
+                          },
+                          body: JSON.stringify({
+                            uid: changingPasswordUser.uid,
+                            newPassword: newPasswordValue
+                          })
+                        });
+                        
+                        const result = await response.json();
+                        if (result.success) {
+                          onToast(`Senha de ${changingPasswordUser.name} alterada com sucesso!`, "success");
+                          setChangingPasswordUser(null);
+                        } else {
+                          onToast(`Erro: ${result.error}`, "error");
+                        }
+                      } catch (err: any) {
+                        onToast(`Erro ao alterar senha: ${err.message}`, "error");
+                      } finally {
+                        setIsUpdatingPassword(false);
+                      }
+                    }}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1.5">
+                        Nova Senha
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Digite a nova senha (mínimo 6 caracteres)"
+                        value={newPasswordValue}
+                        onChange={(e) => setNewPasswordValue(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    
+                    <button
+                      type="submit"
+                      disabled={isUpdatingPassword}
+                      className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:bg-blue-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2 cursor-pointer"
+                    >
+                      {isUpdatingPassword ? (
+                        <span>Alterando...</span>
+                      ) : (
+                        <>
+                          <KeyRound size={16} />
+                          <span>Definir Nova Senha Diretamente</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                  
+                  <div className="relative flex py-2 items-center">
+                    <div className="flex-grow border-t border-slate-100"></div>
+                    <span className="flex-shrink mx-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">ou</span>
+                    <div className="flex-grow border-t border-slate-100"></div>
+                  </div>
+                  
+                  {/* Option 2: Email Password Reset */}
+                  <div className="space-y-3">
+                    <p className="text-xs text-slate-500 text-center">
+                      Você também pode enviar um e-mail de redefinição para o endereço cadastrado do usuário.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (window.confirm(`Deseja enviar um e-mail de redefinição de senha para ${changingPasswordUser.name} (${changingPasswordUser.email})?`)) {
+                          try {
+                            await sendPasswordResetEmail(auth, changingPasswordUser.email);
+                            onToast("E-mail de redefinição enviado com sucesso!", "success");
+                            setChangingPasswordUser(null);
+                          } catch (err: any) {
+                            onToast(`Erro ao enviar e-mail: ${err.message}`, "error");
+                          }
+                        }
+                      }}
+                      className="w-full bg-slate-100 text-slate-700 hover:bg-slate-200 py-2.5 rounded-xl font-bold transition-all text-xs text-center cursor-pointer"
+                    >
+                      Enviar E-mail de Redefinição de Senha
+                    </button>
+                  </div>
+                </div>
               </motion.div>
             </div>
           )}

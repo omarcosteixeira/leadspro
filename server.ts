@@ -3,6 +3,8 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
+import { initializeApp, getApps } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 
 async function startServer() {
   const app = express();
@@ -338,6 +340,49 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
       return res.status(500).json({
         success: false,
         error: `Erro ao processar inteligência artificial para correspondência: ${err.message}`
+      });
+    }
+  });
+
+  // API endpoint to change any user's password directly (Admin only)
+  app.post("/api/admin/change-password", async (req, res) => {
+    try {
+      const { uid, newPassword } = req.body;
+
+      if (!uid || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          error: "Os parâmetros uid e newPassword são obrigatórios."
+        });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          error: "A senha deve ter no mínimo 6 caracteres."
+        });
+      }
+
+      // Initialize Firebase Admin if not already initialized
+      if (getApps().length === 0) {
+        // Try standard initialization
+        initializeApp();
+      }
+
+      // Update password in Firebase Authentication
+      await getAuth().updateUser(uid, {
+        password: newPassword
+      });
+
+      return res.json({
+        success: true,
+        message: "Senha alterada com sucesso!"
+      });
+    } catch (err: any) {
+      console.error("Erro ao alterar senha do usuário:", err);
+      return res.status(500).json({
+        success: false,
+        error: `Erro ao alterar senha do usuário: ${err.message}`
       });
     }
   });
