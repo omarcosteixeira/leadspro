@@ -14204,11 +14204,22 @@ function AdminView({
                           },
                           body: JSON.stringify({
                             uid: changingPasswordUser.uid,
-                            newPassword: newPasswordValue
+                            newPassword: newPasswordValue,
+                            servidor: localStorage.getItem("servidor_selected") || "principal"
                           })
                         });
                         
-                        const result = await response.json();
+                        const responseText = await response.text();
+                        let result;
+                        try {
+                          result = JSON.parse(responseText);
+                        } catch (parseErr) {
+                          console.error("Non-JSON response received:", responseText);
+                          throw new Error(
+                            `O servidor de desenvolvimento retornou uma resposta inválida (HTML). Isso ocorre porque as credenciais administrativas para alteração direta não estão configuradas neste ambiente. Por favor, utilize a opção de redefinição por e-mail abaixo, que é nativa, imediata e funciona perfeitamente para ambos os servidores!`
+                          );
+                        }
+                        
                         if (result.success) {
                           onToast(`Senha de ${changingPasswordUser.name} alterada com sucesso!`, "success");
                           setChangingPasswordUser(null);

@@ -3,7 +3,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
-import { initializeApp, getApps } from "firebase-admin/app";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
 async function startServer() {
@@ -347,7 +347,7 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
   // API endpoint to change any user's password directly (Admin only)
   app.post("/api/admin/change-password", async (req, res) => {
     try {
-      const { uid, newPassword } = req.body;
+      const { uid, newPassword, servidor } = req.body;
 
       if (!uid || !newPassword) {
         return res.status(200).json({
@@ -363,26 +363,67 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
         });
       }
 
-      // Initialize Firebase Admin if not already initialized
-      if (getApps().length === 0) {
-        // Try standard initialization
-        initializeApp();
+      const targetServer = servidor === "comercial" ? "comercial" : "principal";
+      const projectId = targetServer === "comercial" ? "gestaodeleadspro-d4230" : "gestaopro-761e1";
+      const credentialEnv = targetServer === "comercial"
+        ? process.env.FIREBASE_SERVICE_ACCOUNT_COMERCIAL
+        : process.env.FIREBASE_SERVICE_ACCOUNT_PRINCIPAL;
+
+      let appInstance;
+      const existingApps = getApps();
+      const appName = `admin_${targetServer}`;
+      const existingApp = existingApps.find(a => a.name === appName);
+
+      if (existingApp) {
+        appInstance = existingApp;
+      } else {
+        const options: any = { projectId };
+        if (credentialEnv) {
+          try {
+            const serviceAccount = JSON.parse(credentialEnv);
+            options.credential = cert(serviceAccount);
+          } catch (e: any) {
+            console.error(`Erro ao decodificar conta de serviço para ${targetServer}:`, e);
+          }
+        }
+        appInstance = initializeApp(options, appName);
       }
 
-      // Update password in Firebase Authentication
-      await getAuth().updateUser(uid, {
-        password: newPassword
-      });
+      try {
+        const authAdmin = getAuth(appInstance);
+        await authAdmin.updateUser(uid, {
+          password: newPassword
+        });
 
-      return res.status(200).json({
-        success: true,
-        message: "Senha alterada com sucesso!"
-      });
+        return res.status(200).json({
+          success: true,
+          message: "Senha alterada com sucesso!"
+        });
+      } catch (authErr: any) {
+        console.error(`Erro do Firebase Auth Admin (${targetServer}):`, authErr);
+        
+        let customError = authErr.message;
+        if (
+          authErr.code === "auth/invalid-credential" ||
+          authErr.code === "auth/unauthorized-continued-action" ||
+          authErr.message.includes("credential") ||
+          authErr.message.includes("permission") ||
+          authErr.message.includes("identitytoolkit") ||
+          authErr.message.includes("API key")
+        ) {
+          customError = `A alteração direta administrativa de senha requer uma Conta de Serviço (Service Account) configurada para o servidor "${targetServer}". Como as credenciais administrativas do projeto "${projectId}" não estão configuradas no servidor, utilize a opção "Enviar E-mail de Redefinição de Senha" abaixo, que é 100% nativa, imediata e funciona perfeitamente para ambos os servidores!`;
+        }
+        
+        return res.status(200).json({
+          success: false,
+          error: customError
+        });
+      }
     } catch (err: any) {
-      console.error("Erro ao alterar senha do usuário:", err);
+      console.error("Erro ao processar alteração de senha:", err);
       return res.status(200).json({
         success: false,
-        error: `Erro ao alterar senha do usuário: ${err.message}`
+        error: `Erro ao processar alteração de senha: ${err.message}`
       });
     }
   });
