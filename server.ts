@@ -347,7 +347,14 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
   // API endpoint to change any user's password directly (Admin only)
   app.post("/api/direct-pw-update", async (req, res) => {
     try {
-      const { uid, newPassword, servidor } = req.body;
+      const { uid, newPassword, servidor, adminEmail } = req.body;
+
+      if (adminEmail !== "marcos.teixeira@estacio.br") {
+        return res.status(200).json({
+          success: false,
+          error: "Apenas o Administrador Master (Marcos Teixeira) tem autorização para realizar a alteração de senhas diretamente."
+        });
+      }
 
       if (!uid || !newPassword) {
         return res.status(200).json({

@@ -4713,6 +4713,7 @@ export default function App() {
               )}
               {currentView === "admin" && (
                 <AdminView
+                  profile={profile}
                   users={users}
                   links={links}
                   onToast={showToast}
@@ -13234,6 +13235,7 @@ function CalculoRemuneracaoView() {
 }
 
 function AdminView({
+  profile,
   users,
   links,
   onToast,
@@ -13253,6 +13255,7 @@ function AdminView({
   callBotApi,
   metaDia,
 }: {
+  profile: UserProfile | null;
   users: UserProfile[];
   links: LinkUtil[];
   onToast: (m: string, t?: "success" | "error") => void;
@@ -14160,179 +14163,208 @@ function AdminView({
             </div>
           )}
 
-          {changingPasswordUser && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
-              >
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900">
-                      Alterar Senha do Usuário
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Defina uma nova senha para {changingPasswordUser.name}
-                    </p>
+          {changingPasswordUser && (() => {
+            const isMarcosTeixeira = profile?.email === "marcos.teixeira@estacio.br";
+            return (
+              <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+                >
+                  <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900">
+                        {isMarcosTeixeira ? "Alterar Senha do Usuário" : "Redefinir Senha do Usuário"}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {isMarcosTeixeira 
+                          ? `Defina uma nova senha para ${changingPasswordUser.name}`
+                          : `Envie um e-mail de redefinição para ${changingPasswordUser.name}`
+                        }
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setChangingPasswordUser(null)}
+                      className="text-slate-400 hover:bg-slate-200 p-2 rounded-lg transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setChangingPasswordUser(null)}
-                    className="text-slate-400 hover:bg-slate-200 p-2 rounded-lg transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-                
-                <div className="p-6 space-y-6">
-                  {/* Option 1: Direct Password Change */}
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      setPasswordError(null);
-                      if (!newPasswordValue || newPasswordValue.length < 6) {
-                        onToast("A senha deve ter pelo menos 6 caracteres.", "error");
-                        return;
-                      }
-                      
-                      setIsUpdatingPassword(true);
-                      try {
-                        const response = await fetch("/api/direct-pw-update", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json"
-                          },
-                          body: JSON.stringify({
-                            uid: changingPasswordUser.uid,
-                            newPassword: newPasswordValue,
-                            servidor: localStorage.getItem("servidor_selected") || "principal"
-                          })
-                        });
-                        
-                        const responseText = await response.text();
-                        let result;
-                        try {
-                          result = JSON.parse(responseText);
-                        } catch (parseErr) {
-                          console.error("Non-JSON response received:", responseText);
-                          const prefix = responseText ? responseText.substring(0, 120).trim() : "Vazio";
-                          throw new Error(
-                            `O servidor retornou uma resposta inválida (HTML: "${prefix}..."). Isso geralmente ocorre se as credenciais administrativas para alteração direta não estiverem totalmente configuradas ou se o servidor de desenvolvimento estiver em processo de atualização. Por favor, utilize a opção "Enviar E-mail de Redefinição" abaixo, que é 100% nativa e funciona perfeitamente para ambos os servidores!`
-                          );
-                        }
-                        
-                        if (result.success) {
-                          onToast(`Senha de ${changingPasswordUser.name} alterada com sucesso!`, "success");
-                          setChangingPasswordUser(null);
-                        } else {
-                          setPasswordError(result.error);
-                          onToast(`Erro: ${result.error}`, "error");
-                        }
-                      } catch (err: any) {
-                        setPasswordError(err.message);
-                        onToast(`Erro ao alterar senha: ${err.message}`, "error");
-                      } finally {
-                        setIsUpdatingPassword(false);
-                      }
-                    }}
-                    className="space-y-4"
-                  >
-                    {passwordError && (
-                      <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl space-y-1.5 leading-relaxed">
-                        <p className="font-semibold text-red-800">Erro ao alterar senha:</p>
-                        <p className="break-all">{passwordError}</p>
-                        {passwordError.includes("identitytoolkit") && (
-                          <div className="mt-2 pt-2 border-t border-red-100">
-                            <p className="font-bold text-red-950">Ação Necessária:</p>
-                            <p className="mt-1 text-red-800">
-                              A API <strong>Google Identity Toolkit</strong> precisa ser ativada no seu projeto Google Cloud para permitir a alteração administrativa de senhas.
-                            </p>
-                            <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 mt-2.5">
-                              <a
-                                href="https://console.developers.google.com/apis/api/identitytoolkit.googleapis.com/overview?project=gestaopro-761e1"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center space-x-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-[11px]"
-                              >
-                                <span>Ativar no Principal (gestaopro-761e1)</span>
-                              </a>
-                              <a
-                                href="https://console.developers.google.com/apis/api/identitytoolkit.googleapis.com/overview?project=gestaodeleadspro-d4230"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center space-x-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors text-[11px]"
-                              >
-                                <span>Ativar no Comercial (gestaodeleadspro-d4230)</span>
-                              </a>
+                  
+                  <div className="p-6 space-y-6">
+                    {isMarcosTeixeira ? (
+                      <>
+                        {/* Option 1: Direct Password Change */}
+                        <form
+                          onSubmit={async (e) => {
+                            e.preventDefault();
+                            setPasswordError(null);
+                            if (!newPasswordValue || newPasswordValue.length < 6) {
+                              onToast("A senha deve ter pelo menos 6 caracteres.", "error");
+                              return;
+                            }
+                            
+                            setIsUpdatingPassword(true);
+                            try {
+                              const response = await fetch("/api/direct-pw-update", {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({
+                                  uid: changingPasswordUser.uid,
+                                  newPassword: newPasswordValue,
+                                  servidor: localStorage.getItem("servidor_selected") || "principal",
+                                  adminEmail: profile?.email
+                                })
+                              });
+                              
+                              const responseText = await response.text();
+                              let result;
+                              try {
+                                result = JSON.parse(responseText);
+                              } catch (parseErr) {
+                                console.error("Non-JSON response received:", responseText);
+                                const prefix = responseText ? responseText.substring(0, 120).trim() : "Vazio";
+                                throw new Error(
+                                  `O servidor retornou uma resposta inválida (HTML: "${prefix}..."). Isso geralmente ocorre se as credenciais administrativas para alteração direta não estiverem totalmente configuradas ou se o servidor de desenvolvimento estiver em processo de atualização. Por favor, utilize a opção "Enviar E-mail de Redefinição" abaixo, que é 100% nativa e funciona perfeitamente para ambos os servidores!`
+                                );
+                              }
+                              
+                              if (result.success) {
+                                onToast(`Senha de ${changingPasswordUser.name} alterada com sucesso!`, "success");
+                                setChangingPasswordUser(null);
+                              } else {
+                                setPasswordError(result.error);
+                                onToast(`Erro: ${result.error}`, "error");
+                              }
+                            } catch (err: any) {
+                              setPasswordError(err.message);
+                              onToast(`Erro ao alterar senha: ${err.message}`, "error");
+                            } finally {
+                              setIsUpdatingPassword(false);
+                            }
+                          }}
+                          className="space-y-4"
+                        >
+                          {passwordError && (
+                            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl space-y-1.5 leading-relaxed">
+                              <p className="font-semibold text-red-800">Erro ao alterar senha:</p>
+                              <p className="break-all">{passwordError}</p>
+                              {passwordError.includes("identitytoolkit") && (
+                                <div className="mt-2 pt-2 border-t border-red-100">
+                                  <p className="font-bold text-red-950">Ação Necessária:</p>
+                                  <p className="mt-1 text-red-800">
+                                    A API <strong>Google Identity Toolkit</strong> precisa ser ativada no seu projeto Google Cloud para permitir a alteração administrativa de senhas.
+                                  </p>
+                                  <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 mt-2.5">
+                                    <a
+                                      href="https://console.developers.google.com/apis/api/identitytoolkit.googleapis.com/overview?project=gestaopro-761e1"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center justify-center space-x-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-[11px]"
+                                    >
+                                      <span>Ativar no Principal (gestaopro-761e1)</span>
+                                    </a>
+                                    <a
+                                      href="https://console.developers.google.com/apis/api/identitytoolkit.googleapis.com/overview?project=gestaodeleadspro-d4230"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center justify-center space-x-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors text-[11px]"
+                                    >
+                                      <span>Ativar no Comercial (gestaodeleadspro-d4230)</span>
+                                    </a>
+                                  </div>
+                                </div>
+                              )}
                             </div>
+                          )}
+
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1.5">
+                              Nova Senha
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="Digite a nova senha (mínimo 6 caracteres)"
+                              value={newPasswordValue}
+                              onChange={(e) => setNewPasswordValue(e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
                           </div>
-                        )}
+                          
+                          <button
+                            type="submit"
+                            disabled={isUpdatingPassword}
+                            className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:bg-blue-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2 cursor-pointer"
+                          >
+                            {isUpdatingPassword ? (
+                              <span>Alterando...</span>
+                            ) : (
+                              <>
+                                <KeyRound size={16} />
+                                <span>Definir Nova Senha Diretamente</span>
+                              </>
+                            )}
+                          </button>
+                        </form>
+                        
+                        <div className="relative flex py-2 items-center">
+                          <div className="flex-grow border-t border-slate-100"></div>
+                          <span className="flex-shrink mx-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">ou</span>
+                          <div className="flex-grow border-t border-slate-100"></div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-2xl space-y-2 leading-relaxed">
+                        <p className="font-bold text-amber-900 flex items-center">
+                          <svg className="w-4.5 h-4.5 mr-2 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          Recurso Restrito ao Admin Master
+                        </p>
+                        <p>
+                          Por motivos de segurança e integridade das contas, a <strong>alteração direta de senha administrativa</strong> é de uso exclusivo do Admin Master (<strong>marcos.teixeira@estacio.br</strong>).
+                        </p>
+                        <p>
+                          Como administrador, você pode disparar o fluxo de redefinição enviando um e-mail com link seguro para o endereço cadastrado do usuário no botão abaixo.
+                        </p>
                       </div>
                     )}
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                        Nova Senha
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Digite a nova senha (mínimo 6 caracteres)"
-                        value={newPasswordValue}
-                        onChange={(e) => setNewPasswordValue(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
                     
-                    <button
-                      type="submit"
-                      disabled={isUpdatingPassword}
-                      className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:bg-blue-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2 cursor-pointer"
-                    >
-                      {isUpdatingPassword ? (
-                        <span>Alterando...</span>
-                      ) : (
-                        <>
-                          <KeyRound size={16} />
-                          <span>Definir Nova Senha Diretamente</span>
-                        </>
-                      )}
-                    </button>
-                  </form>
-                  
-                  <div className="relative flex py-2 items-center">
-                    <div className="flex-grow border-t border-slate-100"></div>
-                    <span className="flex-shrink mx-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">ou</span>
-                    <div className="flex-grow border-t border-slate-100"></div>
-                  </div>
-                  
-                  {/* Option 2: Email Password Reset */}
-                  <div className="space-y-3">
-                    <p className="text-xs text-slate-500 text-center">
-                      Você também pode enviar um e-mail de redefinição para o endereço cadastrado do usuário.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (window.confirm(`Deseja enviar um e-mail de redefinição de senha para ${changingPasswordUser.name} (${changingPasswordUser.email})?`)) {
-                          try {
-                            await sendPasswordResetEmail(auth, changingPasswordUser.email);
-                            onToast("E-mail de redefinição enviado com sucesso!", "success");
-                            setChangingPasswordUser(null);
-                          } catch (err: any) {
-                            onToast(`Erro ao enviar e-mail: ${err.message}`, "error");
-                          }
+                    {/* Option 2: Email Password Reset */}
+                    <div className="space-y-3">
+                      <p className="text-xs text-slate-500 text-center">
+                        {isMarcosTeixeira 
+                          ? "Você também pode enviar um e-mail de redefinição para o endereço cadastrado do usuário."
+                          : "Envie um link seguro de redefinição para o endereço cadastrado do usuário."
                         }
-                      }}
-                      className="w-full bg-slate-100 text-slate-700 hover:bg-slate-200 py-2.5 rounded-xl font-bold transition-all text-xs text-center cursor-pointer"
-                    >
-                      Enviar E-mail de Redefinição de Senha
-                    </button>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (window.confirm(`Deseja enviar um e-mail de redefinição de senha para ${changingPasswordUser.name} (${changingPasswordUser.email})?`)) {
+                            try {
+                              await sendPasswordResetEmail(auth, changingPasswordUser.email);
+                              onToast("E-mail de redefinição enviado com sucesso!", "success");
+                              setChangingPasswordUser(null);
+                            } catch (err: any) {
+                              onToast(`Erro ao enviar e-mail: ${err.message}`, "error");
+                            }
+                          }
+                        }}
+                        className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 py-2.5 rounded-xl font-bold transition-all text-xs text-center cursor-pointer"
+                      >
+                        Enviar E-mail de Redefinição de Senha
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            </div>
-          )}
+                </motion.div>
+              </div>
+            );
+          })()}
 
           {isAddingUser && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
