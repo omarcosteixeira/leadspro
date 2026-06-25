@@ -345,7 +345,7 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
   });
 
   // API endpoint to change any user's password directly (Admin only)
-  app.post("/api/admin/change-password", async (req, res) => {
+  app.post("/api/direct-pw-update", async (req, res) => {
     try {
       const { uid, newPassword, servidor } = req.body;
 

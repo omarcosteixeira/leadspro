@@ -14197,7 +14197,7 @@ function AdminView({
                       
                       setIsUpdatingPassword(true);
                       try {
-                        const response = await fetch("/api/admin/change-password", {
+                        const response = await fetch("/api/direct-pw-update", {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json"
@@ -14215,8 +14215,9 @@ function AdminView({
                           result = JSON.parse(responseText);
                         } catch (parseErr) {
                           console.error("Non-JSON response received:", responseText);
+                          const prefix = responseText ? responseText.substring(0, 120).trim() : "Vazio";
                           throw new Error(
-                            `O servidor de desenvolvimento retornou uma resposta inválida (HTML). Isso ocorre porque as credenciais administrativas para alteração direta não estão configuradas neste ambiente. Por favor, utilize a opção de redefinição por e-mail abaixo, que é nativa, imediata e funciona perfeitamente para ambos os servidores!`
+                            `O servidor retornou uma resposta inválida (HTML: "${prefix}..."). Isso geralmente ocorre se as credenciais administrativas para alteração direta não estiverem totalmente configuradas ou se o servidor de desenvolvimento estiver em processo de atualização. Por favor, utilize a opção "Enviar E-mail de Redefinição" abaixo, que é 100% nativa e funciona perfeitamente para ambos os servidores!`
                           );
                         }
                         
