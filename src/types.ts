@@ -228,6 +228,8 @@ export interface EmpresaParceira {
   linkSales?: string;
   createdAt: any;
   unidadesVinculadas?: string[];
+  consultorId?: string;
+  consultorNome?: string;
 }
 
 export interface WhatsAppMessage {

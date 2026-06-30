@@ -4727,6 +4727,7 @@ export default function App() {
                   data={empresasParceiras}
                   onToast={showToast}
                   cursos={cursos}
+                  users={users}
                   onGenerateAction={(empresa) => {
                     setInitialActionData({
                       nome: `Ação na empresa ${empresa.nome}`,
@@ -12377,11 +12378,13 @@ function EmpresasParceirasView({
   onToast,
   onGenerateAction,
   cursos = [],
+  users = [],
 }: {
   data: EmpresaParceira[];
   onToast: (m: string, t?: "success" | "error") => void;
   onGenerateAction: (empresa: EmpresaParceira) => void;
   cursos?: CursoDisponivel[];
+  users?: UserProfile[];
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Todas");
@@ -12395,6 +12398,13 @@ function EmpresasParceirasView({
     null,
   );
   const [selectedUnidades, setSelectedUnidades] = useState<string[]>([]);
+  const [selectedConsultorId, setSelectedConsultorId] = useState<string>("");
+
+  // Mass deletion states
+  const [selectedEmpresaIds, setSelectedEmpresaIds] = useState<string[]>([]);
+
+  // Active Tab: list vs tratativas report
+  const [activeTab, setActiveTab] = useState<"lista" | "tratativas">("lista");
 
   const uniqueUnidades = useMemo(() => {
     return Array.from(
@@ -12408,13 +12418,97 @@ function EmpresasParceirasView({
     ).sort();
   }, [data]);
 
+  // Filter commercial/FDV users
+  const listForSelection = useMemo(() => {
+    const consultores = (users || []).filter(u => {
+      const roleLower = (u.role || "").toLowerCase();
+      const isComercialServer = u.servidor === "comercial";
+      return (
+        roleLower.includes("fdv") ||
+        roleLower.includes("comercial") ||
+        roleLower.includes("promotor") ||
+        isComercialServer
+      );
+    });
+    return consultores.length > 0 ? consultores : (users || []);
+  }, [users]);
+
   useEffect(() => {
     if (editingEmpresa) {
       setSelectedUnidades(editingEmpresa.unidadesVinculadas || []);
+      setSelectedConsultorId(editingEmpresa.consultorId || "");
     } else {
       setSelectedUnidades([]);
+      setSelectedConsultorId("");
     }
   }, [editingEmpresa, isModalOpen]);
+
+  // Date and age helpers for reminders
+  const getTratativaDays = (emp: EmpresaParceira) => {
+    if (!emp.createdAt) return 0;
+    const createdDate = emp.createdAt.seconds
+      ? new Date(emp.createdAt.seconds * 1000)
+      : new Date(emp.createdAt);
+    const diffTime = new Date().getTime() - createdDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays < 0 ? 0 : diffDays;
+  };
+
+  const getTratativaAlert = (emp: EmpresaParceira) => {
+    if (emp.statusEmpresa !== "Em tratativa") return null;
+    const days = getTratativaDays(emp);
+    if (days >= 10) {
+      return {
+        level: "Emergência",
+        days,
+        label: "Retorno de Emergência",
+        color: "red",
+        bg: "bg-rose-50 border-rose-200 text-rose-800",
+        iconColor: "text-rose-600"
+      };
+    }
+    if (days >= 7) {
+      return {
+        level: "Atenção",
+        days,
+        label: "Atenção",
+        color: "orange",
+        bg: "bg-orange-50 border-orange-200 text-orange-800",
+        iconColor: "text-orange-600"
+      };
+    }
+    if (days >= 3) {
+      return {
+        level: "Retorno",
+        days,
+        label: "Retorno",
+        color: "yellow",
+        bg: "bg-amber-50 border-amber-200 text-amber-800",
+        iconColor: "text-amber-600"
+      };
+    }
+    return {
+      level: "Recente",
+      days,
+      label: "Recente",
+      color: "blue",
+      bg: "bg-blue-50 border-blue-100 text-blue-800",
+      iconColor: "text-blue-500"
+    };
+  };
+
+  // Helper for direct status update from the report
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
+    try {
+      await updateDoc(doc(db, COLLECTIONS.EMPRESAS_PARCEIRAS, id), {
+        statusEmpresa: newStatus,
+        updatedAt: serverTimestamp(),
+      });
+      onToast("Status atualizado!");
+    } catch (err: any) {
+      onToast("Erro ao atualizar status.", "error");
+    }
+  };
 
   const filteredData = data.filter((emp) => {
     const term = searchTerm.toLowerCase();
@@ -12468,6 +12562,9 @@ function EmpresasParceirasView({
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const matchedUser = (users || []).find(u => u.uid === selectedConsultorId);
+    const consultorNome = matchedUser ? matchedUser.name : "";
+
     const payload = {
       nome: formData.get("nome") as string,
       responsavel: formData.get("responsavel") as string,
@@ -12483,6 +12580,8 @@ function EmpresasParceirasView({
       statusEmpresa: formData.get("statusEmpresa") as string,
       linkSales: formData.get("linkSales") as string,
       unidadesVinculadas: selectedUnidades,
+      consultorId: selectedConsultorId,
+      consultorNome: consultorNome,
       updatedAt: serverTimestamp(),
     };
 
@@ -12527,8 +12626,31 @@ function EmpresasParceirasView({
       try {
         await deleteDoc(doc(db, COLLECTIONS.EMPRESAS_PARCEIRAS, id));
         onToast("Empresa removida.");
+        setSelectedEmpresaIds(prev => prev.filter(item => item !== id));
       } catch (err: any) {
         onToast("Erro ao excluir empresa.", "error");
+      }
+    }
+  };
+
+  // Mass deletion handler
+  const handleBulkDelete = async () => {
+    if (selectedEmpresaIds.length === 0) return;
+    if (
+      window.confirm(
+        `Atenção! Deseja realmente excluir permanentemente as ${selectedEmpresaIds.length} empresas selecionadas?`
+      )
+    ) {
+      try {
+        let deletedCount = 0;
+        for (const id of selectedEmpresaIds) {
+          await deleteDoc(doc(db, COLLECTIONS.EMPRESAS_PARCEIRAS, id));
+          deletedCount++;
+        }
+        onToast(`${deletedCount} empresas excluídas com sucesso!`);
+        setSelectedEmpresaIds([]);
+      } catch (err: any) {
+        onToast("Erro na exclusão em massa das empresas.", "error");
       }
     }
   };
@@ -12548,6 +12670,8 @@ function EmpresasParceirasView({
       Status: emp.statusEmpresa || "",
       "Link Maps": emp.linkMaps,
       "Link Sales": emp.linkSales || "",
+      "Consultor Vinculado": emp.consultorNome || "Sem consultor",
+      "Unidades Vinculadas": (emp.unidadesVinculadas || []).join(", "),
     }));
     exportToExcel(exportData, "Empresas_Parceiras");
   };
@@ -12577,24 +12701,36 @@ function EmpresasParceirasView({
           return val;
         };
 
-        const batch = importData.map((item) => ({
-          nome: String(getVal(item, "Nome", "nome") || "").trim(),
-          cnpj: String(getVal(item, "CNPJ", "cnpj") || "").trim(),
-          responsavel: String(getVal(item, "Responsável", "responsavel", "responsável") || "").trim(),
-          telefone: String(getVal(item, "Telefone", "telefone") || "").replace(/\D/g, ""),
-          telefoneResponsavel: String(
-            getVal(item, "Telefone Responsável", "telefoneResponsavel") || "",
-          ).replace(/\D/g, ""),
-          email: String(getVal(item, "Email", "email") || "").trim(),
-          endereco: String(getVal(item, "Endereço", "endereco", "endereço") || "").trim(),
-          bairro: String(getVal(item, "Bairro", "bairro") || "").trim(),
-          seguimento: String(getVal(item, "Seguimento", "seguimento") || "").trim(),
-          classificacao: String(getVal(item, "Classificação", "classificacao", "classificação") || "").trim(),
-          statusEmpresa: normalizeStatusEmpresa(String(getVal(item, "Status", "statusEmpresa", "status") || "")),
-          linkMaps: String(getVal(item, "Link Maps", "linkMaps") || "").trim(),
-          linkSales: String(getVal(item, "Link Sales", "linkSales") || "").trim(),
-          createdAt: serverTimestamp(),
-        }));
+        const batch = importData.map((item) => {
+          const importedConsultorNome = String(getVal(item, "Consultor", "consultor", "consultorNome", "consultor_vinculado") || "").trim();
+          const matchedImportedUser = (users || []).find(u => u.name.trim().toLowerCase() === importedConsultorNome.toLowerCase());
+          const consultorId = matchedImportedUser ? matchedImportedUser.uid : "";
+
+          const importedUnidadesRaw = String(getVal(item, "Unidades", "unidade", "unidadesVinculadas", "unidade_vinculada", "unidades_vinculadas") || "").trim();
+          const unidadesVinculadas = importedUnidadesRaw ? importedUnidadesRaw.split(",").map(x => x.trim()).filter(Boolean) : [];
+
+          return {
+            nome: String(getVal(item, "Nome", "nome") || "").trim(),
+            cnpj: String(getVal(item, "CNPJ", "cnpj") || "").trim(),
+            responsavel: String(getVal(item, "Responsável", "responsavel", "responsável") || "").trim(),
+            telefone: String(getVal(item, "Telefone", "telefone") || "").replace(/\D/g, ""),
+            telefoneResponsavel: String(
+              getVal(item, "Telefone Responsável", "telefoneResponsavel") || "",
+            ).replace(/\D/g, ""),
+            email: String(getVal(item, "Email", "email") || "").trim(),
+            endereco: String(getVal(item, "Endereço", "endereco", "endereço") || "").trim(),
+            bairro: String(getVal(item, "Bairro", "bairro") || "").trim(),
+            seguimento: String(getVal(item, "Seguimento", "seguimento") || "").trim(),
+            classificacao: String(getVal(item, "Classificação", "classificacao", "classificação") || "").trim(),
+            statusEmpresa: normalizeStatusEmpresa(String(getVal(item, "Status", "statusEmpresa", "status") || "")),
+            linkMaps: String(getVal(item, "Link Maps", "linkMaps") || "").trim(),
+            linkSales: String(getVal(item, "Link Sales", "linkSales") || "").trim(),
+            consultorId,
+            consultorNome: importedConsultorNome || (matchedImportedUser ? matchedImportedUser.name : ""),
+            unidadesVinculadas,
+            createdAt: serverTimestamp(),
+          };
+        });
 
         let imported = 0;
         let skipped = 0;
@@ -12666,348 +12802,661 @@ function EmpresasParceirasView({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 col-span-2 flex items-center space-x-4">
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-            <Building2 size={24} />
-          </div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Total Empresas</p>
-            <p className="text-2xl font-black text-slate-900">{kpiTotais}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 col-span-2 lg:col-span-3 space-y-2">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Por Status
-          </p>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-emerald-600 font-medium text-xs">
-                Conveniada
-              </span>
-              <span className="font-bold text-slate-700">{statConveniada}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-amber-600 font-medium text-xs">
-                Em Tratativa
-              </span>
-              <span className="font-bold text-slate-700">
-                {statEmTratativa}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-rose-600 font-medium text-xs">
-                Cancelada
-              </span>
-              <span className="font-bold text-slate-700">{statCancelada}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-500 font-medium text-xs">
-                Não Visitada
-              </span>
-              <span className="font-bold text-slate-700">
-                {statNaoVisitada}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 col-span-2 lg:col-span-3 space-y-2">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Por Classificação
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-            <div className="bg-amber-100/50 p-2 rounded-lg flex flex-col items-center">
-              <span className="text-amber-700 font-bold text-xs uppercase">
-                Ouro
-              </span>
-              <span className="text-lg font-black text-amber-900">
-                {classOuro}
-              </span>
-            </div>
-            <div className="bg-slate-100/80 p-2 rounded-lg flex flex-col items-center">
-              <span className="text-slate-600 font-bold text-xs uppercase">
-                Prata
-              </span>
-              <span className="text-lg font-black text-slate-800">
-                {classPrata}
-              </span>
-            </div>
-            <div className="bg-orange-100/50 p-2 rounded-lg flex flex-col items-center">
-              <span className="text-orange-800 font-bold text-xs uppercase">
-                Bronze
-              </span>
-              <span className="text-lg font-black text-orange-900">
-                {classBronze}
-              </span>
-            </div>
-          </div>
-        </div>
+      {/* Tab Switcher */}
+      <div className="flex border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab("lista")}
+          className={cn(
+            "pb-3 px-6 font-bold text-sm transition-all border-b-2",
+            activeTab === "lista"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          )}
+        >
+          📋 Lista de Empresas
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("tratativas")}
+          className={cn(
+            "pb-3 px-6 font-bold text-sm transition-all border-b-2 flex items-center space-x-2",
+            activeTab === "tratativas"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          )}
+        >
+          <span>⏰ Acompanhamento de Tratativas (Alertas)</span>
+          {statEmTratativa > 0 && (
+            <span className="bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+              {statEmTratativa}
+            </span>
+          )}
+        </button>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-        <div className="relative">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Buscar por nome da empresa ou CNPJ..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
-            >
-              <option value="Todas">Todos</option>
-              <option value="Conveniada">Conveniada</option>
-              <option value="Em tratativa">Em Tratativa</option>
-              <option value="Cancelada">Cancelada</option>
-              <option value="Não visitada">Não Visitada</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Classificação
-            </label>
-            <select
-              value={classificacaoFilter}
-              onChange={(e) => setClassificacaoFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
-            >
-              <option value="Todas">Todas</option>
-              <option value="Ouro">Ouro</option>
-              <option value="Prata">Prata</option>
-              <option value="Bronze">Bronze</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Unidade Vinculada
-            </label>
-            <select
-              value={unidadeFilter}
-              onChange={(e) => setUnidadeFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
-            >
-              <option value="Todas">Todas</option>
-              {uniqueUnidades.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Seguimento
-            </label>
-            <select
-              value={seguimentoFilter}
-              onChange={(e) => setSeguimentoFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
-            >
-              <option value="Todos">Todos</option>
-              {uniqueSeguimentos.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredData.map((emp) => (
-          <div
-            key={emp.id}
-            className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between hover:border-blue-200 transition-all group relative"
-          >
-            {emp.classificacao && (
-              <div
-                className={cn(
-                  "absolute -top-3 -right-3 text-[10px] font-black uppercase tracking-wider py-1 px-3 rounded-full shadow-sm border",
-                  emp.classificacao === "Ouro"
-                    ? "bg-amber-100 text-amber-800 border-amber-200"
-                    : emp.classificacao === "Prata"
-                      ? "bg-slate-100 text-slate-700 border-slate-300"
-                      : "bg-orange-100 text-orange-800 border-orange-200",
-                )}
-              >
-                {emp.classificacao}
+      {activeTab === "lista" && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 col-span-2 flex items-center space-x-4">
+              <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                <Building2 size={24} />
               </div>
-            )}
-
-            <div>
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors pr-8">
-                  {emp.nome}
-                </h3>
-                <div className="flex space-x-1 shrink-0">
-                  <button
-                    onClick={() => {
-                      setEditingEmpresa(emp);
-                      setIsModalOpen(true);
-                    }}
-                    className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(emp.id)}
-                    className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-all"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
+              <div>
+                <p className="text-sm text-slate-500 font-medium">Total Empresas</p>
+                <p className="text-2xl font-black text-slate-900">{kpiTotais}</p>
               </div>
-
-              <div className="flex space-x-2 mb-4">
-                {emp.statusEmpresa && (
-                  <span
-                    className={cn(
-                      "text-[10px] font-bold px-2 py-0.5 rounded-full border",
-                      emp.statusEmpresa === "Conveniada"
-                        ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                        : emp.statusEmpresa === "Em tratativa"
-                          ? "bg-amber-50 text-amber-600 border-amber-200"
-                          : emp.statusEmpresa === "Cancelada"
-                            ? "bg-rose-50 text-rose-600 border-rose-200"
-                            : "bg-slate-50 text-slate-500 border-slate-200",
-                    )}
-                  >
-                    {emp.statusEmpresa}
-                  </span>
-                )}
-                {emp.seguimento && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-indigo-50 text-indigo-600 border-indigo-200">
-                    {emp.seguimento}
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-3 mb-6">
-                {emp.cnpj && (
-                  <div className="flex items-center space-x-3 text-sm text-slate-600">
-                    <Briefcase size={16} className="text-slate-400" />
-                    <span className="font-mono text-xs">{emp.cnpj}</span>
-                  </div>
-                )}
-                <div className="flex flex-col space-y-1">
-                  <div className="flex items-center justify-between text-sm text-slate-600 pr-1">
-                    <div className="flex items-center space-x-3">
-                      <Phone size={16} className="text-slate-400" />
-                      <span>{formatPhone(emp.telefone)}</span>
-                    </div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase">
-                      Empresa
-                    </span>
-                  </div>
-                  {emp.telefoneResponsavel && (
-                    <div className="flex items-center justify-between text-sm text-slate-600 pr-1">
-                      <div className="flex items-center space-x-3">
-                        <Phone
-                          size={16}
-                          className="text-slate-400 opacity-50"
-                        />
-                        <span>{formatPhone(emp.telefoneResponsavel)}</span>
-                      </div>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">
-                        Resp.
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center space-x-3 text-sm text-slate-600">
-                  <Users size={16} className="text-slate-400" />
-                  <span>{emp.responsavel}</span>
-                </div>
-                <div className="flex items-center space-x-3 text-sm text-slate-600">
-                  <Mail size={16} className="text-slate-400" />
-                  <span className="truncate">{emp.email}</span>
-                </div>
-                <div className="flex items-center space-x-3 text-sm text-slate-600">
-                  <MapPin size={16} className="text-slate-400" />
-                  <span className="truncate">{emp.endereco}</span>
-                </div>
-                {emp.bairro && (
-                  <div className="flex items-center space-x-3 text-sm text-slate-600">
-                    <MapPin size={16} className="text-slate-400 opacity-50" />
-                    <span className="truncate">Bairro: {emp.bairro}</span>
-                  </div>
-                )}
-              </div>
-
-              {emp.unidadesVinculadas && emp.unidadesVinculadas.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-slate-100 mb-4">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
-                    Unidades Vinculadas
-                  </span>
-                  <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
-                    {emp.unidadesVinculadas.map((uni) => (
-                      <span
-                        key={uni}
-                        className="text-[9px] font-bold bg-indigo-50/60 text-indigo-600 border border-indigo-100/40 p-1 px-2 rounded-md truncate max-w-[150px]"
-                        title={uni}
-                      >
-                        {uni}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
-            <div className="flex flex-col space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                {emp.linkMaps && (
-                  <a
-                    href={emp.linkMaps}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center space-x-2 w-full py-2 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-100 transition-all border border-slate-200"
-                  >
-                    <Globe size={14} />
-                    <span>Maps</span>
-                  </a>
-                )}
-                {emp.linkSales && (
-                  <a
-                    href={emp.linkSales}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center space-x-2 w-full py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-all border border-blue-200"
-                  >
-                    <ExternalLink size={14} />
-                    <span>Sales</span>
-                  </a>
-                )}
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 col-span-2 lg:col-span-3 space-y-2">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Por Status
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-emerald-600 font-medium text-xs">
+                    Conveniada
+                  </span>
+                  <span className="font-bold text-slate-700">{statConveniada}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-amber-600 font-medium text-xs">
+                    Em Tratativa
+                  </span>
+                  <span className="font-bold text-slate-700">
+                    {statEmTratativa}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-rose-600 font-medium text-xs">
+                    Cancelada
+                  </span>
+                  <span className="font-bold text-slate-700">{statCancelada}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium text-xs">
+                    Não Visitada
+                  </span>
+                  <span className="font-bold text-slate-700">
+                    {statNaoVisitada}
+                  </span>
+                </div>
               </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 col-span-2 lg:col-span-3 space-y-2">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Por Classificação
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                <div className="bg-amber-100/50 p-2 rounded-lg flex flex-col items-center">
+                  <span className="text-amber-700 font-bold text-xs uppercase">
+                    Ouro
+                  </span>
+                  <span className="text-lg font-black text-amber-900">
+                    {classOuro}
+                  </span>
+                </div>
+                <div className="bg-slate-100/80 p-2 rounded-lg flex flex-col items-center">
+                  <span className="text-slate-600 font-bold text-xs uppercase">
+                    Prata
+                  </span>
+                  <span className="text-lg font-black text-slate-800">
+                    {classPrata}
+                  </span>
+                </div>
+                <div className="bg-orange-100/50 p-2 rounded-lg flex flex-col items-center">
+                  <span className="text-orange-800 font-bold text-xs uppercase">
+                    Bronze
+                  </span>
+                  <span className="text-lg font-black text-orange-900">
+                    {classBronze}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
+              <input
+                type="text"
+                placeholder="Buscar por nome da empresa ou CNPJ..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Status
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                >
+                  <option value="Todas">Todos</option>
+                  <option value="Conveniada">Conveniada</option>
+                  <option value="Em tratativa">Em Tratativa</option>
+                  <option value="Cancelada">Cancelada</option>
+                  <option value="Não visitada">Não Visitada</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Classificação
+                </label>
+                <select
+                  value={classificacaoFilter}
+                  onChange={(e) => setClassificacaoFilter(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                >
+                  <option value="Todas">Todas</option>
+                  <option value="Ouro">Ouro</option>
+                  <option value="Prata">Prata</option>
+                  <option value="Bronze">Bronze</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Unidade Vinculada
+                </label>
+                <select
+                  value={unidadeFilter}
+                  onChange={(e) => setUnidadeFilter(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                >
+                  <option value="Todas">Todas</option>
+                  {uniqueUnidades.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Seguimento
+                </label>
+                <select
+                  value={seguimentoFilter}
+                  onChange={(e) => setSeguimentoFilter(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                >
+                  <option value="Todos">Todos</option>
+                  {uniqueSeguimentos.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Bulk Action Panel */}
+          {selectedEmpresaIds.length > 0 && (
+            <div className="bg-rose-50 border border-rose-200 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 animate-fadeIn">
+              <span className="text-sm text-rose-800 font-medium">
+                Selecionadas: <strong>{selectedEmpresaIds.length}</strong> empresa(s) para exclusão em massa.
+              </span>
+              <div className="flex space-x-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedEmpresaIds([])}
+                  className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-all"
+                >
+                  Desmarcar Todas
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all flex items-center space-x-1.5"
+                >
+                  <Trash2 size={14} />
+                  <span>Excluir Selecionadas</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Quick select toggle */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-400 font-medium font-mono">
+              Mostrando {filteredData.length} de {data.length} empresas
+            </span>
+            <div className="flex space-x-2">
               <button
-                onClick={() => onGenerateAction(emp)}
-                className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center space-x-2"
+                type="button"
+                onClick={() => {
+                  const allFilteredIds = filteredData.map(emp => emp.id);
+                  const areAllSelected = allFilteredIds.every(id => selectedEmpresaIds.includes(id));
+                  if (areAllSelected) {
+                    setSelectedEmpresaIds(prev => prev.filter(id => !allFilteredIds.includes(id)));
+                  } else {
+                    setSelectedEmpresaIds(prev => Array.from(new Set([...prev, ...allFilteredIds])));
+                  }
+                }}
+                className="text-xs text-blue-600 hover:text-blue-800 font-bold"
               >
-                <Calendar size={18} />
-                <span>Gerar Ação</span>
+                {filteredData.length > 0 && filteredData.every(emp => selectedEmpresaIds.includes(emp.id))
+                  ? "Desmarcar Todas do Filtro"
+                  : `Selecionar Todas do Filtro (${filteredData.length})`}
               </button>
             </div>
           </div>
-        ))}
-      </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredData.map((emp) => {
+              const isSelected = selectedEmpresaIds.includes(emp.id);
+              const alertInfo = getTratativaAlert(emp);
+              return (
+                <div
+                  key={emp.id}
+                  className={cn(
+                    "bg-white p-6 pl-12 rounded-3xl shadow-sm border flex flex-col justify-between hover:border-blue-200 transition-all group relative",
+                    isSelected ? "border-blue-400 bg-blue-50/20" : "border-slate-100"
+                  )}
+                >
+                  {/* Absolute checkbox for mass deletion */}
+                  <div className="absolute top-5 left-4 z-10">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => {
+                        if (isSelected) {
+                          setSelectedEmpresaIds(selectedEmpresaIds.filter(id => id !== emp.id));
+                        } else {
+                          setSelectedEmpresaIds([...selectedEmpresaIds, emp.id]);
+                        }
+                      }}
+                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                    />
+                  </div>
+
+                  {emp.classificacao && (
+                    <div
+                      className={cn(
+                        "absolute -top-3 -right-3 text-[10px] font-black uppercase tracking-wider py-1 px-3 rounded-full shadow-sm border",
+                        emp.classificacao === "Ouro"
+                          ? "bg-amber-100 text-amber-800 border-amber-200"
+                          : emp.classificacao === "Prata"
+                            ? "bg-slate-100 text-slate-700 border-slate-300"
+                            : "bg-orange-100 text-orange-800 border-orange-200",
+                      )}
+                    >
+                      {emp.classificacao}
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors pr-8">
+                        {emp.nome}
+                      </h3>
+                      <div className="flex space-x-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingEmpresa(emp);
+                            setIsModalOpen(true);
+                          }}
+                          className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(emp.id)}
+                          className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-all"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      <span
+                        className={cn(
+                          "text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                          emp.statusEmpresa === "Conveniada" &&
+                            "bg-emerald-50 text-emerald-700 border-emerald-200",
+                          emp.statusEmpresa === "Em tratativa" &&
+                            "bg-amber-50 text-amber-700 border-amber-200",
+                          emp.statusEmpresa === "Cancelada" &&
+                            "bg-rose-50 text-rose-700 border-rose-200",
+                          (emp.statusEmpresa === "Não visitada" ||
+                            !emp.statusEmpresa) &&
+                            "bg-slate-50 text-slate-600 border-slate-200",
+                        )}
+                      >
+                        {emp.statusEmpresa || "Não visitada"}
+                      </span>
+                      {emp.seguimento && (
+                        <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
+                          {emp.seguimento}
+                        </span>
+                      )}
+                      {alertInfo && (
+                        <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center space-x-1", alertInfo.bg)}>
+                          <Clock size={10} className={alertInfo.iconColor} />
+                          <span>{alertInfo.label} ({getTratativaDays(emp)}d)</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-3 mb-6 text-sm text-slate-600">
+                      {emp.cnpj && (
+                        <div className="flex items-center space-x-3">
+                          <Briefcase size={16} className="text-slate-400" />
+                          <span className="font-mono text-xs">{emp.cnpj}</span>
+                        </div>
+                      )}
+                      <div className="flex flex-col space-y-1">
+                        <div className="flex items-center justify-between pr-1">
+                          <div className="flex items-center space-x-3">
+                            <Phone size={16} className="text-slate-400" />
+                            <span>{formatPhone(emp.telefone)}</span>
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">
+                            Empresa
+                          </span>
+                        </div>
+                        {emp.telefoneResponsavel && (
+                          <div className="flex items-center justify-between pr-1">
+                            <div className="flex items-center space-x-3">
+                              <Phone
+                                size={16}
+                                className="text-slate-400 opacity-50"
+                              />
+                              <span>{formatPhone(emp.telefoneResponsavel)}</span>
+                            </div>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">
+                              Resp.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center space-x-3">
+                        <Users size={16} className="text-slate-400" />
+                        <span>{emp.responsavel}</span>
+                      </div>
+
+                      {emp.consultorNome && (
+                        <div className="flex items-center space-x-3 text-blue-700 font-medium">
+                          <UserIcon size={16} className="text-blue-500" />
+                          <span>Comercial: {emp.consultorNome}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center space-x-3">
+                        <Mail size={16} className="text-slate-400" />
+                        <span className="truncate">{emp.email}</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <MapPin size={16} className="text-slate-400" />
+                        <span className="truncate">{emp.endereco}</span>
+                      </div>
+                      {emp.bairro && (
+                        <div className="flex items-center space-x-3">
+                          <MapPin size={16} className="text-slate-400 opacity-50" />
+                          <span className="truncate">Bairro: {emp.bairro}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {emp.unidadesVinculadas && emp.unidadesVinculadas.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-100 mb-4">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
+                          Unidades Vinculadas
+                        </span>
+                        <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
+                          {emp.unidadesVinculadas.map((uni) => (
+                            <span
+                              key={uni}
+                              className="text-[9px] font-bold bg-indigo-50/60 text-indigo-600 border border-indigo-100/40 p-1 px-2 rounded-md truncate max-w-[150px]"
+                              title={uni}
+                            >
+                              {uni}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col space-y-2 mt-auto pt-3 border-t border-slate-100/60">
+                    <div className="grid grid-cols-2 gap-2">
+                      {emp.linkMaps && (
+                        <a
+                          href={emp.linkMaps}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center space-x-2 w-full py-2 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-100 transition-all border border-slate-200"
+                        >
+                          <Globe size={14} />
+                          <span>Maps</span>
+                        </a>
+                      )}
+                      {emp.linkSales && (
+                        <a
+                          href={emp.linkSales}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center space-x-2 w-full py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-all border border-blue-200"
+                        >
+                          <ExternalLink size={14} />
+                          <span>Sales</span>
+                        </a>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onGenerateAction(emp)}
+                      className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center space-x-2"
+                    >
+                      <Calendar size={18} />
+                      <span>Gerar Ação</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Tratativas (Alertas) Report View */}
+      {activeTab === "tratativas" && (
+        <div className="space-y-6">
+          {/* Alerts Guide Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start space-x-3">
+              <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0">
+                <Clock size={20} />
+              </div>
+              <div>
+                <h4 className="font-bold text-amber-900 text-sm">Lembrete de Retorno</h4>
+                <p className="text-xs text-amber-700 mt-1">
+                  Ativado após <strong>3 dias</strong> do cadastro. Requer contato inicial para retorno sobre o fechamento da ação.
+                </p>
+              </div>
+            </div>
+            
+            <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl flex items-start space-x-3">
+              <div className="p-2 bg-orange-100 text-orange-700 rounded-xl shrink-0">
+                <AlertCircle size={20} />
+              </div>
+              <div>
+                <h4 className="font-bold text-orange-900 text-sm">Alerta de Atenção</h4>
+                <p className="text-xs text-orange-700 mt-1">
+                  Ativado após <strong>7 dias</strong> do cadastro. Atenção necessária para a negociação em andamento.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-rose-50 border border-rose-200 p-4 rounded-2xl flex items-start space-x-3">
+              <div className="p-2 bg-rose-100 text-rose-700 rounded-xl shrink-0">
+                <AlertCircle size={20} />
+              </div>
+              <div>
+                <h4 className="font-bold text-rose-900 text-sm">Retorno de Emergência</h4>
+                <p className="text-xs text-rose-700 mt-1">
+                  Ativado após <strong>10 dias</strong> ou mais. Tratativa crítica necessitando retorno imediato de emergência.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* List of companies in tratativa */}
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="font-bold text-slate-800 text-base">
+                Relatório de Acompanhamento de Tratativas
+              </h3>
+              <span className="text-xs text-slate-500 font-medium">
+                Total de Tratativas Ativas: <strong>{data.filter(e => e.statusEmpresa === "Em tratativa").length}</strong>
+              </span>
+            </div>
+
+            {data.filter(e => e.statusEmpresa === "Em tratativa").length === 0 ? (
+              <div className="p-12 text-center text-slate-400 italic">
+                Nenhuma empresa com status "Em tratativa" cadastrada.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/30">
+                      <th className="p-4 pl-6">Empresa</th>
+                      <th className="p-4">Consultor Vinculado (FDV)</th>
+                      <th className="p-4">Unidade(s)</th>
+                      <th className="p-4">Data Cadastro</th>
+                      <th className="p-4">Dias Decorridos</th>
+                      <th className="p-4">Lembrete / Status</th>
+                      <th className="p-4 pr-6 text-right">Ações para Mudar Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-sm">
+                    {data
+                      .filter((e) => e.statusEmpresa === "Em tratativa")
+                      .map((emp) => {
+                        const alertInfo = getTratativaAlert(emp);
+                        const days = getTratativaDays(emp);
+                        
+                        const formatDate = (dateVal: any) => {
+                          if (!dateVal) return "-";
+                          let dateObj: Date;
+                          if (dateVal.seconds) {
+                            dateObj = new Date(dateVal.seconds * 1000);
+                          } else {
+                            dateObj = new Date(dateVal);
+                          }
+                          if (isNaN(dateObj.getTime())) return "-";
+                          return dateObj.toLocaleDateString("pt-BR");
+                        };
+
+                        return (
+                          <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-4 pl-6">
+                              <div className="font-bold text-slate-800">{emp.nome}</div>
+                              {emp.cnpj && <div className="text-[10px] text-slate-400 font-mono">CNPJ: {emp.cnpj}</div>}
+                            </td>
+                            <td className="p-4">
+                              {emp.consultorNome ? (
+                                <div className="flex items-center space-x-2 text-slate-700">
+                                  <UserIcon size={14} className="text-blue-500 shrink-0" />
+                                  <span className="font-medium">{emp.consultorNome}</span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 italic text-xs">Sem consultor vinculado</span>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              {emp.unidadesVinculadas && emp.unidadesVinculadas.length > 0 ? (
+                                <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                  {emp.unidadesVinculadas.map(un => (
+                                    <span key={un} className="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold border border-indigo-100/30">
+                                      {un}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 text-xs">-</span>
+                              )}
+                            </td>
+                            <td className="p-4 text-slate-600 text-xs">
+                              {formatDate(emp.createdAt)}
+                            </td>
+                            <td className="p-4">
+                              <span className="font-bold text-slate-700 font-mono">{days}</span>
+                              <span className="text-slate-400 text-xs ml-1">dia(s)</span>
+                            </td>
+                            <td className="p-4">
+                              {alertInfo && (
+                                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border flex items-center space-x-1.5 w-fit", alertInfo.bg)}>
+                                  <Clock size={10} className={alertInfo.iconColor} />
+                                  <span>{alertInfo.label} ({days}d)</span>
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-4 pr-6 text-right">
+                              <div className="flex items-center justify-end space-x-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStatus(emp.id, "Conveniada")}
+                                  className="px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-xs font-bold transition-all animate-none"
+                                  title="Mudar para Conveniada"
+                                >
+                                  🤝 Conveniar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStatus(emp.id, "Cancelada")}
+                                  className="px-2.5 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-bold transition-all animate-none"
+                                  title="Mudar para Cancelada"
+                                >
+                                  ✕ Cancelar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStatus(emp.id, "Não visitada")}
+                                  className="px-2.5 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-bold transition-all animate-none"
+                                  title="Mudar para Não Visitada"
+                                >
+                                  Ignorar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingEmpresa(emp);
+                                    setIsModalOpen(true);
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-all"
+                                  title="Editar Completo"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <AnimatePresence>
         {isModalOpen && (
