@@ -438,16 +438,125 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
   // API endpoint for dynamic reports/dashboards via AI
   app.post("/api/reports/analyze", async (req, res) => {
     try {
-      const { query: searchQuery, dataSummary } = req.body;
+      const { query: searchQuery, dataSummary, botUrl } = req.body;
       if (!searchQuery) {
         return res.status(400).json({ success: false, error: "A consulta (query) é obrigatória." });
       }
 
+      // 1. Try to forward the request to the Railway Bot first if configured
+      if (botUrl) {
+        try {
+          const cleanUrl = botUrl.endsWith("/") ? botUrl.slice(0, -1) : botUrl;
+          const targetUrl = `${cleanUrl}/api/reports/analyze`;
+          console.log(`[AI Reports] Forwarding analysis request to bot URL: ${targetUrl}`);
+          
+          const botResponse = await fetch(targetUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ query: searchQuery, dataSummary }),
+            signal: AbortSignal.timeout(15000)
+          });
+          
+          if (botResponse.ok) {
+            const botData = await botResponse.json();
+            if (botData && (botData.success || botData.report)) {
+              console.log("[AI Reports] Successfully received report from Railway Bot API");
+              return res.json({
+                success: true,
+                report: botData.report || botData
+              });
+            }
+          } else {
+            console.warn(`[AI Reports] Railway Bot API returned status ${botResponse.status}`);
+          }
+        } catch (botErr: any) {
+          console.warn("[AI Reports] Attempt to use Railway Bot API failed:", botErr.message);
+        }
+      }
+
+      // Helper function to clean markdown code blocks around JSON
+      const parseJSONRobustly = (text: string) => {
+        let cleaned = text.trim();
+        if (cleaned.startsWith("```")) {
+          cleaned = cleaned.replace(/^```(?:json)?\n?/, "");
+          cleaned = cleaned.replace(/\n?```$/, "");
+        }
+        return JSON.parse(cleaned.trim());
+      };
+
+      // 2. Try Groq API directly using environment keys
+      const groqApiKey = process.env.GROQ_API_KEY || process.env.GROQ_API || process.env.GROQ_KEY || process.env.GROQ_SECRET;
+      if (groqApiKey) {
+        try {
+          console.log("[AI Reports] Using Groq API key found in the system...");
+          const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${groqApiKey}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model: "llama-3.3-70b-versatile",
+              messages: [
+                {
+                  role: "system",
+                  content: `Você é o "Goorq AI", um analista de inteligência de negócios (BI) extremamente capacitado.
+Você deve analisar os dados estatísticos fornecidos e a pergunta do usuário e responder estritamente no formato JSON estruturado com os seguintes campos:
+{
+  "title": "Título curto do relatório",
+  "answer": "Análise estratégica rica em formato markdown em português (nunca use cabeçalhos tipo # ou ##)",
+  "cards": [
+    { "title": "...", "value": "...", "icon": "users|target|file-text|check-circle|trending-up|briefcase|activity|calendar|message-square|award|percent|shield-alert", "color": "blue|emerald|purple|amber|rose|cyan|indigo|slate" }
+  ],
+  "chart": {
+    "type": "bar|line|pie",
+    "title": "Título do gráfico",
+    "data": [{ "name": "Rótulo", "value": 123 }],
+    "xKey": "name",
+    "yKey": "value"
+  } | null,
+  "suggestions": ["pergunta 1", "pergunta 2"]
+}
+Retorne exclusivamente o JSON puro. Não adicione textos adicionais antes ou depois.`
+                },
+                {
+                  role: "user",
+                  content: `Pergunta do usuário: "${searchQuery}"\n\nResumo estatístico:\n${JSON.stringify(dataSummary)}`
+                }
+              ],
+              response_format: { type: "json_object" }
+            }),
+            signal: AbortSignal.timeout(20000)
+          });
+
+          if (response.ok) {
+            const responseData = await response.json();
+            const content = responseData.choices?.[0]?.message?.content;
+            if (content) {
+              const result = parseJSONRobustly(content);
+              return res.json({
+                success: true,
+                report: result
+              });
+            }
+          } else {
+            const errText = await response.text();
+            console.error(`[AI Reports] Groq API returned error status ${response.status}: ${errText}`);
+          }
+        } catch (groqErr: any) {
+          console.error("[AI Reports] Groq direct API call failed:", groqErr.message);
+        }
+      }
+
+      // 3. Fallback to Gemini if no other option succeeded
+      console.log("[AI Reports] Using Gemini as fallback AI...");
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
         return res.status(500).json({
           success: false,
-          error: "A chave de API do Gemini (GEMINI_API_KEY) não está configurada no servidor."
+          error: "A chave de API do Gemini (GEMINI_API_KEY) ou do Groq (GROQ_API_KEY) não está configurada no servidor."
         });
       }
 
@@ -552,15 +661,15 @@ Não invente dados que não estão no resumo fornecido. Se alguma informação f
         throw new Error("Resposta vazia retornada pelo modelo Gemini.");
       }
 
-      const result = JSON.parse(responseText.trim());
+      const result = parseJSONRobustly(responseText);
       return res.json({
         success: true,
         report: result
       });
 
     } catch (err: any) {
-      console.error("Erro na análise de relatórios via Gemini:", err);
-      return res.status(500).json({
+      console.error("Erro na análise de relatórios via IA:", err);
+      return res.status(200).json({
         success: false,
         error: `Erro ao processar sua análise inteligente: ${err.message}`
       });

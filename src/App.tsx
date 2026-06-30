@@ -4660,7 +4660,7 @@ export default function App() {
                 <EmailMarketingView onToast={showToast} />
               )}
               {currentView === "relatorios" && (
-                <RelatoriosView profile={profile!} />
+                <RelatoriosView profile={profile!} botConfig={botConfig} />
               )}
               {currentView === "controlePagamentos" && (
                 <ControlePagamentosView

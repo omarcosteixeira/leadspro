@@ -49,6 +49,7 @@ import { motion, AnimatePresence } from "motion/react";
 
 interface RelatoriosViewProps {
   profile: UserProfile;
+  botConfig?: any;
 }
 
 interface AICard {
@@ -74,7 +75,7 @@ interface AIReport {
   suggestions: string[];
 }
 
-export function RelatoriosView({ profile }: RelatoriosViewProps) {
+export function RelatoriosView({ profile, botConfig }: RelatoriosViewProps) {
   // Navigation / Tabs
   const [activeTab, setActiveTab] = useState<"ai" | "bot">("ai");
 
@@ -284,7 +285,11 @@ export function RelatoriosView({ profile }: RelatoriosViewProps) {
       const response = await fetch("/api/reports/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: queryText, dataSummary: dbStats }),
+        body: JSON.stringify({ 
+          query: queryText, 
+          dataSummary: dbStats,
+          botUrl: botConfig?.url
+        }),
       });
 
       const result = await response.json();
