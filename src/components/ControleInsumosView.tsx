@@ -58,6 +58,7 @@ interface ControleInsumosViewProps {
   estoque: InsumoEstoque[];
   profile: UserProfile;
   onToast: (m: string, t?: "success" | "error") => void;
+  botConfig?: any;
 }
 
 export function ControleInsumosView({
@@ -65,6 +66,7 @@ export function ControleInsumosView({
   estoque,
   profile,
   onToast,
+  botConfig,
 }: ControleInsumosViewProps) {
   const [activeTab, setActiveTab] = useState<
     "dashboard" | "pedidos" | "estoque" | "compras"
@@ -438,6 +440,7 @@ export function ControleInsumosView({
         body: JSON.stringify({
           typedText: item.material,
           stockMaterials,
+          groqApiKey: botConfig?.groqApiKey,
         }),
       });
 

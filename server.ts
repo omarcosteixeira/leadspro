@@ -289,8 +289,8 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
         return JSON.parse(cleaned.trim());
       };
 
-      // 1. Try Groq API first
-      const groqApiKey = process.env.GROQ_API_KEY || process.env.GROQ_API || process.env.GROQ_KEY || process.env.GROQ_SECRET;
+      // 1. Try Groq API first (prioritizes key sent from database, falls back to env)
+      const groqApiKey = req.body.groqApiKey || process.env.GROQ_API_KEY || process.env.GROQ_API || process.env.GROQ_KEY || process.env.GROQ_SECRET;
       if (groqApiKey) {
         try {
           console.log("[AI Match] Using Groq API key found in the system for material match...");
@@ -555,8 +555,8 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
         return JSON.parse(cleaned.trim());
       };
 
-      // 2. Try Groq API directly using environment keys
-      const groqApiKey = process.env.GROQ_API_KEY || process.env.GROQ_API || process.env.GROQ_KEY || process.env.GROQ_SECRET;
+      // 2. Try Groq API directly (prioritizes key sent from database, falls back to env)
+      const groqApiKey = req.body.groqApiKey || process.env.GROQ_API_KEY || process.env.GROQ_API || process.env.GROQ_KEY || process.env.GROQ_SECRET;
       if (groqApiKey) {
         try {
           console.log("[AI Reports] Using Groq API key found in the system...");

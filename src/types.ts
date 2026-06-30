@@ -301,6 +301,7 @@ export interface BotConfig {
   trainingContext?: string;
   botNames?: Record<string, string>;
   loginLogo?: string;
+  groqApiKey?: string;
   updatedAt?: any;
 }
 

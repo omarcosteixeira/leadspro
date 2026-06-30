@@ -288,7 +288,8 @@ export function RelatoriosView({ profile, botConfig }: RelatoriosViewProps) {
         body: JSON.stringify({ 
           query: queryText, 
           dataSummary: dbStats,
-          botUrl: botConfig?.url
+          botUrl: botConfig?.url,
+          groqApiKey: botConfig?.groqApiKey
         }),
       });
 

@@ -4685,6 +4685,7 @@ export default function App() {
                   estoque={insumosEstoque}
                   profile={profile!}
                   onToast={showToast}
+                  botConfig={botConfig}
                 />
               )}
               {currentView === "controleInsumosComercial" && (
@@ -4693,6 +4694,7 @@ export default function App() {
                   estoque={insumosEstoqueComercial}
                   profile={profile!}
                   onToast={showToast}
+                  botConfig={botConfig}
                 />
               )}
               {currentView === "calendario" && (
@@ -16266,6 +16268,42 @@ function AdminView({
                     https://meubot.up.railway.app).
                   </p>
                 </div>
+
+                <div className="pt-4 border-t border-slate-100">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Chave de API do Groq (GROQ_API_KEY)
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="gsk_..."
+                    defaultValue={botConfig.groqApiKey || ""}
+                    onBlur={async (e) => {
+                      const newKey = e.target.value.trim();
+                      if (newKey === (botConfig.groqApiKey || "")) return;
+                      try {
+                        await setDoc(
+                          doc(db, COLLECTIONS.BOT_CONFIG, "main"),
+                          {
+                            groqApiKey: newKey,
+                            updatedAt: serverTimestamp(),
+                          },
+                          { merge: true },
+                        );
+                        onToast("Chave da API do Groq atualizada com sucesso!");
+                      } catch (err: any) {
+                        onToast(
+                          `Erro ao salvar chave da API do Groq: ${err.message}`,
+                          "error",
+                        );
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Esta chave é utilizada diretamente pelo servidor do Goorq para processar relatórios de IA e realizar a correspondência inteligente de insumos via modelos Llama da Groq.
+                  </p>
+                </div>
+
                 <div className="pt-4 border-t border-slate-100">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-slate-800">
