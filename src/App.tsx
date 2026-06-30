@@ -79,6 +79,7 @@ import {
   Cloud,
   RefreshCw,
   Play,
+  Pause,
   ChevronUp,
   ChevronDown,
   Target,
@@ -3041,6 +3042,8 @@ export default function App() {
     active: boolean;
     info: string;
   }>({ total: 0, sent: 0, active: false, info: "" });
+  const [isMassSendPaused, setIsMassSendPaused] = useState(false);
+  const massSendControlRef = React.useRef({ paused: false, cancelled: false });
 
   const showToast = (
     message: string,
@@ -3354,6 +3357,9 @@ export default function App() {
     )
       return;
 
+    massSendControlRef.current = { paused: false, cancelled: false };
+    setIsMassSendPaused(false);
+
     setMassSendProgress({
       total: messages.length,
       sent: 0,
@@ -3361,38 +3367,95 @@ export default function App() {
       info: "Iniciando...",
     });
 
+    const waitWithCheck = async (seconds: number, labelPrefix: string) => {
+      for (let s = 0; s < seconds; s++) {
+        if (massSendControlRef.current.cancelled) return;
+        while (massSendControlRef.current.paused && !massSendControlRef.current.cancelled) {
+          setMassSendProgress((prev) => ({
+            ...prev,
+            info: `Robô Pausado... (${prev.sent}/${messages.length})`,
+          }));
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+        if (massSendControlRef.current.cancelled) return;
+        const remaining = seconds - s;
+        setMassSendProgress((prev) => ({
+          ...prev,
+          info: `${labelPrefix} (${remaining}s restantes)... (${prev.sent}/${messages.length})`,
+        }));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    };
+
     let sentCount = 0;
     for (let i = 0; i < messages.length; i++) {
+      if (massSendControlRef.current.cancelled) {
+        break;
+      }
+
+      while (massSendControlRef.current.paused && !massSendControlRef.current.cancelled) {
+        setMassSendProgress((prev) => ({
+          ...prev,
+          info: `Robô Pausado... (${sentCount}/${messages.length})`,
+        }));
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      if (massSendControlRef.current.cancelled) {
+        break;
+      }
+
       if (i > 0) {
         if (sentCount % 5 === 0) {
-          setMassSendProgress((prev) => ({
-            ...prev,
-            info: `Pausa de 2 min... (${sentCount}/${messages.length})`,
-          }));
-          await new Promise((resolve) => setTimeout(resolve, 120000));
+          await waitWithCheck(120, "Pausa de 2 min");
         } else {
-          setMassSendProgress((prev) => ({
-            ...prev,
-            info: `Aguardando 30s... (${sentCount}/${messages.length})`,
-          }));
-          await new Promise((resolve) => setTimeout(resolve, 30000));
+          await waitWithCheck(30, "Aguardando cooldown");
         }
+      }
+
+      if (massSendControlRef.current.cancelled) {
+        break;
+      }
+
+      while (massSendControlRef.current.paused && !massSendControlRef.current.cancelled) {
+        setMassSendProgress((prev) => ({
+          ...prev,
+          info: `Robô Pausado... (${sentCount}/${messages.length})`,
+        }));
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      if (massSendControlRef.current.cancelled) {
+        break;
       }
 
       setMassSendProgress((prev) => ({
         ...prev,
+        sent: sentCount,
         info: `Enviando... (${sentCount + 1}/${messages.length})`,
       }));
+
       try {
         await handleSendBotMessage(messages[i].telefone, messages[i].message);
       } catch (e) {
         console.error("Error sending bot message in mass: ", e);
       }
       sentCount++;
+      setMassSendProgress((prev) => ({
+        ...prev,
+        sent: sentCount,
+      }));
     }
 
+    const wasCancelled = massSendControlRef.current.cancelled;
     setMassSendProgress({ total: 0, sent: 0, active: false, info: "" });
-    showToast("Envio em massa concluído!", "success");
+    setIsMassSendPaused(false);
+    
+    if (wasCancelled) {
+      showToast("Envio em massa cancelado pelo usuário.", "error");
+    } else {
+      showToast("Envio em massa concluído!", "success");
+    }
   };
 
   useEffect(() => {
@@ -4351,6 +4414,47 @@ export default function App() {
                   width: `${(massSendProgress.sent / (massSendProgress.total || 1)) * 100}%`,
                 }}
               />
+            </div>
+            
+            <div className="flex gap-2 w-full mt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const newPaused = !isMassSendPaused;
+                  massSendControlRef.current.paused = newPaused;
+                  setIsMassSendPaused(newPaused);
+                  showToast(newPaused ? "Robô pausado!" : "Robô retomado!");
+                }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold transition-all border ${
+                  isMassSendPaused
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                    : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                }`}
+              >
+                {isMassSendPaused ? (
+                  <>
+                    <Play size={14} /> Retomar
+                  </>
+                ) : (
+                  <>
+                    <Pause size={14} /> Pausar
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Deseja realmente cancelar o envio em massa?")) {
+                    massSendControlRef.current.cancelled = true;
+                    massSendControlRef.current.paused = false;
+                    setIsMassSendPaused(false);
+                    showToast("Cancelando envio em massa...");
+                  }
+                }}
+                className="bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+              >
+                <X size={14} /> Cancelar
+              </button>
             </div>
           </motion.div>
         )}

@@ -354,9 +354,26 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
           } else {
             const errText = await response.text();
             console.error(`[AI Match] Groq API returned error status ${response.status}: ${errText}`);
+            if (!process.env.GEMINI_API_KEY) {
+              let parsedErr;
+              try {
+                parsedErr = JSON.parse(errText);
+              } catch (_) {}
+              const displayErr = parsedErr?.error?.message || errText || `Status ${response.status}`;
+              return res.status(200).json({
+                success: false,
+                error: `Erro retornado pela API da Groq: ${displayErr}`
+              });
+            }
           }
         } catch (groqErr: any) {
           console.error("[AI Match] Groq direct API call failed:", groqErr.message);
+          if (!process.env.GEMINI_API_KEY) {
+            return res.status(200).json({
+              success: false,
+              error: `Falha ao conectar com a API da Groq: ${groqErr.message}`
+            });
+          }
         }
       }
 
@@ -632,9 +649,26 @@ Retorne exclusivamente o JSON puro. Não adicione textos adicionais antes ou dep
           } else {
             const errText = await response.text();
             console.error(`[AI Reports] Groq API returned error status ${response.status}: ${errText}`);
+            if (!process.env.GEMINI_API_KEY) {
+              let parsedErr;
+              try {
+                parsedErr = JSON.parse(errText);
+              } catch (_) {}
+              const displayErr = parsedErr?.error?.message || errText || `Status ${response.status}`;
+              return res.status(200).json({
+                success: false,
+                error: `Erro retornado pela API da Groq: ${displayErr}`
+              });
+            }
           }
         } catch (groqErr: any) {
           console.error("[AI Reports] Groq direct API call failed:", groqErr.message);
+          if (!process.env.GEMINI_API_KEY) {
+            return res.status(200).json({
+              success: false,
+              error: `Falha ao conectar com a API da Groq: ${groqErr.message}`
+            });
+          }
         }
       }
 

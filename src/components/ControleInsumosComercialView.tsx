@@ -421,7 +421,7 @@ export function ControleInsumosComercialView({
         handleRequestItemChange(index, "material", data.suggestion);
         onToast(`✨ Ajustado para "${data.suggestion}": ${data.reason}`, "success");
       } else {
-        onToast(`✨ ${data.reason || "Nenhum material semelhante encontrado no estoque."}`, "error");
+        onToast(`✨ ${data.error || data.reason || "Nenhum material semelhante encontrado no estoque."}`, "error");
       }
     } catch (err: any) {
       console.error("AI Match error:", err);
