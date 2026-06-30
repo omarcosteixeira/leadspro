@@ -13657,6 +13657,32 @@ function EmpresasParceirasView({
                   </div>
 
                   <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">
+                      Vincular a Consultor Comercial / FDV
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedConsultorId}
+                        onChange={(e) => setSelectedConsultorId(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm cursor-pointer"
+                      >
+                        <option value="">Nenhum consultor selecionado (Sem vínculo)</option>
+                        {listForSelection.map((u) => (
+                          <option key={u.uid} value={u.uid}>
+                            {u.name} ({(u.role || u.servidor || "Comercial").toUpperCase()})
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                        <UserIcon size={18} />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Selecione um comercial/FDV cadastrado no sistema para vincular a esta empresa parceira.
+                    </p>
+                  </div>
+
+                  <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">
                       Unidades Vinculadas
                     </label>
