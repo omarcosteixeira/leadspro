@@ -435,6 +435,138 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
     }
   });
 
+  // API endpoint for dynamic reports/dashboards via AI
+  app.post("/api/reports/analyze", async (req, res) => {
+    try {
+      const { query: searchQuery, dataSummary } = req.body;
+      if (!searchQuery) {
+        return res.status(400).json({ success: false, error: "A consulta (query) é obrigatória." });
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({
+          success: false,
+          error: "A chave de API do Gemini (GEMINI_API_KEY) não está configurada no servidor."
+        });
+      }
+
+      // Initialize Gemini Client
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            "User-Agent": "aistudio-build",
+          },
+        },
+      });
+
+      const prompt = `Você é o "Goorq AI", um analista de inteligência de negócios (BI) extremamente capacitado para responder perguntas e gerar dashboards de inteligência sobre o sistema Goorq.
+O usuário está visualizando a aba de Relatórios e fez a seguinte busca ou pergunta: "${searchQuery}"
+
+Aqui está o resumo estatístico em tempo real do banco de dados (Firestore) do sistema:
+${JSON.stringify(dataSummary, null, 2)}
+
+Sua tarefa é analisar o resumo estatístico fornecido e responder à pergunta do usuário de forma inteligente e baseada em dados reais.
+Retorne um JSON contendo uma análise textual rica, de 3 a 4 cartões de métricas fundamentais (com título, valor e ícones) e um gráfico dinâmico (com dados reais estruturados) que ilustre a resposta perfeitamente.
+
+Regras importantes de preenchimento dos campos JSON:
+1. "title": Título curto, direto e profissional (ex: "Leads por Promotor", "Análise de Empresas Conveniadas").
+2. "answer": Uma análise estratégica e insights em markdown detalhando os dados. Mencione rankings, sugestões operacionais de BI (ex: "O promotor X está com maior volume de leads", "O seguimento Y é o mais forte"). Use tabelas se for útil. Nunca use cabeçalhos tipo # ou ##.
+3. "cards": Uma lista de até 4 cartões de destaque. Os valores devem ser strings (ex: "45 leads", "12%", "Ativas"). O "icon" deve ser estritamente um destes: "users", "target", "file-text", "check-circle", "trending-up", "briefcase", "activity", "calendar", "message-square", "award", "percent", "shield-alert". O "color" deve ser um destes: "blue", "emerald", "purple", "amber", "rose", "cyan", "indigo", "slate".
+4. "chart": Configuração de gráfico se fizer sentido (se não, envie null). O gráfico deve conter:
+   - "type": "bar" (comparar valores ou rankings), "line" (tendências temporais) ou "pie" (proporções e fatias).
+   - "title": Título amigável do gráfico.
+   - "data": Uma lista de objetos simples com as chaves exatas "name" (string) e "value" (number). Por exemplo: [{"name": "Pendente", "value": 24}, {"name": "Convertido", "value": 12}].
+   - "xKey": Sempre defina como "name".
+   - "yKey": Sempre defina como "value".
+5. "suggestions": Uma lista de 2 a 3 perguntas sugeridas para dar sequência rápida baseadas nos dados fornecidos.
+
+Não invente dados que não estão no resumo fornecido. Se alguma informação for nula ou zero, reporte corretamente.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: {
+                type: Type.STRING,
+                description: "Título curto e profissional para o relatório gerado.",
+              },
+              answer: {
+                type: Type.STRING,
+                description: "Análise estratégica e insights em formato markdown em português.",
+              },
+              cards: {
+                type: Type.ARRAY,
+                description: "Lista de até 4 cartões de destaque com métricas importantes.",
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING },
+                    value: { type: Type.STRING },
+                    icon: { type: Type.STRING, description: "Ícone lucide: users, target, file-text, check-circle, trending-up, briefcase, activity, calendar, message-square, award, percent, shield-alert" },
+                    color: { type: Type.STRING, description: "Cor Tailwind: blue, emerald, purple, amber, rose, cyan, indigo, slate" },
+                  },
+                  required: ["title", "value", "icon", "color"],
+                },
+              },
+              chart: {
+                type: Type.OBJECT,
+                description: "Configuração do gráfico dinâmico (pode ser null).",
+                properties: {
+                  type: { type: Type.STRING, description: "bar, line ou pie" },
+                  title: { type: Type.STRING },
+                  data: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        name: { type: Type.STRING, description: "Rótulo do dado" },
+                        value: { type: Type.NUMBER, description: "Valor do dado" },
+                      },
+                      required: ["name", "value"]
+                    }
+                  },
+                  xKey: { type: Type.STRING },
+                  yKey: { type: Type.STRING },
+                },
+                required: ["type", "title", "data", "xKey", "yKey"],
+              },
+              suggestions: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "Lista de 2 a 3 perguntas sugeridas."
+              }
+            },
+            required: ["title", "answer", "cards", "suggestions"],
+          },
+        },
+      });
+
+      const responseText = response.text;
+      if (!responseText) {
+        throw new Error("Resposta vazia retornada pelo modelo Gemini.");
+      }
+
+      const result = JSON.parse(responseText.trim());
+      return res.json({
+        success: true,
+        report: result
+      });
+
+    } catch (err: any) {
+      console.error("Erro na análise de relatórios via Gemini:", err);
+      return res.status(500).json({
+        success: false,
+        error: `Erro ao processar sua análise inteligente: ${err.message}`
+      });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
