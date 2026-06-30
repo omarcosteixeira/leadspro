@@ -3084,11 +3084,20 @@ export default function App() {
 
     const response = await fetch(directUrl, fetchOptions);
     if (!response.ok) {
-      const json = await response.json().catch(() => ({}));
+      const isJson = response.headers.get("content-type")?.includes("application/json");
+      const json = isJson ? await response.json().catch(() => ({})) : {};
       throw new Error(
         json.error ||
           json.message ||
           `Erro ao conectar ao Bot (${response.status})`,
+      );
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await response.text();
+      throw new Error(
+        `O Bot no Railway retornou uma resposta inesperada (formato não-JSON). O bot pode estar offline ou em reinicialização.`
       );
     }
 

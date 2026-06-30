@@ -241,13 +241,13 @@ async function startServer() {
     }
   });
 
-  // API endpoint to fuzzy match typed material with current stock materials using Gemini
+  // API endpoint to fuzzy match typed material with current stock materials using AI (prioritizes Groq, falls back to Gemini)
   app.post("/api/match-material", async (req, res) => {
     try {
       const { typedText, stockMaterials } = req.body;
 
       if (!typedText || !typedText.trim()) {
-        return res.status(400).json({
+        return res.status(200).json({
           success: false,
           error: "O parâmetro typedText é obrigatório."
         });
@@ -261,24 +261,6 @@ async function startServer() {
           reason: "Nenhum material cadastrado em estoque para correspondência."
         });
       }
-
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({
-          success: false,
-          error: "A chave de API do Gemini (GEMINI_API_KEY) não está configurada no servidor."
-        });
-      }
-
-      // Initialize Gemini Client
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: {
-          headers: {
-            "User-Agent": "aistudio-build",
-          },
-        },
-      });
 
       const prompt = `Você é o assistente inteligente de almoxarifado do Goorq.
 Sua missão é analisar o texto digitado pelo usuário e identificar se existe algum item semanticamente equivalente no nosso estoque.
@@ -295,8 +277,89 @@ ${stockMaterials.map((mat) => `- "${mat}"`).join("\n")}
 
 Texto digitado pelo usuário: "${typedText}"
 
-Se você encontrar um item na lista de estoque que seja semanticamente equivalente ou uma variação óbvia/sinônimo do texto digitado pelo usuário, retorne "matched": true, o "suggestion" contendo o nome EXATO do item na lista de estoque, e uma justificativa amigável em português em "reason".
-Caso contrário (se não houver correspondência lógica ou for um item completamente diferente), retorne "matched": false, "suggestion": null e explique brevemente em "reason" que não encontrou um item similar.`;
+Se você encontrar um item na lista de estoque que seja semanticamente equivalente ou uma variação óbvia/sinônimo do texto digitado pelo usuário, retorne um JSON puro estruturado com "matched": true, o "suggestion" contendo o nome EXATO do item na lista de estoque, e uma justificativa amigável em português em "reason".
+Caso contrário (se não houver correspondência lógica ou for um item completamente diferente), retorne um JSON puro estruturado com "matched": false, "suggestion": null e explique brevemente em "reason" que não encontrou um item similar.`;
+
+      const parseJSONRobustly = (text: string) => {
+        let cleaned = text.trim();
+        if (cleaned.startsWith("```")) {
+          cleaned = cleaned.replace(/^```(?:json)?\n?/, "");
+          cleaned = cleaned.replace(/\n?```$/, "");
+        }
+        return JSON.parse(cleaned.trim());
+      };
+
+      // 1. Try Groq API first
+      const groqApiKey = process.env.GROQ_API_KEY || process.env.GROQ_API || process.env.GROQ_KEY || process.env.GROQ_SECRET;
+      if (groqApiKey) {
+        try {
+          console.log("[AI Match] Using Groq API key found in the system for material match...");
+          const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${groqApiKey}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model: "llama-3.3-70b-versatile",
+              messages: [
+                {
+                  role: "system",
+                  content: `Você é um assistente de almoxarifado altamente preciso. Responda estritamente no formato JSON:
+{
+  "matched": true | false,
+  "suggestion": "Nome Exato do Item" | null,
+  "reason": "Sua explicação amigável em português"
+}`
+                },
+                {
+                  role: "user",
+                  content: prompt
+                }
+              ],
+              response_format: { type: "json_object" }
+            }),
+            signal: AbortSignal.timeout(15000)
+          });
+
+          if (response.ok) {
+            const responseData = await response.json();
+            const content = responseData.choices?.[0]?.message?.content;
+            if (content) {
+              const result = parseJSONRobustly(content);
+              return res.json({
+                success: true,
+                ...result
+              });
+            }
+          } else {
+            const errText = await response.text();
+            console.error(`[AI Match] Groq API returned error status ${response.status}: ${errText}`);
+          }
+        } catch (groqErr: any) {
+          console.error("[AI Match] Groq direct API call failed:", groqErr.message);
+        }
+      }
+
+      // 2. Fallback to Gemini
+      console.log("[AI Match] Falling back to Gemini for material match...");
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(200).json({
+          success: false,
+          error: "A chave de API do Gemini (GEMINI_API_KEY) ou do Groq (GROQ_API_KEY) não está configurada no servidor."
+        });
+      }
+
+      // Initialize Gemini Client
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            "User-Agent": "aistudio-build",
+          },
+        },
+      });
 
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
@@ -329,15 +392,15 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
         throw new Error("Resposta vazia retornada pelo modelo Gemini.");
       }
 
-      const result = JSON.parse(responseText.trim());
+      const result = parseJSONRobustly(responseText);
       return res.json({
         success: true,
         ...result
       });
 
     } catch (err: any) {
-      console.error("Erro no match de material via Gemini:", err);
-      return res.status(500).json({
+      console.error("Erro no match de material via IA:", err);
+      return res.status(200).json({
         success: false,
         error: `Erro ao processar inteligência artificial para correspondência: ${err.message}`
       });
@@ -460,13 +523,19 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
           });
           
           if (botResponse.ok) {
-            const botData = await botResponse.json();
-            if (botData && (botData.success || botData.report)) {
-              console.log("[AI Reports] Successfully received report from Railway Bot API");
-              return res.json({
-                success: true,
-                report: botData.report || botData
-              });
+            const contentType = botResponse.headers.get("content-type") || "";
+            if (contentType.includes("application/json")) {
+              const botData = await botResponse.json();
+              if (botData && (botData.success || botData.report)) {
+                console.log("[AI Reports] Successfully received report from Railway Bot API");
+                return res.json({
+                  success: true,
+                  report: botData.report || botData
+                });
+              }
+            } else {
+              const errText = await botResponse.text();
+              console.warn("[AI Reports] Railway Bot API returned non-JSON content:", errText.slice(0, 100));
             }
           } else {
             console.warn(`[AI Reports] Railway Bot API returned status ${botResponse.status}`);
@@ -554,9 +623,9 @@ Retorne exclusivamente o JSON puro. Não adicione textos adicionais antes ou dep
       console.log("[AI Reports] Using Gemini as fallback AI...");
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
-        return res.status(500).json({
+        return res.status(200).json({
           success: false,
-          error: "A chave de API do Gemini (GEMINI_API_KEY) ou do Groq (GROQ_API_KEY) não está configurada no servidor."
+          error: "A chave de API do Gemini (GEMINI_API_KEY) ou do Groq (GROQ_API_KEY) não está configurada no servidor. Por favor, adicione-a no painel de configurações para ativar os relatórios com inteligência artificial."
         });
       }
 

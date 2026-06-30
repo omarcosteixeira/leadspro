@@ -292,6 +292,17 @@ export function RelatoriosView({ profile, botConfig }: RelatoriosViewProps) {
         }),
       });
 
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const text = await response.text();
+        const isHtmlError = text.includes("The page could") || text.includes("The page can") || text.includes("<!DOCTYPE");
+        throw new Error(
+          isHtmlError 
+            ? "O servidor não pôde processar a análise da IA (erro de infraestrutura/proxy ou página não encontrada). Verifique se a chave de API da Groq (GROQ_API_KEY) foi configurada corretamente."
+            : `Resposta inválida do servidor (esperado JSON): ${text.substring(0, 100)}...`
+        );
+      }
+
       const result = await response.json();
       stepIntervals.forEach(clearTimeout);
 
