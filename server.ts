@@ -262,8 +262,27 @@ async function startServer() {
         });
       }
 
+      // 1. Direct Case-Insensitive Exact Match (Immediate Bypass for Perfect Matches)
+      const exactMatch = stockMaterials.find(
+        (mat: string) => mat && mat.trim().toLowerCase() === typedText.trim().toLowerCase()
+      );
+      if (exactMatch) {
+        console.log(`[AI Match] Direct case-insensitive match found for "${typedText}" -> "${exactMatch}"`);
+        return res.json({
+          success: true,
+          matched: true,
+          suggestion: exactMatch,
+          reason: `O item "${exactMatch}" foi encontrado no estoque (correspondência exata desconsiderando maiúsculas/minúsculas).`
+        });
+      }
+
       const prompt = `Você é o assistente inteligente de almoxarifado do Goorq.
 Sua missão é analisar o texto digitado pelo usuário e identificar se existe algum item semanticamente equivalente no nosso estoque.
+
+ATENÇÃO CRÍTICA PARA COMPATIBILIDADE DE LETRAS MAIÚSCULAS/MINÚSCULAS:
+- Desconsidere totalmente qualquer diferença de maiúsculas e minúsculas (case-insensitive).
+- Se o usuário digitar "PAPEL A4" ou "papel a4", e em estoque estiver "Papel A4", isso é considerado uma CORRESPONDÊNCIA IDÊNTICA. Reconheça-os como o mesmo item!
+- Retorne sempre o nome do item com a grafia e caixa de letras EXATAS que constam na lista de estoque abaixo, independentemente de como o usuário digitou.
 
 Exemplos de correspondência de sinônimos/equivalências comuns:
 - "folha A4", "resma a4", "sulfite a4" -> "Papel A4" (se existir)

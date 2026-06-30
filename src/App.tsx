@@ -1630,22 +1630,37 @@ function CampanhasView({
 
     importFromExcel(file, async (data) => {
       try {
-        const batch = data.map((item) => ({
-          nome: item.Nome || item.nome || "",
-          dataInicio: item["Data Início"] || item.dataInicio || "",
-          dataFim: item["Data Fim"] || item.dataFim || "",
-          status: item.Status || item.status || "Ativa",
-          objetivo: item.Objetivo || item.objetivo || "",
-          createdAt: serverTimestamp(),
-        }));
+        const getVal = (row: any, ...keys: string[]) => {
+          const rowKeys = Object.keys(row);
+          for (const key of keys) {
+            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            if (foundKey && row[foundKey] !== undefined) return row[foundKey];
+          }
+          return undefined;
+        };
+
+        const batch = data.map((item) => {
+          const rawStatus = String(getVal(item, "Status", "status") || "").trim().toLowerCase();
+          const finalStatus = rawStatus === "ativa" ? "Ativa" : rawStatus === "inativa" ? "Inativa" : rawStatus === "pendente" ? "Pendente" : "Ativa";
+
+          return {
+            nome: String(getVal(item, "Nome", "nome") || "").trim(),
+            dataInicio: String(getVal(item, "Data Início", "dataInicio", "data_inicio") || "").trim(),
+            dataFim: String(getVal(item, "Data Fim", "dataFim", "data_fim") || "").trim(),
+            status: finalStatus,
+            objetivo: String(getVal(item, "Objetivo", "objetivo") || "").trim(),
+            createdAt: serverTimestamp(),
+          };
+        });
 
         let imported = 0;
         let skipped = 0;
         const inserted = new Set();
         for (const entry of batch) {
+          if (!entry.nome) continue;
           const isDup =
-            campanhas.some((c) => c.nome === entry.nome) ||
-            inserted.has(entry.nome);
+            campanhas.some((c) => c.nome.trim().toLowerCase() === entry.nome.toLowerCase()) ||
+            Array.from(inserted).some((name: any) => String(name).toLowerCase() === entry.nome.toLowerCase());
           if (!isDup) {
             await addDoc(collection(db, COLLECTIONS.CAMPANHAS), entry);
             inserted.add(entry.nome);
@@ -7762,20 +7777,31 @@ function HistoricoView({
 
     importFromExcel(file, async (data) => {
       try {
-        const batch = data.map((item) => ({
-          nome: item.Nome || item.nome || "",
-          telefone: String(item.Telefone || item.telefone || "").replace(
-            /\D/g,
-            "",
-          ),
-          cpf: String(item.CPF || item.cpf || "").replace(/\D/g, ""),
-          cursoInteresse: item.Curso || item.cursoInteresse || "",
-          acao: item.Acao || item.acao || "Importação",
-          promotorId: "import",
-          promotorName: item.Promotor || item.promotorName || "Sistema",
-          converted: item.Status === "Convertido" || item.converted === true,
-          createdAt: serverTimestamp(),
-        }));
+        const getVal = (row: any, ...keys: string[]) => {
+          const rowKeys = Object.keys(row);
+          for (const key of keys) {
+            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            if (foundKey && row[foundKey] !== undefined) return row[foundKey];
+          }
+          return undefined;
+        };
+
+        const batch = data.map((item) => {
+          const rawStatus = String(getVal(item, "Status", "status") || "").trim().toLowerCase();
+          const isConverted = rawStatus === "convertido" || getVal(item, "converted") === true;
+
+          return {
+            nome: String(getVal(item, "Nome", "nome") || "").trim(),
+            telefone: String(getVal(item, "Telefone", "telefone") || "").replace(/\D/g, ""),
+            cpf: String(getVal(item, "CPF", "cpf") || "").replace(/\D/g, ""),
+            cursoInteresse: String(getVal(item, "Curso", "cursoInteresse", "curso") || "").trim(),
+            acao: String(getVal(item, "Acao", "acao", "Ação", "ação") || "Importação").trim(),
+            promotorId: "import",
+            promotorName: String(getVal(item, "Promotor", "promotorName") || "Sistema").trim(),
+            converted: isConverted,
+            createdAt: serverTimestamp(),
+          };
+        });
 
         let imported = 0;
         let skipped = 0;
@@ -8669,24 +8695,60 @@ function BasesView({
 
     importFromExcel(file, async (data) => {
       try {
+        const getVal = (row: any, ...keys: string[]) => {
+          const rowKeys = Object.keys(row);
+          for (const key of keys) {
+            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            if (foundKey && row[foundKey] !== undefined) return row[foundKey];
+          }
+          return undefined;
+        };
+
+        const normalizeProduto = (val: string) => {
+          if (!val) return "Graduação";
+          const lower = val.trim().toLowerCase();
+          if (lower.includes("gradua")) return "Graduação";
+          if (lower.includes("tecnic") || lower.includes("técnic")) return "Técnico";
+          if (lower.includes("pos") || lower.includes("pós")) return "Pós-graduação";
+          return val;
+        };
+
+        const normalizeMetodologia = (val: string) => {
+          if (!val) return "";
+          const lower = val.trim().toLowerCase();
+          if (lower === "ead") return "EAD";
+          if (lower === "presencial") return "Presencial";
+          if (lower === "semipresencial") return "Semipresencial";
+          if (lower === "flex") return "Flex";
+          if (lower === "hibrido" || lower === "híbrido") return "Híbrido";
+          if (lower === "digital") return "Digital";
+          return val;
+        };
+
+        const normalizeStatusBase = (val: string) => {
+          if (!val) return "Pendente";
+          const lower = val.trim().toLowerCase();
+          if (lower === "pendente") return "Pendente";
+          if (lower === "matriculado") return "Matriculado";
+          if (lower === "ligacao efetuada" || lower === "ligação efetuada" || lower.includes("liga")) return "Ligação Efetuada";
+          if (lower === "sem interesse" || lower.includes("sem inter")) return "Sem Interesse";
+          return val.charAt(0).toUpperCase() + val.slice(1);
+        };
+
         const batch = data.map((item) => ({
-          nome: item.Nome || item.nome || "",
-          telefone: String(item.Telefone || item.telefone || "").replace(
-            /\D/g,
-            "",
-          ),
-          cpf: String(item.CPF || item.cpf || "").replace(/\D/g, ""),
-          curso: item.Curso || item.curso || "",
-          produto: item.Produto || item.produto || "Graduação",
-          numeroOportunidade:
-            item["Nº Oportunidade"] || item.numeroOportunidade || "",
-          semestre: item.Semestre || item.semestre || "",
-          periodo: item.Periodo || item.periodo || "",
-          metodologia: item.Metodologia || item.metodologia || "",
-          formaIngresso: item["Forma de Ingresso"] || item.formaIngresso || "",
-          numeroMatricula: item["Nº Matrícula"] || item.numeroMatricula || "",
-          nomeBase: item.Base || item.nomeBase || "Importado",
-          status: item.Status || item.status || "Pendente",
+          nome: String(getVal(item, "Nome", "nome") || "").trim(),
+          telefone: String(getVal(item, "Telefone", "telefone") || "").replace(/\D/g, ""),
+          cpf: String(getVal(item, "CPF", "cpf") || "").replace(/\D/g, ""),
+          curso: String(getVal(item, "Curso", "curso") || "").trim(),
+          produto: normalizeProduto(String(getVal(item, "Produto", "produto") || "")),
+          numeroOportunidade: String(getVal(item, "Nº Oportunidade", "numeroOportunidade", "oportunidade") || "").trim(),
+          semestre: String(getVal(item, "Semestre", "semestre") || "").trim(),
+          periodo: String(getVal(item, "Periodo", "periodo", "período") || "").trim(),
+          metodologia: normalizeMetodologia(String(getVal(item, "Metodologia", "metodologia") || "")),
+          formaIngresso: String(getVal(item, "Forma de Ingresso", "formaIngresso", "ingresso") || "").trim(),
+          numeroMatricula: String(getVal(item, "Nº Matrícula", "numeroMatricula", "matricula", "matrícula") || "").trim(),
+          nomeBase: String(getVal(item, "Base", "nomeBase") || "Importado").trim(),
+          status: normalizeStatusBase(String(getVal(item, "Status", "status") || "")),
           createdAt: serverTimestamp(),
         }));
 
@@ -9440,24 +9502,60 @@ function BasesRenovacaoView({
 
     importFromExcel(file, async (data) => {
       try {
+        const getVal = (row: any, ...keys: string[]) => {
+          const rowKeys = Object.keys(row);
+          for (const key of keys) {
+            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            if (foundKey && row[foundKey] !== undefined) return row[foundKey];
+          }
+          return undefined;
+        };
+
+        const normalizeProduto = (val: string) => {
+          if (!val) return "Graduação";
+          const lower = val.trim().toLowerCase();
+          if (lower.includes("gradua")) return "Graduação";
+          if (lower.includes("tecnic") || lower.includes("técnic")) return "Técnico";
+          if (lower.includes("pos") || lower.includes("pós")) return "Pós-graduação";
+          return val;
+        };
+
+        const normalizeMetodologia = (val: string) => {
+          if (!val) return "";
+          const lower = val.trim().toLowerCase();
+          if (lower === "ead") return "EAD";
+          if (lower === "presencial") return "Presencial";
+          if (lower === "semipresencial") return "Semipresencial";
+          if (lower === "flex") return "Flex";
+          if (lower === "hibrido" || lower === "híbrido") return "Híbrido";
+          if (lower === "digital") return "Digital";
+          return val;
+        };
+
+        const normalizeStatusBase = (val: string) => {
+          if (!val) return "Pendente";
+          const lower = val.trim().toLowerCase();
+          if (lower === "pendente") return "Pendente";
+          if (lower === "matriculado") return "Matriculado";
+          if (lower === "ligacao efetuada" || lower === "ligação efetuada" || lower.includes("liga")) return "Ligação Efetuada";
+          if (lower === "sem interesse" || lower.includes("sem inter")) return "Sem Interesse";
+          return val.charAt(0).toUpperCase() + val.slice(1);
+        };
+
         const batch = data.map((item) => ({
-          nome: item.Nome || item.nome || "",
-          telefone: String(item.Telefone || item.telefone || "").replace(
-            /\D/g,
-            "",
-          ),
-          cpf: String(item.CPF || item.cpf || "").replace(/\D/g, ""),
-          curso: item.Curso || item.curso || "",
-          produto: item.Produto || item.produto || "Graduação",
-          numeroOportunidade:
-            item["Nº Oportunidade"] || item.numeroOportunidade || "",
-          semestre: item.Semestre || item.semestre || "",
-          periodo: item.Periodo || item.periodo || "",
-          metodologia: item.Metodologia || item.metodologia || "",
-          formaIngresso: item["Forma de Ingresso"] || item.formaIngresso || "",
-          numeroMatricula: item["Nº Matrícula"] || item.numeroMatricula || "",
-          nomeBase: item.Base || item.nomeBase || "Importado Renovação",
-          status: item.Status || item.status || "Pendente",
+          nome: String(getVal(item, "Nome", "nome") || "").trim(),
+          telefone: String(getVal(item, "Telefone", "telefone") || "").replace(/\D/g, ""),
+          cpf: String(getVal(item, "CPF", "cpf") || "").replace(/\D/g, ""),
+          curso: String(getVal(item, "Curso", "curso") || "").trim(),
+          produto: normalizeProduto(String(getVal(item, "Produto", "produto") || "")),
+          numeroOportunidade: String(getVal(item, "Nº Oportunidade", "numeroOportunidade", "oportunidade") || "").trim(),
+          semestre: String(getVal(item, "Semestre", "semestre") || "").trim(),
+          periodo: String(getVal(item, "Periodo", "periodo", "período") || "").trim(),
+          metodologia: normalizeMetodologia(String(getVal(item, "Metodologia", "metodologia") || "")),
+          formaIngresso: String(getVal(item, "Forma de Ingresso", "formaIngresso", "ingresso") || "").trim(),
+          numeroMatricula: String(getVal(item, "Nº Matrícula", "numeroMatricula", "matricula", "matrícula") || "").trim(),
+          nomeBase: String(getVal(item, "Base", "nomeBase") || "Importado Renovação").trim(),
+          status: normalizeStatusBase(String(getVal(item, "Status", "status") || "")),
           createdAt: serverTimestamp(),
         }));
 
@@ -10397,36 +10495,38 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
 
     importFromExcel(file, async (data) => {
       try {
-        const batch = data.map((item) => ({
-          nome: item.Nome || item.nome || "",
-          cpf: String(item.CPF || item.cpf || "").replace(/\D/g, ""),
-          telefone: String(item.Telefone || item.telefone || "").replace(
-            /\D/g,
-            "",
-          ),
-          produto: item.Produto || item.produto || "",
-          curso: item.Curso || item.curso || "",
-          semestre: item.Semestre || item.semestre || "",
-          metodologia: item.Metodologia || item.metodologia || "",
-          formaIngresso: item["Forma de Ingresso"] || item.formaIngresso || "",
-          numeroOportunidade:
-            item["Nº Oportunidade"] || item.numeroOportunidade || "",
-          periodo: item.Periodo || item.periodo || "",
-          numeroMatricula: String(
-            item.Matricula ||
-              item.numeroMatricula ||
-              item["Nº Matrícula"] ||
-              item.Matrícula ||
-              item["Nº Matricula"] ||
-              "",
-          ),
-          matAcad:
-            item.MatAcad === "Sim" ||
-            item.matAcad === true ||
-            item["Mat. Acad."] === "OK",
-          documentos: {},
-          createdAt: serverTimestamp(),
-        }));
+        const getVal = (row: any, ...keys: string[]) => {
+          const rowKeys = Object.keys(row);
+          for (const key of keys) {
+            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            if (foundKey && row[foundKey] !== undefined) return row[foundKey];
+          }
+          return undefined;
+        };
+
+        const batch = data.map((item) => {
+          const matAcadRaw = String(getVal(item, "MatAcad", "matAcad", "Mat. Acad.", "mat_acad") || "").trim().toLowerCase();
+          const isMatAcad = matAcadRaw === "sim" || matAcadRaw === "ok" || matAcadRaw === "yes" || matAcadRaw === "true" || getVal(item, "matAcad") === true;
+
+          return {
+            nome: String(getVal(item, "Nome", "nome") || "").trim(),
+            cpf: String(getVal(item, "CPF", "cpf") || "").replace(/\D/g, ""),
+            telefone: String(getVal(item, "Telefone", "telefone") || "").replace(/\D/g, ""),
+            produto: String(getVal(item, "Produto", "produto") || "").trim(),
+            curso: String(getVal(item, "Curso", "curso") || "").trim(),
+            semestre: String(getVal(item, "Semestre", "semestre") || "").trim(),
+            metodologia: String(getVal(item, "Metodologia", "metodologia") || "").trim(),
+            formaIngresso: String(getVal(item, "Forma de Ingresso", "formaIngresso", "ingresso") || "").trim(),
+            numeroOportunidade: String(getVal(item, "Nº Oportunidade", "numeroOportunidade", "oportunidade") || "").trim(),
+            periodo: String(getVal(item, "Periodo", "periodo", "período") || "").trim(),
+            numeroMatricula: String(
+              getVal(item, "Matricula", "numeroMatricula", "Nº Matrícula", "Matrícula", "Nº Matricula", "matricula") || "",
+            ).trim(),
+            matAcad: isMatAcad,
+            documentos: {},
+            createdAt: serverTimestamp(),
+          };
+        });
 
         let imported = 0;
         let skipped = 0;
@@ -11330,18 +11430,32 @@ function CalendarioAcoesView({
 
     importFromExcel(file, async (importData) => {
       try {
-        const batch = importData.map((item) => ({
-          nome: item.Nome || item.nome || "",
-          dataInicio: item["Data Início"] || item.dataInicio || "",
-          dataFim: item["Data Fim"] || item.dataFim || "",
-          local: item.Local || item.local || "",
-          observacao: item.Observação || item.observacao || "",
-          concluida: item.Status === "Concluída" || item.concluida === true,
-          fotos: [],
-          creatorId: profile.uid,
-          creatorRole: profile.role,
-          createdAt: serverTimestamp(),
-        }));
+        const getVal = (row: any, ...keys: string[]) => {
+          const rowKeys = Object.keys(row);
+          for (const key of keys) {
+            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            if (foundKey && row[foundKey] !== undefined) return row[foundKey];
+          }
+          return undefined;
+        };
+
+        const batch = importData.map((item) => {
+          const rawStatus = String(getVal(item, "Status", "status") || "").trim().toLowerCase();
+          const isConcluida = ["concluída", "concluida", "sim", "true", "ok"].includes(rawStatus) || getVal(item, "concluida") === true;
+
+          return {
+            nome: String(getVal(item, "Nome", "nome") || "").trim(),
+            dataInicio: String(getVal(item, "Data Início", "dataInicio", "data_inicio") || "").trim(),
+            dataFim: String(getVal(item, "Data Fim", "dataFim", "data_fim") || "").trim(),
+            local: String(getVal(item, "Local", "local") || "").trim(),
+            observacao: String(getVal(item, "Observação", "observacao", "observação") || "").trim(),
+            concluida: isConcluida,
+            fotos: [],
+            creatorId: profile.uid,
+            creatorRole: profile.role,
+            createdAt: serverTimestamp(),
+          };
+        });
 
         let imported = 0;
         let skipped = 0;
@@ -12444,25 +12558,41 @@ function EmpresasParceirasView({
 
     importFromExcel(file, async (importData) => {
       try {
+        const getVal = (row: any, ...keys: string[]) => {
+          const rowKeys = Object.keys(row);
+          for (const key of keys) {
+            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            if (foundKey && row[foundKey] !== undefined) return row[foundKey];
+          }
+          return undefined;
+        };
+
+        const normalizeStatusEmpresa = (val: string) => {
+          if (!val) return "Não visitada";
+          const lower = val.trim().toLowerCase();
+          if (lower === "conveniada") return "Conveniada";
+          if (lower === "em tratativa" || lower.includes("tratativa")) return "Em tratativa";
+          if (lower === "cancelada") return "Cancelada";
+          if (lower === "nao visitada" || lower === "não visitada" || lower.includes("visitada")) return "Não visitada";
+          return val;
+        };
+
         const batch = importData.map((item) => ({
-          nome: item.Nome || item.nome || "",
-          cnpj: item.CNPJ || item.cnpj || "",
-          responsavel: item.Responsável || item.responsavel || "",
-          telefone: String(item.Telefone || item.telefone || "").replace(
-            /\D/g,
-            "",
-          ),
+          nome: String(getVal(item, "Nome", "nome") || "").trim(),
+          cnpj: String(getVal(item, "CNPJ", "cnpj") || "").trim(),
+          responsavel: String(getVal(item, "Responsável", "responsavel", "responsável") || "").trim(),
+          telefone: String(getVal(item, "Telefone", "telefone") || "").replace(/\D/g, ""),
           telefoneResponsavel: String(
-            item["Telefone Responsável"] || item.telefoneResponsavel || "",
+            getVal(item, "Telefone Responsável", "telefoneResponsavel") || "",
           ).replace(/\D/g, ""),
-          email: item.Email || item.email || "",
-          endereco: item.Endereço || item.endereco || "",
-          bairro: item.Bairro || item.bairro || "",
-          seguimento: item.Seguimento || item.seguimento || "",
-          classificacao: item.Classificação || item.classificacao || "",
-          statusEmpresa: item.Status || item.statusEmpresa || "",
-          linkMaps: item["Link Maps"] || item.linkMaps || "",
-          linkSales: item["Link Sales"] || item.linkSales || "",
+          email: String(getVal(item, "Email", "email") || "").trim(),
+          endereco: String(getVal(item, "Endereço", "endereco", "endereço") || "").trim(),
+          bairro: String(getVal(item, "Bairro", "bairro") || "").trim(),
+          seguimento: String(getVal(item, "Seguimento", "seguimento") || "").trim(),
+          classificacao: String(getVal(item, "Classificação", "classificacao", "classificação") || "").trim(),
+          statusEmpresa: normalizeStatusEmpresa(String(getVal(item, "Status", "statusEmpresa", "status") || "")),
+          linkMaps: String(getVal(item, "Link Maps", "linkMaps") || "").trim(),
+          linkSales: String(getVal(item, "Link Sales", "linkSales") || "").trim(),
           createdAt: serverTimestamp(),
         }));
 

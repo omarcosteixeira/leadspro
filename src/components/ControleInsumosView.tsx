@@ -774,20 +774,36 @@ export function ControleInsumosView({
         const worksheet = workbook.Sheets[worksheetName];
         const rawData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
+        const getVal = (row: any, ...keys: string[]) => {
+          const rowKeys = Object.keys(row);
+          for (const key of keys) {
+            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            if (foundKey && row[foundKey] !== undefined) return row[foundKey];
+          }
+          return undefined;
+        };
+
         let importsCount = 0;
         for (const row of rawData) {
-          if (!row.Material) continue;
+          const rawMaterial = getVal(row, "Material", "material");
+          if (!rawMaterial) continue;
+
+          const materialStr = String(rawMaterial).trim();
 
           const existing = estoque.find(
             (es) =>
-              es.material.trim().toLowerCase() ===
-              row.Material?.toString().trim().toLowerCase(),
+              es.material.trim().toLowerCase() === materialStr.toLowerCase(),
           );
 
-          const qty = parseInt(row.Quantidade || row.quantidade || "0", 10);
-          const min = parseInt(row.Mínimo || row.minimo || "5", 10);
-          const un = row.Unidade || row.unidade || "UN";
-          const desc = row.Descrição || row.descricao || "";
+          const qtyVal = getVal(row, "Quantidade", "quantidade");
+          const minVal = getVal(row, "Mínimo", "minimo", "mínimo");
+          const unVal = getVal(row, "Unidade", "unidade");
+          const descVal = getVal(row, "Descrição", "descricao", "descrição");
+
+          const qty = parseInt(qtyVal || "0", 10);
+          const min = parseInt(minVal || "5", 10);
+          const un = unVal || "UN";
+          const desc = descVal || "";
 
           if (existing) {
             await updateDoc(doc(db, COLLECTIONS.INSUMOS_ESTOQUE, existing.id), {
@@ -799,7 +815,7 @@ export function ControleInsumosView({
             });
           } else {
             await addDoc(collection(db, COLLECTIONS.INSUMOS_ESTOQUE), {
-              material: row.Material?.toString().trim(),
+              material: materialStr,
               quantidade: isNaN(qty) ? 0 : qty,
               unidadeMedida: un,
               estoqueMinimo: isNaN(min) ? 5 : min,

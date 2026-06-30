@@ -120,13 +120,41 @@ export function CursosDisponiveisView({
 
     importFromExcel(file, async (importData) => {
       try {
+        const normalizeProduto = (val: string) => {
+          if (!val) return "Graduação";
+          const lower = val.trim().toLowerCase();
+          if (lower.includes("gradua")) return "Graduação";
+          if (lower.includes("tecnic") || lower.includes("técnic")) return "Técnico";
+          if (lower.includes("pos") || lower.includes("pós")) return "Pós-graduação";
+          return val;
+        };
+
+        const normalizeMetodologia = (val: string) => {
+          if (!val) return "EAD";
+          const lower = val.trim().toLowerCase();
+          const found = METODOLOGIAS.find((m) => m.toLowerCase() === lower);
+          if (found) return found;
+          if (lower === "ead") return "EAD";
+          return val;
+        };
+
+        const normalizeTurno = (val: string) => {
+          if (!val) return "";
+          const lower = val.trim().toLowerCase();
+          if (lower === "matutino") return "Matutino";
+          if (lower === "vespertino") return "Vespertino";
+          if (lower === "noturno") return "Noturno";
+          if (lower === "integral") return "Integral";
+          return val;
+        };
+
         const batch = importData.map((item) => ({
           nomeUnidade: item.Unidade || item.nomeUnidade || "",
-          produto: item.Produto || item.produto || "Graduação",
+          produto: normalizeProduto(item.Produto || item.produto),
           curso: item.Curso || item.curso || "",
-          metodologia: item.Metodologia || item.metodologia || "EAD",
+          metodologia: normalizeMetodologia(item.Metodologia || item.metodologia),
           duracao: item["Duração"] || item.duracao || "",
-          turno: item.Turno || item.turno || "",
+          turno: normalizeTurno(item.Turno || item.turno),
           createdAt: new Date().toISOString(),
         }));
 

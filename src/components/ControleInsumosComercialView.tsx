@@ -650,13 +650,21 @@ export function ControleInsumosComercialView({
         const worksheet = workbook.Sheets[worksheetName];
         const rawData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
+        const getVal = (row: any, ...keys: string[]) => {
+          const rowKeys = Object.keys(row);
+          for (const key of keys) {
+            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            if (foundKey && row[foundKey] !== undefined) return row[foundKey];
+          }
+          return undefined;
+        };
+
         let importsCount = 0;
         for (const row of rawData) {
-          if (!row.Material) continue;
+          const rawMaterial = getVal(row, "Material", "material");
+          if (!rawMaterial) continue;
 
-          // If standard user, find their own material. If manager, they can't magically import for others unless row has exact owner,
-          // let's simplify and make the importer the owner.
-          const materialName = row.Material?.toString().trim();
+          const materialName = String(rawMaterial).trim();
 
           const existing = estoque.find(
             (es) =>
@@ -664,10 +672,15 @@ export function ControleInsumosComercialView({
               es.ownerId === profile.uid,
           );
 
-          const qty = parseInt(row.Quantidade || row.quantidade || "0", 10);
-          const min = parseInt(row.Mínimo || row.minimo || "5", 10);
-          const un = row.Unidade || row.unidade || "UN";
-          const desc = row.Descrição || row.descricao || "";
+          const qtyVal = getVal(row, "Quantidade", "quantidade");
+          const minVal = getVal(row, "Mínimo", "minimo", "mínimo");
+          const unVal = getVal(row, "Unidade", "unidade");
+          const descVal = getVal(row, "Descrição", "descricao", "descrição");
+
+          const qty = parseInt(qtyVal || "0", 10);
+          const min = parseInt(minVal || "5", 10);
+          const un = unVal || "UN";
+          const desc = descVal || "";
 
           if (existing) {
             await updateDoc(
