@@ -135,6 +135,7 @@ import {
   BaseDisparoEntry,
   BotConfig,
   MetaDia,
+  QgLigacao,
   SolicitacaoFolga,
   CursoDisponivel,
   InsumoPedido,
@@ -3020,6 +3021,7 @@ export default function App() {
   const [bomDia, setBomDia] = useState<BomDiaCaptacao[]>([]);
   const [forecast, setForecast] = useState<ForecastCaptacao[]>([]);
   const [metaDia, setMetaDia] = useState<MetaDia[]>([]);
+  const [qgLigacoes, setQgLigacoes] = useState<QgLigacao[]>([]);
   const [planner, setPlanner] = useState<PlannerTask[]>([]);
   const [periodos, setPeriodos] = useState<PeriodoCaptacao[]>([]);
   const [calendarioAcoes, setCalendarioAcoes] = useState<CalendarioAcao[]>([]);
@@ -3871,6 +3873,20 @@ export default function App() {
       );
     }
 
+    let unsubQgLigacoes = () => {};
+    if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
+      unsubQgLigacoes = onSnapshot(
+        collection(db, COLLECTIONS.QG_LIGACOES),
+        (snap) => {
+          setQgLigacoes(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as QgLigacao),
+          );
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.QG_LIGACOES),
+      );
+    }
+
     let unsubPeriodos = () => {};
     if (profile && VIEW_PERMISSIONS.dashboard.includes(profile.role)) {
       unsubPeriodos = onSnapshot(
@@ -4181,6 +4197,7 @@ export default function App() {
       unsubBomDia();
       unsubForecast();
       unsubMetaDia();
+      unsubQgLigacoes();
       unsubPeriodos();
       unsubCalendario();
       unsubEmpresas();
@@ -4774,6 +4791,7 @@ export default function App() {
                   forecast={forecast}
                   periodos={periodos}
                   metaDia={metaDia}
+                  qgLigacoes={qgLigacoes}
                   users={users}
                 />
               )}
@@ -4957,6 +4975,7 @@ export default function App() {
                   setBotStatuses={setBotStatuses}
                   callBotApi={callBotApi}
                   metaDia={metaDia}
+                  qgLigacoes={qgLigacoes}
                 />
               )}
             </motion.div>
@@ -6008,6 +6027,7 @@ function DashboardView({
   forecast,
   periodos,
   metaDia,
+  qgLigacoes,
   users,
 }: {
   leads: Lead[];
@@ -6020,6 +6040,7 @@ function DashboardView({
   forecast: ForecastCaptacao[];
   periodos: PeriodoCaptacao[];
   metaDia: MetaDia[];
+  qgLigacoes: QgLigacao[];
   users: UserProfile[];
 }) {
   const [isCustomizing, setIsCustomizing] = useState(false);
@@ -6072,6 +6093,7 @@ function DashboardView({
     bomDia: true,
     forecast: true,
     periodo: true,
+    qgLigacoes: true,
     aniversarios: true,
   };
   const widgets = profile?.dashboardWidgets
@@ -6405,7 +6427,8 @@ function DashboardView({
               <span className="text-2xl font-black text-slate-500 mt-2">
                 {activeMeta.aaPresencial +
                   activeMeta.aaSemipresencial +
-                  activeMeta.aaDigital}
+                  activeMeta.aaDigital +
+                  (activeMeta.aaTecnico || 0)}
               </span>
             </div>
 
@@ -6413,11 +6436,13 @@ function DashboardView({
               const totYTD =
                 activeMeta.ytdPresencial +
                 activeMeta.ytdSemipresencial +
-                activeMeta.ytdDigital;
+                activeMeta.ytdDigital +
+                (activeMeta.ytdTecnico || 0);
               const totReal =
                 activeMeta.realizadoPresencial +
                 activeMeta.realizadoSemipresencial +
-                activeMeta.realizadoDigital;
+                activeMeta.realizadoDigital +
+                (activeMeta.realizadoTecnico || 0);
               const pct = totYTD > 0 ? (totReal / totYTD) * 100 : 0;
 
               let pctBg = "bg-rose-50 text-rose-700";
@@ -6444,7 +6469,7 @@ function DashboardView({
             })()}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
             {[
               {
                 label: "Presencial",
@@ -6466,6 +6491,13 @@ function DashboardView({
                 real: activeMeta.realizadoDigital,
                 aa: activeMeta.aaDigital,
                 accent: "border-l-4 border-l-indigo-500",
+              },
+              {
+                label: "Curso Técnico",
+                ytd: activeMeta.ytdTecnico || 0,
+                real: activeMeta.realizadoTecnico || 0,
+                aa: activeMeta.aaTecnico || 0,
+                accent: "border-l-4 border-l-emerald-500",
               },
             ].map((modal, idx) => {
               let color = "text-rose-600";
@@ -6753,6 +6785,39 @@ function DashboardView({
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* QG Ligações Widget */}
+      {widgets.qgLigacoes !== false && qgLigacoes && qgLigacoes.length > 0 && (
+        <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-slate-900 flex items-center">
+              <span className="bg-emerald-100 text-emerald-600 p-2 rounded-xl mr-3">
+                <Phone size={20} />
+              </span>
+              QG Ligações
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {qgLigacoes.map((qg) => (
+              <div
+                key={qg.id}
+                className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col justify-between items-start"
+              >
+                <div className="flex items-center space-x-2 text-emerald-600 mb-2 font-bold">
+                  <Phone size={16} />
+                  <span>{qg.nome}</span>
+                </div>
+                <div className="text-sm font-semibold text-slate-700">
+                  {qg.diaSemana}
+                </div>
+                <div className="text-xs text-slate-500 font-medium bg-emerald-100/50 px-2 py-1 rounded-md mt-2">
+                  {qg.horario}
                 </div>
               </div>
             ))}
@@ -7085,6 +7150,7 @@ function DashboardView({
                   { id: "forecast", label: "Forecasts", icon: TrendingUp },
                   { id: "links", label: "Links Úteis", icon: ExternalLink },
                   { id: "planner", label: "Planner da Semana", icon: Calendar },
+                  { id: "qgLigacoes", label: "QG Ligações", icon: Phone },
                   {
                     id: "aniversarios",
                     label: "Aniversariantes do Mês",
@@ -15353,6 +15419,7 @@ function AdminView({
   setBotStatuses,
   callBotApi,
   metaDia,
+  qgLigacoes,
 }: {
   profile: UserProfile | null;
   users: UserProfile[];
@@ -15398,6 +15465,7 @@ function AdminView({
     options?: { method?: "GET" | "POST"; body?: any },
   ) => Promise<any>;
   metaDia: MetaDia[];
+  qgLigacoes: QgLigacao[];
 }) {
   const [activeTab, setActiveTab] = useState<
     | "usuarios"
@@ -15410,6 +15478,7 @@ function AdminView({
     | "backup"
     | "treinamento"
     | "metaDia"
+    | "qgLigacoes"
     | "folgas"
     | "logo"
     | "funcionarios"
@@ -15674,7 +15743,18 @@ function AdminView({
     aaDigital: 0,
     ytdDigital: 0,
     realizadoDigital: 0,
+    aaTecnico: 0,
+    ytdTecnico: 0,
+    realizadoTecnico: 0,
   });
+
+  const [editingQgLigacao, setEditingQgLigacao] = useState<QgLigacao | null>(null);
+  const [newQgLigacao, setNewQgLigacao] = useState({
+    nome: "",
+    diaSemana: "",
+    horario: "",
+  });
+
   const [isAddingUser, setIsAddingUser] = useState(false);
 
   const handleAddMetaDia = async (e: React.FormEvent) => {
@@ -15691,6 +15771,9 @@ function AdminView({
         aaDigital: Number(newMetaDia.aaDigital),
         ytdDigital: Number(newMetaDia.ytdDigital),
         realizadoDigital: Number(newMetaDia.realizadoDigital),
+        aaTecnico: Number(newMetaDia.aaTecnico || 0),
+        ytdTecnico: Number(newMetaDia.ytdTecnico || 0),
+        realizadoTecnico: Number(newMetaDia.realizadoTecnico || 0),
       };
 
       if (editingMetaDia) {
@@ -15719,9 +15802,56 @@ function AdminView({
         aaDigital: 0,
         ytdDigital: 0,
         realizadoDigital: 0,
+        aaTecnico: 0,
+        ytdTecnico: 0,
+        realizadoTecnico: 0,
       });
     } catch (err: any) {
       onToast(`Erro ao salvar Meta Diária: ${err.message}`, "error");
+    }
+  };
+
+  const handleAddQgLigacao = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        nome: newQgLigacao.nome,
+        diaSemana: newQgLigacao.diaSemana,
+        horario: newQgLigacao.horario,
+      };
+
+      if (editingQgLigacao) {
+        await updateDoc(
+          doc(db, COLLECTIONS.QG_LIGACOES, editingQgLigacao.id),
+          payload,
+        );
+        onToast("QG Ligações atualizado com sucesso!");
+        setEditingQgLigacao(null);
+      } else {
+        await addDoc(collection(db, COLLECTIONS.QG_LIGACOES), {
+          ...payload,
+          createdAt: serverTimestamp(),
+        });
+        onToast("QG Ligações cadastrado com sucesso!");
+      }
+
+      setNewQgLigacao({
+        nome: "",
+        diaSemana: "",
+        horario: "",
+      });
+    } catch (err: any) {
+      onToast(`Erro ao salvar QG Ligações: ${err.message}`, "error");
+    }
+  };
+
+  const handleDeleteQgLigacao = async (id: string) => {
+    if (!window.confirm("Deseja apagar este registro do QG Ligações?")) return;
+    try {
+      await deleteDoc(doc(db, COLLECTIONS.QG_LIGACOES, id));
+      onToast("Registro apagado com sucesso!");
+    } catch (err: any) {
+      onToast(`Erro ao apagar QG Ligações: ${err.message}`, "error");
     }
   };
 
@@ -15905,6 +16035,7 @@ function AdminView({
           { id: "bomDia", label: "Bom Dia Captação" },
           { id: "forecast", label: "Forecast" },
           { id: "metaDia", label: "Meta Dia" },
+          { id: "qgLigacoes", label: "QG Ligações" },
           { id: "planner", label: "Planner da Semana" },
           { id: "periodo", label: "Período da Captação" },
           { id: "whatsapp", label: "Gestão WhatsApp" },
@@ -16719,6 +16850,9 @@ function AdminView({
                       aaDigital: 0,
                       ytdDigital: 0,
                       realizadoDigital: 0,
+                      aaTecnico: 0,
+                      ytdTecnico: 0,
+                      realizadoTecnico: 0,
                     });
                   }}
                   className="text-slate-400 hover:text-slate-600 text-sm font-bold"
@@ -16753,7 +16887,8 @@ function AdminView({
                     <span className="text-sm font-extrabold text-slate-700">
                       {Number(newMetaDia.aaPresencial) +
                         Number(newMetaDia.aaSemipresencial) +
-                        Number(newMetaDia.aaDigital)}
+                        Number(newMetaDia.aaDigital) +
+                        Number(newMetaDia.aaTecnico || 0)}
                     </span>
                   </div>
                   <div className="text-center border-x border-slate-200 px-6">
@@ -16763,7 +16898,8 @@ function AdminView({
                     <span className="text-sm font-extrabold text-blue-600">
                       {Number(newMetaDia.ytdPresencial) +
                         Number(newMetaDia.ytdSemipresencial) +
-                        Number(newMetaDia.ytdDigital)}
+                        Number(newMetaDia.ytdDigital) +
+                        Number(newMetaDia.ytdTecnico || 0)}
                     </span>
                   </div>
                   <div className="text-center">
@@ -16773,7 +16909,8 @@ function AdminView({
                     <span className="text-sm font-extrabold text-emerald-600">
                       {Number(newMetaDia.realizadoPresencial) +
                         Number(newMetaDia.realizadoSemipresencial) +
-                        Number(newMetaDia.realizadoDigital)}
+                        Number(newMetaDia.realizadoDigital) +
+                        Number(newMetaDia.realizadoTecnico || 0)}
                     </span>
                   </div>
                 </div>
@@ -16803,6 +16940,14 @@ function AdminView({
                   aa: "aaDigital",
                   ytd: "ytdDigital",
                   realizado: "realizadoDigital",
+                },
+                {
+                  key: "Tecnico",
+                  label: "Curso Técnico",
+                  color: "border-emerald-100 bg-emerald-50/10",
+                  aa: "aaTecnico",
+                  ytd: "ytdTecnico",
+                  realizado: "realizadoTecnico",
                 },
               ].map((modal) => (
                 <div
@@ -16908,6 +17053,9 @@ function AdminView({
                     <th className="p-4 text-center text-indigo-600">
                       Digital (A.A / YTD / Real)
                     </th>
+                    <th className="p-4 text-center text-emerald-600">
+                      Curso Técnico (A.A / YTD / Real)
+                    </th>
                     <th className="p-4 text-center bg-slate-50/50">
                       Total (A.A / YTD / Real)
                     </th>
@@ -16918,7 +17066,7 @@ function AdminView({
                   {metaDia.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="p-8 text-center text-slate-400 italic"
                       >
                         Nenhum registro de Meta Diária encontrado.
@@ -16931,15 +17079,18 @@ function AdminView({
                         const totAA =
                           item.aaPresencial +
                           item.aaSemipresencial +
-                          item.aaDigital;
+                          item.aaDigital +
+                          (item.aaTecnico || 0);
                         const totYTD =
                           item.ytdPresencial +
                           item.ytdSemipresencial +
-                          item.ytdDigital;
+                          item.ytdDigital +
+                          (item.ytdTecnico || 0);
                         const totReal =
                           item.realizadoPresencial +
                           item.realizadoSemipresencial +
-                          item.realizadoDigital;
+                          item.realizadoDigital +
+                          (item.realizadoTecnico || 0);
 
                         // Function to get color class comparison Realizado vs YTD
                         const getColorClass = (real: number, ytd: number) => {
@@ -17019,6 +17170,26 @@ function AdminView({
                                 {item.realizadoDigital}
                               </span>
                             </td>
+                            <td className="p-4 text-center">
+                              <span className="text-slate-400">
+                                {item.aaTecnico || 0}
+                              </span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span className="text-slate-600 font-semibold">
+                                {item.ytdTecnico || 0}
+                              </span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span
+                                className={cn(
+                                  getColorClass(
+                                    item.realizadoTecnico || 0,
+                                    item.ytdTecnico || 0,
+                                  ),
+                                )}
+                              >
+                                {item.realizadoTecnico || 0}
+                              </span>
+                            </td>
                             <td className="p-4 text-center bg-slate-50/20 font-bold">
                               <span className="text-slate-400">{totAA}</span>
                               <span className="mx-1 text-slate-300">/</span>
@@ -17050,6 +17221,9 @@ function AdminView({
                                       aaDigital: item.aaDigital,
                                       ytdDigital: item.ytdDigital,
                                       realizadoDigital: item.realizadoDigital,
+                                      aaTecnico: item.aaTecnico || 0,
+                                      ytdTecnico: item.ytdTecnico || 0,
+                                      realizadoTecnico: item.realizadoTecnico || 0,
                                     });
                                     // Scroll to form smoothly
                                     window.scrollTo({
@@ -17096,6 +17270,163 @@ function AdminView({
                           </tr>
                         );
                       })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {activeTab === "qgLigacoes" && (
+        <div className="space-y-6">
+          <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center">
+                <span className="bg-emerald-100 text-emerald-600 p-2 rounded-xl mr-3">
+                  <Phone size={20} />
+                </span>
+                {editingQgLigacao
+                  ? "Editar Registro QG Ligações"
+                  : "Adicionar Novo Registro QG Ligações"}
+              </h3>
+              {editingQgLigacao && (
+                <button
+                  onClick={() => {
+                    setEditingQgLigacao(null);
+                    setNewQgLigacao({
+                      nome: "",
+                      diaSemana: "",
+                      horario: "",
+                    });
+                  }}
+                  className="text-sm font-bold text-slate-400 hover:text-slate-600 px-3 py-1 bg-slate-100 rounded-lg"
+                >
+                  Cancelar Edição
+                </button>
+              )}
+            </div>
+
+            <form onSubmit={handleAddQgLigacao} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Nome
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newQgLigacao.nome}
+                    onChange={(e) =>
+                      setNewQgLigacao({ ...newQgLigacao, nome: e.target.value })
+                    }
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
+                    placeholder="Nome da pessoa"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Dia da Semana
+                  </label>
+                  <select
+                    required
+                    value={newQgLigacao.diaSemana}
+                    onChange={(e) =>
+                      setNewQgLigacao({ ...newQgLigacao, diaSemana: e.target.value })
+                    }
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-white"
+                  >
+                    <option value="">Selecione o dia...</option>
+                    <option value="Segunda-feira">Segunda-feira</option>
+                    <option value="Terça-feira">Terça-feira</option>
+                    <option value="Quarta-feira">Quarta-feira</option>
+                    <option value="Quinta-feira">Quinta-feira</option>
+                    <option value="Sexta-feira">Sexta-feira</option>
+                    <option value="Sábado">Sábado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Horário
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={newQgLigacao.horario}
+                    onChange={(e) =>
+                      setNewQgLigacao({ ...newQgLigacao, horario: e.target.value })
+                    }
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-emerald-100 flex items-center justify-center space-x-2 text-sm"
+              >
+                <span>
+                  {editingQgLigacao ? "Salvar Alterações" : "Adicionar ao QG"}
+                </span>
+              </button>
+            </form>
+          </section>
+
+          <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-slate-900">
+                Lista de Registros - QG Ligações
+              </h3>
+              <p className="text-xs text-slate-400 font-medium">
+                Total: {qgLigacoes.length}
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                    <th className="p-4">Nome</th>
+                    <th className="p-4">Dia da Semana</th>
+                    <th className="p-4">Horário</th>
+                    <th className="p-4 text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
+                  {qgLigacoes.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="p-8 text-center text-slate-400 italic">
+                        Nenhum registro cadastrado no QG Ligações.
+                      </td>
+                    </tr>
+                  ) : (
+                    [...qgLigacoes].map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="p-4 font-bold text-slate-800">{item.nome}</td>
+                        <td className="p-4">{item.diaSemana}</td>
+                        <td className="p-4 font-medium text-emerald-600">{item.horario}</td>
+                        <td className="p-4 text-center whitespace-nowrap">
+                          <button
+                            onClick={() => {
+                              setEditingQgLigacao(item);
+                              setNewQgLigacao({
+                                nome: item.nome,
+                                diaSemana: item.diaSemana,
+                                horario: item.horario,
+                              });
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            className="p-1 px-2.5 text-blue-600 hover:bg-blue-50 rounded-lg font-bold hover:scale-105 transition-all text-xs mr-2"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDeleteQgLigacao(item.id)}
+                            className="p-1 px-2.5 text-rose-600 hover:bg-rose-50 rounded-lg font-bold hover:scale-105 transition-all text-xs"
+                          >
+                            Excluir
+                          </button>
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>

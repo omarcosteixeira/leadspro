@@ -61,6 +61,7 @@ export const COLLECTIONS = {
   BOT_CONFIG: `artifacts/${appId}/public/data/bot_config`,
   BOT_REPORTS: `artifacts/${appId}/public/data/bot_reports`,
   META_DIA: `artifacts/${appId}/public/data/meta_dia`,
+  QG_LIGACOES: `artifacts/${appId}/public/data/qg_ligacoes`,
   SOLICITACAO_FOLGA: `artifacts/${appId}/public/data/solicitacoes_folga`,
   CURSOS: `artifacts/${appId}/public/data/cursos`,
   INSUMOS_PEDIDOS: `artifacts/${appId}/public/data/insumos_pedidos`,
