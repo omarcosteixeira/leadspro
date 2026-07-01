@@ -140,6 +140,17 @@ export interface GapEntry {
   createdAt: any;
 }
 
+export interface ControleConcorrencia {
+  id: string;
+  ies: string;
+  curso: string;
+  valor: number;
+  bairro: string;
+  descontoExtra?: string;
+  observacao?: string;
+  createdAt: any;
+}
+
 export interface BomDiaMetrics {
   insc: number;
   matFin: number;

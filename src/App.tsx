@@ -113,6 +113,7 @@ import {
 } from "./lib/utils";
 import * as XLSX from "xlsx";
 import { EmailMarketingView } from "./components/EmailMarketingView";
+import { ControleConcorrenciaView } from "./components/ControleConcorrenciaView";
 import Mapa3D from "./components/Mapa3D";
 import {
   UserProfile,
@@ -143,6 +144,7 @@ import {
   InsumoPedidoComercial,
   InsumoEstoqueComercial,
   IsencaoEntry,
+  ControleConcorrencia,
 } from "./types";
 import { ProfileModal } from "./components/ProfileModal";
 import { PublicRegistrationForm } from "./components/PublicRegistrationForm";
@@ -473,6 +475,20 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.LIDER_FDV,
     ROLES.GESTOR_COMERCIAL,
     ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ],
+  controleConcorrencia: [
+    ROLES.ADMIN_MASTER,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.FDV,
+    ROLES.FDV_COMERCIAL,
+    ROLES.SALA_MATRICULA,
+    ROLES.QG,
+    ROLES.PROMOTOR,
+    ROLES.PROMOTOR_RUA,
+    ROLES.FINANCEIRO,
   ],
   admin: [
     ROLES.ADMIN_MASTER,
@@ -3028,6 +3044,7 @@ export default function App() {
   const [empresasParceiras, setEmpresasParceiras] = useState<EmpresaParceira[]>(
     [],
   );
+  const [controleConcorrencia, setControleConcorrencia] = useState<ControleConcorrencia[]>([]);
   const [whatsappMessages, setWhatsappMessages] = useState<WhatsAppMessage[]>(
     [],
   );
@@ -3995,6 +4012,26 @@ export default function App() {
       );
     }
 
+    let unsubControleConcorrencia = () => {};
+    if (profile && VIEW_PERMISSIONS.controleConcorrencia.includes(profile.role)) {
+      unsubControleConcorrencia = onSnapshot(
+        collection(db, COLLECTIONS.CONTROLE_CONCORRENCIA),
+        (snap) => {
+          setControleConcorrencia(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as ControleConcorrencia,
+            ),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.CONTROLE_CONCORRENCIA,
+          ),
+      );
+    }
+
     let unsubWhatsApp = () => {};
     if (user) {
       unsubWhatsApp = onSnapshot(
@@ -4206,6 +4243,7 @@ export default function App() {
       unsubBasesDisparo();
       unsubBasesRenovacao();
       unsubCursos();
+      unsubControleConcorrencia();
       unsubInsumosPedidos();
       unsubInsumosEstoque();
       unsubInsumosPedidosComercial();
@@ -4631,6 +4669,7 @@ export default function App() {
               { id: "campanhas", label: "Campanhas", icon: Megaphone },
               { id: "calendario", label: "Plano de Ação", icon: Calendar },
               { id: "empresas", label: "Empresas Parceiras", icon: Building2 },
+              { id: "controleConcorrencia", label: "Controle de Concorrência", icon: Target },
               {
                 id: "calculo",
                 label: "Cálculo de Remuneração",
@@ -4952,6 +4991,12 @@ export default function App() {
                     });
                     setCurrentView("calendario");
                   }}
+                />
+              )}
+              {currentView === "controleConcorrencia" && (
+                <ControleConcorrenciaView
+                  data={controleConcorrencia}
+                  onToast={showToast}
                 />
               )}
               {currentView === "admin" && (
