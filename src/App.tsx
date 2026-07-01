@@ -3151,6 +3151,31 @@ export default function App() {
     return resData;
   };
 
+  const sendAppWhatsApp = async (recipientPhone: string, message: string) => {
+    let rawPhone = recipientPhone.replace(/\D/g, "");
+    if (rawPhone.startsWith("0")) rawPhone = rawPhone.substring(1);
+    if (rawPhone.length === 10 || rawPhone.length === 11) {
+      rawPhone = `55${rawPhone}`;
+    }
+    if (!rawPhone) return;
+
+    try {
+      await callBotApi("/api/send", {
+        method: "POST",
+        body: {
+          botNumber: "5524993346717",
+          number: rawPhone,
+          message,
+          force: true,
+          manual: true,
+        },
+      });
+      console.log(`WhatsApp sent to ${rawPhone} via bot 5524993346717`);
+    } catch (err) {
+      console.error("Error sending WhatsApp notification:", err);
+    }
+  };
+
   const handleSendBotMessage = async (telefone: string, message: string) => {
     const currentBotNumber = profile?.botNumber;
     let safeBotNumber = currentBotNumber
@@ -4880,6 +4905,7 @@ export default function App() {
                   onToast={showToast}
                   cursos={cursos}
                   users={users}
+                  onSendWhatsApp={sendAppWhatsApp}
                   onGenerateAction={(empresa) => {
                     setInitialActionData({
                       nome: `Ação na empresa ${empresa.nome}`,
@@ -12258,7 +12284,7 @@ function CalendarioAcoesView({
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   };
 
-  const formatToWhatsAppPhone = (phone?: string): string => {
+  function formatToWhatsAppPhone(phone?: string): string {
     if (!phone) return "";
     let cleaned = phone.replace(/\D/g, "");
     if (cleaned.startsWith("0")) cleaned = cleaned.substring(1);
@@ -12266,9 +12292,9 @@ function CalendarioAcoesView({
       cleaned = `55${cleaned}`;
     }
     return cleaned;
-  };
+  }
 
-  const sendActionWhatsApp = async (recipientPhone: string, message: string) => {
+  async function sendActionWhatsApp(recipientPhone: string, message: string) {
     const cleanPhone = formatToWhatsAppPhone(recipientPhone);
     if (!cleanPhone) return;
 
@@ -12303,7 +12329,7 @@ function CalendarioAcoesView({
     } catch (err) {
       console.error("Error sending WhatsApp notification:", err);
     }
-  };
+  }
 
   const triggerImmediateNotifications = async (action: {
     id: string;
@@ -13750,12 +13776,14 @@ function EmpresasParceirasView({
   onGenerateAction,
   cursos = [],
   users = [],
+  onSendWhatsApp,
 }: {
   data: EmpresaParceira[];
   onToast: (m: string, t?: "success" | "error") => void;
   onGenerateAction: (empresa: EmpresaParceira) => void;
   cursos?: CursoDisponivel[];
   users?: UserProfile[];
+  onSendWhatsApp?: (phone: string, message: string) => Promise<void>;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Todas");
@@ -13976,6 +14004,10 @@ function EmpresasParceirasView({
         );
         if (isNowInTratativa) {
           onToast(`O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`, "success");
+          if (matchedUser && matchedUser.phone && onSendWhatsApp) {
+            const msg = `O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`;
+            await onSendWhatsApp(matchedUser.phone, msg);
+          }
         } else {
           onToast("Empresa atualizada!");
         }
@@ -13986,6 +14018,10 @@ function EmpresasParceirasView({
         });
         if (isNowInTratativa) {
           onToast(`O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`, "success");
+          if (matchedUser && matchedUser.phone && onSendWhatsApp) {
+            const msg = `O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`;
+            await onSendWhatsApp(matchedUser.phone, msg);
+          }
         } else {
           onToast("Empresa cadastrada!");
         }
