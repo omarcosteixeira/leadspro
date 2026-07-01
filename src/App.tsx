@@ -4503,27 +4503,37 @@ export default function App() {
         )}
       >
         <div className="h-full flex flex-col">
-          <div className="p-6 flex items-center space-x-3">
-            {botConfig?.loginLogo ? (
-              <img
-                src={botConfig.loginLogo}
-                alt="Logo"
-                className="w-full max-h-12 object-contain drop-shadow-md"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <>
-                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                  <TrendingUp size={24} />
-                </div>
-                <h1 className="text-xl font-bold text-white tracking-tight">
-                  Gestão Oeste pro
-                </h1>
-              </>
-            )}
+          <div className="p-6 flex items-center justify-between space-x-3">
+            <div className="flex items-center space-x-3 overflow-hidden">
+              {botConfig?.loginLogo ? (
+                <img
+                  src={botConfig.loginLogo}
+                  alt="Logo"
+                  className="w-full max-h-12 object-contain drop-shadow-md"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <>
+                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0">
+                    <TrendingUp size={24} />
+                  </div>
+                  <h1 className="text-xl font-bold text-white tracking-tight truncate">
+                    Gestão Oeste pro
+                  </h1>
+                </>
+              )}
+            </div>
+            {/* Close Button on Mobile */}
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="lg:hidden p-2 text-slate-400 hover:text-white hover:bg-[#082a5c] rounded-lg shrink-0"
+              title="Fechar menu"
+            >
+              <X size={20} />
+            </button>
           </div>
 
-          <nav className="flex-1 px-4 space-y-1">
+          <nav className="flex-1 px-4 space-y-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-slate-700">
             {[
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
               { id: "cadastro", label: "Novo Lead", icon: UserPlus },
@@ -4633,7 +4643,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-[#011a3c] border-b border-[#092e5c] flex items-center justify-between px-4 lg:px-8 shrink-0">
+        <header className="min-h-[4rem] bg-[#011a3c] border-b border-[#092e5c] flex items-center justify-between px-4 lg:px-8 py-2 shrink-0 flex-wrap sm:flex-nowrap gap-3">
           <button
             onClick={() => setIsSidebarOpen(true)}
             className="lg:hidden p-2 text-slate-400 hover:bg-[#082a5c] rounded-lg"
@@ -4677,7 +4687,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 lg:p-8">
+        <div className="flex-1 overflow-auto p-3 sm:p-4 lg:p-8 min-w-0 max-w-full">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
@@ -4832,6 +4842,7 @@ export default function App() {
                   onToast={showToast}
                   cursos={cursos}
                   users={users}
+                  callBotApi={callBotApi}
                   onGenerateAction={(empresa) => {
                     setInitialActionData({
                       nome: `Ação na empresa ${empresa.nome}`,
@@ -12483,12 +12494,14 @@ function EmpresasParceirasView({
   onGenerateAction,
   cursos = [],
   users = [],
+  callBotApi,
 }: {
   data: EmpresaParceira[];
   onToast: (m: string, t?: "success" | "error") => void;
   onGenerateAction: (empresa: EmpresaParceira) => void;
   cursos?: CursoDisponivel[];
   users?: UserProfile[];
+  callBotApi?: any;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Todas");
@@ -12668,6 +12681,7 @@ function EmpresasParceirasView({
     const formData = new FormData(e.currentTarget);
     const matchedUser = (users || []).find(u => u.uid === selectedConsultorId);
     const consultorNome = matchedUser ? matchedUser.name : "";
+    const lembreteText = (formData.get("lembrete") as string) || "";
 
     const payload = {
       nome: formData.get("nome") as string,
@@ -12686,6 +12700,7 @@ function EmpresasParceirasView({
       unidadesVinculadas: selectedUnidades,
       consultorId: selectedConsultorId,
       consultorNome: consultorNome,
+      lembrete: lembreteText,
       updatedAt: serverTimestamp(),
     };
 
@@ -12713,6 +12728,55 @@ function EmpresasParceirasView({
         });
         onToast("Empresa cadastrada!");
       }
+
+      // Check if status is "Em tratativa" and we have a linked FDV to send WhatsApp notification
+      if (payload.statusEmpresa === "Em tratativa" && payload.consultorId) {
+        const fdvUser = (users || []).find(u => u.uid === payload.consultorId);
+        if (fdvUser) {
+          const fdvPhone = fdvUser.phone ? fdvUser.phone.replace(/\D/g, "") : "";
+          if (fdvPhone) {
+            let formattedRecipient = fdvPhone;
+            if (formattedRecipient.startsWith("0")) {
+              formattedRecipient = formattedRecipient.substring(1);
+            }
+            if (formattedRecipient.length === 10 || formattedRecipient.length === 11) {
+              formattedRecipient = `55${formattedRecipient}`;
+            }
+
+            // Find canaldonutri user bot number
+            const canaldonutriUser = (users || []).find(u => u.email === "canaldonutri@gmail.com");
+            const senderBotNumber = canaldonutriUser?.botNumber
+              ? canaldonutriUser.botNumber.replace(/\D/g, "")
+              : "5524993346717";
+
+            const msg = `Olá *${fdvUser.name}*! ⏰\n\nEste é um lembrete para você retornar o contato com a empresa parceira *${payload.nome}* (status em tratativa).\n\n*Detalhes da Empresa:*\n- Nome: ${payload.nome}\n- Responsável: ${payload.responsavel}\n- Telefone: ${payload.telefone}${lembreteText ? `\n- Lembrete/Observação: ${lembreteText}` : ""}\n\nPor favor, retorne o contato com a empresa o quanto antes para dar andamento à parceria.`;
+
+            if (callBotApi) {
+              try {
+                await callBotApi("/api/send", {
+                  method: "POST",
+                  body: {
+                    botNumber: senderBotNumber,
+                    number: formattedRecipient,
+                    message: msg,
+                    force: true,
+                    manual: true,
+                  },
+                });
+                onToast(`Lembrete enviado por WhatsApp para ${fdvUser.name}!`);
+              } catch (botErr: any) {
+                console.error("Failed to send WhatsApp via bot api:", botErr);
+                onToast(`Erro ao enviar lembrete por WhatsApp: ${botErr.message}`, "error");
+              }
+            } else {
+              console.warn("callBotApi is not available on props");
+            }
+          } else {
+            onToast(`O comercial ${fdvUser.name} não tem telefone cadastrado no perfil para receber o lembrete por WhatsApp.`, "error");
+          }
+        }
+      }
+
       setIsModalOpen(false);
       setEditingEmpresa(null);
     } catch (err: any) {
@@ -13335,6 +13399,17 @@ function EmpresasParceirasView({
                         </div>
                       </div>
                     )}
+
+                    {emp.lembrete && (
+                      <div className="mt-3 pt-3 border-t border-slate-100">
+                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block mb-1 font-mono">
+                          ⏰ Lembrete de Retorno
+                        </span>
+                        <div className="text-xs text-amber-800 bg-amber-50/60 border border-amber-100/80 p-2.5 rounded-xl italic">
+                          "{emp.lembrete}"
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex flex-col space-y-2 mt-auto pt-3 border-t border-slate-100/60">
@@ -13473,6 +13548,11 @@ function EmpresasParceirasView({
                             <td className="p-4 pl-6">
                               <div className="font-bold text-slate-800">{emp.nome}</div>
                               {emp.cnpj && <div className="text-[10px] text-slate-400 font-mono">CNPJ: {emp.cnpj}</div>}
+                              {emp.lembrete && (
+                                <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg mt-1.5 italic max-w-xs font-medium">
+                                  ⏰ Lembrete: "{emp.lembrete}"
+                                </div>
+                              )}
                             </td>
                             <td className="p-4">
                               {emp.consultorNome ? (
@@ -13786,6 +13866,21 @@ function EmpresasParceirasView({
                     </p>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">
+                      Lembrete / Observação de Retorno de Contato
+                    </label>
+                    <textarea
+                      name="lembrete"
+                      defaultValue={editingEmpresa?.lembrete || ""}
+                      placeholder="Ex: Retornar contato na segunda-feira às 14h para alinhar detalhes da parceria."
+                      rows={3}
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Se o status for <strong>Em tratativa</strong>, salvar ou cadastrar a empresa enviará este lembrete por WhatsApp para o FDV vinculado.
+                    </p>
+                  </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">
                       Unidades Vinculadas

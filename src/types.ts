@@ -230,6 +230,7 @@ export interface EmpresaParceira {
   unidadesVinculadas?: string[];
   consultorId?: string;
   consultorNome?: string;
+  lembrete?: string;
 }
 
 export interface WhatsAppMessage {

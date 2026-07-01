@@ -720,61 +720,6 @@ Não invente dados que não estão no resumo fornecido. Se alguma informação f
         contents: prompt,
         config: {
           responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              title: {
-                type: Type.STRING,
-                description: "Título curto e profissional para o relatório gerado.",
-              },
-              answer: {
-                type: Type.STRING,
-                description: "Análise estratégica e insights em formato markdown em português.",
-              },
-              cards: {
-                type: Type.ARRAY,
-                description: "Lista de até 4 cartões de destaque com métricas importantes.",
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    title: { type: Type.STRING },
-                    value: { type: Type.STRING },
-                    icon: { type: Type.STRING, description: "Ícone lucide: users, target, file-text, check-circle, trending-up, briefcase, activity, calendar, message-square, award, percent, shield-alert" },
-                    color: { type: Type.STRING, description: "Cor Tailwind: blue, emerald, purple, amber, rose, cyan, indigo, slate" },
-                  },
-                  required: ["title", "value", "icon", "color"],
-                },
-              },
-              chart: {
-                type: Type.OBJECT,
-                description: "Configuração do gráfico dinâmico (pode ser null).",
-                properties: {
-                  type: { type: Type.STRING, description: "bar, line ou pie" },
-                  title: { type: Type.STRING },
-                  data: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        name: { type: Type.STRING, description: "Rótulo do dado" },
-                        value: { type: Type.NUMBER, description: "Valor do dado" },
-                      },
-                      required: ["name", "value"]
-                    }
-                  },
-                  xKey: { type: Type.STRING },
-                  yKey: { type: Type.STRING },
-                },
-                required: ["type", "title", "data", "xKey", "yKey"],
-              },
-              suggestions: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
-                description: "Lista de 2 a 3 perguntas sugeridas."
-              }
-            },
-            required: ["title", "answer", "cards", "suggestions"],
-          },
         },
       });
 
