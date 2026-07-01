@@ -1,0 +1,700 @@
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  MapPin,
+  ExternalLink,
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
+  Sparkles,
+  Layers,
+  Globe,
+  Building2,
+  Calendar,
+  Search,
+  Maximize2,
+  Sliders,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  HelpCircle,
+} from "lucide-react";
+import { cn } from "../lib/utils";
+
+interface Empresa {
+  id: string;
+  nome: string;
+  endereco?: string;
+  classificacao?: string;
+  statusEmpresa?: string;
+  seguimento?: string;
+  responsavel?: string;
+  telefone?: string;
+  consultorNome?: string;
+  linkMaps?: string;
+}
+
+interface Mapa3DProps {
+  empresas: Empresa[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onGenerateAction: (empresa: Empresa) => void;
+  formatPhone: (phone?: string) => string;
+}
+
+export default function Mapa3D({
+  empresas,
+  selectedId,
+  onSelect,
+  onGenerateAction,
+  formatPhone,
+}: Mapa3DProps) {
+  // Map Modes: "city" (3D Isometric City) vs "satellite" (Google Satellite)
+  const [mapMode, setMapMode] = useState<"city" | "satellite">("city");
+
+  // 3D Isometric View Parameters
+  const [rotation, setRotation] = useState<number>(-35); // Degrees around Z axis
+  const [pitch, setPitch] = useState<number>(60); // Degrees around X axis
+  const [zoom, setZoom] = useState<number>(0.9); // Scale
+  const [showRoads, setShowRoads] = useState<boolean>(true);
+  const [showZones, setShowZones] = useState<boolean>(true);
+
+  // Mouse pan/drag state for the 3D board
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Map Filter/Search
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredEmpresas = useMemo(() => {
+    if (!searchTerm.trim()) return empresas;
+    const term = searchTerm.toLowerCase();
+    return empresas.filter(
+      (e) =>
+        e.nome.toLowerCase().includes(term) ||
+        (e.endereco && e.endereco.toLowerCase().includes(term)) ||
+        (e.statusEmpresa && e.statusEmpresa.toLowerCase().includes(term))
+    );
+  }, [empresas, searchTerm]);
+
+  const selectedEmpresa = useMemo(() => {
+    return (
+      filteredEmpresas.find((emp) => emp.id === selectedId) ||
+      filteredEmpresas[0] ||
+      null
+    );
+  }, [filteredEmpresas, selectedId]);
+
+  // Sync selectedId to first item if none is selected
+  useEffect(() => {
+    if (filteredEmpresas.length > 0 && !selectedId) {
+      onSelect(filteredEmpresas[0].id);
+    }
+  }, [filteredEmpresas, selectedId, onSelect]);
+
+  // Deterministic positioning based on company ID/Name
+  const getCoordinates = (id: string, name: string) => {
+    let hash = 0;
+    const combined = id + name;
+    for (let i = 0; i < combined.length; i++) {
+      hash = combined.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    // Distribute nicely from 8% to 92% to avoid clipping edges
+    const x = Math.abs((hash * 17) % 84) + 8;
+    const y = Math.abs((hash * 31) % 84) + 8;
+    return { x, y };
+  };
+
+  // Pre-calculate company positions
+  const empresasWithPositions = useMemo(() => {
+    return filteredEmpresas.map((emp) => {
+      const { x, y } = getCoordinates(emp.id, emp.nome);
+      return {
+        ...emp,
+        pos: { x, y },
+      };
+    });
+  }, [filteredEmpresas]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const counts = {
+      conveniada: 0,
+      tratativa: 0,
+      cancelada: 0,
+      naoVisitada: 0,
+    };
+    filteredEmpresas.forEach((e) => {
+      const status = e.statusEmpresa || "Não visitada";
+      if (status === "Conveniada") counts.conveniada++;
+      else if (status === "Em tratativa") counts.tratativa++;
+      else if (status === "Cancelada") counts.cancelada++;
+      else counts.naoVisitada++;
+    });
+    return counts;
+  }, [filteredEmpresas]);
+
+  // Reset 3D camera
+  const handleResetCamera = () => {
+    setRotation(-35);
+    setPitch(60);
+    setZoom(0.9);
+    setDragOffset({ x: 0, y: 0 });
+  };
+
+  // Map drag handling
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (mapMode !== "city") return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || mapMode !== "city") return;
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+    
+    // We adjust rotation and pitch slightly with drag, or pan the map
+    setRotation((prev) => (prev + dx * 0.3) % 360);
+    setPitch((prev) => Math.max(30, Math.min(80, prev - dy * 0.3)));
+    
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Google Maps Iframe URL with Satellite Hybrid view enabled via t=k (or t=h)
+  const mapsEmbedUrl = useMemo(() => {
+    if (!selectedEmpresa) return "";
+    const addressQuery = selectedEmpresa.endereco || selectedEmpresa.nome;
+    // t=k (satellite), t=h (hybrid satellite + labels), z=19 (highly zoomed in 3D level)
+    return `https://maps.google.com/maps?q=${encodeURIComponent(
+      addressQuery
+    )}&t=h&z=19&ie=UTF8&iwloc=&output=embed`;
+  }, [selectedEmpresa]);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* LEFT SIDEBAR: List with high-fidelity color filters & stats */}
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col space-y-4 max-h-[75vh] overflow-hidden">
+        <div>
+          <h3 className="font-bold text-slate-800 text-lg flex items-center space-x-2">
+            <span>🏢 Empresas & Localização 3D</span>
+            <span className="bg-blue-50 text-blue-600 text-xs px-2 py-0.5 rounded-full font-bold">
+              {filteredEmpresas.length}
+            </span>
+          </h3>
+          <p className="text-slate-400 text-xs mt-1">
+            Selecione uma empresa para focar e visualizar as coordenadas e mapas.
+          </p>
+        </div>
+
+        {/* Quick Colored Status Legend / Mini-Stats */}
+        <div className="grid grid-cols-4 gap-1.5 shrink-0 text-center text-[10px]">
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-1.5 flex flex-col items-center">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 mb-0.5" />
+            <span className="font-bold text-emerald-800">{stats.conveniada}</span>
+            <span className="text-slate-400 font-medium scale-90 origin-top">Conv.</span>
+          </div>
+          <div className="bg-amber-50 border border-amber-100 rounded-xl p-1.5 flex flex-col items-center">
+            <span className="w-2 h-2 rounded-full bg-amber-500 mb-0.5" />
+            <span className="font-bold text-amber-800">{stats.tratativa}</span>
+            <span className="text-slate-400 font-medium scale-90 origin-top">Trat.</span>
+          </div>
+          <div className="bg-rose-50 border border-rose-100 rounded-xl p-1.5 flex flex-col items-center">
+            <span className="w-2 h-2 rounded-full bg-rose-500 mb-0.5" />
+            <span className="font-bold text-rose-800">{stats.cancelada}</span>
+            <span className="text-slate-400 font-medium scale-90 origin-top">Canc.</span>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 rounded-xl p-1.5 flex flex-col items-center">
+            <span className="w-2 h-2 rounded-full bg-slate-400 mb-0.5" />
+            <span className="font-bold text-slate-700">{stats.naoVisitada}</span>
+            <span className="text-slate-400 font-medium scale-90 origin-top">N. Vis.</span>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+          <input
+            type="text"
+            placeholder="Filtrar empresas no mapa..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
+          />
+        </div>
+
+        {/* List items with elegant scrollbar */}
+        <div className="space-y-2 overflow-y-auto flex-1 pr-1 scrollbar-thin">
+          {filteredEmpresas.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-slate-400 italic text-xs">
+              <Building2 size={24} className="mb-2 text-slate-300" />
+              <span>Nenhuma empresa encontrada com os filtros atuais.</span>
+            </div>
+          ) : (
+            empresasWithPositions.map((emp) => {
+              const isSelected = selectedId === emp.id;
+              const status = emp.statusEmpresa || "Não visitada";
+              const coordinates = emp.pos;
+
+              return (
+                <button
+                  key={emp.id}
+                  type="button"
+                  onClick={() => onSelect(emp.id)}
+                  className={cn(
+                    "w-full text-left p-3.5 rounded-2xl border transition-all flex flex-col space-y-2 cursor-pointer relative overflow-hidden group",
+                    isSelected
+                      ? "border-blue-500 bg-blue-50/20 ring-2 ring-blue-500/20"
+                      : "border-slate-100 hover:bg-slate-50"
+                  )}
+                >
+                  {/* Selected Indicator Left Line */}
+                  {isSelected && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md" />
+                  )}
+
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="font-bold text-slate-800 text-xs line-clamp-1 group-hover:text-blue-600 transition-colors">
+                      {emp.nome}
+                    </span>
+                    {emp.classificacao && (
+                      <span
+                        className={cn(
+                          "text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0 border",
+                          emp.classificacao === "Ouro"
+                            ? "bg-amber-100 text-amber-800 border-amber-200"
+                            : emp.classificacao === "Prata"
+                              ? "bg-slate-100 text-slate-700 border-slate-300"
+                              : "bg-orange-100 text-orange-800 border-orange-200"
+                        )}
+                      >
+                        {emp.classificacao}
+                      </span>
+                    )}
+                  </div>
+
+                  {emp.endereco && (
+                    <div className="flex items-center space-x-1.5 text-slate-500 text-[10px]">
+                      <MapPin size={10} className="shrink-0 text-slate-400" />
+                      <span className="truncate">{emp.endereco}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center text-[9px] pt-1 border-t border-slate-50">
+                    <div className="flex items-center space-x-1">
+                      <span
+                        className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          status === "Conveniada" && "bg-emerald-500",
+                          status === "Em tratativa" && "bg-amber-500",
+                          status === "Cancelada" && "bg-rose-500",
+                          status === "Não visitada" && "bg-slate-400"
+                        )}
+                      />
+                      <span className="font-bold text-slate-500">{status}</span>
+                    </div>
+                    {/* Simulated Coordinates */}
+                    <span className="font-mono text-slate-400 scale-90">
+                      3D Coord: ({coordinates.x}, {coordinates.y})
+                    </span>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* RIGHT WORKSPACE: 3D Isometric View vs Live Satellite Maps */}
+      <div className="lg:col-span-2 flex flex-col space-y-4">
+        {/* Toggle Mode Controller & High-tech style details */}
+        <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="flex items-center space-x-2">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+              <Globe size={18} />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-800 text-sm">Visualização Tridimensional (3D)</h4>
+              <p className="text-slate-400 text-xs">Visualize e interaja com as empresas parceiras no espaço 3D.</p>
+            </div>
+          </div>
+
+          {/* Mode Selector Tabs */}
+          <div className="bg-slate-100 p-1 rounded-2xl flex space-x-1 w-full sm:w-auto shrink-0 self-stretch sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setMapMode("city")}
+              className={cn(
+                "flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center space-x-1.5",
+                mapMode === "city"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              )}
+            >
+              <Layers size={13} />
+              <span>Perspectiva 3D</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMapMode("satellite")}
+              className={cn(
+                "flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center space-x-1.5",
+                mapMode === "satellite"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              )}
+            >
+              <Sparkles size={13} />
+              <span>Satélite 3D</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Map Body container */}
+        {selectedEmpresa ? (
+          <div className="bg-slate-950 rounded-3xl overflow-hidden border border-slate-900 flex flex-col h-[65vh] relative shadow-2xl">
+            {/* Header overlay displaying focused company details */}
+            <div className="absolute top-4 left-4 z-10 bg-slate-900/90 backdrop-blur-md border border-slate-800/80 p-3.5 rounded-2xl max-w-sm text-xs text-white shadow-xl">
+              <div className="flex items-center space-x-2 mb-1">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <span className="font-bold tracking-wider text-slate-400 uppercase text-[9px]">Empresa em Destaque</span>
+              </div>
+              <h5 className="font-bold text-white text-sm truncate">{selectedEmpresa.nome}</h5>
+              <p className="text-slate-400 text-[11px] line-clamp-1 mt-0.5">{selectedEmpresa.endereco || "Sem endereço cadastrado"}</p>
+              
+              <div className="flex gap-1.5 mt-2">
+                <span
+                  className={cn(
+                    "text-[8px] font-bold px-1.5 py-0.2 rounded-full border border-opacity-30",
+                    selectedEmpresa.statusEmpresa === "Conveniada" && "bg-emerald-500/20 text-emerald-400 border-emerald-500",
+                    selectedEmpresa.statusEmpresa === "Em tratativa" && "bg-amber-500/20 text-amber-400 border-amber-500",
+                    selectedEmpresa.statusEmpresa === "Cancelada" && "bg-rose-500/20 text-rose-400 border-rose-500",
+                    (!selectedEmpresa.statusEmpresa || selectedEmpresa.statusEmpresa === "Não visitada") && "bg-slate-500/20 text-slate-300 border-slate-400"
+                  )}
+                >
+                  {selectedEmpresa.statusEmpresa || "Não visitada"}
+                </span>
+                {selectedEmpresa.classificacao && (
+                  <span className="text-[8px] font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded-full border border-amber-500/30">
+                    🏆 {selectedEmpresa.classificacao}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* 3D CITY PERSPECTIVE MODE */}
+            {mapMode === "city" && (
+              <div
+                className="flex-1 relative overflow-hidden select-none cursor-grab active:cursor-grabbing bg-radial from-slate-900 to-slate-950 flex items-center justify-center"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              >
+                {/* 3D Terrain controls top-right */}
+                <div className="absolute top-4 right-4 z-10 flex flex-col space-y-1 bg-slate-900/95 backdrop-blur-md p-2 rounded-2xl border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setZoom((z) => Math.min(1.8, z + 0.1))}
+                    title="Aproximar Zoom"
+                    className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    <ZoomIn size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}
+                    title="Afastar Zoom"
+                    className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    <ZoomOut size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRotation((r) => r - 45)}
+                    title="Girar para Esquerda"
+                    className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors text-xs font-bold"
+                  >
+                    ↺
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRotation((r) => r + 45)}
+                    title="Girar para Direita"
+                    className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors text-xs font-bold"
+                  >
+                    ↺
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetCamera}
+                    title="Redefinir Câmera"
+                    className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    <RotateCcw size={15} />
+                  </button>
+                </div>
+
+                {/* Sub-layers Display Toggle Bottom Left */}
+                <div className="absolute bottom-4 left-4 z-10 flex space-x-1 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-800 text-[10px] text-slate-400 font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setShowRoads(!showRoads)}
+                    className={cn(
+                      "px-2 py-1 rounded-lg transition-colors",
+                      showRoads ? "bg-slate-800 text-blue-400" : "hover:text-white"
+                    )}
+                  >
+                    Estradas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowZones(!showZones)}
+                    className={cn(
+                      "px-2 py-1 rounded-lg transition-colors",
+                      showZones ? "bg-slate-800 text-blue-400" : "hover:text-white"
+                    )}
+                  >
+                    Bairros
+                  </button>
+                </div>
+
+                {/* Perspective Guide & Map compass background */}
+                <div className="absolute inset-0 pointer-events-none border border-slate-900 flex items-center justify-center opacity-30">
+                  <div className="w-[600px] h-[600px] border border-dashed border-blue-500/20 rounded-full animate-spin-slow" />
+                  <div className="absolute w-[450px] h-[450px] border border-dashed border-slate-500/10 rounded-full" />
+                </div>
+
+                {/* THE 3D ISOMETRIC CITY BOARD */}
+                <div
+                  className="relative transition-transform duration-300 ease-out"
+                  style={{
+                    width: "800px",
+                    height: "800px",
+                    transform: `perspective(1000px) rotateX(${pitch}deg) rotateZ(${rotation}deg) scale3d(${zoom}, ${zoom}, ${zoom})`,
+                    transformStyle: "preserve-3d",
+                  }}
+                >
+                  {/* Base Flat Layer representing Map Territory */}
+                  <div className="absolute inset-0 bg-slate-900 border-4 border-slate-800 rounded-[40px] shadow-2xl relative overflow-hidden">
+                    {/* Grid texture lines */}
+                    <div
+                      className="absolute inset-0 opacity-15"
+                      style={{
+                        backgroundImage: `linear-gradient(#475569 1px, transparent 1px), linear-gradient(90deg, #475569 1px, transparent 1px)`,
+                        backgroundSize: "40px 40px",
+                      }}
+                    />
+
+                    {/* Neighborhoods / Zoning colored patches */}
+                    {showZones && (
+                      <>
+                        {/* Zone 1: Premium / Financial (Goldish glowing sector) */}
+                        <div className="absolute top-[10%] left-[10%] w-[35%] h-[35%] rounded-[30px] bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/5 pointer-events-none" />
+                        <div className="absolute top-[15%] left-[15%] text-[9px] text-amber-500/20 font-black tracking-widest uppercase">
+                          Setor Ouro Residencial
+                        </div>
+
+                        {/* Zone 2: Commercial / Central (Bluish glowing sector) */}
+                        <div className="absolute bottom-[15%] left-[20%] w-[40%] h-[30%] rounded-[30px] bg-gradient-to-tr from-blue-500/5 to-transparent border border-blue-500/5 pointer-events-none" />
+                        <div className="absolute bottom-[20%] left-[25%] text-[9px] text-blue-500/20 font-black tracking-widest uppercase">
+                          Área Comercial Central
+                        </div>
+
+                        {/* Zone 3: Lake / Green Park Zone (Emerald/Teal glowing sector) */}
+                        <div className="absolute top-[20%] right-[10%] w-[30%] h-[40%] rounded-full bg-emerald-500/5 blur-3xl pointer-events-none" />
+                        <div className="absolute top-[40%] right-[15%] text-[9px] text-emerald-500/25 font-black tracking-widest uppercase">
+                          Parque de Inovação
+                        </div>
+                      </>
+                    )}
+
+                    {/* Animated Roads */}
+                    {showRoads && (
+                      <div className="absolute inset-0 pointer-events-none">
+                        {/* Diagonal Main Road */}
+                        <div className="absolute top-0 bottom-0 left-[48%] w-8 bg-slate-950/80 border-l border-r border-slate-800/50 flex items-center justify-center">
+                          <div className="h-full w-0.5 border-r border-dashed border-slate-700" />
+                        </div>
+                        {/* Horizontal Main Avenue */}
+                        <div className="absolute left-0 right-0 top-[48%] h-8 bg-slate-950/80 border-t border-b border-slate-800/50 flex items-center justify-center">
+                          <div className="w-full h-0.5 border-b border-dashed border-slate-700" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3D FLOATING PINS LAYER */}
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ transformStyle: "preserve-3d" }}
+                  >
+                    {empresasWithPositions.map((emp) => {
+                      const isFocused = selectedId === emp.id;
+                      const status = emp.statusEmpresa || "Não visitada";
+                      
+                      // Determine pin styles based on status
+                      let pinColor = "bg-slate-400 shadow-slate-400/50";
+                      let stemColor = "bg-slate-500";
+                      let glowColor = "bg-slate-400/30";
+                      let ringPulse = "border-slate-400/40";
+                      
+                      if (status === "Conveniada") {
+                        pinColor = "bg-emerald-500 shadow-emerald-500/80";
+                        stemColor = "bg-emerald-600";
+                        glowColor = "bg-emerald-500/40";
+                        ringPulse = "border-emerald-500/50";
+                      } else if (status === "Em tratativa") {
+                        pinColor = "bg-amber-500 shadow-amber-500/80";
+                        stemColor = "bg-amber-600";
+                        glowColor = "bg-amber-500/40";
+                        ringPulse = "border-amber-500/50";
+                      } else if (status === "Cancelada") {
+                        pinColor = "bg-rose-500 shadow-rose-500/80";
+                        stemColor = "bg-rose-600";
+                        glowColor = "bg-rose-500/40";
+                        ringPulse = "border-rose-500/50";
+                      }
+
+                      return (
+                        <div
+                          key={emp.id}
+                          className="absolute pointer-events-auto cursor-pointer"
+                          style={{
+                            left: `${emp.pos.x}%`,
+                            top: `${emp.pos.y}%`,
+                            transformStyle: "preserve-3d",
+                            transform: "translate3d(-50%, -50%, 0)",
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelect(emp.id);
+                          }}
+                        >
+                          {/* 1. Ground Shadow (flat) */}
+                          <div
+                            className={cn(
+                              "w-10 h-10 rounded-full blur-sm absolute -translate-x-1/2 -translate-y-1/2 transition-all duration-300",
+                              glowColor,
+                              isFocused ? "scale-150 opacity-100" : "scale-100 opacity-60"
+                            )}
+                            style={{ transform: "rotateX(0deg)" }}
+                          />
+
+                          {/* 2. Concentric animated pulses for selected ones */}
+                          {isFocused && (
+                            <div className="absolute -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full border-2 animate-ping pointer-events-none" />
+                          )}
+
+                          {/* 3. The Vertical Stem (3D altitude extrusion) */}
+                          <div
+                            className={cn(
+                              "w-[3px] absolute bottom-0 -translate-x-1/2 origin-bottom transition-all duration-300",
+                              stemColor
+                            )}
+                            style={{
+                              height: isFocused ? "40px" : "24px",
+                              transform: "rotateX(-90deg)",
+                            }}
+                          />
+
+                          {/* 4. The Floating Pin Head */}
+                          <div
+                            style={{
+                              transformStyle: "preserve-3d",
+                              transform: `translate3d(0, 0, ${isFocused ? "40px" : "24px"})`,
+                            }}
+                            className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center animate-bounce-slow"
+                          >
+                            {/* Colorful 3D Pin Bubble */}
+                            <div
+                              className={cn(
+                                "w-6 h-6 rounded-full flex items-center justify-center shadow-lg border-2 border-white/20 text-[9px] text-white font-bold transition-all duration-300 hover:scale-125",
+                                pinColor,
+                                isFocused ? "ring-4 ring-blue-500/40 scale-110" : ""
+                              )}
+                              style={{ transform: `rotateZ(${-rotation}deg) rotateX(${-pitch}deg)` }}
+                            >
+                              {emp.classificacao === "Ouro" ? "⭐" : <Building2 size={10} />}
+                            </div>
+
+                            {/* Floating Name Overlay above Pin Head (shows permanently if focused) */}
+                            {isFocused && (
+                              <div
+                                style={{
+                                  transform: `rotateZ(${-rotation}deg) rotateX(${-pitch}deg) translate3d(0, -32px, 10px)`,
+                                  transformStyle: "preserve-3d",
+                                }}
+                                className="absolute pointer-events-none bg-slate-900 border border-slate-800 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg shadow-xl whitespace-nowrap z-50 animate-fade-in flex items-center space-x-1"
+                              >
+                                <span>{emp.nome}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* LIVE GOOGLE SATELLITE 3D MODE */}
+            {mapMode === "satellite" && (
+              <div className="flex-1 bg-slate-950 relative h-full">
+                <iframe
+                  title={`Visualização de Satélite 3D - ${selectedEmpresa.nome}`}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  src={mapsEmbedUrl}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full opacity-90 hover:opacity-100 transition-opacity"
+                />
+              </div>
+            )}
+
+            {/* Quick Details footer under the Map workspace */}
+            <div className="p-5 bg-slate-900 border-t border-slate-800 grid grid-cols-1 md:grid-cols-4 gap-4 text-xs shrink-0 z-10 text-white">
+              <div>
+                <span className="text-slate-500 font-bold block uppercase text-[9px] tracking-wider">Contato / Responsável</span>
+                <span className="text-slate-200 font-semibold">{selectedEmpresa.responsavel || "Não cadastrado"}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 font-bold block uppercase text-[9px] tracking-wider">Telefone Comercial</span>
+                <span className="text-slate-200 font-semibold">{formatPhone(selectedEmpresa.telefone) || "Sem telefone"}</span>
+              </div>
+              {selectedEmpresa.consultorNome && (
+                <div>
+                  <span className="text-slate-500 font-bold block uppercase text-[9px] tracking-wider">Comercial Vinculado</span>
+                  <span className="text-blue-400 font-bold">{selectedEmpresa.consultorNome}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => onGenerateAction(selectedEmpresa)}
+                  className="w-full md:w-auto px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-900/30 flex items-center justify-center space-x-2"
+                >
+                  <Calendar size={14} />
+                  <span>Gerar Ação</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white p-12 rounded-3xl border border-slate-100 text-center text-slate-400 italic">
+            Adicione empresas parceiras com endereços para visualizar o mapa 3D interactivo.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

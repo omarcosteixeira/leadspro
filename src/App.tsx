@@ -113,6 +113,7 @@ import {
 } from "./lib/utils";
 import * as XLSX from "xlsx";
 import { EmailMarketingView } from "./components/EmailMarketingView";
+import Mapa3D from "./components/Mapa3D";
 import {
   UserProfile,
   Lead,
@@ -14742,198 +14743,13 @@ function EmpresasParceirasView({
 
       {/* Mapa das Empresas View */}
       {activeTab === "mapa" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Sidebar - Company List */}
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col space-y-4 max-h-[70vh] overflow-y-auto">
-            <h3 className="font-bold text-slate-800 text-lg flex items-center space-x-2">
-              <span>🏢 Empresas Cadastradas</span>
-              <span className="bg-blue-50 text-blue-600 text-xs px-2 py-0.5 rounded-full font-bold">
-                {filteredData.length}
-              </span>
-            </h3>
-            
-            <div className="relative">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                size={16}
-              />
-              <input
-                type="text"
-                placeholder="Filtrar empresas no mapa..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
-              />
-            </div>
-
-            <div className="space-y-2 overflow-y-auto flex-1 pr-1">
-              {filteredData.length === 0 ? (
-                <p className="text-slate-400 text-xs italic text-center py-8">
-                  Nenhuma empresa encontrada com os filtros atuais.
-                </p>
-              ) : (
-                filteredData.map((emp) => {
-                  const isSelected = selectedMapEmpresaId === emp.id || (!selectedMapEmpresaId && filteredData[0]?.id === emp.id);
-                  return (
-                    <button
-                      key={emp.id}
-                      type="button"
-                      onClick={() => setSelectedMapEmpresaId(emp.id)}
-                      className={cn(
-                        "w-full text-left p-3 rounded-2xl border transition-all flex flex-col space-y-1.5 hover:bg-slate-50 cursor-pointer",
-                        isSelected
-                          ? "border-blue-500 bg-blue-50/30 ring-2 ring-blue-500/20"
-                          : "border-slate-100"
-                      )}
-                    >
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="font-bold text-slate-800 text-xs line-clamp-1">
-                          {emp.nome}
-                        </span>
-                        {emp.classificacao && (
-                          <span
-                            className={cn(
-                              "text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0 border",
-                              emp.classificacao === "Ouro"
-                                ? "bg-amber-100 text-amber-800 border-amber-200"
-                                : emp.classificacao === "Prata"
-                                  ? "bg-slate-100 text-slate-700 border-slate-300"
-                                  : "bg-orange-100 text-orange-800 border-orange-200",
-                            )}
-                          >
-                            {emp.classificacao}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {emp.endereco && (
-                        <div className="flex items-center space-x-1.5 text-slate-500 text-[10px]">
-                          <MapPin size={10} className="shrink-0 text-slate-400" />
-                          <span className="truncate">{emp.endereco}</span>
-                        </div>
-                      )}
-
-                      <div className="flex flex-wrap gap-1">
-                        <span
-                          className={cn(
-                            "text-[8px] font-bold px-1.5 py-0.2 rounded-full border",
-                            emp.statusEmpresa === "Conveniada" &&
-                              "bg-emerald-50 text-emerald-700 border-emerald-200",
-                            emp.statusEmpresa === "Em tratativa" &&
-                              "bg-amber-50 text-amber-700 border-amber-200",
-                            emp.statusEmpresa === "Cancelada" &&
-                              "bg-rose-50 text-rose-700 border-rose-200",
-                            (emp.statusEmpresa === "Não visitada" ||
-                              !emp.statusEmpresa) &&
-                              "bg-slate-50 text-slate-600 border-slate-200",
-                          )}
-                        >
-                          {emp.statusEmpresa || "Não visitada"}
-                        </span>
-                        {emp.seguimento && (
-                          <span className="text-[8px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.2 rounded-full border border-slate-200">
-                            {emp.seguimento}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Right Area - Map Embed & Company Details */}
-          <div className="lg:col-span-2 flex flex-col space-y-4">
-            {(() => {
-              const selectedEmpresa =
-                filteredData.find((emp) => emp.id === selectedMapEmpresaId) ||
-                filteredData[0];
-
-              if (!selectedEmpresa) {
-                return (
-                  <div className="bg-white p-12 rounded-3xl border border-slate-100 text-center text-slate-400 italic">
-                    Nenhuma empresa para exibir no mapa. Cadastre uma empresa com endereço.
-                  </div>
-                );
-              }
-
-              const addressQuery = selectedEmpresa.endereco || selectedEmpresa.nome;
-              const mapsEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(addressQuery)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
-
-              return (
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[70vh]">
-                  {/* Map header */}
-                  <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shrink-0">
-                    <div>
-                      <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                        <MapPin size={16} className="text-blue-600" />
-                        <span>Visualização no Mapa: {selectedEmpresa.nome}</span>
-                      </h4>
-                      {selectedEmpresa.endereco && (
-                        <p className="text-slate-500 text-xs mt-0.5">{selectedEmpresa.endereco}</p>
-                      )}
-                    </div>
-                    {selectedEmpresa.linkMaps && (
-                      <a
-                        href={selectedEmpresa.linkMaps}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 shrink-0 bg-blue-50 px-2.5 py-1 rounded-lg"
-                      >
-                        <span>Abrir no Google Maps</span>
-                        <ExternalLink size={12} />
-                      </a>
-                    )}
-                  </div>
-
-                  {/* Map Iframe */}
-                  <div className="flex-1 bg-slate-100 relative">
-                    <iframe
-                      title={`Mapa de ${selectedEmpresa.nome}`}
-                      width="100%"
-                      height="100%"
-                      style={{ border: 0 }}
-                      src={mapsEmbedUrl}
-                      allowFullScreen
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full"
-                    />
-                  </div>
-
-                  {/* Quick Details footer of the map */}
-                  <div className="p-4 bg-slate-50 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0 text-xs">
-                    <div>
-                      <span className="text-slate-400 font-bold block uppercase text-[9px]">Responsável</span>
-                      <span className="text-slate-700 font-medium">{selectedEmpresa.responsavel || "-"}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 font-bold block uppercase text-[9px]">Telefone</span>
-                      <span className="text-slate-700 font-medium">{formatPhone(selectedEmpresa.telefone) || "-"}</span>
-                    </div>
-                    {selectedEmpresa.consultorNome && (
-                      <div>
-                        <span className="text-slate-400 font-bold block uppercase text-[9px]">Comercial Vinculado</span>
-                        <span className="text-blue-700 font-semibold">{selectedEmpresa.consultorNome}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-end col-span-2 md:col-span-1">
-                      <button
-                        type="button"
-                        onClick={() => onGenerateAction(selectedEmpresa)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-100 flex items-center space-x-1.5"
-                      >
-                        <Calendar size={14} />
-                        <span>Gerar Ação</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
+        <Mapa3D
+          empresas={filteredData}
+          selectedId={selectedMapEmpresaId}
+          onSelect={setSelectedMapEmpresaId}
+          onGenerateAction={onGenerateAction}
+          formatPhone={formatPhone}
+        />
       )}
 
       {/* Tratativas (Alertas) Report View */}
