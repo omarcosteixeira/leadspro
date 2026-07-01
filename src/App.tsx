@@ -153,6 +153,7 @@ import { AdminFuncionariosView } from "./components/AdminFuncionariosView";
 import { RelatoriosView } from "./components/RelatoriosView";
 import { WhatsAppMessageSelector } from "./components/WhatsAppMessageSelector";
 import { MultiSelect } from "./components/MultiSelect";
+import EmpresaMapDashboard from "./components/EmpresaMapDashboard";
 
 // --- Helpers ---
 export const replaceMessageVariables = (
@@ -12520,8 +12521,8 @@ function EmpresasParceirasView({
   // Mass deletion states
   const [selectedEmpresaIds, setSelectedEmpresaIds] = useState<string[]>([]);
 
-  // Active Tab: list vs tratativas report
-  const [activeTab, setActiveTab] = useState<"lista" | "tratativas">("lista");
+  // Active Tab: list vs tratativas report vs map
+  const [activeTab, setActiveTab] = useState<"lista" | "tratativas" | "mapa">("lista");
 
   const uniqueUnidades = useMemo(() => {
     return Array.from(
@@ -13000,6 +13001,18 @@ function EmpresasParceirasView({
               {statEmTratativa}
             </span>
           )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("mapa")}
+          className={cn(
+            "pb-3 px-6 font-bold text-sm transition-all border-b-2 flex items-center space-x-2",
+            activeTab === "mapa"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          )}
+        >
+          <span>🗺️ Mapa de Concentração</span>
         </button>
       </div>
 
@@ -13640,6 +13653,10 @@ function EmpresasParceirasView({
             )}
           </div>
         </div>
+      )}
+
+      {activeTab === "mapa" && (
+        <EmpresaMapDashboard data={data} users={users} />
       )}
 
       <AnimatePresence>
