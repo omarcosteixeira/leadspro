@@ -51,9 +51,8 @@ export default function Mapa3D({
   onGenerateAction,
   formatPhone,
 }: Mapa3DProps) {
-  // Map Modes: "city" (3D Isometric City) vs "satellite" (Google Satellite)
-  const [mapMode, setMapMode] = useState<"city" | "satellite">("city");
-
+  // Map Modes: "city" (3D Isometric City)
+  
   // 3D Isometric View Parameters
   const [rotation, setRotation] = useState<number>(-35); // Degrees around Z axis
   const [pitch, setPitch] = useState<number>(60); // Degrees around X axis
@@ -294,13 +293,12 @@ export default function Mapa3D({
 
   // Map drag handling
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (mapMode !== "city") return;
     setIsDragging(true);
     setDragStart({ x: e.clientX, y: e.clientY });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || mapMode !== "city") return;
+    if (!isDragging) return;
     const dx = e.clientX - dragStart.x;
     const dy = e.clientY - dragStart.y;
     
@@ -314,28 +312,6 @@ export default function Mapa3D({
   const handleMouseUp = () => {
     setIsDragging(false);
   };
-
-  // Build Google Maps query, ensuring it is focused on Rio de Janeiro Municipality
-  const getMapsQuery = (empresa: Empresa) => {
-    let address = empresa.endereco || empresa.nome;
-    const lowerAddress = address.toLowerCase();
-    
-    // Append Rio de Janeiro to query if not specified
-    if (!lowerAddress.includes("rio de janeiro") && !lowerAddress.includes("rj") && !lowerAddress.includes("niteroi") && !lowerAddress.includes("niterói")) {
-      address += ", Rio de Janeiro - RJ";
-    }
-    return address;
-  };
-
-  // Google Maps Iframe URL with Satellite Hybrid view enabled via t=k (or t=h)
-  const mapsEmbedUrl = useMemo(() => {
-    if (!selectedEmpresa) {
-      // Center on Rio de Janeiro Municipality default view (bird's-eye view)
-      return `https://maps.google.com/maps?q=Rio+de+Janeiro,+RJ,+Brasil&t=h&z=11&ie=UTF8&iwloc=&output=embed`;
-    }
-    const query = getMapsQuery(selectedEmpresa);
-    return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=h&z=17&ie=UTF8&iwloc=&output=embed`;
-  }, [selectedEmpresa]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -642,36 +618,6 @@ export default function Mapa3D({
               <p className="text-slate-400 text-xs">Visualize e interaja com as empresas parceiras no espaço 3D.</p>
             </div>
           </div>
-
-          {/* Mode Selector Tabs */}
-          <div className="bg-slate-100 p-1 rounded-2xl flex space-x-1 w-full sm:w-auto shrink-0 self-stretch sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setMapMode("city")}
-              className={cn(
-                "flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center space-x-1.5",
-                mapMode === "city"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              )}
-            >
-              <Layers size={13} />
-              <span>Perspectiva 3D</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMapMode("satellite")}
-              className={cn(
-                "flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center space-x-1.5",
-                mapMode === "satellite"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              )}
-            >
-              <Sparkles size={13} />
-              <span>Satélite 3D</span>
-            </button>
-          </div>
         </div>
 
         {/* Map Body container */}
@@ -707,7 +653,6 @@ export default function Mapa3D({
             </div>
 
             {/* 3D CITY PERSPECTIVE MODE */}
-            {mapMode === "city" && (
               <div
                 className="flex-1 relative overflow-hidden select-none cursor-grab active:cursor-grabbing bg-radial from-slate-900 to-slate-950 flex items-center justify-center"
                 onMouseDown={handleMouseDown}
@@ -1026,24 +971,6 @@ export default function Mapa3D({
                   </div>
                 </div>
               </div>
-            )}
-
-            {/* LIVE GOOGLE SATELLITE 3D MODE */}
-            {mapMode === "satellite" && (
-              <div className="flex-1 bg-slate-950 relative h-full">
-                <iframe
-                  title={`Visualização de Satélite 3D - ${selectedEmpresa.nome}`}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  src={mapsEmbedUrl}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full opacity-90 hover:opacity-100 transition-opacity"
-                />
-              </div>
-            )}
 
             {/* Quick Details footer under the Map workspace */}
             <div className="p-5 bg-slate-900 border-t border-slate-800 grid grid-cols-1 md:grid-cols-4 gap-4 text-xs shrink-0 z-10 text-white">
