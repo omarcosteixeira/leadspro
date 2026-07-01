@@ -340,10 +340,14 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.SALA_MATRICULA,
     ROLES.QG,
     ROLES.LIDER_FDV,
+    ROLES.SSA,
     ROLES.GESTOR_UNIDADE,
     ROLES.GESTOR_COMERCIAL,
+    ROLES.ACADEMICO,
     ROLES.GESTOR_COMERCIAL_COMERCIAL,
     ROLES.FDV_COMERCIAL,
+    ROLES.FINANCEIRO,
+    ROLES.TECNICO,
   ],
   cadastro: [
     ROLES.ADMIN_MASTER,
@@ -378,14 +382,18 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   ],
   campanhas: [
     ROLES.ADMIN_MASTER,
-    ROLES.LIDER_FDV,
+    ROLES.FDV,
     ROLES.SALA_MATRICULA,
     ROLES.QG,
-    ROLES.FDV,
+    ROLES.LIDER_FDV,
+    ROLES.SSA,
     ROLES.GESTOR_UNIDADE,
     ROLES.GESTOR_COMERCIAL,
-    ROLES.FDV_COMERCIAL,
+    ROLES.ACADEMICO,
     ROLES.GESTOR_COMERCIAL_COMERCIAL,
+    ROLES.FDV_COMERCIAL,
+    ROLES.FINANCEIRO,
+    ROLES.TECNICO,
   ],
   calendario: [
     ROLES.ADMIN_MASTER,
@@ -425,11 +433,16 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.ADMIN_MASTER,
     ROLES.FDV,
     ROLES.SALA_MATRICULA,
+    ROLES.QG,
     ROLES.LIDER_FDV,
     ROLES.SSA,
     ROLES.GESTOR_UNIDADE,
     ROLES.GESTOR_COMERCIAL,
     ROLES.ACADEMICO,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+    ROLES.FDV_COMERCIAL,
+    ROLES.FINANCEIRO,
+    ROLES.TECNICO,
   ],
   basesDisparo: [
     ROLES.ADMIN_MASTER,
@@ -475,7 +488,6 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   ],
   cursos: [
     ROLES.ADMIN_MASTER,
-    ROLES.PROMOTOR,
     ROLES.FDV,
     ROLES.SALA_MATRICULA,
     ROLES.QG,
@@ -484,9 +496,10 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.GESTOR_UNIDADE,
     ROLES.GESTOR_COMERCIAL,
     ROLES.ACADEMICO,
-    ROLES.PROMOTOR_RUA,
     ROLES.GESTOR_COMERCIAL_COMERCIAL,
     ROLES.FDV_COMERCIAL,
+    ROLES.FINANCEIRO,
+    ROLES.TECNICO,
   ],
   controleInsumos: [
     ROLES.ADMIN_MASTER,
@@ -6044,7 +6057,7 @@ function DashboardView({
     }
   };
 
-  const widgets = profile.dashboardWidgets || {
+  const defaultWidgets = {
     stats: false,
     links: true,
     planner: true,
@@ -6054,6 +6067,9 @@ function DashboardView({
     periodo: true,
     aniversarios: true,
   };
+  const widgets = profile?.dashboardWidgets
+    ? { ...defaultWidgets, ...profile.dashboardWidgets }
+    : defaultWidgets;
 
   const currentMonthNum = new Date().getMonth() + 1; // 1-12
   const monthNamesPt = [
@@ -12477,7 +12493,11 @@ function CalendarioAcoesView({
     (u) => u.role === ROLES.PROMOTOR || u.role === ROLES.PROMOTOR_RUA,
   );
   const colaboradoresDisponiveis = (users || []).filter(
-    (u) => u.role === ROLES.FDV_COMERCIAL || u.role === ROLES.FDV,
+    (u) =>
+      u.role === ROLES.FDV_COMERCIAL ||
+      u.role === ROLES.FDV ||
+      u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL ||
+      u.role === ROLES.GESTOR_COMERCIAL,
   );
 
   useEffect(() => {
