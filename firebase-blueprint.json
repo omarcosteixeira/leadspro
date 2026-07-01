@@ -230,6 +230,23 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["solicitanteId", "solicitanteNome", "dataInicio", "dataFim", "tipo", "status"]
+    },
+    "IsencaoEntry": {
+      "title": "IsencaoEntry",
+      "description": "Exemptions tracking and follow-up",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "cpf": { "type": "string" },
+        "telefone": { "type": "string" },
+        "numeroOportunidade": { "type": "string" },
+        "curso": { "type": "string" },
+        "inseridoDigitaliza": { "type": "string", "enum": ["Sim", "Não"] },
+        "status": { "type": "string", "enum": ["Pendente", "Solicitado", "Deferido"] },
+        "boletoPago": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nome", "cpf", "telefone", "curso", "inseridoDigitaliza", "status", "boletoPago"]
     }
   },
   "firestore": {
@@ -288,6 +305,10 @@
     "artifacts/gestaopro-761e1/public/data/solicitacoes_folga/{id}": {
       "schema": "SolicitacaoFolga",
       "description": "Time off and vacation requests data"
+    },
+    "artifacts/gestaopro-761e1/public/data/isencoes/{isencaoId}": {
+      "schema": "IsencaoEntry",
+      "description": "Exemptions tracking data"
     }
   }
 }

@@ -297,5 +297,9 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuthenticated() && (isAdminMaster() || isLider() || isGestorComercial() || isSalaMatricula());
     }
+
+    match /artifacts/gestaopro-761e1/public/data/isencoes/{isencaoId} {
+      allow read, write: if isAuthenticated();
+    }
   }
 }

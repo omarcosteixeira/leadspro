@@ -43,6 +43,7 @@ export const COLLECTIONS = {
   LEADS: `artifacts/${appId}/public/data/leads`,
   USERS: `artifacts/${appId}/public/data/users`,
   GAP: `artifacts/${appId}/public/data/gap_academico`,
+  ISENCOES: `artifacts/${appId}/public/data/isencoes`,
   PLANNER: `artifacts/${appId}/public/data/planner`,
   BASES: `artifacts/${appId}/public/data/bases`,
   LINKS: `artifacts/${appId}/public/data/linksUteis`,

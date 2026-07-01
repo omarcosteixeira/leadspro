@@ -433,5 +433,19 @@ export interface BotReport {
   sentAt: any;
 }
 
+export interface IsencaoEntry {
+  id: string;
+  nome: string;
+  cpf: string;
+  telefone: string;
+  numeroOportunidade?: string;
+  curso: string;
+  inseridoDigitaliza: 'Sim' | 'Não';
+  status: 'Pendente' | 'Solicitado' | 'Deferido';
+  boletoPago: boolean;
+  createdAt: any;
+  updatedAt?: any;
+}
+
 
 

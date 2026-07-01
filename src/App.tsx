@@ -140,6 +140,7 @@ import {
   InsumoEstoque,
   InsumoPedidoComercial,
   InsumoEstoqueComercial,
+  IsencaoEntry,
 } from "./types";
 import { ProfileModal } from "./components/ProfileModal";
 import { PublicRegistrationForm } from "./components/PublicRegistrationForm";
@@ -150,6 +151,7 @@ import { ControleInsumosView } from "./components/ControleInsumosView";
 import { ControleInsumosComercialView } from "./components/ControleInsumosComercialView";
 import { WhatsAppMessageEditor } from "./components/WhatsAppMessageEditor";
 import { AdminFuncionariosView } from "./components/AdminFuncionariosView";
+import { IsencoesView } from "./components/IsencoesView";
 import { RelatoriosView } from "./components/RelatoriosView";
 import { WhatsAppMessageSelector } from "./components/WhatsAppMessageSelector";
 import { MultiSelect } from "./components/MultiSelect";
@@ -494,6 +496,18 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
   ],
   controleInsumosComercial: [
     ROLES.ADMIN_MASTER,
+    ROLES.FDV_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ],
+  isencoes: [
+    ROLES.ADMIN_MASTER,
+    ROLES.SALA_MATRICULA,
+    ROLES.LIDER_FDV,
+    ROLES.SSA,
+    ROLES.QG,
+    ROLES.FDV,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
     ROLES.FDV_COMERCIAL,
     ROLES.GESTOR_COMERCIAL_COMERCIAL,
   ],
@@ -2986,6 +3000,7 @@ export default function App() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [bases, setBases] = useState<BaseEntry[]>([]);
   const [gap, setGap] = useState<GapEntry[]>([]);
+  const [isencoes, setIsencoes] = useState<IsencaoEntry[]>([]);
   const [fiesProuni, setFiesProuni] = useState<FiesProuniEntry[]>([]);
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [bomDia, setBomDia] = useState<BomDiaCaptacao[]>([]);
@@ -3719,6 +3734,20 @@ export default function App() {
       );
     }
 
+    let unsubIsencoes = () => {};
+    if (profile && VIEW_PERMISSIONS.isencoes.includes(profile.role)) {
+      unsubIsencoes = onSnapshot(
+        collection(db, COLLECTIONS.ISENCOES),
+        (snap) => {
+          setIsencoes(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as IsencaoEntry),
+          );
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.ISENCOES),
+      );
+    }
+
     let unsubFiesProuni = () => {};
     if (profile && VIEW_PERMISSIONS.fiesProuni.includes(profile.role)) {
       unsubFiesProuni = onSnapshot(
@@ -4101,6 +4130,7 @@ export default function App() {
       unsubLeads();
       unsubBases();
       unsubGap();
+      unsubIsencoes();
       unsubFiesProuni();
       unsubCampanhas();
       unsubBomDia();
@@ -4530,6 +4560,7 @@ export default function App() {
               { id: "historico", label: "Histórico", icon: History },
               { id: "bases", label: "Bases", icon: Database },
               { id: "gap", label: "GAP Acadêmico", icon: GraduationCap },
+              { id: "isencoes", label: "Acompanhamento de Isenções", icon: ShieldCheck },
               { id: "fiesProuni", label: "Fies/Prouni", icon: FileText },
               { id: "mapao", label: "Mapão Acadêmico", icon: MapPin },
               { id: "cursos", label: "Cursos Disponíveis", icon: BookOpen },
@@ -4745,6 +4776,14 @@ export default function App() {
                   onSendBot={handleSendBotMessage}
                   onMassSendBot={handleMassSendBotMessages}
                   calendarioAcoes={calendarioAcoes}
+                />
+              )}
+              {currentView === "isencoes" && (
+                <IsencoesView
+                  isencoes={isencoes}
+                  gap={gap}
+                  onToast={showToast}
+                  profile={profile!}
                 />
               )}
               {currentView === "fiesProuni" && (
@@ -8672,6 +8711,145 @@ function BasesView({
     "all" | "blocked" | "unblocked"
   >("all");
 
+  // New States for Sub-tabs and Candidates Editing
+  const [basesSubTab, setBasesSubTab] = useState<"dashboard" | "lista" | "novo">("dashboard");
+  const [editingCandidate, setEditingCandidate] = useState<BaseEntry | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    nomeBase: "",
+    nome: "",
+    telefone: "",
+    cpf: "",
+    curso: "",
+    produto: "Graduação" as "Graduação" | "Técnico" | "Pós-graduação",
+    numeroOportunidade: "",
+    semestre: "",
+    periodo: "",
+    metodologia: "",
+    formaIngresso: "",
+    numeroMatricula: "",
+    status: "Pendente" as 'Pendente' | 'Interessado' | 'Convertido' | 'Não tem interesse' | 'Sem retorno',
+  });
+
+  // Memoized aggregations for Dashboard basic metrics
+  const statsByBase = useMemo(() => {
+    const groups: { [key: string]: { total: number; converted: number; interested: number; pending: number } } = {};
+    bases.forEach((b) => {
+      const baseName = b.nomeBase || "Sem Nome";
+      if (!groups[baseName]) {
+        groups[baseName] = { total: 0, converted: 0, interested: 0, pending: 0 };
+      }
+      groups[baseName].total += 1;
+      if (b.status === "Convertido") groups[baseName].converted += 1;
+      if (b.status === "Interessado") groups[baseName].interested += 1;
+      if (b.status === "Pendente") groups[baseName].pending += 1;
+    });
+
+    return Object.entries(groups).map(([name, data]) => ({
+      name,
+      total: data.total,
+      converted: data.converted,
+      interested: data.interested,
+      pending: data.pending,
+      conversionRate: data.total > 0 ? ((data.converted / data.total) * 100).toFixed(1) : "0",
+    })).sort((a, b) => b.total - a.total);
+  }, [bases]);
+
+  const statsByProduct = useMemo(() => {
+    const groups: { [key: string]: number } = { "Graduação": 0, "Técnico": 0, "Pós-graduação": 0 };
+    bases.forEach((b) => {
+      const p = b.produto || "Graduação";
+      if (groups[p] !== undefined) {
+        groups[p] += 1;
+      } else {
+        groups[p] = 1;
+      }
+    });
+    return Object.entries(groups).map(([name, count]) => ({
+      name,
+      count,
+      percentage: bases.length > 0 ? ((count / bases.length) * 100).toFixed(1) : "0",
+    }));
+  }, [bases]);
+
+  const statsByStatus = useMemo(() => {
+    const groups: { [key: string]: number } = {
+      "Pendente": 0,
+      "Interessado": 0,
+      "Convertido": 0,
+      "Não tem interesse": 0,
+      "Sem retorno": 0,
+    };
+    bases.forEach((b) => {
+      const s = b.status || "Pendente";
+      if (groups[s] !== undefined) {
+        groups[s] += 1;
+      }
+    });
+    return Object.entries(groups).map(([name, count]) => ({
+      name,
+      count,
+      percentage: bases.length > 0 ? ((count / bases.length) * 100).toFixed(1) : "0",
+    }));
+  }, [bases]);
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCandidate) return;
+
+    setLoading(true);
+    try {
+      const cleanCpf = editFormData.cpf ? editFormData.cpf.replace(/\D/g, "") : "";
+      const cleanTelefone = editFormData.telefone.replace(/\D/g, "");
+
+      const updatedData = {
+        ...editFormData,
+        cpf: cleanCpf,
+        telefone: cleanTelefone,
+        updatedAt: serverTimestamp(),
+      };
+
+      await updateDoc(doc(db, COLLECTIONS.BASES, editingCandidate.id), updatedData);
+      
+      // If conversion status toggled to Convertido, check and sync with GAP
+      if (editFormData.status === "Convertido" && editingCandidate.status !== "Convertido") {
+        const q = query(
+          collection(db, COLLECTIONS.GAP),
+          where("cpf", "==", cleanCpf || ""),
+        );
+        const snap = await getDocs(q);
+        if (snap.empty && cleanCpf) {
+          await addDoc(collection(db, COLLECTIONS.GAP), {
+            nome: editFormData.nome,
+            telefone: cleanTelefone,
+            cpf: cleanCpf,
+            produto: editFormData.produto,
+            numeroOportunidade: editFormData.numeroOportunidade,
+            curso: editFormData.curso,
+            metodologia: editFormData.metodologia,
+            formaIngresso: editFormData.formaIngresso,
+            semestre: editFormData.semestre,
+            matAcad: false,
+            documentos: {},
+            createdAt: serverTimestamp(),
+          });
+          onToast("Candidato atualizado e enviado para o GAP (Convertido)!", "success");
+        } else {
+          onToast("Status atualizado com sucesso!", "success");
+        }
+      } else {
+        onToast("Informações do candidato atualizadas com sucesso!", "success");
+      }
+
+      setIsEditModalOpen(false);
+      setEditingCandidate(null);
+    } catch (err: any) {
+      onToast(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleVerificacao = () => {
     const invalidIds = new Set<string>();
     bases.forEach((base) => {
@@ -9063,16 +9241,23 @@ function BasesView({
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-center max-w-xl mx-auto gap-4">
-        <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap">
-          Bases
-        </h3>
-        <div className="flex flex-wrap justify-center gap-2">
+    <div className="space-y-6">
+      {/* Header and Actions */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <Database className="text-blue-600" size={28} />
+            Acompanhamento de Bases
+          </h2>
+          <p className="text-sm text-slate-500">
+            Gerencie e analise as bases de captação de candidatos da sua unidade.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           {[ROLES.ADMIN_MASTER, ROLES.LIDER_FDV].includes(profile.role) && (
             <button
               onClick={handleVerificacao}
-              className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold"
+              className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold shadow-sm"
               title="Verificar se contatos existem no GAP ou Base Líquida"
             >
               <Search size={18} />
@@ -9081,19 +9266,19 @@ function BasesView({
           )}
           <button
             onClick={() => setIsAddMsgModalOpen(true)}
-            className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
+            className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold shadow-sm"
           >
             <Plus size={18} />
             <span>Inserir Mensagens</span>
           </button>
           <button
             onClick={handleInsertDefaultBasesMessages}
-            className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold"
+            className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold shadow-sm"
             title="Inserir Mensagens Padrões"
           >
             <MessageSquare size={14} />
           </button>
-          <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
+          <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer shadow-sm">
             <Upload size={18} />
             <span>Importar</span>
             <input
@@ -9105,404 +9290,916 @@ function BasesView({
           </label>
           <button
             onClick={handleExport}
-            className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
+            className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold shadow-sm"
           >
             <Download size={18} />
             <span>Exportar</span>
           </button>
         </div>
       </div>
-      <div className="max-w-xl mx-auto">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-          <h3 className="text-xl font-bold text-slate-900 mb-4">
-            Novo Registro em Base
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              placeholder="Nome da Base (Ex: Junho 2024)"
-              required
-              value={formData.nomeBase}
-              onChange={(e) =>
-                setFormData({ ...formData, nomeBase: e.target.value })
-              }
-              className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                placeholder="Nome"
-                required
-                value={formData.nome}
-                onChange={(e) =>
-                  setFormData({ ...formData, nome: e.target.value })
-                }
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input
-                placeholder="Telefone"
-                required
-                value={formData.telefone}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    telefone: formatPhone(e.target.value),
-                  })
-                }
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+
+      {/* Elegant Sub-tabs */}
+      <div className="flex border-b border-slate-100 gap-2 overflow-x-auto">
+        <button
+          onClick={() => setBasesSubTab("dashboard")}
+          className={cn(
+            "px-5 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap",
+            basesSubTab === "dashboard"
+              ? "border-b-2 border-blue-600 text-blue-600 font-bold"
+              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
+          )}
+        >
+          <LayoutDashboard size={16} />
+          <span>Painel Geral (Dashboard)</span>
+        </button>
+        <button
+          onClick={() => setBasesSubTab("lista")}
+          className={cn(
+            "px-5 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap",
+            basesSubTab === "lista"
+              ? "border-b-2 border-blue-600 text-blue-600 font-bold"
+              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
+          )}
+        >
+          <Database size={16} />
+          <span>Lista de Candidatos</span>
+        </button>
+        <button
+          onClick={() => setBasesSubTab("novo")}
+          className={cn(
+            "px-5 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap",
+            basesSubTab === "novo"
+              ? "border-b-2 border-blue-600 text-blue-600 font-bold"
+              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
+          )}
+        >
+          <UserPlus size={16} />
+          <span>Novo Registro</span>
+        </button>
+      </div>
+
+      {/* Dashboard Sub-tab */}
+      {basesSubTab === "dashboard" && (
+        <div className="space-y-6" id="bases-dashboard-view">
+          {/* Main Hero KPI Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+              <div className="p-3.5 bg-blue-50 text-blue-600 rounded-xl">
+                <Users size={24} />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total de Cadastros</span>
+                <span className="text-2xl font-black text-slate-800">{bases.length}</span>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                placeholder="CPF"
-                value={formData.cpf}
-                onChange={(e) =>
-                  setFormData({ ...formData, cpf: formatCPF(e.target.value) })
-                }
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input
-                placeholder="N° Oportunidade"
-                required
-                value={formData.numeroOportunidade}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    numeroOportunidade: e.target.value,
-                  })
-                }
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+              <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                <CheckCircle2 size={24} />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider block">Convertidos</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-slate-800">
+                    {bases.filter((b) => b.status === "Convertido").length}
+                  </span>
+                  <span className="text-xs font-bold text-emerald-600">
+                    ({bases.length > 0 ? ((bases.filter((b) => b.status === "Convertido").length / bases.length) * 100).toFixed(1) : "0"}%)
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+              <div className="p-3.5 bg-blue-50 text-blue-500 rounded-xl">
+                <TrendingUp size={24} />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-blue-500 uppercase tracking-wider block">Interessados</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-slate-800">
+                    {bases.filter((b) => b.status === "Interessado").length}
+                  </span>
+                  <span className="text-xs font-bold text-blue-600">
+                    ({bases.length > 0 ? ((bases.filter((b) => b.status === "Interessado").length / bases.length) * 100).toFixed(1) : "0"}%)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+              <div className="p-3.5 bg-amber-50 text-amber-600 rounded-xl">
+                <Clock size={24} />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-amber-500 uppercase tracking-wider block">Pendentes</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-slate-800">
+                    {bases.filter((b) => b.status === "Pendente").length}
+                  </span>
+                  <span className="text-xs font-bold text-amber-600">
+                    ({bases.length > 0 ? ((bases.filter((b) => b.status === "Pendente").length / bases.length) * 100).toFixed(1) : "0"}%)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2-Column Bento Breakdown */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Column 1: Performance por Base */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <Database size={18} className="text-blue-500" />
+                Desempenho por Base de Origem
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase pb-2">
+                      <th className="pb-2">Nome da Base</th>
+                      <th className="pb-2 text-center">Registros</th>
+                      <th className="pb-2 text-center">Conversões</th>
+                      <th className="pb-2 text-right">Conversão (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {statsByBase.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-4 text-center text-slate-400 italic">
+                          Nenhuma base registrada ainda.
+                        </td>
+                      </tr>
+                    ) : (
+                      statsByBase.slice(0, 10).map((b) => (
+                        <tr key={b.name} className="hover:bg-slate-50/50">
+                          <td className="py-3 font-semibold text-slate-700">{b.name}</td>
+                          <td className="py-3 text-center font-bold text-slate-600">{b.total}</td>
+                          <td className="py-3 text-center text-emerald-600 font-bold">{b.converted}</td>
+                          <td className="py-3 text-right">
+                            <span className="inline-block px-2 py-0.5 rounded-full font-black bg-emerald-50 text-emerald-700 text-[10px]">
+                              {b.conversionRate}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Column 2: Status & Product distributions */}
+            <div className="space-y-6">
+              {/* Distribution of Statuses */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Target size={18} className="text-blue-500" />
+                  Distribuição de Status dos Candidatos
+                </h3>
+                <div className="space-y-3">
+                  {statsByStatus.map((s) => (
+                    <div key={s.name} className="space-y-1">
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span className="text-slate-600 flex items-center gap-1.5">
+                          <span className={cn(
+                            "w-2 h-2 rounded-full",
+                            s.name === "Pendente" && "bg-slate-400",
+                            s.name === "Interessado" && "bg-blue-400",
+                            s.name === "Convertido" && "bg-emerald-400",
+                            s.name === "Não tem interesse" && "bg-rose-400",
+                            s.name === "Sem retorno" && "bg-orange-400",
+                          )} />
+                          {s.name}
+                        </span>
+                        <span className="text-slate-800 font-bold">
+                          {s.count} <span className="text-slate-400 font-normal">({s.percentage}%)</span>
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            s.name === "Pendente" && "bg-slate-400",
+                            s.name === "Interessado" && "bg-blue-400",
+                            s.name === "Convertido" && "bg-emerald-400",
+                            s.name === "Não tem interesse" && "bg-rose-400",
+                            s.name === "Sem retorno" && "bg-orange-400",
+                          )}
+                          style={{ width: `${s.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Distribution of Products */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <GraduationCap size={18} className="text-blue-500" />
+                  Distribuição por Produto Acadêmico
+                </h3>
+                <div className="space-y-3">
+                  {statsByProduct.map((p) => (
+                    <div key={p.name} className="space-y-1">
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span className="text-slate-600">{p.name}</span>
+                        <span className="text-slate-800 font-bold">
+                          {p.count} <span className="text-slate-400 font-normal">({p.percentage}%)</span>
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full transition-all"
+                          style={{ width: `${p.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Cadastro Sub-tab */}
+      {basesSubTab === "novo" && (
+        <div className="max-w-xl mx-auto">
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <h3 className="text-xl font-bold text-slate-900 mb-4">
+              Novo Registro em Base
+            </h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <input
-                placeholder="Semestre"
+                placeholder="Nome da Base (Ex: Junho 2024)"
                 required
-                value={formData.semestre}
+                value={formData.nomeBase}
                 onChange={(e) =>
-                  setFormData({ ...formData, semestre: e.target.value })
+                  setFormData({ ...formData, nomeBase: e.target.value })
                 }
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  placeholder="Nome"
+                  required
+                  value={formData.nome}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nome: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <input
+                  placeholder="Telefone"
+                  required
+                  value={formData.telefone}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      telefone: formatPhone(e.target.value),
+                    })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  placeholder="CPF"
+                  value={formData.cpf}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cpf: formatCPF(e.target.value) })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <input
+                  placeholder="N° Oportunidade"
+                  required
+                  value={formData.numeroOportunidade}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      numeroOportunidade: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  placeholder="Semestre"
+                  required
+                  value={formData.semestre}
+                  onChange={(e) =>
+                    setFormData({ ...formData, semestre: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <select
+                  value={formData.produto}
+                  onChange={(e) =>
+                    setFormData({ ...formData, produto: e.target.value as any })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  {uniqueProdutos.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  placeholder="Metodologia"
+                  required
+                  value={formData.metodologia}
+                  onChange={(e) =>
+                    setFormData({ ...formData, metodologia: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <input
+                  placeholder="Forma de Ingresso"
+                  required
+                  value={formData.formaIngresso}
+                  onChange={(e) =>
+                    setFormData({ ...formData, formaIngresso: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  placeholder="Período"
+                  value={formData.periodo}
+                  onChange={(e) =>
+                    setFormData({ ...formData, periodo: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <input
+                  placeholder="Nº Matrícula"
+                  value={formData.numeroMatricula}
+                  onChange={(e) =>
+                    setFormData({ ...formData, numeroMatricula: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <input
+                placeholder="Curso"
+                required
+                value={formData.curso}
+                onChange={(e) =>
+                  setFormData({ ...formData, curso: e.target.value })
+                }
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50"
+              >
+                {loading ? "Salvando..." : "Adicionar à Base"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Candidates List Sub-tab */}
+      {basesSubTab === "lista" && (
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h3 className="text-xl font-bold text-slate-900">
+              Bases a Trabalhar
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={16}
+                />
+                <input
+                  type="text"
+                  placeholder="Buscar por nome..."
+                  className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <MultiSelect
+                options={uniqueBases}
+                selectedValues={baseFilter}
+                onChange={setBaseFilter}
+                placeholder="Todas as Bases"
+                allLabel="Todas as Bases"
               />
               <select
-                value={formData.produto}
-                onChange={(e) =>
-                  setFormData({ ...formData, produto: e.target.value as any })
-                }
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                value={produtoFilter}
+                onChange={(e) => setProdutoFilter(e.target.value)}
               >
+                <option value="">Todos os Produtos</option>
                 {uniqueProdutos.map((p) => (
                   <option key={p} value={p}>
                     {p}
                   </option>
                 ))}
               </select>
+              <select
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                value={cursoFilter}
+                onChange={(e) => setCursoFilter(e.target.value)}
+              >
+                <option value="">Todos os Cursos</option>
+                {uniqueCursos.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                value={semestreFilter}
+                onChange={(e) => setSemestreFilter(e.target.value)}
+              >
+                <option value="">Todos os Semestres</option>
+                {uniqueSemestres.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">Todos Status</option>
+                <option value="Pendente">Pendente</option>
+                <option value="Interessado">Interessado</option>
+                <option value="Convertido">Convertido</option>
+                <option value="Não tem interesse">Não tem interesse</option>
+                <option value="Sem retorno">Sem retorno</option>
+              </select>
+              <select
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                value={blockedFilter}
+                onChange={(e) => setBlockedFilter(e.target.value as any)}
+              >
+                <option value="all">Verificação: Todos</option>
+                <option value="blocked">Verificação: Bloqueados</option>
+                <option value="unblocked">Verificação: Ativos</option>
+              </select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                placeholder="Metodologia"
-                required
-                value={formData.metodologia}
-                onChange={(e) =>
-                  setFormData({ ...formData, metodologia: e.target.value })
-                }
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input
-                placeholder="Forma de Ingresso"
-                required
-                value={formData.formaIngresso}
-                onChange={(e) =>
-                  setFormData({ ...formData, formaIngresso: e.target.value })
-                }
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                placeholder="Período"
-                value={formData.periodo}
-                onChange={(e) =>
-                  setFormData({ ...formData, periodo: e.target.value })
-                }
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input
-                placeholder="Nº Matrícula"
-                value={formData.numeroMatricula}
-                onChange={(e) =>
-                  setFormData({ ...formData, numeroMatricula: e.target.value })
-                }
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <input
-              placeholder="Curso"
-              required
-              value={formData.curso}
-              onChange={(e) =>
-                setFormData({ ...formData, curso: e.target.value })
-              }
-              className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50"
-            >
-              {loading ? "Salvando..." : "Adicionar à Base"}
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h3 className="text-xl font-bold text-slate-900">
-            Bases a Trabalhar
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            <div className="relative">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                size={16}
-              />
-              <input
-                type="text"
-                placeholder="Buscar por nome..."
-                className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 w-48"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <MultiSelect
-              options={uniqueBases}
-              selectedValues={baseFilter}
-              onChange={setBaseFilter}
-              placeholder="Todas as Bases"
-              allLabel="Todas as Bases"
-            />
-            <select
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
-              value={produtoFilter}
-              onChange={(e) => setProdutoFilter(e.target.value)}
-            >
-              <option value="">Todos os Produtos</option>
-              {uniqueProdutos.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-            <select
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
-              value={cursoFilter}
-              onChange={(e) => setCursoFilter(e.target.value)}
-            >
-              <option value="">Todos os Cursos</option>
-              {uniqueCursos.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <select
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
-              value={semestreFilter}
-              onChange={(e) => setSemestreFilter(e.target.value)}
-            >
-              <option value="">Todos os Semestres</option>
-              {uniqueSemestres.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <select
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">Todos Status</option>
-              <option value="Pendente">Pendente</option>
-              <option value="Interessado">Interessado</option>
-              <option value="Convertido">Convertido</option>
-              <option value="Não tem interesse">Não tem interesse</option>
-              <option value="Sem retorno">Sem retorno</option>
-            </select>
-            <select
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
-              value={blockedFilter}
-              onChange={(e) => setBlockedFilter(e.target.value as any)}
-            >
-              <option value="all">Verificação: Todos</option>
-              <option value="blocked">Verificação: Bloqueados</option>
-              <option value="unblocked">Verificação: Ativos</option>
-            </select>
           </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
-                <th className="px-6 py-4 w-12 text-center">#</th>
-                <th className="px-6 py-4 w-12">
-                  <input
-                    type="checkbox"
-                    checked={
-                      filteredBases.filter((b) => !invalidBaseIds.has(b.id))
-                        .length > 0 &&
-                      selectedEntries.length ===
-                        filteredBases.filter((b) => !invalidBaseIds.has(b.id))
-                          .length
-                    }
-                    onChange={(e) => toggleSelectAll(e.target.checked)}
-                  />
-                </th>
-                <th className="px-6 py-4">Nome</th>
-                <th className="px-6 py-4">Base</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 flex items-center gap-4">
-                  {selectedEntries.length > 0 && (
-                    <button
-                      onClick={handleBulkDelete}
-                      className="text-rose-600 font-bold hover:underline"
-                    >
-                      excluir selecionados
-                    </button>
-                  )}
-                  {selectedEntries.length > 0 && botConfig.url && (
-                    <button
-                      onClick={() => setMassSelectorOpen(true)}
-                      className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
-                    >
-                      <Bot size={14} /> Em Massa
-                    </button>
-                  )}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredBases.map((entry, index) => (
-                <tr
-                  key={entry.id}
-                  className={cn(
-                    "hover:bg-slate-50/50 transition-all",
-                    invalidBaseIds.has(entry.id) && "bg-rose-50/50",
-                  )}
-                >
-                  <td className="px-6 py-4 text-center font-bold text-slate-400 text-xs">
-                    {index + 1}
-                  </td>
-                  <td className="px-6 py-4">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                  <th className="px-6 py-4 w-12 text-center">#</th>
+                  <th className="px-6 py-4 w-12">
                     <input
                       type="checkbox"
-                      disabled={invalidBaseIds.has(entry.id)}
-                      checked={selectedEntries.includes(entry.id)}
-                      onChange={(e) =>
-                        !invalidBaseIds.has(entry.id) &&
-                        toggleSelect(entry.id, e.target.checked)
+                      checked={
+                        filteredBases.filter((b) => !invalidBaseIds.has(b.id))
+                          .length > 0 &&
+                        selectedEntries.length ===
+                          filteredBases.filter((b) => !invalidBaseIds.has(b.id))
+                            .length
                       }
+                      onChange={(e) => toggleSelectAll(e.target.checked)}
                     />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-slate-900">
-                        {entry.nome}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {entry.curso}
-                      </span>
-                      <div className="flex items-center space-x-2 mt-1 flex-wrap gap-y-1">
-                        {entry.telefone && (
-                          <span className="text-[10px] text-slate-400 font-bold">
-                            {entry.telefone}
-                          </span>
-                        )}
-                        {entry.cpf && (
-                          <span className="text-[10px] text-slate-500 font-bold px-2 py-0.5 bg-slate-100 rounded-full">
-                            CPF: {formatCPF(entry.cpf)}
-                          </span>
-                        )}
-                        {entry.semestre && (
-                          <span className="text-[10px] text-blue-500 font-bold px-2 py-0.5 bg-blue-50 rounded-full">
-                            {entry.semestre}
-                          </span>
-                        )}
-                        {entry.periodo && (
-                          <span className="text-[10px] text-purple-500 font-bold px-2 py-0.5 bg-purple-50 rounded-full">
-                            {entry.periodo}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {entry.nomeBase}
-                  </td>
-                  <td className="px-6 py-4">
-                    <select
-                      value={entry.status}
-                      onChange={(e) =>
-                        handleStatusChange(entry, e.target.value)
-                      }
-                      className={cn(
-                        "px-2 py-1 rounded-lg text-xs font-bold outline-none border-none",
-                        entry.status === "Pendente" &&
-                          "bg-slate-100 text-slate-600",
-                        entry.status === "Interessado" &&
-                          "bg-blue-100 text-blue-600",
-                        entry.status === "Convertido" &&
-                          "bg-emerald-100 text-emerald-600",
-                        entry.status === "Não tem interesse" &&
-                          "bg-rose-100 text-rose-600",
-                        entry.status === "Sem retorno" &&
-                          "bg-orange-100 text-orange-600",
-                      )}
-                    >
-                      <option value="Pendente">Pendente</option>
-                      <option value="Interessado">Interessado</option>
-                      <option value="Convertido">Convertido</option>
-                      <option value="Não tem interesse">
-                        Não tem interesse
-                      </option>
-                      <option value="Sem retorno">Sem retorno</option>
-                    </select>
-                  </td>
-                  <td className="px-6 py-4 flex items-center space-x-2">
-                    {!invalidBaseIds.has(entry.id) && (
+                  </th>
+                  <th className="px-6 py-4">Nome</th>
+                  <th className="px-6 py-4">Base</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 flex items-center gap-4">
+                    {selectedEntries.length > 0 && (
                       <button
-                        onClick={() => {
-                          setSelectedEntry(entry);
-                          setSelectorOpen(true);
-                        }}
-                        className="text-emerald-600 font-bold text-sm flex items-center space-x-1 hover:text-emerald-700"
+                        onClick={handleBulkDelete}
+                        className="text-rose-600 font-bold hover:underline"
                       >
-                        <MessageSquare size={14} />
-                        <span>WhatsApp</span>
+                        excluir selecionados
                       </button>
                     )}
-                    <button
-                      onClick={() => handleDeleteBase(entry.id)}
-                      className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
+                    {selectedEntries.length > 0 && botConfig.url && (
+                      <button
+                        onClick={() => setMassSelectorOpen(true)}
+                        className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                      >
+                        <Bot size={14} /> Em Massa
+                      </button>
+                    )}
+                  </th>
                 </tr>
-              ))}
-              {filteredBases.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-12 text-center text-slate-400 italic"
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredBases.map((entry, index) => (
+                  <tr
+                    key={entry.id}
+                    className={cn(
+                      "hover:bg-slate-50/50 transition-all",
+                      invalidBaseIds.has(entry.id) && "bg-rose-50/50",
+                    )}
                   >
-                    Nenhum registro encontrado com os filtros aplicados.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    <td className="px-6 py-4 text-center font-bold text-slate-400 text-xs">
+                      {index + 1}
+                    </td>
+                    <td className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        disabled={invalidBaseIds.has(entry.id)}
+                        checked={selectedEntries.includes(entry.id)}
+                        onChange={(e) =>
+                          !invalidBaseIds.has(entry.id) &&
+                          toggleSelect(entry.id, e.target.checked)
+                        }
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-900">
+                          {entry.nome}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {entry.curso}
+                        </span>
+                        <div className="flex items-center space-x-2 mt-1 flex-wrap gap-y-1">
+                          {entry.telefone && (
+                            <span className="text-[10px] text-slate-400 font-bold">
+                              {entry.telefone}
+                            </span>
+                          )}
+                          {entry.cpf && (
+                            <span className="text-[10px] text-slate-500 font-bold px-2 py-0.5 bg-slate-100 rounded-full">
+                              CPF: {formatCPF(entry.cpf)}
+                            </span>
+                          )}
+                          {entry.semestre && (
+                            <span className="text-[10px] text-blue-500 font-bold px-2 py-0.5 bg-blue-50 rounded-full">
+                              {entry.semestre}
+                            </span>
+                          )}
+                          {entry.periodo && (
+                            <span className="text-[10px] text-purple-500 font-bold px-2 py-0.5 bg-purple-50 rounded-full">
+                              {entry.periodo}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {entry.nomeBase}
+                    </td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={entry.status}
+                        onChange={(e) =>
+                          handleStatusChange(entry, e.target.value)
+                        }
+                        className={cn(
+                          "px-2 py-1 rounded-lg text-xs font-bold outline-none border-none",
+                          entry.status === "Pendente" &&
+                            "bg-slate-100 text-slate-600",
+                          entry.status === "Interessado" &&
+                            "bg-blue-100 text-blue-600",
+                          entry.status === "Convertido" &&
+                            "bg-emerald-100 text-emerald-600",
+                          entry.status === "Não tem interesse" &&
+                            "bg-rose-100 text-rose-600",
+                          entry.status === "Sem retorno" &&
+                            "bg-orange-100 text-orange-600",
+                        )}
+                      >
+                        <option value="Pendente">Pendente</option>
+                        <option value="Interessado">Interessado</option>
+                        <option value="Convertido">Convertido</option>
+                        <option value="Não tem interesse">
+                          Não tem interesse
+                        </option>
+                        <option value="Sem retorno">Sem retorno</option>
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 flex items-center space-x-2">
+                      {!invalidBaseIds.has(entry.id) && (
+                        <button
+                          onClick={() => {
+                            setSelectedEntry(entry);
+                            setSelectorOpen(true);
+                          }}
+                          className="text-emerald-600 font-bold text-sm flex items-center space-x-1 hover:text-emerald-700"
+                        >
+                          <MessageSquare size={14} />
+                          <span>WhatsApp</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setEditingCandidate(entry);
+                          setEditFormData({
+                            nomeBase: entry.nomeBase || "",
+                            nome: entry.nome || "",
+                            telefone: entry.telefone || "",
+                            cpf: entry.cpf || "",
+                            curso: entry.curso || "",
+                            produto: entry.produto || "Graduação",
+                            numeroOportunidade: entry.numeroOportunidade || "",
+                            semestre: entry.semestre || "",
+                            periodo: entry.periodo || "",
+                            metodologia: entry.metodologia || "",
+                            formaIngresso: entry.formaIngresso || "",
+                            numeroMatricula: entry.numeroMatricula || "",
+                            status: entry.status || "Pendente",
+                          });
+                          setIsEditModalOpen(true);
+                        }}
+                        className="text-blue-500 hover:text-blue-700 p-2 hover:bg-blue-50 rounded-lg transition-all"
+                        title="Editar Candidato"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBase(entry.id)}
+                        className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {filteredBases.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-12 text-center text-slate-400 italic"
+                    >
+                      Nenhum registro encontrado com os filtros aplicados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Editing Candidate Modal */}
+      {isEditModalOpen && editingCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden my-8 animate-in fade-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-6 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Edit2 size={20} className="text-blue-600" />
+                Editar Candidato
+              </h3>
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingCandidate(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Nome da Base *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.nomeBase}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, nomeBase: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                    placeholder="Ex: Junho 2024"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Nome do Candidato *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.nome}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, nome: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Telefone *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.telefone}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        telefone: formatPhone(e.target.value),
+                      })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    CPF
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.cpf}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, cpf: formatCPF(e.target.value) })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Nº Oportunidade
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.numeroOportunidade}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        numeroOportunidade: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Curso *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.curso}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, curso: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Produto *
+                  </label>
+                  <select
+                    value={editFormData.produto}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, produto: e.target.value as any })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500 bg-white"
+                  >
+                    {uniqueProdutos.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Semestre *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.semestre}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, semestre: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Período
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.periodo}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, periodo: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Metodologia
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.metodologia}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, metodologia: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Forma de Ingresso
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.formaIngresso}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, formaIngresso: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Nº Matrícula
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.numeroMatricula}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, numeroMatricula: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Status do Candidato *
+                  </label>
+                  <select
+                    value={editFormData.status}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, status: e.target.value as any })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500 bg-white"
+                  >
+                    <option value="Pendente">Pendente</option>
+                    <option value="Interessado">Interessado</option>
+                    <option value="Convertido">Convertido</option>
+                    <option value="Não tem interesse">Não tem interesse</option>
+                    <option value="Sem retorno">Sem retorno</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Form buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditingCandidate(null);
+                  }}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {loading ? "Salvando..." : "Salvar Alterações"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <WhatsAppMessageSelector
         isOpen={selectorOpen}
