@@ -104,12 +104,16 @@ const NEIGHBORHOODS_COORDS: Record<string, Record<string, { x: number; y: number
 export default function EmpresaMapDashboard({
   data,
   users = [],
+  cursos = [],
 }: {
   data: EmpresaParceira[];
   users?: UserProfile[];
+  cursos?: any[];
 }) {
   const [selectedCity, setSelectedCity] = useState<string>("Todas");
   const [selectedBairro, setSelectedBairro] = useState<string>("Todos");
+  const [selectedUnidade, setSelectedUnidade] = useState<string>("Todas");
+  const [selectedPromotor, setSelectedPromotor] = useState<string>("Todos");
   const [statusFilter, setStatusFilter] = useState<string>("Todos");
   const [viewMode, setViewMode] = useState<"cidade" | "bairro">("cidade");
   const [hoveredNode, setHoveredNode] = useState<any>(null);
@@ -214,6 +218,35 @@ export default function EmpresaMapDashboard({
     return Array.from(new Set(filtered.map(d => d.parsedBairro))).sort();
   }, [parsedData, selectedCity]);
 
+  const availableUnits = useMemo(() => {
+    if (cursos && cursos.length > 0) {
+      return Array.from(new Set(cursos.map((c: any) => c.nomeUnidade).filter(Boolean) as string[])).sort();
+    }
+    // Fallback if no courses
+    const fromData = parsedData.flatMap(d => d.unidadesVinculadas || []).filter(Boolean);
+    return Array.from(new Set(fromData)).sort();
+  }, [cursos, parsedData]);
+
+  const availablePromotores = useMemo(() => {
+    // Extract from FDV / Comercial users, fallback or merge with actual consultorNames in data
+    const fromUsers = (users || [])
+      .filter((u: any) => {
+        const roleLower = (u.role || "").toLowerCase();
+        const isComercialServer = u.servidor === "comercial";
+        return (
+          roleLower.includes("fdv") ||
+          roleLower.includes("comercial") ||
+          roleLower.includes("promotor") ||
+          isComercialServer
+        );
+      })
+      .map((u: any) => u.name)
+      .filter(Boolean);
+
+    const fromData = parsedData.map(d => d.consultorNome).filter(Boolean) as string[];
+    return Array.from(new Set([...fromUsers, ...fromData])).sort();
+  }, [users, parsedData]);
+
   // Handle auto view-mode change when a city is selected
   React.useEffect(() => {
     if (selectedCity !== "Todas") {
@@ -236,9 +269,17 @@ export default function EmpresaMapDashboard({
         (statusFilter === "Cancelada" && emp.statusEmpresa === "Cancelada") ||
         (statusFilter === "Não visitada" && emp.statusEmpresa === "Não visitada");
 
-      return matchCity && matchBairro && matchStatus;
+      const matchUnidade = 
+        selectedUnidade === "Todas" || 
+        (emp.unidadesVinculadas || []).includes(selectedUnidade);
+
+      const matchPromotor = 
+        selectedPromotor === "Todos" || 
+        emp.consultorNome === selectedPromotor;
+
+      return matchCity && matchBairro && matchStatus && matchUnidade && matchPromotor;
     });
-  }, [parsedData, selectedCity, selectedBairro, statusFilter]);
+  }, [parsedData, selectedCity, selectedBairro, statusFilter, selectedUnidade, selectedPromotor]);
 
   // Grouped metrics for Map Display Nodes
   const mapNodes = useMemo(() => {
@@ -321,6 +362,8 @@ export default function EmpresaMapDashboard({
               onClick={() => {
                 setSelectedCity("Todas");
                 setSelectedBairro("Todos");
+                setSelectedUnidade("Todas");
+                setSelectedPromotor("Todos");
                 setStatusFilter("Todos");
                 setViewMode("cidade");
               }}
@@ -365,6 +408,40 @@ export default function EmpresaMapDashboard({
                 <option value="Todos">Todos os Bairros ({availableBairros.length})</option>
                 {availableBairros.map((b) => (
                   <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Unidade Selector */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Unidade Vinculada
+              </label>
+              <select
+                value={selectedUnidade}
+                onChange={(e) => setSelectedUnidade(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="Todas">Todas as Unidades ({availableUnits.length})</option>
+                {availableUnits.map((u) => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Promotor Selector */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Promotor / Consultor
+              </label>
+              <select
+                value={selectedPromotor}
+                onChange={(e) => setSelectedPromotor(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="Todos">Todos os Promotores ({availablePromotores.length})</option>
+                {availablePromotores.map((p) => (
+                  <option key={p} value={p}>{p}</option>
                 ))}
               </select>
             </div>

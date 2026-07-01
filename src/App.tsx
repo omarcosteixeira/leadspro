@@ -13656,7 +13656,7 @@ function EmpresasParceirasView({
       )}
 
       {activeTab === "mapa" && (
-        <EmpresaMapDashboard data={data} users={users} />
+        <EmpresaMapDashboard data={data} users={users} cursos={cursos} />
       )}
 
       <AnimatePresence>

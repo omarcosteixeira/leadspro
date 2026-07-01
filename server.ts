@@ -715,18 +715,41 @@ Regras importantes de preenchimento dos campos JSON:
 
 Não invente dados que não estão no resumo fornecido. Se alguma informação for nula ou zero, reporte corretamente.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-        },
-      });
+      // Helper to call Gemini with retries and model fallback to handle 503 errors
+      const responseText = await (async () => {
+        const modelsToTry = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
+        let lastError: any = null;
 
-      const responseText = response.text;
-      if (!responseText) {
-        throw new Error("Resposta vazia retornada pelo modelo Gemini.");
-      }
+        for (const modelName of modelsToTry) {
+          const retries = 3;
+          for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+              console.log(`[AI Reports] Tentativa ${attempt} usando o modelo ${modelName}...`);
+              const response = await ai.models.generateContent({
+                model: modelName,
+                contents: prompt,
+                config: {
+                  responseMimeType: "application/json",
+                },
+              });
+
+              const text = response.text;
+              if (text) {
+                return text;
+              }
+              throw new Error("Resposta vazia retornada pelo modelo Gemini.");
+            } catch (err: any) {
+              lastError = err;
+              console.warn(`[AI Reports] Tentativa ${attempt} falhou no modelo ${modelName}:`, err.message || err);
+              if (attempt < retries) {
+                // Exponential backoff: 1.5s, 3s
+                await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+              }
+            }
+          }
+        }
+        throw lastError || new Error("Falha ao chamar a API do Gemini.");
+      })();
 
       const result = parseJSONRobustly(responseText);
       return res.json({

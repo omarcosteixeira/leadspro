@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { BotReport, UserProfile } from "../types";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import {
   LineChart,
   Line,
@@ -42,7 +44,8 @@ import {
   CheckCircle,
   TrendingUp,
   RefreshCw,
-  BarChart3
+  BarChart3,
+  Download
 } from "lucide-react";
 import { startOfDay, endOfDay, subDays, format, parseISO } from "date-fns";
 import { motion, AnimatePresence } from "motion/react";
@@ -92,6 +95,47 @@ export function RelatoriosView({ profile, botConfig }: RelatoriosViewProps) {
   const [aiStep, setAiStep] = useState(0);
   const [currentReport, setCurrentReport] = useState<AIReport | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const downloadReportPDF = async () => {
+    const reportElement = document.getElementById("ai-report-results");
+    if (!reportElement) return;
+
+    setDownloadingPdf(true);
+    try {
+      const canvas = await html2canvas(reportElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        scrollX: 0,
+        scrollY: -window.scrollY
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      const pdfHeight = Math.max(297, imgHeight + 10);
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [imgWidth, pdfHeight]
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 5, imgWidth, imgHeight, undefined, "FAST");
+
+      const sanitizedTitle = currentReport?.title
+        ? currentReport.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_")
+        : "relatorio";
+      const fileName = `relatorio_${sanitizedTitle}_${format(new Date(), "dd-MM-yyyy")}.pdf`;
+      pdf.save(fileName);
+    } catch (err) {
+      console.error("Error generating PDF:", err);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   // Fetch bot reports (original feature)
   useEffect(() => {
@@ -721,9 +765,23 @@ export function RelatoriosView({ profile, botConfig }: RelatoriosViewProps) {
                       {currentReport.title}
                     </h3>
                   </div>
-                  <div className="text-right" id="report-rendered-timestamp">
-                    <span className="text-xs font-bold text-slate-400 block">Gerado em:</span>
-                    <span className="text-xs font-black text-slate-600">{format(new Date(), "dd/MM/yyyy 'às' HH:mm")}</span>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4" id="report-rendered-actions">
+                    <button
+                      onClick={downloadReportPDF}
+                      disabled={downloadingPdf}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer shrink-0"
+                    >
+                      {downloadingPdf ? (
+                        <Loader2 className="animate-spin" size={14} />
+                      ) : (
+                        <Download size={14} />
+                      )}
+                      <span>{downloadingPdf ? "Gerando PDF..." : "Baixar PDF"}</span>
+                    </button>
+                    <div className="text-left sm:text-right" id="report-rendered-timestamp">
+                      <span className="text-xs font-bold text-slate-400 block">Gerado em:</span>
+                      <span className="text-xs font-black text-slate-600">{format(new Date(), "dd/MM/yyyy 'às' HH:mm")}</span>
+                    </div>
                   </div>
                 </div>
 
