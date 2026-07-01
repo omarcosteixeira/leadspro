@@ -4591,7 +4591,7 @@ export default function App() {
             )}
           </div>
 
-          <nav className="flex-1 px-4 space-y-1">
+          <nav className="flex-1 px-4 space-y-1 overflow-y-auto pr-2">
             {[
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
               { id: "cadastro", label: "Novo Lead", icon: UserPlus },
