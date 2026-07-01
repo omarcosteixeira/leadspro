@@ -6341,13 +6341,11 @@ function DashboardView({
               const totYTD =
                 activeMeta.ytdPresencial +
                 activeMeta.ytdSemipresencial +
-                activeMeta.ytdDigital +
-                activeMeta.ytdTecnico;
+                activeMeta.ytdDigital;
               const totReal =
                 activeMeta.realizadoPresencial +
                 activeMeta.realizadoSemipresencial +
-                activeMeta.realizadoDigital +
-                activeMeta.realizadoTecnico;
+                activeMeta.realizadoDigital;
 
               let statusText = "Abaixo da Meta";
               let statusColor = "bg-rose-50 text-rose-600 border-rose-100";
@@ -6381,8 +6379,7 @@ function DashboardView({
               <span className="text-2xl font-black text-slate-800 mt-2">
                 {activeMeta.ytdPresencial +
                   activeMeta.ytdSemipresencial +
-                  activeMeta.ytdDigital +
-                  activeMeta.ytdTecnico}
+                  activeMeta.ytdDigital}
               </span>
             </div>
 
@@ -6390,13 +6387,11 @@ function DashboardView({
               const totYTD =
                 activeMeta.ytdPresencial +
                 activeMeta.ytdSemipresencial +
-                activeMeta.ytdDigital +
-                activeMeta.ytdTecnico;
+                activeMeta.ytdDigital;
               const totReal =
                 activeMeta.realizadoPresencial +
                 activeMeta.realizadoSemipresencial +
-                activeMeta.realizadoDigital +
-                activeMeta.realizadoTecnico;
+                activeMeta.realizadoDigital;
 
               let color = "text-rose-600";
               if (totReal > totYTD) color = "text-emerald-600";
@@ -6421,8 +6416,7 @@ function DashboardView({
               <span className="text-2xl font-black text-slate-500 mt-2">
                 {activeMeta.aaPresencial +
                   activeMeta.aaSemipresencial +
-                  activeMeta.aaDigital +
-                  activeMeta.aaTecnico}
+                  activeMeta.aaDigital}
               </span>
             </div>
 
@@ -6430,13 +6424,11 @@ function DashboardView({
               const totYTD =
                 activeMeta.ytdPresencial +
                 activeMeta.ytdSemipresencial +
-                activeMeta.ytdDigital +
-                activeMeta.ytdTecnico;
+                activeMeta.ytdDigital;
               const totReal =
                 activeMeta.realizadoPresencial +
                 activeMeta.realizadoSemipresencial +
-                activeMeta.realizadoDigital +
-                activeMeta.realizadoTecnico;
+                activeMeta.realizadoDigital;
               const pct = totYTD > 0 ? (totReal / totYTD) * 100 : 0;
 
               let pctBg = "bg-rose-50 text-rose-700";
@@ -6485,13 +6477,6 @@ function DashboardView({
                 real: activeMeta.realizadoDigital,
                 aa: activeMeta.aaDigital,
                 accent: "border-l-4 border-l-indigo-500",
-              },
-              {
-                label: "Técnico",
-                ytd: activeMeta.ytdTecnico,
-                real: activeMeta.realizadoTecnico,
-                aa: activeMeta.aaTecnico,
-                accent: "border-l-4 border-l-teal-500",
               },
             ].map((modal, idx) => {
               let color = "text-rose-600";
@@ -15718,9 +15703,6 @@ function AdminView({
         aaDigital: Number(newMetaDia.aaDigital),
         ytdDigital: Number(newMetaDia.ytdDigital),
         realizadoDigital: Number(newMetaDia.realizadoDigital),
-        aaTecnico: Number(newMetaDia.aaTecnico),
-        ytdTecnico: Number(newMetaDia.ytdTecnico),
-        realizadoTecnico: Number(newMetaDia.realizadoTecnico),
       };
 
       if (editingMetaDia) {
@@ -16749,9 +16731,6 @@ function AdminView({
                       aaDigital: 0,
                       ytdDigital: 0,
                       realizadoDigital: 0,
-                      aaTecnico: 0,
-                      ytdTecnico: 0,
-                      realizadoTecnico: 0,
                     });
                   }}
                   className="text-slate-400 hover:text-slate-600 text-sm font-bold"
@@ -16786,8 +16765,7 @@ function AdminView({
                     <span className="text-sm font-extrabold text-slate-700">
                       {Number(newMetaDia.aaPresencial) +
                         Number(newMetaDia.aaSemipresencial) +
-                        Number(newMetaDia.aaDigital) +
-                        Number(newMetaDia.aaTecnico)}
+                        Number(newMetaDia.aaDigital)}
                     </span>
                   </div>
                   <div className="text-center border-x border-slate-200 px-6">
@@ -16797,8 +16775,7 @@ function AdminView({
                     <span className="text-sm font-extrabold text-blue-600">
                       {Number(newMetaDia.ytdPresencial) +
                         Number(newMetaDia.ytdSemipresencial) +
-                        Number(newMetaDia.ytdDigital) +
-                        Number(newMetaDia.ytdTecnico)}
+                        Number(newMetaDia.ytdDigital)}
                     </span>
                   </div>
                   <div className="text-center">
@@ -16808,8 +16785,7 @@ function AdminView({
                     <span className="text-sm font-extrabold text-emerald-600">
                       {Number(newMetaDia.realizadoPresencial) +
                         Number(newMetaDia.realizadoSemipresencial) +
-                        Number(newMetaDia.realizadoDigital) +
-                        Number(newMetaDia.realizadoTecnico)}
+                        Number(newMetaDia.realizadoDigital)}
                     </span>
                   </div>
                 </div>
@@ -16839,14 +16815,6 @@ function AdminView({
                   aa: "aaDigital",
                   ytd: "ytdDigital",
                   realizado: "realizadoDigital",
-                },
-                {
-                  key: "Tecnico",
-                  label: "Modalidade Técnico",
-                  color: "border-teal-100 bg-teal-50/10",
-                  aa: "aaTecnico",
-                  ytd: "ytdTecnico",
-                  realizado: "realizadoTecnico",
                 },
               ].map((modal) => (
                 <div
@@ -16952,9 +16920,6 @@ function AdminView({
                     <th className="p-4 text-center text-indigo-600">
                       Digital (A.A / YTD / Real)
                     </th>
-                    <th className="p-4 text-center text-teal-600">
-                      Técnico (A.A / YTD / Real)
-                    </th>
                     <th className="p-4 text-center bg-slate-50/50">
                       Total (A.A / YTD / Real)
                     </th>
@@ -16965,7 +16930,7 @@ function AdminView({
                   {metaDia.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={6}
                         className="p-8 text-center text-slate-400 italic"
                       >
                         Nenhum registro de Meta Diária encontrado.
@@ -16978,18 +16943,15 @@ function AdminView({
                         const totAA =
                           item.aaPresencial +
                           item.aaSemipresencial +
-                          item.aaDigital +
-                          item.aaTecnico;
+                          item.aaDigital;
                         const totYTD =
                           item.ytdPresencial +
                           item.ytdSemipresencial +
-                          item.ytdDigital +
-                          item.ytdTecnico;
+                          item.ytdDigital;
                         const totReal =
                           item.realizadoPresencial +
                           item.realizadoSemipresencial +
-                          item.realizadoDigital +
-                          item.realizadoTecnico;
+                          item.realizadoDigital;
 
                         // Function to get color class comparison Realizado vs YTD
                         const getColorClass = (real: number, ytd: number) => {
@@ -17069,26 +17031,6 @@ function AdminView({
                                 {item.realizadoDigital}
                               </span>
                             </td>
-                            <td className="p-4 text-center">
-                              <span className="text-slate-400">
-                                {item.aaTecnico}
-                              </span>
-                              <span className="mx-1 text-slate-300">/</span>
-                              <span className="text-slate-600 font-semibold">
-                                {item.ytdTecnico}
-                              </span>
-                              <span className="mx-1 text-slate-300">/</span>
-                              <span
-                                className={cn(
-                                  getColorClass(
-                                    item.realizadoTecnico,
-                                    item.ytdTecnico,
-                                  ),
-                                )}
-                              >
-                                {item.realizadoTecnico}
-                              </span>
-                            </td>
                             <td className="p-4 text-center bg-slate-50/20 font-bold">
                               <span className="text-slate-400">{totAA}</span>
                               <span className="mx-1 text-slate-300">/</span>
@@ -17120,9 +17062,6 @@ function AdminView({
                                       aaDigital: item.aaDigital,
                                       ytdDigital: item.ytdDigital,
                                       realizadoDigital: item.realizadoDigital,
-                                      aaTecnico: item.aaTecnico,
-                                      ytdTecnico: item.ytdTecnico,
-                                      realizadoTecnico: item.realizadoTecnico,
                                     });
                                     // Scroll to form smoothly
                                     window.scrollTo({

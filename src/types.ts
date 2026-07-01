@@ -298,9 +298,6 @@ export interface MetaDia {
   aaDigital: number;
   ytdDigital: number;
   realizadoDigital: number;
-  aaTecnico: number;
-  ytdTecnico: number;
-  realizadoTecnico: number;
   createdAt: any;
 }
 
