@@ -30,6 +30,7 @@ export interface UserProfile {
     forecast: boolean;
     periodo: boolean;
     aniversarios?: boolean;
+    ligacoesQg?: boolean;
   };
 }
 
@@ -298,6 +299,9 @@ export interface MetaDia {
   aaDigital: number;
   ytdDigital: number;
   realizadoDigital: number;
+  aaTecnico: number;
+  ytdTecnico: number;
+  realizadoTecnico: number;
   createdAt: any;
 }
 
@@ -448,6 +452,15 @@ export interface IsencaoEntry {
   createdAt: any;
   updatedAt?: any;
   createdByNome?: string;
+}
+
+export interface LigacaoQg {
+  id: string;
+  nome: string;
+  data: string;
+  horario: string;
+  createdAt: any;
+  createdBy: string;
 }
 
 
