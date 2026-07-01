@@ -30,7 +30,6 @@ export interface UserProfile {
     forecast: boolean;
     periodo: boolean;
     aniversarios?: boolean;
-    ligacoesQg?: boolean;
   };
 }
 
@@ -452,15 +451,6 @@ export interface IsencaoEntry {
   createdAt: any;
   updatedAt?: any;
   createdByNome?: string;
-}
-
-export interface LigacaoQg {
-  id: string;
-  nome: string;
-  data: string;
-  horario: string;
-  createdAt: any;
-  createdBy: string;
 }
 
 

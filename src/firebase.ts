@@ -58,7 +58,6 @@ export const COLLECTIONS = {
   MAPAO_ACADEMICO: `artifacts/${appId}/public/data/mapao_academico`,
   BASES_DISPARO: `artifacts/${appId}/public/data/bases_disparo`,
   BASES_RENOVACAO: `artifacts/${appId}/public/data/bases_renovacao`,
-  LIGACOES_QG: `artifacts/${appId}/public/data/ligacoes_qg`,
   BOT_CONFIG: `artifacts/${appId}/public/data/bot_config`,
   BOT_REPORTS: `artifacts/${appId}/public/data/bot_reports`,
   META_DIA: `artifacts/${appId}/public/data/meta_dia`,

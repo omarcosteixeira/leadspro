@@ -142,7 +142,6 @@ import {
   InsumoPedidoComercial,
   InsumoEstoqueComercial,
   IsencaoEntry,
-  LigacaoQg,
 } from "./types";
 import { ProfileModal } from "./components/ProfileModal";
 import { PublicRegistrationForm } from "./components/PublicRegistrationForm";
@@ -3009,7 +3008,6 @@ export default function App() {
   const [bases, setBases] = useState<BaseEntry[]>([]);
   const [gap, setGap] = useState<GapEntry[]>([]);
   const [isencoes, setIsencoes] = useState<IsencaoEntry[]>([]);
-  const [ligacoesQg, setLigacoesQg] = useState<LigacaoQg[]>([]);
   const [fiesProuni, setFiesProuni] = useState<FiesProuniEntry[]>([]);
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [bomDia, setBomDia] = useState<BomDiaCaptacao[]>([]);
@@ -3788,20 +3786,6 @@ export default function App() {
       );
     }
 
-    let unsubLigacoesQg = () => {};
-    if (profile) {
-      unsubLigacoesQg = onSnapshot(
-        collection(db, COLLECTIONS.LIGACOES_QG),
-        (snap) => {
-          setLigacoesQg(
-            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as LigacaoQg),
-          );
-        },
-        (err) =>
-          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.LIGACOES_QG),
-      );
-    }
-
     let unsubFiesProuni = () => {};
     if (profile && VIEW_PERMISSIONS.fiesProuni.includes(profile.role)) {
       unsubFiesProuni = onSnapshot(
@@ -4185,7 +4169,6 @@ export default function App() {
       unsubBases();
       unsubGap();
       unsubIsencoes();
-      unsubLigacoesQg();
       unsubFiesProuni();
       unsubCampanhas();
       unsubBomDia();
@@ -4785,7 +4768,6 @@ export default function App() {
                   periodos={periodos}
                   metaDia={metaDia}
                   users={users}
-                  ligacoesQg={ligacoesQg}
                 />
               )}
               {currentView === "cadastro" && (
@@ -4968,7 +4950,6 @@ export default function App() {
                   setBotStatuses={setBotStatuses}
                   callBotApi={callBotApi}
                   metaDia={metaDia}
-                  ligacoesQg={ligacoesQg}
                 />
               )}
             </motion.div>
@@ -6021,7 +6002,6 @@ function DashboardView({
   periodos,
   metaDia,
   users,
-  ligacoesQg,
 }: {
   leads: Lead[];
   planner: PlannerTask[];
@@ -6034,7 +6014,6 @@ function DashboardView({
   periodos: PeriodoCaptacao[];
   metaDia: MetaDia[];
   users: UserProfile[];
-  ligacoesQg: LigacaoQg[];
 }) {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -6096,7 +6075,6 @@ function DashboardView({
     forecast: allowedFullDashboard,
     periodo: allowedFullDashboard,
     aniversarios: allowedFullDashboard,
-    ligacoesQg: allowedFullDashboard,
   };
   
   const userWidgets = profile?.dashboardWidgets || ({} as NonNullable<UserProfile['dashboardWidgets']>);
@@ -6109,7 +6087,6 @@ function DashboardView({
     forecast: allowedFullDashboard && (userWidgets.forecast ?? defaultWidgets.forecast),
     periodo: allowedFullDashboard && (userWidgets.periodo ?? defaultWidgets.periodo),
     aniversarios: allowedFullDashboard && (userWidgets.aniversarios ?? defaultWidgets.aniversarios),
-    ligacoesQg: allowedFullDashboard && (userWidgets.ligacoesQg ?? defaultWidgets.ligacoesQg),
   };
 
   const currentMonthNum = new Date().getMonth() + 1; // 1-12
@@ -7097,38 +7074,6 @@ function DashboardView({
         </section>
       )}
 
-      {widgets.ligacoesQg && (
-        <section>
-          <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
-            Controle de Ligações QG
-          </h3>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[...ligacoesQg]
-                .sort((a, b) => b.data.localeCompare(a.data) || b.horario.localeCompare(a.horario))
-                .slice(0, 8)
-                .map((ligacao) => (
-                  <div key={ligacao.id} className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex flex-col justify-between">
-                    <div>
-                      <p className="text-sm font-bold text-blue-900 mb-1">{ligacao.nome}</p>
-                      <div className="flex items-center text-xs text-blue-700 font-medium space-x-2">
-                        <span>{new Date(ligacao.data + "T12:00:00").toLocaleDateString("pt-BR")}</span>
-                        <span>•</span>
-                        <span>{ligacao.horario}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              {ligacoesQg.length === 0 && (
-                <div className="col-span-full py-8 text-center text-slate-400 text-sm">
-                  Nenhum registro de Ligação QG encontrado.
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Customization Modal */}
       <AnimatePresence>
         {isCustomizing && (
@@ -7171,7 +7116,6 @@ function DashboardView({
                     label: "Aniversariantes do Mês",
                     icon: Cake,
                   },
-                  { id: "ligacoesQg", label: "Ligações QG", icon: Phone },
                 ].filter((item) => {
                   if (item.id === "bomDia") return true;
                   return allowedFullDashboard;
@@ -15436,7 +15380,6 @@ function AdminView({
   setBotStatuses,
   callBotApi,
   metaDia,
-  ligacoesQg,
 }: {
   profile: UserProfile | null;
   users: UserProfile[];
@@ -15482,7 +15425,6 @@ function AdminView({
     options?: { method?: "GET" | "POST"; body?: any },
   ) => Promise<any>;
   metaDia: MetaDia[];
-  ligacoesQg: LigacaoQg[];
 }) {
   const [activeTab, setActiveTab] = useState<
     | "usuarios"
@@ -15498,7 +15440,6 @@ function AdminView({
     | "folgas"
     | "logo"
     | "funcionarios"
-    | "ligacoesQg"
   >("usuarios");
   const [adminRequests, setAdminRequests] = useState<SolicitacaoFolga[]>([]);
   const [loadingAdminRequests, setLoadingAdminRequests] = useState(false);
@@ -15761,41 +15702,6 @@ function AdminView({
     ytdDigital: 0,
     realizadoDigital: 0,
   });
-  
-  const [editingLigacaoQg, setEditingLigacaoQg] = useState<LigacaoQg | null>(null);
-  const [newLigacaoQg, setNewLigacaoQg] = useState({
-    nome: "",
-    data: new Date().toISOString().split("T")[0],
-    horario: "",
-  });
-
-  const handleAddLigacaoQg = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (editingLigacaoQg) {
-        await updateDoc(doc(db, COLLECTIONS.LIGACOES_QG, editingLigacaoQg.id), {
-          ...newLigacaoQg,
-        });
-        onToast("Registro QG atualizado!");
-        setEditingLigacaoQg(null);
-      } else {
-        await addDoc(collection(db, COLLECTIONS.LIGACOES_QG), {
-          ...newLigacaoQg,
-          createdAt: serverTimestamp(),
-          createdBy: profile?.uid || "",
-        });
-        onToast("Registro QG adicionado!");
-      }
-      setNewLigacaoQg({
-        nome: "",
-        data: new Date().toISOString().split("T")[0],
-        horario: "",
-      });
-    } catch (err: any) {
-      onToast(`Erro: ${err.message}`, "error");
-    }
-  };
-
   const [isAddingUser, setIsAddingUser] = useState(false);
 
   const handleAddMetaDia = async (e: React.FormEvent) => {
@@ -16025,7 +15931,6 @@ function AdminView({
         {[
           { id: "usuarios", label: "Usuários" },
           { id: "funcionarios", label: "Funcionários (Insumos)" },
-          { id: "ligacoesQg", label: "Ligações QG" },
           { id: "folgas", label: "Folgas e Férias" },
           { id: "bomDia", label: "Bom Dia Captação" },
           { id: "forecast", label: "Forecast" },
@@ -17264,165 +17169,6 @@ function AdminView({
                           </tr>
                         );
                       })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </div>
-      )}
-
-      {activeTab === "ligacoesQg" && (
-        <div className="space-y-6 animate-fade-in">
-          <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-slate-800">
-                {editingLigacaoQg ? "Editar Registro de Ligação QG" : "Novo Registro de Ligação QG"}
-              </h3>
-              {editingLigacaoQg && (
-                <button
-                  onClick={() => {
-                    setEditingLigacaoQg(null);
-                    setNewLigacaoQg({
-                      nome: "",
-                      data: new Date().toISOString().split("T")[0],
-                      horario: "",
-                    });
-                  }}
-                  className="text-slate-400 hover:text-slate-600 text-sm font-bold"
-                >
-                  Cancelar Edição
-                </button>
-              )}
-            </div>
-            
-            <form onSubmit={handleAddLigacaoQg} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">
-                    Nome
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newLigacaoQg.nome}
-                    onChange={(e) =>
-                      setNewLigacaoQg({ ...newLigacaoQg, nome: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Nome completo..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">
-                    Data
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={newLigacaoQg.data}
-                    onChange={(e) =>
-                      setNewLigacaoQg({ ...newLigacaoQg, data: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">
-                    Horário
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={newLigacaoQg.horario}
-                    onChange={(e) =>
-                      setNewLigacaoQg({ ...newLigacaoQg, horario: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-              </div>
-              
-              <button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-100 flex items-center justify-center space-x-2 text-sm mt-4"
-              >
-                <span>{editingLigacaoQg ? "Salvar Alterações" : "Salvar Registro"}</span>
-              </button>
-            </form>
-          </section>
-
-          <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-800 mb-6">
-              Histórico de Ligações QG
-            </h3>
-            
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-50 text-slate-500 font-bold">
-                  <tr>
-                    <th className="px-6 py-4">Data</th>
-                    <th className="px-6 py-4">Horário</th>
-                    <th className="px-6 py-4">Nome</th>
-                    <th className="px-6 py-4 text-center">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {ligacoesQg.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-8 text-center text-slate-400 italic">
-                        Nenhum registro encontrado.
-                      </td>
-                    </tr>
-                  ) : (
-                    [...ligacoesQg]
-                      .sort((a, b) => b.data.localeCompare(a.data) || b.horario.localeCompare(a.horario))
-                      .map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50/50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {new Date(item.data + "T12:00:00").toLocaleDateString("pt-BR")}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {item.horario}
-                          </td>
-                          <td className="px-6 py-4 font-medium text-slate-800">
-                            {item.nome}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <div className="flex items-center justify-center space-x-2">
-                              <button
-                                onClick={() => {
-                                  setEditingLigacaoQg(item);
-                                  setNewLigacaoQg({
-                                    nome: item.nome,
-                                    data: item.data,
-                                    horario: item.horario,
-                                  });
-                                  window.scrollTo({ top: 0, behavior: "smooth" });
-                                }}
-                                className="p-1 px-2.5 text-blue-600 hover:bg-blue-50 rounded-lg font-bold hover:scale-105 transition-all text-xs"
-                              >
-                                Editar
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  if (confirm("Tem certeza que deseja excluir este registro?")) {
-                                    try {
-                                      await deleteDoc(doc(db, COLLECTIONS.LIGACOES_QG, item.id));
-                                      onToast("Registro excluído!");
-                                    } catch (err: any) {
-                                      onToast(`Erro: ${err.message}`, "error");
-                                    }
-                                  }
-                                }}
-                                className="p-1 px-2.5 text-rose-600 hover:bg-rose-50 rounded-lg font-bold hover:scale-105 transition-all text-xs"
-                              >
-                                Excluir
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
                   )}
                 </tbody>
               </table>
