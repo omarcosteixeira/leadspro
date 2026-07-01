@@ -517,6 +517,13 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.ADMIN_MASTER,
     ROLES.SALA_MATRICULA,
     ROLES.LIDER_FDV,
+    ROLES.SSA,
+    ROLES.QG,
+    ROLES.FDV,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.FDV_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
   ],
 };
 
@@ -6057,37 +6064,19 @@ function DashboardView({
     }
   };
 
-  const allowedFullDashboard = [
-    ROLES.ADMIN_MASTER,
-    ROLES.LIDER_FDV,
-    ROLES.FDV_COMERCIAL,
-    ROLES.SALA_MATRICULA,
-    ROLES.GESTOR_UNIDADE,
-    ROLES.GESTOR_COMERCIAL,
-  ].includes(profile.role);
-
   const defaultWidgets = {
-    stats: allowedFullDashboard ? false : false,
-    links: allowedFullDashboard,
-    planner: allowedFullDashboard,
-    campanhas: allowedFullDashboard ? false : false,
+    stats: false,
+    links: true,
+    planner: true,
+    campanhas: false,
     bomDia: true,
-    forecast: allowedFullDashboard,
-    periodo: allowedFullDashboard,
-    aniversarios: allowedFullDashboard,
+    forecast: true,
+    periodo: true,
+    aniversarios: true,
   };
-  
-  const userWidgets = profile?.dashboardWidgets || ({} as NonNullable<UserProfile['dashboardWidgets']>);
-  const widgets = {
-    stats: allowedFullDashboard && (userWidgets.stats ?? defaultWidgets.stats),
-    links: allowedFullDashboard && (userWidgets.links ?? defaultWidgets.links),
-    planner: allowedFullDashboard && (userWidgets.planner ?? defaultWidgets.planner),
-    campanhas: allowedFullDashboard && (userWidgets.campanhas ?? defaultWidgets.campanhas),
-    bomDia: userWidgets.bomDia ?? defaultWidgets.bomDia,
-    forecast: allowedFullDashboard && (userWidgets.forecast ?? defaultWidgets.forecast),
-    periodo: allowedFullDashboard && (userWidgets.periodo ?? defaultWidgets.periodo),
-    aniversarios: allowedFullDashboard && (userWidgets.aniversarios ?? defaultWidgets.aniversarios),
-  };
+  const widgets = profile?.dashboardWidgets
+    ? { ...defaultWidgets, ...profile.dashboardWidgets }
+    : defaultWidgets;
 
   const currentMonthNum = new Date().getMonth() + 1; // 1-12
   const monthNamesPt = [
@@ -7101,10 +7090,7 @@ function DashboardView({
                     label: "Aniversariantes do Mês",
                     icon: Cake,
                   },
-                ].filter((item) => {
-                  if (item.id === "bomDia") return true;
-                  return allowedFullDashboard;
-                }).map((item) => (
+                ].map((item) => (
                   <button
                     key={item.id}
                     onClick={() => toggleWidget(item.id as any)}
@@ -12540,6 +12526,8 @@ function CalendarioAcoesView({
           (initialData as any).metaInscritos !== undefined
             ? (initialData as any).metaInscritos
             : "",
+        leadsFeitos: (initialData as any).leadsFeitos !== undefined ? (initialData as any).leadsFeitos : "",
+        boletosFeitos: (initialData as any).boletosFeitos !== undefined ? (initialData as any).boletosFeitos : "",
         precisaPromotor: !!(initialData as any).precisaPromotor,
         promotoresSelecionados:
           (initialData as any).promotoresSelecionados || [],
@@ -17481,7 +17469,7 @@ function AdminView({
                         type="number"
                         required
                         value={
-                          newBomDia[section.key as keyof typeof newBomDia].insc
+                          (newBomDia[section.key as keyof typeof newBomDia] as any).insc
                         }
                         onChange={(e) => {
                           const val = Number(e.target.value);
@@ -17506,7 +17494,7 @@ function AdminView({
                         type="number"
                         required
                         value={
-                          newBomDia[section.key as keyof typeof newBomDia]
+                          (newBomDia[section.key as keyof typeof newBomDia] as any)
                             .matFin
                         }
                         onChange={(e) => {
@@ -17532,7 +17520,7 @@ function AdminView({
                         type="number"
                         required
                         value={
-                          newBomDia[section.key as keyof typeof newBomDia]
+                          (newBomDia[section.key as keyof typeof newBomDia] as any)
                             .matAcad
                         }
                         onChange={(e) => {

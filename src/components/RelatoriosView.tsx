@@ -815,7 +815,7 @@ export function RelatoriosView({ profile, botConfig }: RelatoriosViewProps) {
                                 paddingAngle={4}
                                 dataKey="value"
                                 nameKey="name"
-                                label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                                label={({ percent }) => percent ? `${(percent * 100).toFixed(0)}%` : ''}
                                 labelLine={false}
                               >
                                 {currentReport.chart.data.map((entry, index) => (
@@ -1077,7 +1077,7 @@ export function RelatoriosView({ profile, botConfig }: RelatoriosViewProps) {
                             dataKey="count"
                             nameKey="name"
                             label={({ name, percent }) =>
-                              `${(percent * 100).toFixed(0)}%`
+                              percent ? `${(percent * 100).toFixed(0)}%` : ''
                             }
                             labelLine={false}
                           >

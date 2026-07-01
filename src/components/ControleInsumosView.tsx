@@ -715,7 +715,7 @@ export function ControleInsumosView({
       dataToExport = filteredPedidos.map((p) => ({
         Status: p.status,
         "Prof./Func.": p.professorNome,
-        Curso: p.cursoNome || p.courseNome,
+        Curso: p.cursoNome,
         Disciplina: p.disciplinaNome,
         Motivo: p.motivoUso,
         Itens: p.itens.map((i) => `${i.quantidade}x ${i.material}`).join(", "),
@@ -1055,7 +1055,7 @@ export function ControleInsumosView({
                             <span className="flex items-center space-x-1">
                               <Book size={12} className="text-slate-400" />
                               <span className="font-medium text-slate-600">
-                                {pedido.courseNome || pedido.cursoNome} &bull;{" "}
+                                {pedido.cursoNome} &bull;{" "}
                                 {pedido.disciplinaNome}
                               </span>
                             </span>

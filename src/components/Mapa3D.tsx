@@ -26,20 +26,7 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
-interface Empresa {
-  id: string;
-  nome: string;
-  endereco?: string;
-  classificacao?: string;
-  statusEmpresa?: string;
-  seguimento?: string;
-  responsavel?: string;
-  telefone?: string;
-  consultorNome?: string;
-  linkMaps?: string;
-  bairro?: string;
-  unidadesVinculadas?: string[];
-}
+import { EmpresaParceira as Empresa } from "../types";
 
 interface Mapa3DProps {
   empresas: Empresa[];
@@ -486,15 +473,15 @@ export default function Mapa3D({
             <ZoomableGroup
               zoom={zoom}
               center={center}
-              onMoveEnd={({ coordinates, zoom }) => {
+              onMoveEnd={({ coordinates, zoom }: { coordinates: [number, number]; zoom: number }) => {
                 setCenter(coordinates);
                 setZoom(zoom);
               }}
             >
               {mapGeoUrl && (
                 <Geographies geography={mapGeoUrl}>
-                  {({ geographies }) =>
-                    geographies.map((geo) => {
+                  {({ geographies }: { geographies: any[] }) =>
+                    geographies.map((geo: any) => {
                       const cityName = geo.properties?.name || "";
                       const regionColor = getRegionColor(cityName);
                       return (

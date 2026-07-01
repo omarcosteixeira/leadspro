@@ -9,6 +9,7 @@ export interface UserProfile {
   uid: string;
   email: string;
   name: string;
+  nome?: string;
   cpf?: string;
   dataNascimento?: string;
   phone?: string;
@@ -69,6 +70,7 @@ export interface Campanha {
   dataInicio: string;
   dataFim: string;
   objetivo: string;
+  status?: string;
   createdAt: any;
 }
 
@@ -82,6 +84,7 @@ export interface Lead {
   cursoInteresse?: string;
   empresa?: string;
   status: 'Pendente' | 'Sem retorno' | 'Interessado' | 'Não Interessado' | 'Convertido';
+  converted?: boolean;
   createdAt: any;
   promotorId: string;
   promotorName: string;
@@ -120,6 +123,7 @@ export interface GapEntry {
   matAcad: boolean | string;
   numeroMatricula?: string;
   periodo?: string;
+  semestre?: string;
   documentos: {
     rg?: boolean;
     cpf?: boolean;
