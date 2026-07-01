@@ -175,10 +175,12 @@ service cloud.firestore {
 
     // Dashboard & Config Collections
     match /artifacts/gestaopro-761e1/public/data/campanhas/{id} {
-      allow read, write: if isPrincipal() || isComercial();
+      allow read: if isAuthenticated() && !isPromotor();
+      allow write: if isPrincipal() || isComercial();
     }
     match /artifacts/gestaopro-761e1/public/data/bom_dia/{id} {
-      allow read, write: if isPrincipal() || isComercial();
+      allow read: if isAuthenticated() && !isPromotor();
+      allow write: if isPrincipal() || isComercial();
     }
     match /artifacts/gestaopro-761e1/public/data/forecast/{id} {
       allow read, write: if isPrincipal() || isComercial();
@@ -204,7 +206,7 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaopro-761e1/public/data/mapao_academico/{id} {
-      allow read: if isPrincipal() || isComercial() || isAcademico() || isSSA();
+      allow read: if isAuthenticated() && !isPromotor();
       allow create, update: if (isPrincipal() || isComercial() || isAcademico()) && isValidMapaoAcademico(request.resource.data);
       allow delete: if isPrincipal() || isAcademico();
     }
@@ -240,7 +242,7 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaopro-761e1/public/data/cursos/{id} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && !isPromotor();
       allow write: if isPrincipal() || isComercial();
     }
 

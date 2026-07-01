@@ -21,7 +21,8 @@ import {
   RotateCcw,
   Calendar,
   MessageSquare,
-  Phone
+  Phone,
+  LocateFixed
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -463,9 +464,17 @@ export default function Mapa3D({
             </button>
             <button
               onClick={() => { setZoom(1); setCenter([-42.5, -22.2]); }}
+              title="Visão Geral do Estado"
               className="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition-colors"
             >
               <RotateCcw size={15} />
+            </button>
+            <button
+              onClick={() => { setZoom(4); setCenter([-43.3, -22.9]); }}
+              title="Centralizar no Rio de Janeiro"
+              className="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition-colors mt-2 border-t border-slate-200/50 pt-2"
+            >
+              <LocateFixed size={15} />
             </button>
           </div>
 
