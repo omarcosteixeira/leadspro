@@ -14744,7 +14744,7 @@ function EmpresasParceirasView({
       {/* Mapa das Empresas View */}
       {activeTab === "mapa" && (
         <Mapa3D
-          empresas={filteredData}
+          empresas={data}
           selectedId={selectedMapEmpresaId}
           onSelect={setSelectedMapEmpresaId}
           onGenerateAction={onGenerateAction}
