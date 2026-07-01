@@ -25,6 +25,7 @@ import {
   Clock,
   CheckCircle,
   TrendingUp,
+  User,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -171,6 +172,7 @@ export function IsencoesView({
         const newDoc = await addDoc(collection(db, COLLECTIONS.ISENCOES), {
           ...entryData,
           createdAt: serverTimestamp(),
+          createdByNome: profile.name || profile.email || "Usuário Desconhecido",
         });
         onToast("Isenção cadastrada com sucesso!", "success");
 
@@ -390,7 +392,14 @@ export function IsencoesView({
               ) : (
                 filteredIsencoes.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-4 font-bold text-slate-800">{item.nome}</td>
+                    <td className="p-4">
+                      <div className="font-bold text-slate-800">{item.nome}</div>
+                      {item.createdByNome && (
+                        <div className="text-[10px] font-bold text-slate-400 mt-1.5 flex items-center gap-1 bg-slate-100 w-fit px-1.5 py-0.5 rounded">
+                          <User size={10} /> {item.createdByNome}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-4 text-slate-600">
                       <div className="text-xs">{item.cpf}</div>
                       <div className="text-xs text-slate-400 mt-0.5">{item.telefone}</div>

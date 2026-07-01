@@ -1,4 +1,9 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+const fs = require('fs');
+
+const tempMap = fs.readFileSync('temp_map.txt', 'utf-8');
+
+// I will write a new Mapa3D.tsx
+const newMap = `import React, { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ComposableMap,
@@ -97,7 +102,7 @@ export default function Mapa3D({
       return "Rio de Janeiro";
     }
     
-    const match = endereco.match(/,\s*([^,]+)\s*-\s*R[Jj]/);
+    const match = endereco.match(/,\\s*([^,]+)\\s*-\\s*R[Jj]/);
     if (match && match[1]) {
       const parsed = match[1].trim();
       return parsed.charAt(0).toUpperCase() + parsed.slice(1);
@@ -561,3 +566,6 @@ export default function Mapa3D({
     </div>
   );
 }
+`;
+
+fs.writeFileSync('src/components/Mapa3D.tsx', newMap, 'utf-8');

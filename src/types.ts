@@ -447,6 +447,7 @@ export interface IsencaoEntry {
   boletoPago: boolean;
   createdAt: any;
   updatedAt?: any;
+  createdByNome?: string;
 }
 
 

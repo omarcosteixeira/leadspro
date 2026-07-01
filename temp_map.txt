@@ -1,0 +1,250 @@
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  MapPin,
+  ExternalLink,
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
+  Sparkles,
+  Layers,
+  Globe,
+  Building2,
+  Calendar,
+  Search,
+  Maximize2,
+  Sliders,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  HelpCircle,
+} from "lucide-react";
+import { cn } from "../lib/utils";
+
+interface Empresa {
+  id: string;
+  nome: string;
+  endereco?: string;
+  classificacao?: string;
+  statusEmpresa?: string;
+  seguimento?: string;
+  responsavel?: string;
+  telefone?: string;
+  consultorNome?: string;
+  linkMaps?: string;
+  bairro?: string;
+  unidadesVinculadas?: string[];
+}
+
+interface Mapa3DProps {
+  empresas: Empresa[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onGenerateAction: (empresa: Empresa) => void;
+  formatPhone: (phone?: string) => string;
+}
+
+export default function Mapa3D({
+  empresas,
+  selectedId,
+  onSelect,
+  onGenerateAction,
+  formatPhone,
+}: Mapa3DProps) {
+  // Map Modes: "city" (3D Isometric City)
+  
+  // 3D Isometric View Parameters
+  const [rotation, setRotation] = useState<number>(-35); // Degrees around Z axis
+  const [pitch, setPitch] = useState<number>(60); // Degrees around X axis
+  const [zoom, setZoom] = useState<number>(0.9); // Scale
+  const [showRoads, setShowRoads] = useState<boolean>(true);
+  const [showZones, setShowZones] = useState<boolean>(true);
+
+  // Mouse pan/drag state for the 3D board
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Map Filter/Search
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState<boolean>(false);
+  const [filterConsultor, setFilterConsultor] = useState<string>("Todos");
+  const [filterBairro, setFilterBairro] = useState<string>("Todos");
+  const [filterCidade, setFilterCidade] = useState<string>("Todas");
+  const [filterStatus, setFilterStatus] = useState<string>("Todos");
+  const [filterClassificacao, setFilterClassificacao] = useState<string>("Todas");
+  const [filterUnidade, setFilterUnidade] = useState<string>("Todas");
+
+  // Helper to detect city from address
+  const detectCidade = (endereco?: string) => {
+    if (!endereco) return "Rio de Janeiro";
+    const lower = endereco.toLowerCase();
+    
+    // Check known cities of RJ
+    const cities = [
+      "Niterói", "Duque de Caxias", "Nova Iguaçu", "São Gonçalo", 
+      "Belford Roxo", "São João de Meriti", "Petrópolis", "Volta Redonda", 
+      "Campos dos Goytacazes", "Macaé", "Cabo Frio", "Angra dos Reis", 
+      "Maricá", "Nilópolis", "Itaboraí", "Magé", "Mesquita", 
+      "Queimados", "Resende", "Araruama", "Saquarema", "Teresópolis",
+      "Rio das Ostras", "Itaguaí"
+    ];
+    
+    for (const city of cities) {
+      if (lower.includes(city.toLowerCase())) {
+        return city;
+      }
+    }
+    
+    if (lower.includes("rio de janeiro") || lower.includes("rj") || lower.includes("capital")) {
+      return "Rio de Janeiro";
+    }
+    
+    const match = endereco.match(/,\s*([^,]+)\s*-\s*R[Jj]/);
+    if (match && match[1]) {
+      const parsed = match[1].trim();
+      return parsed.charAt(0).toUpperCase() + parsed.slice(1);
+    }
+    
+    return "Rio de Janeiro"; // Default
+  };
+
+  // Dynamic filter values
+  const uniqueConsultores = useMemo(() => {
+    return Array.from(new Set(empresas.map((e) => e.consultorNome).filter(Boolean))).sort() as string[];
+  }, [empresas]);
+
+  const uniqueBairros = useMemo(() => {
+    return Array.from(new Set(empresas.map((e) => e.bairro).filter(Boolean))).sort() as string[];
+  }, [empresas]);
+
+  const uniqueCidades = useMemo(() => {
+    const cities = empresas.map(e => detectCidade(e.endereco));
+    return Array.from(new Set(cities)).sort() as string[];
+  }, [empresas]);
+
+  const uniqueUnidades = useMemo(() => {
+    const list: string[] = [];
+    empresas.forEach(e => {
+      if (Array.isArray(e.unidadesVinculadas)) {
+        e.unidadesVinculadas.forEach(u => {
+          if (u) list.push(u);
+        });
+      }
+    });
+    return Array.from(new Set(list)).sort() as string[];
+  }, [empresas]);
+
+  // Master Filter List
+  const filteredEmpresas = useMemo(() => {
+    return empresas.filter((e) => {
+      // 1. Search term (Matches Name or Address or CNPJ/Status)
+      const term = searchTerm.toLowerCase().trim();
+      const matchesSearch = !term || 
+        e.nome.toLowerCase().includes(term) ||
+        (e.endereco && e.endereco.toLowerCase().includes(term)) ||
+        (e.statusEmpresa && e.statusEmpresa.toLowerCase().includes(term));
+      
+      // 2. Consultor
+      const matchesConsultor = filterConsultor === "Todos" || e.consultorNome === filterConsultor;
+      
+      // 3. Bairro
+      const matchesBairro = filterBairro === "Todos" || e.bairro === filterBairro;
+      
+      // 4. Cidade
+      const matchesCidade = filterCidade === "Todas" || detectCidade(e.endereco) === filterCidade;
+      
+      // 5. Status
+      const currentStatus = e.statusEmpresa || "Não visitada";
+      const matchesStatus = filterStatus === "Todos" || currentStatus === filterStatus;
+      
+      // 6. Classificação
+      const matchesClassificacao = filterClassificacao === "Todas" || e.classificacao === filterClassificacao;
+      
+      // 7. Unidade
+      const matchesUnidade = filterUnidade === "Todas" || 
+        (Array.isArray(e.unidadesVinculadas) && e.unidadesVinculadas.includes(filterUnidade));
+        
+      return matchesSearch && matchesConsultor && matchesBairro && matchesCidade && matchesStatus && matchesClassificacao && matchesUnidade;
+    });
+  }, [empresas, searchTerm, filterConsultor, filterBairro, filterCidade, filterStatus, filterClassificacao, filterUnidade]);
+
+  const selectedEmpresa = useMemo(() => {
+    return (
+      filteredEmpresas.find((emp) => emp.id === selectedId) ||
+      filteredEmpresas[0] ||
+      null
+    );
+  }, [filteredEmpresas, selectedId]);
+
+  // Sync selectedId to first item if none is selected
+  useEffect(() => {
+    if (filteredEmpresas.length > 0 && !selectedId) {
+      onSelect(filteredEmpresas[0].id);
+    }
+  }, [filteredEmpresas, selectedId, onSelect]);
+
+  // Deterministic positioning matching Rio de Janeiro's real geography sectors
+  const getCoordinates = (empresa: Empresa) => {
+    const { id, nome, endereco, bairro } = empresa;
+    const combined = id + nome;
+    let hash = 0;
+    for (let i = 0; i < combined.length; i++) {
+      hash = combined.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const noiseX = Math.abs((hash * 17) % 15);
+    const noiseY = Math.abs((hash * 31) % 15);
+    
+    const lowerBairro = (bairro || "").toLowerCase();
+    const lowerAddress = (endereco || "").toLowerCase();
+    
+    const zonaSul = ["copacabana", "ipanema", "leblon", "botafogo", "flamengo", "gávea", "catete", "laranjeiras", "glória", "urca", "jardim botânico", "humaitá", "leme", "lagoa", "cosme velho", "são conrado"];
+    const centro = ["centro", "lapa", "santa teresa", "estácio", "rio comprido", "gamboa", "saúde", "santo cristo", "maravilha", "castelo", "cinelândia", "praça xv", "catumbi"];
+    const zonaOeste = ["barra", "recreio", "jacarepaguá", "campo grande", "santa cruz", "bangu", "realengo", "taquara", "anil", "freguesia", "curicica", "camorim", "itanhangá", "vargem", "cosmos", "paciência", "guaratiba", "pechincha", "sulacap", "padre miguel", "senador camará"];
+    const zonaNorte = ["tijuca", "vila isabel", "grajaú", "maracanã", "méier", "madureira", "penha", "bonsucesso", "ilha do governador", "ramos", "iraja", "irajá", "cascadura", "meier", "del castilho", "galeão", "inhaúma", "pavuna", "vaz lobo", "benfica", "sampaio", "engenho", "piedade", "quintino", "anchieta", "coelho neto", "colégio", "cordovil", "higienópolis", "jacaré", "manguinhos", "olaria", "rocha", "vargas", "vicente de carvalho", "vigário geral", "vista alegre"];
+
+    let minX = 15;
+    let maxX = 85;
+    let minY = 15;
+    let maxY = 85;
+
+    const matchesRegion = (list: string[]) => {
+      return list.some(item => lowerBairro.includes(item) || lowerAddress.includes(item));
+    };
+
+    if (matchesRegion(zonaSul)) {
+      // Bottom Center-Right (near Atlantic Ocean)
+      minX = 55;
+      maxX = 75;
+      minY = 65;
+      maxY = 82;
+    } else if (matchesRegion(centro)) {
+      // Center Top-Right (near Guanabara Bay)
+      minX = 62;
+      maxX = 82;
+      minY = 25;
+      maxY = 48;
+    } else if (matchesRegion(zonaOeste)) {
+      // Bottom Left / Wide territory
+      minX = 12;
+      maxX = 45;
+      minY = 55;
+      maxY = 82;
+    } else if (matchesRegion(zonaNorte)) {
+      // Top Center-Left
+      minX = 25;
+      maxX = 52;
+      minY = 15;
+      maxY = 45;
+    } else {
+      const regionChoice = Math.abs(hash) % 4;
+      if (regionChoice === 0) { // Zona Sul
+        minX = 55; maxX = 75; minY = 65; maxY = 82;
+      } else if (regionChoice === 1) { // Centro
+        minX = 62; maxX = 82; minY = 25; maxY = 48;
+      } else if (regionChoice === 2) { // Zona Oeste
+        minX = 12; maxX = 45; minY = 55; maxY = 82;
+      } else { // Zona Norte
+        minX = 25; maxX = 52; minY = 15; maxY = 45;
+      }
+    }
