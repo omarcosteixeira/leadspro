@@ -13966,19 +13966,29 @@ function EmpresasParceirasView({
       return;
     }
 
+    const isNowInTratativa = payload.statusEmpresa === "Em tratativa" && (!editingEmpresa || editingEmpresa.statusEmpresa !== "Em tratativa");
+
     try {
       if (editingEmpresa) {
         await updateDoc(
           doc(db, COLLECTIONS.EMPRESAS_PARCEIRAS, editingEmpresa.id),
           payload,
         );
-        onToast("Empresa atualizada!");
+        if (isNowInTratativa) {
+          onToast(`O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`, "success");
+        } else {
+          onToast("Empresa atualizada!");
+        }
       } else {
         await addDoc(collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS), {
           ...payload,
           createdAt: serverTimestamp(),
         });
-        onToast("Empresa cadastrada!");
+        if (isNowInTratativa) {
+          onToast(`O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`, "success");
+        } else {
+          onToast("Empresa cadastrada!");
+        }
       }
       setIsModalOpen(false);
       setEditingEmpresa(null);
@@ -14523,6 +14533,15 @@ function EmpresasParceirasView({
                       )}
                     </div>
 
+                    {emp.statusEmpresa === "Em tratativa" && (
+                      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start space-x-2 shadow-sm">
+                        <span className="text-amber-500 shrink-0 font-bold">⚠️</span>
+                        <div className="leading-relaxed">
+                          O processo foi iniciado acompanhe a tratativa com a empresa <span className="font-bold text-slate-900">{emp.nome}</span> para iniciar as campanhas de trade.
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-3 mb-6 text-sm text-slate-600">
                       {emp.cnpj && (
                         <div className="flex items-center space-x-3">
@@ -14740,6 +14759,9 @@ function EmpresasParceirasView({
                             <td className="p-4 pl-6">
                               <div className="font-bold text-slate-800">{emp.nome}</div>
                               {emp.cnpj && <div className="text-[10px] text-slate-400 font-mono">CNPJ: {emp.cnpj}</div>}
+                              <div className="mt-1.5 text-xs text-amber-700 max-w-sm leading-relaxed bg-amber-50/60 p-2 rounded-lg border border-amber-100/50">
+                                O processo foi iniciado acompanhe a tratativa com a empresa <strong>{emp.nome}</strong> para iniciar as campanhas de trade.
+                              </div>
                             </td>
                             <td className="p-4">
                               {emp.consultorNome ? (

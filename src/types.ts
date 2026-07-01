@@ -440,6 +440,8 @@ export interface IsencaoEntry {
   telefone: string;
   numeroOportunidade?: string;
   curso: string;
+  cursoOrigem?: string;
+  universidadeOrigem?: string;
   inseridoDigitaliza: 'Sim' | 'Não';
   status: 'Pendente' | 'Solicitado' | 'Deferido';
   boletoPago: boolean;
