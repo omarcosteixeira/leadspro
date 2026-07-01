@@ -11,7 +11,7 @@ service cloud.firestore {
     }
     
     function getUserData() {
-      let path = /databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid);
+      let path = /databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid);
       return get(path).data;
     }
     
@@ -20,11 +20,11 @@ service cloud.firestore {
         request.auth.token.email == "canaldonutri@gmail.com" || 
         request.auth.token.email == "marcos.teixeira@estacio.br" ||
         (
-          exists(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)) &&
+          exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) &&
           (
-            get(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)).data.email == "canaldonutri@gmail.com" ||
-            get(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)).data.email == "marcos.teixeira@estacio.br" ||
-            get(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)).data.role == "Admin Master"
+            get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.email == "canaldonutri@gmail.com" ||
+            get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.email == "marcos.teixeira@estacio.br" ||
+            get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.role == "Admin Master"
           )
         )
       );
@@ -34,8 +34,8 @@ service cloud.firestore {
       return isAuthenticated() && (
         isMasterUser() ||
         (
-          exists(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)).data.role in roles
+          exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.role in roles
         )
       );
     }
@@ -138,7 +138,7 @@ service cloud.firestore {
     // Collection Rules
     // ===============================================================
 
-    match /artifacts/gestaopro-761e1/public/data/users/{userId} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/users/{userId} {
       allow get: if true;
       allow list: if isAuthenticated();
       allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdminMaster() || isLider());
@@ -146,143 +146,143 @@ service cloud.firestore {
       allow delete: if isAdminMaster() || isLider();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/leads/{leadId} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/leads/{leadId} {
       allow read: if isPrincipal() || isComercial() || request.auth == null;
       allow create: if isPrincipal() || isComercial() || request.auth == null || request.resource.data.acao == 'Ação ( formulario)';
       allow update: if isPrincipal() || isComercial();
       allow delete: if isPrincipal();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/bases/{baseId} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/bases/{baseId} {
       allow read, create, update: if isPrincipal() || isComercial();
       allow delete: if isPrincipal();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/gap_academico/{gapId} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/gap_academico/{gapId} {
       allow read, create, update: if isPrincipal() || isComercial() || isSSA();
       allow delete: if isPrincipal();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/fies_prouni/{entryId} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/fies_prouni/{entryId} {
       allow read, create, update: if isPrincipal() || isComercial() || isSSA();
       allow delete: if isPrincipal();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/calendario_acoes/{acaoId} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/calendario_acoes/{acaoId} {
       allow read, create, update: if isPrincipal() || isComercial() || isFinanceiro();
       allow delete: if isPrincipal();
     }
 
     // Dashboard & Config Collections
-    match /artifacts/gestaopro-761e1/public/data/ligacoes_qg/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/ligacoes_qg/{id} {
       allow read, write: if isAuthenticated();
     }
-    match /artifacts/gestaopro-761e1/public/data/campanhas/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/campanhas/{id} {
       allow read: if isAuthenticated() && !isPromotor();
       allow write: if isPrincipal() || isComercial();
     }
-    match /artifacts/gestaopro-761e1/public/data/bom_dia/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/bom_dia/{id} {
       allow read: if isAuthenticated() && !isPromotor();
       allow write: if isPrincipal() || isComercial();
     }
-    match /artifacts/gestaopro-761e1/public/data/forecast/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/forecast/{id} {
       allow read, write: if isPrincipal() || isComercial();
     }
-    match /artifacts/gestaopro-761e1/public/data/planner/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/planner/{id} {
       allow read, write: if isPrincipal() || isComercial();
     }
-    match /artifacts/gestaopro-761e1/public/data/periodo_captacao/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/periodo_captacao/{id} {
       allow read, write: if isPrincipal() || isComercial();
     }
-    match /artifacts/gestaopro-761e1/public/data/linksUteis/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/linksUteis/{id} {
       allow read, write: if isPrincipal() || isComercial();
     }
-    match /artifacts/gestaopro-761e1/public/data/empresas_parceiras/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/empresas_parceiras/{id} {
       allow read: if true;
       allow create, update: if (isPrincipal() || isComercial()) && isValidEmpresa(request.resource.data);
       allow delete: if isPrincipal();
     }
-    match /artifacts/gestaopro-761e1/public/data/whatsapp_messages/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/whatsapp_messages/{id} {
       allow read: if isAuthenticated();
       allow create, update: if (isPrincipal() || isComercial() || isSSA()) && isValidWhatsAppMessage(request.resource.data);
       allow delete: if isPrincipal();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/mapao_academico/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/mapao_academico/{id} {
       allow read: if isAuthenticated() && !isPromotor();
       allow create, update: if (isPrincipal() || isComercial() || isAcademico()) && isValidMapaoAcademico(request.resource.data);
       allow delete: if isPrincipal() || isAcademico();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/bases_disparo/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/bases_disparo/{id} {
       allow read, create, update: if isPrincipal() || isComercial();
       allow delete: if isPrincipal();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/bot_config/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/bot_config/{id} {
       allow read: if true;
       allow write: if isAuthenticated();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/bot_reports/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/bot_reports/{id} {
       allow read: if isPrincipal() || isComercial();
       allow create: if isAuthenticated();
       allow update, delete: if isPrincipal();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/bases_renovacao/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/bases_renovacao/{id} {
       allow read, create, update: if isPrincipal() || isComercial() || isSSA();
       allow delete: if isPrincipal();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/meta_dia/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/meta_dia/{id} {
       allow read: if isAuthenticated();
       allow write: if isPrincipal() || isComercial();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/solicitacoes_folga/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/solicitacoes_folga/{id} {
       allow read, write: if isAuthenticated();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/cursos/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/cursos/{id} {
       allow read: if isAuthenticated() && !isPromotor();
       allow write: if isPrincipal() || isComercial();
     }
 
-    match /artifacts/gestaopro-761e1/public/data/insumos_pedidos/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/insumos_pedidos/{id} {
       allow create: if true;
       allow read, update, delete: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isFinanceiro() || isTecnico());
     }
 
-    match /artifacts/gestaopro-761e1/public/data/insumos_estoque/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/insumos_estoque/{id} {
       allow read, write: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isFinanceiro() || isTecnico());
     }
 
-    match /artifacts/gestaopro-761e1/public/data/insumos_pedidos_comercial/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/insumos_pedidos_comercial/{id} {
       allow create: if true;
       allow read, update, delete: if isAuthenticated() && (isPrincipal() || isComercial());
     }
 
-    match /artifacts/gestaopro-761e1/public/data/insumos_estoque_comercial/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/insumos_estoque_comercial/{id} {
       allow read, write: if isAuthenticated() && (isPrincipal() || isComercial());
     }
 
-    match /artifacts/gestaopro-761e1/public/data/insumos_baixas/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/insumos_baixas/{id} {
       allow create: if isAuthenticated();
       allow read, update, delete: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isFinanceiro() || isTecnico());
     }
 
-    match /artifacts/gestaopro-761e1/public/data/insumos_baixas_comercial/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/insumos_baixas_comercial/{id} {
       allow create: if isAuthenticated();
       allow read, update, delete: if isAuthenticated() && (isPrincipal() || isComercial());
     }
 
-    match /artifacts/gestaopro-761e1/public/data/funcionarios/{id} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/funcionarios/{id} {
       allow read: if true;
       allow write: if isAuthenticated() && (isPrincipal() || isComercial());
     }
 
-    match /artifacts/gestaopro-761e1/public/data/isencoes/{isencaoId} {
+    match /artifacts/gestaodeleadspro-d4230/public/data/isencoes/{isencaoId} {
       allow read, write: if isAuthenticated();
     }
   }
