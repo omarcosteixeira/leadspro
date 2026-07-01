@@ -19,7 +19,9 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  Calendar
+  Calendar,
+  MessageSquare,
+  Phone
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -54,12 +56,13 @@ export default function Mapa3D({
   formatPhone,
 }: Mapa3DProps) {
   const [zoom, setZoom] = useState<number>(1);
+  const [showCard, setShowCard] = useState<boolean>(false);
   const [center, setCenter] = useState<[number, number]>([-42.5, -22.2]); // Approx center of RJ state
   const [mapGeoUrl, setMapGeoUrl] = useState<string>("");
 
   useEffect(() => {
     // Fetch RJ Municipalities GeoJSON from IBGE
-    setMapGeoUrl("https://servicodados.ibge.gov.br/api/v3/malhas/estados/33?formato=application/vnd.geo+json&resolucao=5");
+    setMapGeoUrl("https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-33-mun.json");
   }, []);
 
   // Map Filter/Search
@@ -73,6 +76,30 @@ export default function Mapa3D({
   const [filterUnidade, setFilterUnidade] = useState<string>("Todas");
 
   // Helper to detect city from address
+  
+  const getRegionColor = (cityName: string) => {
+    if (!cityName) return "#e2e8f0"; // default slate-200
+    const lowerName = cityName.toLowerCase();
+    
+    const noroeste = ["aperibé", "bom jesus do itabapoana", "cambuci", "italva", "itaocara", "itaperuna", "laje do muriaé", "miracema", "natividade", "porciúncula", "santo antônio de pádua", "são josé de ubá", "varre-sai"];
+    const norte = ["campos dos goytacazes", "carapebus", "cardoso moreira", "conceição de macabu", "macaé", "quissamã", "são fidélis", "são francisco de itabapoana", "são joão da barra"];
+    const serrana = ["bom jardim", "cachoeiras de macacu", "cantagalo", "carmo", "cordeiro", "duas barras", "guapimirim", "macuco", "nova friburgo", "petrópolis", "santa maria madalena", "são sebastião do alto", "sumidouro", "teresópolis", "trajano de moraes"];
+    const lagos = ["araruama", "armação dos búzios", "arraial do cabo", "cabo frio", "casimiro de abreu", "iguaba grande", "rio das ostras", "são pedro da aldeia", "silva jardim", "rio bonito", "saquarema"];
+    const metropolitana = ["belford roxo", "duque de caxias", "itaboraí", "itaguaí", "japeri", "magé", "maricá", "mesquita", "nilópolis", "niterói", "nova iguaçu", "paracambi", "queimados", "rio de janeiro", "são gonçalo", "são joão de meriti", "seropédica", "tanguá"];
+    const medioParaiba = ["angra dos reis", "barra do piraí", "barra mansa", "itatiaia", "mangaratiba", "paraty", "parati", "pinheiral", "piraí", "porto real", "quatis", "resende", "rio claro", "rio das flores", "valença", "vassouras", "volta redonda"];
+    const centroSul = ["areal", "comendador levy gasparian", "engenheiro paulo de frontin", "mendes", "miguel pereira", "paraíba do sul", "paty do alferes", "sapucaia", "são josé do vale do rio preto", "três rios"];
+
+    if (noroeste.includes(lowerName)) return "#f9a8d4"; // Pink
+    if (norte.includes(lowerName)) return "#fde047"; // Yellow
+    if (serrana.includes(lowerName)) return "#7dd3fc"; // Blue
+    if (lagos.includes(lowerName)) return "#fca5a5"; // Red/Coral
+    if (metropolitana.includes(lowerName)) return "#86efac"; // Green
+    if (medioParaiba.includes(lowerName)) return "#d8b4fe"; // Purple
+    if (centroSul.includes(lowerName)) return "#fdba74"; // Orange
+
+    return "#e2e8f0";
+  };
+
   const detectCidade = (endereco?: string) => {
     if (!endereco) return "Rio de Janeiro";
     const lower = endereco.toLowerCase();
@@ -387,7 +414,10 @@ export default function Mapa3D({
               <button
                 key={emp.id}
                 type="button"
-                onClick={() => onSelect(emp.id)}
+                onClick={() => {
+                  onSelect(emp.id);
+                  setShowCard(false);
+                }}
                 className={cn(
                   "w-full text-left p-3.5 rounded-2xl border transition-all flex flex-col space-y-2 cursor-pointer relative overflow-hidden group",
                   isSelected
@@ -455,20 +485,24 @@ export default function Mapa3D({
               {mapGeoUrl && (
                 <Geographies geography={mapGeoUrl}>
                   {({ geographies }) =>
-                    geographies.map((geo) => (
-                      <Geography
-                        key={geo.rsmKey}
-                        geography={geo}
-                        fill="#0284c7"
-                        stroke="#7dd3fc"
-                        strokeWidth={0.5}
-                        style={{
-                          default: { outline: "none" },
-                          hover: { fill: "#0369a1", outline: "none" },
-                          pressed: { fill: "#0c4a6e", outline: "none" },
-                        }}
-                      />
-                    ))
+                    geographies.map((geo) => {
+                      const cityName = geo.properties?.name || "";
+                      const regionColor = getRegionColor(cityName);
+                      return (
+                        <Geography
+                          key={geo.rsmKey}
+                          geography={geo}
+                          fill={regionColor}
+                          stroke="#ffffff"
+                          strokeWidth={0.5}
+                          style={{
+                            default: { outline: "none", transition: "all 250ms" },
+                            hover: { fill: "#cbd5e1", outline: "none" },
+                            pressed: { fill: "#94a3b8", outline: "none" },
+                          }}
+                        />
+                      );
+                    })
                   }
                 </Geographies>
               )}
@@ -488,6 +522,7 @@ export default function Mapa3D({
                     coordinates={emp.pos}
                     onClick={() => {
                       onSelect(emp.id);
+                      setShowCard(true);
                       setCenter(emp.pos);
                       if (zoom < 4) setZoom(4);
                     }}
@@ -529,34 +564,81 @@ export default function Mapa3D({
           </ComposableMap>
         </div>
 
-        {selectedEmpresa && (
-          <div className="p-5 bg-white border-t border-slate-100 grid grid-cols-1 md:grid-cols-4 gap-4 text-xs shrink-0 z-10">
-            <div>
-              <span className="text-slate-400 font-bold block uppercase text-[9px] tracking-wider">Contato / Responsável</span>
-              <span className="text-slate-700 font-semibold">{selectedEmpresa.responsavel || "Não cadastrado"}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 font-bold block uppercase text-[9px] tracking-wider">Telefone Comercial</span>
-              <span className="text-slate-700 font-semibold">{formatPhone(selectedEmpresa.telefone) || "Sem telefone"}</span>
-            </div>
-            {selectedEmpresa.consultorNome && (
-              <div>
-                <span className="text-slate-400 font-bold block uppercase text-[9px] tracking-wider">Comercial Vinculado</span>
-                <span className="text-blue-600 font-bold">{selectedEmpresa.consultorNome}</span>
+        
+        {/* LATERAL FLOATING CARD (Mini-Card) */}
+        <AnimatePresence>
+          {(selectedEmpresa && showCard) && (
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="absolute top-4 right-16 w-72 bg-white/95 backdrop-blur-md border border-slate-200 shadow-2xl rounded-2xl p-5 z-20"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <h4 className="font-bold text-slate-800 text-sm leading-tight pr-4">{selectedEmpresa.nome}</h4>
+                <button 
+                  onClick={() => setShowCard(false)} 
+                  className="text-slate-400 hover:text-red-500 transition-colors shrink-0"
+                >
+                  <XCircle size={16} />
+                </button>
               </div>
-            )}
-            <div className="flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => onGenerateAction(selectedEmpresa)}
-                className="w-full md:w-auto px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold transition-all shadow-md flex items-center justify-center space-x-2"
-              >
-                <Calendar size={14} />
-                <span>Gerar Ação</span>
-              </button>
-            </div>
-          </div>
-        )}
+
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  {(() => {
+                    const st = selectedEmpresa.statusEmpresa || "Não visitada";
+                    if (st === "Conveniada") return <CheckCircle2 size={14} className="text-emerald-500" />;
+                    if (st === "Em tratativa") return <AlertTriangle size={14} className="text-amber-500" />;
+                    if (st === "Cancelada") return <XCircle size={14} className="text-red-500" />;
+                    return <HelpCircle size={14} className="text-slate-400" />;
+                  })()}
+                  <span className="font-semibold text-xs text-slate-700">
+                    {selectedEmpresa.statusEmpresa || "Não visitada"}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-slate-400 font-bold block uppercase text-[9px] tracking-wider mb-0.5">Responsável</span>
+                  <div className="flex items-center space-x-1.5 text-slate-700 font-semibold text-xs">
+                    <MapPin size={12} className="text-slate-400" />
+                    <span className="line-clamp-1">{selectedEmpresa.responsavel || "Não cadastrado"}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-slate-400 font-bold block uppercase text-[9px] tracking-wider mb-0.5">Telefone Comercial</span>
+                  <div className="flex items-center space-x-1.5 text-slate-700 font-semibold text-xs">
+                    <Phone size={12} className="text-slate-400" />
+                    <span>{formatPhone(selectedEmpresa.telefone) || "Sem telefone"}</span>
+                  </div>
+                </div>
+
+                {selectedEmpresa.telefone && (
+                  <a
+                    href={`https://wa.me/${selectedEmpresa.telefone.replace(/\D/g, "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full mt-2 px-4 py-2.5 bg-[#25D366] hover:bg-[#1DA851] text-white rounded-xl font-bold transition-all shadow-md flex items-center justify-center space-x-2 text-xs"
+                  >
+                    <MessageSquare size={14} />
+                    <span>WhatsApp</span>
+                  </a>
+                )}
+                
+                <button
+                  type="button"
+                  onClick={() => onGenerateAction(selectedEmpresa)}
+                  className="w-full mt-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold transition-all shadow-md flex items-center justify-center space-x-2 text-xs"
+                >
+                  <Calendar size={14} />
+                  <span>Gerar Ação</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </div>
     </div>
   );
