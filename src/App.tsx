@@ -153,7 +153,6 @@ import { AdminFuncionariosView } from "./components/AdminFuncionariosView";
 import { RelatoriosView } from "./components/RelatoriosView";
 import { WhatsAppMessageSelector } from "./components/WhatsAppMessageSelector";
 import { MultiSelect } from "./components/MultiSelect";
-import EmpresaMapDashboard from "./components/EmpresaMapDashboard";
 
 // --- Helpers ---
 export const replaceMessageVariables = (
@@ -4504,37 +4503,27 @@ export default function App() {
         )}
       >
         <div className="h-full flex flex-col">
-          <div className="p-6 flex items-center justify-between space-x-3">
-            <div className="flex items-center space-x-3 overflow-hidden">
-              {botConfig?.loginLogo ? (
-                <img
-                  src={botConfig.loginLogo}
-                  alt="Logo"
-                  className="w-full max-h-12 object-contain drop-shadow-md"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <>
-                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0">
-                    <TrendingUp size={24} />
-                  </div>
-                  <h1 className="text-xl font-bold text-white tracking-tight truncate">
-                    Gestão Oeste pro
-                  </h1>
-                </>
-              )}
-            </div>
-            {/* Close Button on Mobile */}
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden p-2 text-slate-400 hover:text-white hover:bg-[#082a5c] rounded-lg shrink-0"
-              title="Fechar menu"
-            >
-              <X size={20} />
-            </button>
+          <div className="p-6 flex items-center space-x-3">
+            {botConfig?.loginLogo ? (
+              <img
+                src={botConfig.loginLogo}
+                alt="Logo"
+                className="w-full max-h-12 object-contain drop-shadow-md"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <>
+                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                  <TrendingUp size={24} />
+                </div>
+                <h1 className="text-xl font-bold text-white tracking-tight">
+                  Gestão Oeste pro
+                </h1>
+              </>
+            )}
           </div>
 
-          <nav className="flex-1 px-4 space-y-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-slate-700">
+          <nav className="flex-1 px-4 space-y-1">
             {[
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
               { id: "cadastro", label: "Novo Lead", icon: UserPlus },
@@ -4644,7 +4633,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="min-h-[4rem] bg-[#011a3c] border-b border-[#092e5c] flex items-center justify-between px-4 lg:px-8 py-2 shrink-0 flex-wrap sm:flex-nowrap gap-3">
+        <header className="h-16 bg-[#011a3c] border-b border-[#092e5c] flex items-center justify-between px-4 lg:px-8 shrink-0">
           <button
             onClick={() => setIsSidebarOpen(true)}
             className="lg:hidden p-2 text-slate-400 hover:bg-[#082a5c] rounded-lg"
@@ -4688,7 +4677,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-3 sm:p-4 lg:p-8 min-w-0 max-w-full">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
@@ -4713,7 +4702,11 @@ export default function App() {
                 />
               )}
               {currentView === "cadastro" && (
-                <CadastroView onToast={showToast} profile={profile!} />
+                <CadastroView
+                  onToast={showToast}
+                  profile={profile!}
+                  calendarioAcoes={calendarioAcoes}
+                />
               )}
               {currentView === "historico" && (
                 <HistoricoView
@@ -4727,6 +4720,7 @@ export default function App() {
                   onMassSendBot={handleMassSendBotMessages}
                   gap={gap}
                   basesRenovacao={basesRenovacao}
+                  calendarioAcoes={calendarioAcoes}
                 />
               )}
               {currentView === "bases" && (
@@ -4750,6 +4744,7 @@ export default function App() {
                   botConfig={botConfig}
                   onSendBot={handleSendBotMessage}
                   onMassSendBot={handleMassSendBotMessages}
+                  calendarioAcoes={calendarioAcoes}
                 />
               )}
               {currentView === "fiesProuni" && (
@@ -4835,6 +4830,9 @@ export default function App() {
                   initialData={initialActionData}
                   onClearInitialData={() => setInitialActionData(null)}
                   users={users}
+                  callBotApi={callBotApi}
+                  leads={leads}
+                  gap={gap}
                 />
               )}
               {currentView === "empresas" && (
@@ -4843,7 +4841,6 @@ export default function App() {
                   onToast={showToast}
                   cursos={cursos}
                   users={users}
-                  callBotApi={callBotApi}
                   onGenerateAction={(empresa) => {
                     setInitialActionData({
                       nome: `Ação na empresa ${empresa.nome}`,
@@ -7059,12 +7056,15 @@ function DashboardView({
 function CadastroView({
   onToast,
   profile,
+  calendarioAcoes = [],
 }: {
   onToast: (m: string, t?: "success" | "error") => void;
   profile: UserProfile;
+  calendarioAcoes?: CalendarioAcao[];
 }) {
   const [formData, setFormData] = useState({
     acao: "",
+    acaoId: "",
     nome: "",
     telefone: "",
     cpf: "",
@@ -7135,9 +7135,26 @@ function CadastroView({
       }
 
       await addDoc(collection(db, COLLECTIONS.LEADS), newLeadData);
+      
+      if (newLeadData.acaoId && newLeadData.acaoId !== "manual") {
+        try {
+          const qLeads = query(
+            collection(db, COLLECTIONS.LEADS),
+            where("acaoId", "==", newLeadData.acaoId)
+          );
+          const snapLeads = await getDocs(qLeads);
+          await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, newLeadData.acaoId), {
+            leadsFeitos: snapLeads.size
+          });
+        } catch (error) {
+          console.error("Error auto-updating action leadsCount:", error);
+        }
+      }
+
       onToast("Lead cadastrado com sucesso!");
       setFormData({
         acao: "",
+        acaoId: "",
         nome: "",
         telefone: "",
         cpf: "",
@@ -7285,20 +7302,72 @@ function CadastroView({
             </h3>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                <div className="md:col-span-2 space-y-2">
+                  <label className="block text-sm font-bold text-slate-700">
                     Ação / Origem
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.acao}
-                    onChange={(e) =>
-                      setFormData({ ...formData, acao: e.target.value })
-                    }
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                    placeholder="Ex: Evento Junino, Facebook, etc."
-                  />
+                  {calendarioAcoes && calendarioAcoes.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <span className="block text-xs font-semibold text-slate-500 mb-1">
+                          Selecionar do Calendário
+                        </span>
+                        <select
+                          value={formData.acaoId || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "manual") {
+                              setFormData({ ...formData, acaoId: "manual", acao: "" });
+                            } else {
+                              const matched = calendarioAcoes.find((a) => a.id === val);
+                              setFormData({
+                                ...formData,
+                                acaoId: val,
+                                acao: matched ? matched.nome : "",
+                              });
+                            }
+                          }}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm bg-white"
+                        >
+                          <option value="">Selecione...</option>
+                          {calendarioAcoes.map((act) => (
+                            <option key={act.id} value={act.id}>
+                              {act.nome} ({act.dataInicio})
+                            </option>
+                          ))}
+                          <option value="manual">Outro (Digitar manualmente)</option>
+                        </select>
+                      </div>
+                      {(formData.acaoId === "manual" || !formData.acaoId) && (
+                        <div>
+                          <span className="block text-xs font-semibold text-slate-500 mb-1">
+                            Digitar Nome da Ação/Origem
+                          </span>
+                          <input
+                            type="text"
+                            required={!formData.acaoId || formData.acaoId === "manual"}
+                            value={formData.acao}
+                            onChange={(e) =>
+                              setFormData({ ...formData, acao: e.target.value })
+                            }
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                            placeholder="Ex: Facebook, Panfletagem, etc."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      required
+                      value={formData.acao}
+                      onChange={(e) =>
+                        setFormData({ ...formData, acao: e.target.value })
+                      }
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      placeholder="Ex: Evento Junino, Facebook, etc."
+                    />
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-bold text-slate-700 mb-1">
@@ -7522,6 +7591,7 @@ function HistoricoView({
   onMassSendBot,
   gap,
   basesRenovacao,
+  calendarioAcoes = [],
 }: {
   leads: Lead[];
   profile: UserProfile;
@@ -7533,6 +7603,7 @@ function HistoricoView({
   onMassSendBot: (messages: { telefone: string; message: string }[]) => void;
   gap: GapEntry[];
   basesRenovacao: BaseEntry[];
+  calendarioAcoes?: CalendarioAcao[];
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [courseFilter, setCourseFilter] = useState("");
@@ -7560,6 +7631,7 @@ function HistoricoView({
     cpf: "",
     cursoInteresse: "",
     acao: "",
+    acaoId: "",
   });
 
   const handleVerificacao = () => {
@@ -7864,6 +7936,7 @@ function HistoricoView({
       cpf: lead.cpf || "",
       cursoInteresse: lead.cursoInteresse || "",
       acao: lead.acao,
+      acaoId: lead.acaoId || "",
     });
     setEditModalOpen(true);
   };
@@ -7872,13 +7945,48 @@ function HistoricoView({
     e.preventDefault();
     if (!editingLead) return;
     try {
+      const prevAcaoId = editingLead.acaoId;
+      const newAcaoId = editFormData.acaoId;
+
       await updateDoc(doc(db, COLLECTIONS.LEADS, editingLead.id), {
         nome: editFormData.nome,
         telefone: editFormData.telefone,
         cpf: editFormData.cpf,
         cursoInteresse: editFormData.cursoInteresse,
         acao: editFormData.acao,
+        acaoId: newAcaoId || "",
       });
+
+      if (prevAcaoId && prevAcaoId !== "manual" && prevAcaoId !== newAcaoId) {
+        try {
+          const qLeadsOld = query(
+            collection(db, COLLECTIONS.LEADS),
+            where("acaoId", "==", prevAcaoId),
+          );
+          const snapOld = await getDocs(qLeadsOld);
+          await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, prevAcaoId), {
+            leadsFeitos: snapOld.size,
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      if (newAcaoId && newAcaoId !== "manual") {
+        try {
+          const qLeadsNew = query(
+            collection(db, COLLECTIONS.LEADS),
+            where("acaoId", "==", newAcaoId),
+          );
+          const snapNew = await getDocs(qLeadsNew);
+          await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, newAcaoId), {
+            leadsFeitos: snapNew.size,
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
       onToast("Lead atualizado com sucesso!", "success");
       setEditModalOpen(false);
       setEditingLead(null);
@@ -8433,17 +8541,69 @@ function HistoricoView({
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                <div className="col-span-2 space-y-2">
+                  <label className="block text-xs font-bold text-slate-500">
                     Origem / Ação
                   </label>
-                  <input
-                    value={editFormData.acao}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, acao: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
+                  {calendarioAcoes && calendarioAcoes.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <span className="block text-[10px] font-semibold text-slate-400 mb-1">
+                          Selecionar do Calendário
+                        </span>
+                        <select
+                          value={editFormData.acaoId || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "manual") {
+                              setEditFormData({ ...editFormData, acaoId: "manual", acao: "" });
+                            } else {
+                              const matched = calendarioAcoes.find((a) => a.id === val);
+                              setEditFormData({
+                                ...editFormData,
+                                acaoId: val,
+                                acao: matched ? matched.nome : "",
+                              });
+                            }
+                          }}
+                          className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white"
+                        >
+                          <option value="">Selecione...</option>
+                          {calendarioAcoes.map((act) => (
+                            <option key={act.id} value={act.id}>
+                              {act.nome} ({act.dataInicio})
+                            </option>
+                          ))}
+                          <option value="manual">Outro (Digitar manualmente)</option>
+                        </select>
+                      </div>
+                      {(editFormData.acaoId === "manual" || !editFormData.acaoId) && (
+                        <div>
+                          <span className="block text-[10px] font-semibold text-slate-400 mb-1">
+                            Digitar Nome da Ação/Origem
+                          </span>
+                          <input
+                            type="text"
+                            required={!editFormData.acaoId || editFormData.acaoId === "manual"}
+                            value={editFormData.acao}
+                            onChange={(e) =>
+                              setEditFormData({ ...editFormData, acao: e.target.value })
+                            }
+                            className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                            placeholder="Ex: Facebook, Panfletagem, etc."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      value={editFormData.acao}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, acao: e.target.value })
+                      }
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  )}
                 </div>
               </div>
               <button
@@ -10273,6 +10433,7 @@ function GapView({
   botConfig,
   onSendBot,
   onMassSendBot,
+  calendarioAcoes = [],
 }: {
   gap: GapEntry[];
   onToast: (m: string, t?: "success" | "error") => void;
@@ -10280,6 +10441,7 @@ function GapView({
   botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
   onMassSendBot: (messages: { telefone: string; message: string }[]) => void;
+  calendarioAcoes?: CalendarioAcao[];
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [cpfFilter, setCpfFilter] = useState("");
@@ -10339,6 +10501,8 @@ function GapView({
     formaIngresso: "",
     numeroMatricula: "",
     periodo: "",
+    acao: "",
+    acaoId: "",
   });
 
   const docLabels: Record<string, string> = {
@@ -10541,6 +10705,9 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
 
     setLoading(true);
     try {
+      const prevAcaoId = editingEntry?.acaoId;
+      const newAcaoId = formData.acaoId;
+
       if (editingEntry) {
         await updateDoc(doc(db, COLLECTIONS.GAP, editingEntry.id), {
           ...formData,
@@ -10556,6 +10723,37 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
         });
         onToast("Candidato cadastrado no GAP!");
       }
+
+      if (prevAcaoId && prevAcaoId !== "manual" && prevAcaoId !== newAcaoId) {
+        try {
+          const qGapOld = query(
+            collection(db, COLLECTIONS.GAP),
+            where("acaoId", "==", prevAcaoId),
+          );
+          const snapOld = await getDocs(qGapOld);
+          await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, prevAcaoId), {
+            boletosFeitos: snapOld.size,
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      if (newAcaoId && newAcaoId !== "manual") {
+        try {
+          const qGapNew = query(
+            collection(db, COLLECTIONS.GAP),
+            where("acaoId", "==", newAcaoId),
+          );
+          const snapNew = await getDocs(qGapNew);
+          await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, newAcaoId), {
+            boletosFeitos: snapNew.size,
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
       setIsModalOpen(false);
       setEditingEntry(null);
       setFormData({
@@ -10569,6 +10767,8 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
         formaIngresso: "",
         numeroMatricula: "",
         periodo: "",
+        acao: "",
+        acaoId: "",
       } as any);
     } catch (err: any) {
       onToast("Erro ao salvar.", "error");
@@ -11005,6 +11205,8 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
                           formaIngresso: entry.formaIngresso || "",
                           numeroMatricula: entry.numeroMatricula || "",
                           periodo: entry.periodo || "",
+                          acao: entry.acao || "",
+                          acaoId: entry.acaoId || "",
                         });
                         setIsModalOpen(true);
                       }}
@@ -11222,6 +11424,71 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
                   />
                 </div>
                 <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Ação Vinculada (Opcional)
+                  </label>
+                  {calendarioAcoes && calendarioAcoes.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <span className="block text-[10px] font-semibold text-slate-400 mb-1">
+                          Selecionar do Calendário
+                        </span>
+                        <select
+                          value={formData.acaoId || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "manual") {
+                              setFormData({ ...formData, acaoId: "manual", acao: "" });
+                            } else {
+                              const matched = calendarioAcoes.find((a) => a.id === val);
+                              setFormData({
+                                ...formData,
+                                acaoId: val,
+                                acao: matched ? matched.nome : "",
+                              });
+                            }
+                          }}
+                          className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                        >
+                          <option value="">Nenhuma ação vinculada</option>
+                          {calendarioAcoes.map((act) => (
+                            <option key={act.id} value={act.id}>
+                              {act.nome} ({act.dataInicio})
+                            </option>
+                          ))}
+                          <option value="manual">Outro (Digitar manualmente)</option>
+                        </select>
+                      </div>
+                      {(formData.acaoId === "manual" || !formData.acaoId) && (
+                        <div>
+                          <span className="block text-[10px] font-semibold text-slate-400 mb-1">
+                            Digitar Nome da Ação/Origem
+                          </span>
+                          <input
+                            type="text"
+                            required={formData.acaoId === "manual"}
+                            value={formData.acao}
+                            onChange={(e) =>
+                              setFormData({ ...formData, acao: e.target.value })
+                            }
+                            className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                            placeholder="Ex: Facebook, Panfletagem, etc."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      value={formData.acao}
+                      onChange={(e) =>
+                        setFormData({ ...formData, acao: e.target.value })
+                      }
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      placeholder="Ex: Evento Junino, Facebook, etc."
+                    />
+                  )}
+                </div>
+                <div className="md:col-span-2">
                   <button
                     type="submit"
                     disabled={loading}
@@ -11251,6 +11518,9 @@ function CalendarioAcoesView({
   onClearInitialData,
   users,
   empresasParceiras = [],
+  callBotApi,
+  leads = [],
+  gap = [],
 }: {
   data: CalendarioAcao[];
   onToast: (m: string, t?: "success" | "error") => void;
@@ -11259,8 +11529,187 @@ function CalendarioAcoesView({
   onClearInitialData?: () => void;
   users: UserProfile[];
   empresasParceiras?: EmpresaParceira[];
+  callBotApi?: (
+    path: string,
+    options?: { method?: "GET" | "POST"; body?: any },
+  ) => Promise<any>;
+  leads?: Lead[];
+  gap?: GapEntry[];
 }) {
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Helper functions for automatic WhatsApp notifications
+  const getLocalDateString = (d: Date = new Date()) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const addDays = (dateStr: string, days: number): string => {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return '';
+    const date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    date.setDate(date.getDate() + days);
+    return getLocalDateString(date);
+  };
+
+  const formatBrazilianDate = (dateStr?: string): string => {
+    if (!dateStr) return "";
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  };
+
+  const formatToWhatsAppPhone = (phone?: string): string => {
+    if (!phone) return "";
+    let cleaned = phone.replace(/\D/g, "");
+    if (cleaned.startsWith("0")) cleaned = cleaned.substring(1);
+    if (cleaned.length === 10 || cleaned.length === 11) {
+      cleaned = `55${cleaned}`;
+    }
+    return cleaned;
+  };
+
+  const sendActionWhatsApp = async (recipientPhone: string, message: string) => {
+    const cleanPhone = formatToWhatsAppPhone(recipientPhone);
+    if (!cleanPhone) return;
+
+    try {
+      if (callBotApi) {
+        await callBotApi("/api/send", {
+          method: "POST",
+          body: {
+            botNumber: "5524993346717",
+            number: cleanPhone,
+            message,
+            force: true,
+            manual: true,
+          },
+        });
+        console.log(`WhatsApp sent to ${cleanPhone} via bot 5524993346717`);
+      } else {
+        const directUrl = "https://argoscliente-production-170b.up.railway.app/api/send";
+        await fetch(directUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            botNumber: "5524993346717",
+            number: cleanPhone,
+            message,
+            force: true,
+            manual: true,
+          }),
+        });
+        console.log(`Direct WhatsApp sent to ${cleanPhone} via bot 5524993346717`);
+      }
+    } catch (err) {
+      console.error("Error sending WhatsApp notification:", err);
+    }
+  };
+
+  const triggerImmediateNotifications = async (action: {
+    id: string;
+    nome: string;
+    local: string;
+    dataInicio: string;
+    colaboradorId?: string;
+    promotoresSelecionados?: string[];
+  }) => {
+    // 1. Send to FDV Comercial linked to action
+    if (action.colaboradorId) {
+      const fdvUser = (users || []).find((u) => u.uid === action.colaboradorId);
+      if (fdvUser && fdvUser.phone) {
+        const msg = `*Aviso de Nova Ação Criada*\n\nOlá, *${fdvUser.name}*!\nUma nova ação foi criada no sistema e vinculada a você:\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n\nPor favor, acompanhe os detalhes no sistema.`;
+        await sendActionWhatsApp(fdvUser.phone, msg);
+      }
+    }
+
+    // 2. Send to Promotores (if any selected)
+    if (action.promotoresSelecionados && action.promotoresSelecionados.length > 0) {
+      for (const promoterId of action.promotoresSelecionados) {
+        const promoterUser = (users || []).find((u) => u.uid === promoterId);
+        if (promoterUser && promoterUser.phone) {
+          const msg = `*Aviso de Nova Ação Criada*\n\nOlá, *${promoterUser.name}*!\nUma nova ação foi criada com a sua participação:\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n\nPor favor, fique atento ao cronograma!`;
+          await sendActionWhatsApp(promoterUser.phone, msg);
+        }
+      }
+    }
+  };
+
+  // Background check for 1-day reminders and 1-day post-action requests
+  useEffect(() => {
+    if (!data || data.length === 0 || !users || users.length === 0) return;
+
+    const checkRemindersAndRequests = async () => {
+      const lastRun = sessionStorage.getItem("last_action_notification_check");
+      const nowTime = Date.now();
+      if (lastRun && nowTime - Number(lastRun) < 300000) {
+        return;
+      }
+      sessionStorage.setItem("last_action_notification_check", String(nowTime));
+
+      const todayStr = getLocalDateString();
+
+      for (const action of data) {
+        // --- 1. Reminder 1 day before action start date ---
+        const oneDayBeforeStart = addDays(action.dataInicio, -1);
+        if (oneDayBeforeStart && todayStr === oneDayBeforeStart && !action.concluida && !(action as any).whatsappLembreteSent) {
+          try {
+            await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, action.id), {
+              whatsappLembreteSent: true
+            });
+
+            // Send to FDV
+            if (action.colaboradorId) {
+              const fdvUser = users.find((u) => u.uid === action.colaboradorId);
+              if (fdvUser && fdvUser.phone) {
+                const msg = `*Lembrete de Ação Amanhã*\n\nOlá, *${fdvUser.name}*!\nLembrando que amanhã temos a seguinte ação programada:\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n\nAté lá!`;
+                await sendActionWhatsApp(fdvUser.phone, msg);
+              }
+            }
+
+            // Send to selected promoters
+            if (action.promotoresSelecionados && action.promotoresSelecionados.length > 0) {
+              for (const promoterId of action.promotoresSelecionados) {
+                const promoterUser = users.find((u) => u.uid === promoterId);
+                if (promoterUser && promoterUser.phone) {
+                  const msg = `*Lembrete de Ação Amanhã*\n\nOlá, *${promoterUser.name}*!\nLembrando que amanhã temos a seguinte ação programada:\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n\nAté lá!`;
+                  await sendActionWhatsApp(promoterUser.phone, msg);
+                }
+              }
+            }
+          } catch (err) {
+            console.error("Failed to send 1-day-before reminder", action.id, err);
+          }
+        }
+
+        // --- 2. Closure Request 1 day after action end date ---
+        const oneDayAfterEnd = addDays(action.dataFim, 1);
+        if (oneDayAfterEnd && todayStr === oneDayAfterEnd && !action.concluida && !(action as any).whatsappFechamentoSent) {
+          try {
+            await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, action.id), {
+              whatsappFechamentoSent: true
+            });
+
+            if (action.colaboradorId) {
+              const fdvUser = users.find((u) => u.uid === action.colaboradorId);
+              if (fdvUser && fdvUser.phone) {
+                const msg = `*Solicitação de Fechamento no Sistema*\n\nOlá, *${fdvUser.name}*!\nA ação *${action.nome}* finalizou ontem (${formatBrazilianDate(action.dataFim)}).\n\nPor favor, acesse o sistema para realizar o fechamento formal, registrar fotos e confirmar as presenças dos promotores.`;
+                await sendActionWhatsApp(fdvUser.phone, msg);
+              }
+            }
+          } catch (err) {
+            console.error("Failed to send closure request", action.id, err);
+          }
+        }
+      }
+    };
+
+    const timer = setTimeout(checkRemindersAndRequests, 3000);
+    return () => clearTimeout(timer);
+  }, [data, users]);
+
   const [statusFilter, setStatusFilter] = useState<
     "all" | "concluida" | "pendente"
   >("all");
@@ -11270,6 +11719,13 @@ function CalendarioAcoesView({
   const [editingAction, setEditingAction] = useState<CalendarioAcao | null>(
     null,
   );
+
+  const autoLeadsCount = editingAction
+    ? (leads || []).filter((l) => l.acaoId === editingAction.id).length
+    : 0;
+  const autoBoletosCount = editingAction
+    ? (gap || []).filter((g) => g.acaoId === editingAction.id).length
+    : 0;
 
   const [newAction, setNewAction] = useState({
     nome: "",
@@ -11290,6 +11746,8 @@ function CalendarioAcoesView({
     tipoAtividade: "Ação" as "Ação" | "Visita",
     empresaParceiraId: "",
     empresaParceiraNome: "",
+    leadsFeitos: "" as number | "",
+    boletosFeitos: "" as number | "",
   });
 
   const promotoresDisponiveis = (users || []).filter(
@@ -11374,6 +11832,10 @@ function CalendarioAcoesView({
           newAction.valorPromotor === "" ? 0 : Number(newAction.valorPromotor),
         valorOrcado:
           newAction.valorOrcado === "" ? 0 : Number(newAction.valorOrcado),
+        leadsFeitos:
+          newAction.leadsFeitos === "" ? "" : Number(newAction.leadsFeitos),
+        boletosFeitos:
+          newAction.boletosFeitos === "" ? "" : Number(newAction.boletosFeitos),
         fotos: newAction.fotos.filter((f) => f.trim() !== ""),
         updatedAt: serverTimestamp(),
       };
@@ -11396,13 +11858,24 @@ function CalendarioAcoesView({
         );
         onToast("Ação updated com sucesso!");
       } else {
-        await addDoc(collection(db, COLLECTIONS.CALENDARIO_ACOES), {
+        const docRef = await addDoc(collection(db, COLLECTIONS.CALENDARIO_ACOES), {
           ...payload,
           creatorId: profile.uid,
           creatorRole: profile.role,
           createdAt: serverTimestamp(),
+          whatsappMomentoSent: true,
         });
         onToast("Ação agendada com sucesso!");
+
+        // Send automatic WhatsApp notifications at creation time
+        triggerImmediateNotifications({
+          id: docRef.id,
+          nome: payload.nome,
+          local: payload.local,
+          dataInicio: payload.dataInicio,
+          colaboradorId: payload.colaboradorId,
+          promotoresSelecionados: payload.promotoresSelecionados,
+        });
       }
       setIsAdding(false);
       setEditingAction(null);
@@ -11425,6 +11898,8 @@ function CalendarioAcoesView({
         tipoAtividade: "Ação",
         empresaParceiraId: "",
         empresaParceiraNome: "",
+        leadsFeitos: "",
+        boletosFeitos: "",
       });
     } catch (err: any) {
       handleFirestoreError(
@@ -11770,6 +12245,8 @@ function CalendarioAcoesView({
                       tipoAtividade: action.tipoAtividade || "Ação",
                       empresaParceiraId: action.empresaParceiraId || "",
                       empresaParceiraNome: action.empresaParceiraNome || "",
+                      leadsFeitos: action.leadsFeitos !== undefined ? action.leadsFeitos : "",
+                      boletosFeitos: action.boletosFeitos !== undefined ? action.boletosFeitos : "",
                     });
                     setIsAdding(true);
                   }}
@@ -11853,6 +12330,30 @@ function CalendarioAcoesView({
                 </div>
               </div>
             )}
+
+            {/* Resultados da Ação */}
+            <div className="grid grid-cols-2 gap-2 mb-4 bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100/50">
+              <div>
+                <span className="text-[10px] font-bold text-emerald-600 uppercase block">
+                  Leads Feitos
+                </span>
+                <span className="text-xs font-bold text-emerald-800">
+                  {typeof action.leadsFeitos === "number"
+                    ? action.leadsFeitos
+                    : (leads || []).filter((l) => l.acaoId === action.id).length}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-emerald-600 uppercase block">
+                  Boletos Feitos
+                </span>
+                <span className="text-xs font-bold text-emerald-800">
+                  {typeof action.boletosFeitos === "number"
+                    ? action.boletosFeitos
+                    : (gap || []).filter((g) => g.acaoId === action.id).length}
+                </span>
+              </div>
+            </div>
 
             {/* Promotores e Presenças */}
             {action.precisaPromotor && (
@@ -12455,6 +12956,63 @@ function CalendarioAcoesView({
                 )}
               </div>
 
+              {/* Optional outcome statistics after completed */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Resultados da Ação (Opcional)
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Leads Feitos
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newAction.leadsFeitos}
+                      onChange={(e) =>
+                        setNewAction({
+                          ...newAction,
+                          leadsFeitos:
+                            e.target.value === "" ? "" : Number(e.target.value),
+                        })
+                      }
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                      placeholder={editingAction ? `Automático: ${autoLeadsCount}` : "Ex: 10"}
+                    />
+                    {editingAction && (
+                      <span className="text-[10px] text-slate-400 block mt-1">
+                        Total vinculados no sistema: {autoLeadsCount}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Boletos Feitos
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newAction.boletosFeitos}
+                      onChange={(e) =>
+                        setNewAction({
+                          ...newAction,
+                          boletosFeitos:
+                            e.target.value === "" ? "" : Number(e.target.value),
+                        })
+                      }
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                      placeholder={editingAction ? `Automático: ${autoBoletosCount}` : "Ex: 5"}
+                    />
+                    {editingAction && (
+                      <span className="text-[10px] text-slate-400 block mt-1">
+                        Total vinculados no sistema: {autoBoletosCount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-2">
                   Fotos (até 3 URLs)
@@ -12495,14 +13053,12 @@ function EmpresasParceirasView({
   onGenerateAction,
   cursos = [],
   users = [],
-  callBotApi,
 }: {
   data: EmpresaParceira[];
   onToast: (m: string, t?: "success" | "error") => void;
   onGenerateAction: (empresa: EmpresaParceira) => void;
   cursos?: CursoDisponivel[];
   users?: UserProfile[];
-  callBotApi?: any;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Todas");
@@ -12521,8 +13077,8 @@ function EmpresasParceirasView({
   // Mass deletion states
   const [selectedEmpresaIds, setSelectedEmpresaIds] = useState<string[]>([]);
 
-  // Active Tab: list vs tratativas report vs map
-  const [activeTab, setActiveTab] = useState<"lista" | "tratativas" | "mapa">("lista");
+  // Active Tab: list vs tratativas report
+  const [activeTab, setActiveTab] = useState<"lista" | "tratativas">("lista");
 
   const uniqueUnidades = useMemo(() => {
     return Array.from(
@@ -12682,7 +13238,6 @@ function EmpresasParceirasView({
     const formData = new FormData(e.currentTarget);
     const matchedUser = (users || []).find(u => u.uid === selectedConsultorId);
     const consultorNome = matchedUser ? matchedUser.name : "";
-    const lembreteText = (formData.get("lembrete") as string) || "";
 
     const payload = {
       nome: formData.get("nome") as string,
@@ -12701,7 +13256,6 @@ function EmpresasParceirasView({
       unidadesVinculadas: selectedUnidades,
       consultorId: selectedConsultorId,
       consultorNome: consultorNome,
-      lembrete: lembreteText,
       updatedAt: serverTimestamp(),
     };
 
@@ -12729,55 +13283,6 @@ function EmpresasParceirasView({
         });
         onToast("Empresa cadastrada!");
       }
-
-      // Check if status is "Em tratativa" and we have a linked FDV to send WhatsApp notification
-      if (payload.statusEmpresa === "Em tratativa" && payload.consultorId) {
-        const fdvUser = (users || []).find(u => u.uid === payload.consultorId);
-        if (fdvUser) {
-          const fdvPhone = fdvUser.phone ? fdvUser.phone.replace(/\D/g, "") : "";
-          if (fdvPhone) {
-            let formattedRecipient = fdvPhone;
-            if (formattedRecipient.startsWith("0")) {
-              formattedRecipient = formattedRecipient.substring(1);
-            }
-            if (formattedRecipient.length === 10 || formattedRecipient.length === 11) {
-              formattedRecipient = `55${formattedRecipient}`;
-            }
-
-            // Find canaldonutri user bot number
-            const canaldonutriUser = (users || []).find(u => u.email === "canaldonutri@gmail.com");
-            const senderBotNumber = canaldonutriUser?.botNumber
-              ? canaldonutriUser.botNumber.replace(/\D/g, "")
-              : "5524993346717";
-
-            const msg = `Olá *${fdvUser.name}*! ⏰\n\nEste é um lembrete para você retornar o contato com a empresa parceira *${payload.nome}* (status em tratativa).\n\n*Detalhes da Empresa:*\n- Nome: ${payload.nome}\n- Responsável: ${payload.responsavel}\n- Telefone: ${payload.telefone}${lembreteText ? `\n- Lembrete/Observação: ${lembreteText}` : ""}\n\nPor favor, retorne o contato com a empresa o quanto antes para dar andamento à parceria.`;
-
-            if (callBotApi) {
-              try {
-                await callBotApi("/api/send", {
-                  method: "POST",
-                  body: {
-                    botNumber: senderBotNumber,
-                    number: formattedRecipient,
-                    message: msg,
-                    force: true,
-                    manual: true,
-                  },
-                });
-                onToast(`Lembrete enviado por WhatsApp para ${fdvUser.name}!`);
-              } catch (botErr: any) {
-                console.error("Failed to send WhatsApp via bot api:", botErr);
-                onToast(`Erro ao enviar lembrete por WhatsApp: ${botErr.message}`, "error");
-              }
-            } else {
-              console.warn("callBotApi is not available on props");
-            }
-          } else {
-            onToast(`O comercial ${fdvUser.name} não tem telefone cadastrado no perfil para receber o lembrete por WhatsApp.`, "error");
-          }
-        }
-      }
-
       setIsModalOpen(false);
       setEditingEmpresa(null);
     } catch (err: any) {
@@ -13001,18 +13506,6 @@ function EmpresasParceirasView({
               {statEmTratativa}
             </span>
           )}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("mapa")}
-          className={cn(
-            "pb-3 px-6 font-bold text-sm transition-all border-b-2 flex items-center space-x-2",
-            activeTab === "mapa"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-slate-500 hover:text-slate-700"
-          )}
-        >
-          <span>🗺️ Mapa de Concentração</span>
         </button>
       </div>
 
@@ -13412,17 +13905,6 @@ function EmpresasParceirasView({
                         </div>
                       </div>
                     )}
-
-                    {emp.lembrete && (
-                      <div className="mt-3 pt-3 border-t border-slate-100">
-                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block mb-1 font-mono">
-                          ⏰ Lembrete de Retorno
-                        </span>
-                        <div className="text-xs text-amber-800 bg-amber-50/60 border border-amber-100/80 p-2.5 rounded-xl italic">
-                          "{emp.lembrete}"
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   <div className="flex flex-col space-y-2 mt-auto pt-3 border-t border-slate-100/60">
@@ -13561,11 +14043,6 @@ function EmpresasParceirasView({
                             <td className="p-4 pl-6">
                               <div className="font-bold text-slate-800">{emp.nome}</div>
                               {emp.cnpj && <div className="text-[10px] text-slate-400 font-mono">CNPJ: {emp.cnpj}</div>}
-                              {emp.lembrete && (
-                                <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg mt-1.5 italic max-w-xs font-medium">
-                                  ⏰ Lembrete: "{emp.lembrete}"
-                                </div>
-                              )}
                             </td>
                             <td className="p-4">
                               {emp.consultorNome ? (
@@ -13653,10 +14130,6 @@ function EmpresasParceirasView({
             )}
           </div>
         </div>
-      )}
-
-      {activeTab === "mapa" && (
-        <EmpresaMapDashboard data={data} users={users} cursos={cursos} />
       )}
 
       <AnimatePresence>
@@ -13883,21 +14356,6 @@ function EmpresasParceirasView({
                     </p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1">
-                      Lembrete / Observação de Retorno de Contato
-                    </label>
-                    <textarea
-                      name="lembrete"
-                      defaultValue={editingEmpresa?.lembrete || ""}
-                      placeholder="Ex: Retornar contato na segunda-feira às 14h para alinhar detalhes da parceria."
-                      rows={3}
-                      className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Se o status for <strong>Em tratativa</strong>, salvar ou cadastrar a empresa enviará este lembrete por WhatsApp para o FDV vinculado.
-                    </p>
-                  </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">
                       Unidades Vinculadas

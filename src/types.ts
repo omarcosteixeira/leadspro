@@ -47,6 +47,8 @@ export interface CalendarioAcao {
   createdAt: any;
   metaBoletos?: number;
   metaInscritos?: number;
+  boletosFeitos?: number;
+  leadsFeitos?: number;
   precisaPromotor?: boolean;
   promotoresSelecionados?: string[];
   presencaPromotores?: { [promoterUid: string]: boolean };
@@ -73,6 +75,7 @@ export interface Campanha {
 export interface Lead {
   id: string;
   acao: string;
+  acaoId?: string;
   nome: string;
   telefone: string;
   cpf?: string;
@@ -127,6 +130,8 @@ export interface GapEntry {
     contrato?: boolean;
     carta?: boolean;
   };
+  acao?: string;
+  acaoId?: string;
   createdAt: any;
 }
 
@@ -230,7 +235,6 @@ export interface EmpresaParceira {
   unidadesVinculadas?: string[];
   consultorId?: string;
   consultorNome?: string;
-  lembrete?: string;
 }
 
 export interface WhatsAppMessage {
