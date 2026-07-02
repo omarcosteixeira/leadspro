@@ -5058,7 +5058,7 @@ export default function App() {
                   callBotApi={callBotApi}
                   leads={leads}
                   gap={gap}
-                  onSendWhatsApp={sendSilentWhatsApp}
+                  onSendWhatsApp={sendAppWhatsApp}
                 />
               )}
               {currentView === "empresas" && (
