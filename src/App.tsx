@@ -13682,9 +13682,12 @@ function CalendarioAcoesView({
               <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1">
-                    Valor Diário do Promotor (R$)
+                    Valor Hora do Promotor (R$)
                   </label>
-                  <select
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
                     value={newAction.valorPromotor}
                     onChange={(e) =>
                       setNewAction({
@@ -13694,14 +13697,8 @@ function CalendarioAcoesView({
                       })
                     }
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
-                  >
-                    <option value="">Selecione...</option>
-                    {[60, 70, 80, 90, 100, 120, 150].map((val) => (
-                      <option key={val} value={val}>
-                        R$ {val.toFixed(2).replace(".", ",")}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Ex: 15.00"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1">
@@ -19624,7 +19621,8 @@ export function ControlePagamentosView({
 
         const diarias = getDiarias(action.dataInicio, action.dataFim);
         const valorPromotor = action.valorPromotor || 0;
-        const custoTotal = diarias * valorPromotor;
+        const horasAtuadas = details.horas || 4;
+        const custoTotal = diarias * horasAtuadas * valorPromotor;
 
         result.push({
           actionId: action.id,
@@ -19754,7 +19752,7 @@ export function ControlePagamentosView({
         "Tipo de Ação": r.tipoAcao,
         "Data de Início": r.dataInicio,
         "Data Final": r.dataFim,
-        "Valor Promotor (R$)": r.valorPromotor,
+        "Valor Hora (R$)": r.valorPromotor,
         "Custo Total (R$)": r.custoTotal,
         "Valor Orçado (R$)": r.valorOrcado,
         "Status de Pagamento": r.statusPagamento,
@@ -19936,7 +19934,7 @@ export function ControlePagamentosView({
                   <th className="px-5 py-4">Região</th>
                   <th className="px-5 py-4">Ação</th>
                   <th className="px-5 py-4">Datas</th>
-                  <th className="px-5 py-4 text-right">Valor Promotor</th>
+                  <th className="px-5 py-4 text-right">Valor Hora</th>
                   <th className="px-5 py-4 text-right bg-slate-50 font-bold text-slate-600">
                     Custo Total
                   </th>
@@ -20052,7 +20050,7 @@ export function ControlePagamentosView({
                         </div>
                       </td>
 
-                      {/* Valor Promotor */}
+                      {/* Valor Hora */}
                       <td className="px-5 py-4 text-right font-mono font-bold">
                         R$ {row.valorPromotor.toFixed(2).replace(".", ",")}
                       </td>
