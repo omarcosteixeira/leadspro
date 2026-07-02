@@ -6859,7 +6859,7 @@ function DashboardView({
                   <span>{qg.nome}</span>
                 </div>
                 <div className="text-sm font-semibold text-slate-700">
-                  {qg.diaSemana}
+                  {Array.isArray(qg.diaSemana) ? qg.diaSemana.join(", ") : qg.diaSemana}
                 </div>
                 <div className="text-xs text-slate-500 font-medium bg-emerald-100/50 px-2 py-1 rounded-md mt-2">
                   {qg.horario}
@@ -15791,9 +15791,9 @@ function AdminView({
   });
 
   const [editingQgLigacao, setEditingQgLigacao] = useState<QgLigacao | null>(null);
-  const [newQgLigacao, setNewQgLigacao] = useState({
+  const [newQgLigacao, setNewQgLigacao] = useState<{nome: string, diaSemana: string[], horario: string}>({
     nome: "",
-    diaSemana: "",
+    diaSemana: [],
     horario: "",
   });
 
@@ -15879,7 +15879,7 @@ function AdminView({
 
       setNewQgLigacao({
         nome: "",
-        diaSemana: "",
+        diaSemana: [],
         horario: "",
       });
     } catch (err: any) {
@@ -17337,10 +17337,10 @@ function AdminView({
                   onClick={() => {
                     setEditingQgLigacao(null);
                     setNewQgLigacao({
-                      nome: "",
-                      diaSemana: "",
-                      horario: "",
-                    });
+        nome: "",
+        diaSemana: [],
+        horario: "",
+      });
                   }}
                   className="text-sm font-bold text-slate-400 hover:text-slate-600 px-3 py-1 bg-slate-100 rounded-lg"
                 >
@@ -17367,25 +17367,30 @@ function AdminView({
                   />
                 </div>
                 <div>
+                  
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    Dia da Semana
+                    Dias da Semana
                   </label>
-                  <select
-                    required
-                    value={newQgLigacao.diaSemana}
-                    onChange={(e) =>
-                      setNewQgLigacao({ ...newQgLigacao, diaSemana: e.target.value })
-                    }
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-white"
-                  >
-                    <option value="">Selecione o dia...</option>
-                    <option value="Segunda-feira">Segunda-feira</option>
-                    <option value="Terça-feira">Terça-feira</option>
-                    <option value="Quarta-feira">Quarta-feira</option>
-                    <option value="Quinta-feira">Quinta-feira</option>
-                    <option value="Sexta-feira">Sexta-feira</option>
-                    <option value="Sábado">Sábado</option>
-                  </select>
+                  <div className="flex flex-wrap gap-2">
+                    {["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"].map((dia) => (
+                      <label key={dia} className="flex items-center space-x-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={newQgLigacao.diaSemana.includes(dia)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setNewQgLigacao({ ...newQgLigacao, diaSemana: [...newQgLigacao.diaSemana, dia] });
+                            } else {
+                              setNewQgLigacao({ ...newQgLigacao, diaSemana: newQgLigacao.diaSemana.filter(d => d !== dia) });
+                            }
+                          }}
+                          className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
+                        />
+                        <span className="text-xs font-semibold text-slate-700">{dia}</span>
+                      </label>
+                    ))}
+                  </div>
+
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
@@ -17443,7 +17448,7 @@ function AdminView({
                     [...qgLigacoes].map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
                         <td className="p-4 font-bold text-slate-800">{item.nome}</td>
-                        <td className="p-4">{item.diaSemana}</td>
+                        <td className="p-4">{Array.isArray(item.diaSemana) ? item.diaSemana.join(", ") : item.diaSemana}</td>
                         <td className="p-4 font-medium text-emerald-600">{item.horario}</td>
                         <td className="p-4 text-center whitespace-nowrap">
                           <button
@@ -17451,7 +17456,7 @@ function AdminView({
                               setEditingQgLigacao(item);
                               setNewQgLigacao({
                                 nome: item.nome,
-                                diaSemana: item.diaSemana,
+                                diaSemana: Array.isArray(item.diaSemana) ? item.diaSemana : (item.diaSemana ? [item.diaSemana] : []),
                                 horario: item.horario,
                               });
                               window.scrollTo({ top: 0, behavior: "smooth" });

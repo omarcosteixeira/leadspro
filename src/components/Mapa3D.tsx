@@ -59,6 +59,30 @@ export default function Mapa3D({
   const [filterConsultor, setFilterConsultor] = useState<string>("Todos");
   const [filterBairro, setFilterBairro] = useState<string>("Todos");
   const [filterCidade, setFilterCidade] = useState<string>("Todas");
+
+  useEffect(() => {
+    if (filterCidade !== "Todas") {
+      setZoom(10);
+      // Let's rely on the first marker of the filtered companies
+      if (filteredEmpresas.length > 0) {
+        // We need to calculate its coordinate quickly
+        // getCoordinates is inside the component
+        const first = filteredEmpresas[0];
+        // The pos is in empresasWithPositions, let's just trigger a re-center if we find it
+      }
+    } else {
+      setCenter([-42.5, -22.2]);
+      setZoom(1);
+    }
+  }, [filterCidade]);
+
+  // Center on first company of the filtered list if city is selected
+  useEffect(() => {
+     if (filterCidade !== "Todas" && empresasWithPositions.length > 0) {
+        setCenter(empresasWithPositions[0].pos);
+     }
+  }, [filterCidade, empresasWithPositions]);
+  
   const [filterStatus, setFilterStatus] = useState<string>("Todos");
   const [filterClassificacao, setFilterClassificacao] = useState<string>("Todas");
   const [filterUnidade, setFilterUnidade] = useState<string>("Todas");
@@ -480,10 +504,19 @@ export default function Mapa3D({
             >
               {mapGeoUrl && (
                 <Geographies geography={mapGeoUrl}>
-                  {({ geographies }: { geographies: any[] }) =>
-                    geographies.map((geo: any) => {
+                  {({ geographies }: { geographies: any[] }) => {
+                    const filteredGeographies = filterCidade === "Todas"
+                      ? geographies
+                      : geographies.filter((geo: any) => geo.properties?.name?.toLowerCase() === filterCidade.toLowerCase());
+
+                    return filteredGeographies.map((geo: any) => {
                       const cityName = geo.properties?.name || "";
                       const regionColor = getRegionColor(cityName);
+
+                      // Update center automatically based on the selected city's geometry center approximation
+                      // using the first coordinate of its boundary. React simple maps handles this in a more complex way,
+                      // but we can just let the user zoom or we can center on the marker.
+                      
                       return (
                         <Geography
                           key={geo.rsmKey}
@@ -498,8 +531,8 @@ export default function Mapa3D({
                           }}
                         />
                       );
-                    })
-                  }
+                    });
+                  }}
                 </Geographies>
               )}
 
@@ -514,8 +547,9 @@ export default function Mapa3D({
 
                 return (
                   <Marker 
-                    key={emp.id} 
-                    coordinates={emp.pos}
+                     key={emp.id} 
+                     coordinates={emp.pos}
+                     data-city-marker="true"
                     onClick={() => {
                       onSelect(emp.id);
                       setShowCard(true);

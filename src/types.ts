@@ -323,7 +323,7 @@ export interface MetaDia {
 export interface QgLigacao {
   id: string;
   nome: string;
-  diaSemana: string;
+  diaSemana: string | string[];
   horario: string;
   createdAt: any;
 }
