@@ -92,6 +92,8 @@ import {
   Boxes,
   Smartphone,
   Chrome,
+  BarChart3,
+  List,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -7825,6 +7827,7 @@ function HistoricoView({
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [historicoSubTab, setHistoricoSubTab] = useState<"dashboard" | "lista">("dashboard");
 
   const [editFormData, setEditFormData] = useState({
     nome: "",
@@ -8017,11 +8020,48 @@ function HistoricoView({
     const userLeads = filteredLeads.filter(
       (l) => l.promotorId === profile.uid,
     ).length;
+    
+    // Stats by Course (Top 5)
+    const courseGroups: Record<string, number> = {};
+    filteredLeads.forEach(l => {
+      const c = l.cursoInteresse || "Não Informado";
+      courseGroups[c] = (courseGroups[c] || 0) + 1;
+    });
+    const byCourse = Object.entries(courseGroups)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0"
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Stats by Status
+    const statusGroups: Record<string, number> = {
+      "Pendente": 0,
+      "Convertido": 0,
+      "Sem retorno": 0,
+      "Interessado": 0,
+      "Não Interessado": 0,
+    };
+    filteredLeads.forEach(l => {
+      const s = l.converted ? "Convertido" : (l.status || "Pendente");
+      if (statusGroups[s] !== undefined) statusGroups[s] += 1;
+      else statusGroups["Pendente"] += 1;
+    });
+    const byStatus = Object.entries(statusGroups).map(([name, count]) => ({
+      name,
+      count,
+      percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0"
+    }));
+
     return {
       total,
       conv,
       userLeads,
       rate: total > 0 ? ((conv / total) * 100).toFixed(1) : "0",
+      byCourse,
+      byStatus
     };
   }, [filteredLeads, profile]);
 
@@ -8264,7 +8304,137 @@ function HistoricoView({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-1 bg-white p-1 rounded-2xl shadow-sm border border-slate-100 w-fit">
+        <button
+          onClick={() => setHistoricoSubTab("dashboard")}
+          className={cn(
+            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
+            historicoSubTab === "dashboard"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+              : "text-slate-500 hover:bg-slate-50",
+          )}
+        >
+          <BarChart3 size={18} />
+          <span>Dashboard</span>
+        </button>
+        <button
+          onClick={() => setHistoricoSubTab("lista")}
+          className={cn(
+            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
+            historicoSubTab === "lista"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+              : "text-slate-500 hover:bg-slate-50",
+          )}
+        >
+          <List size={18} />
+          <span>Lista de Leads</span>
+        </button>
+      </div>
+
+      {historicoSubTab === "dashboard" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              title="Total de Leads"
+              value={stats.total}
+              icon={Users}
+              color="bg-blue-500"
+            />
+            <StatCard
+              title="Convertidos"
+              value={stats.conv}
+              icon={CheckCircle2}
+              color="bg-emerald-500"
+            />
+            <StatCard
+              title="Taxa de Conv."
+              value={`${stats.rate}%`}
+              icon={TrendingUp}
+              color="bg-purple-500"
+            />
+            <StatCard
+              title="Meus Leads"
+              value={stats.userLeads}
+              icon={UserPlus}
+              color="bg-amber-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <Target size={18} className="text-blue-500" />
+                Status dos Leads
+              </h3>
+              <div className="space-y-3">
+                {stats.byStatus.map((s) => (
+                  <div key={s.name} className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-slate-600 flex items-center gap-1.5">
+                        <span className={cn(
+                          "w-2 h-2 rounded-full",
+                          s.name === "Convertido" && "bg-emerald-400",
+                          s.name === "Pendente" && "bg-amber-400",
+                          s.name === "Interessado" && "bg-blue-400",
+                          s.name === "Não Interessado" && "bg-rose-400",
+                          s.name === "Sem retorno" && "bg-slate-400",
+                        )} />
+                        {s.name}
+                      </span>
+                      <span className="text-slate-800 font-bold">
+                        {s.count} <span className="text-slate-400 font-normal">({s.percentage}%)</span>
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          s.name === "Convertido" && "bg-emerald-400",
+                          s.name === "Pendente" && "bg-amber-400",
+                          s.name === "Interessado" && "bg-blue-400",
+                          s.name === "Não Interessado" && "bg-rose-400",
+                          s.name === "Sem retorno" && "bg-slate-400",
+                        )}
+                        style={{ width: `${s.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <GraduationCap size={18} className="text-blue-500" />
+                Cursos de Interesse (Top 5)
+              </h3>
+              <div className="space-y-3">
+                {stats.byCourse.map((p) => (
+                  <div key={p.name} className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-slate-600 truncate max-w-[200px]">{p.name}</span>
+                      <span className="text-slate-800 font-bold">
+                        {p.count} <span className="text-slate-400 font-normal">({p.percentage}%)</span>
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 rounded-full transition-all"
+                        style={{ width: `${p.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historicoSubTab === "lista" && (
+        <>
+          <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-800">
           Histórico de Leads
         </h2>
@@ -8311,32 +8481,6 @@ function HistoricoView({
             <span>Exportar</span>
           </button>
         </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Filtrados"
-          value={stats.total}
-          icon={Users}
-          color="bg-blue-500"
-        />
-        <StatCard
-          title="Convertidos"
-          value={stats.conv}
-          icon={CheckCircle2}
-          color="bg-emerald-500"
-        />
-        <StatCard
-          title="Taxa"
-          value={`${stats.rate}%`}
-          icon={TrendingUp}
-          color="bg-purple-500"
-        />
-        <StatCard
-          title="Meus Leads"
-          value={stats.userLeads}
-          icon={UserPlus}
-          color="bg-amber-500"
-        />
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
@@ -8592,6 +8736,8 @@ function HistoricoView({
           </table>
         </div>
       </div>
+    </>
+  )}
 
       <WhatsAppMessageSelector
         isOpen={selectorOpen}
@@ -11313,6 +11459,7 @@ function GapView({
   const [editingEntry, setEditingEntry] = useState<GapEntry | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
+  const [gapSubTab, setGapSubTab] = useState<"dashboard" | "lista">("dashboard");
 
   const handleBulkDelete = async () => {
     if (selectedEntries.length === 0) return;
@@ -11388,6 +11535,39 @@ function GapView({
     const conversionRate =
       total > 0 ? ((matAcadOk / total) * 100).toFixed(1) : "0";
     return { matFin, matAcadOk, pendingDocs, conversionRate };
+  }, [gap]);
+
+  const statsByProduct = useMemo(() => {
+    const groups: { [key: string]: number } = { "Graduação": 0, "Técnico": 0, "Pós-graduação": 0 };
+    gap.forEach((g) => {
+      const p = g.produto || "Graduação";
+      if (groups[p] !== undefined) groups[p] += 1;
+    });
+    return Object.entries(groups).map(([name, count]) => ({
+      name,
+      count,
+      percentage: gap.length > 0 ? ((count / gap.length) * 100).toFixed(1) : "0",
+    }));
+  }, [gap]);
+
+  const statsByStatus = useMemo(() => {
+    const groups: { [key: string]: number } = {
+      "OK": 0,
+      "Pendente": 0,
+      "Aguardando": 0,
+      "Desistente": 0,
+    };
+    gap.forEach((g) => {
+      const s = g.matAcad === true || g.matAcad === "Matrícula Gerada" || g.matAcad === "OK" ? "OK" : 
+                g.matAcad === "Aguardando N° de Matrícula" ? "Aguardando" :
+                g.matAcad === "Desistente" ? "Desistente" : "Pendente";
+      if (groups[s] !== undefined) groups[s] += 1;
+    });
+    return Object.entries(groups).map(([name, count]) => ({
+      name,
+      count,
+      percentage: gap.length > 0 ? ((count / gap.length) * 100).toFixed(1) : "0",
+    }));
   }, [gap]);
 
   const filteredGap = useMemo(() => {
@@ -11739,34 +11919,135 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Mat. Financeira"
-          value={stats.matFin}
-          icon={Database}
-          color="bg-blue-500"
-        />
-        <StatCard
-          title="Mat. Acadêmica OK"
-          value={stats.matAcadOk}
-          icon={CheckCircle2}
-          color="bg-emerald-500"
-        />
-        <StatCard
-          title="Gap (Docs Pendentes)"
-          value={stats.pendingDocs}
-          icon={Clock}
-          color="bg-amber-500"
-        />
-        <StatCard
-          title="Taxa Conv. Acad"
-          value={`${stats.conversionRate}%`}
-          icon={TrendingUp}
-          color="bg-purple-500"
-        />
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-1 bg-white p-1 rounded-2xl shadow-sm border border-slate-100 w-fit">
+        <button
+          onClick={() => setGapSubTab("dashboard")}
+          className={cn(
+            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
+            gapSubTab === "dashboard"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+              : "text-slate-500 hover:bg-slate-50",
+          )}
+        >
+          <BarChart3 size={18} />
+          <span>Dashboard</span>
+        </button>
+        <button
+          onClick={() => setGapSubTab("lista")}
+          className={cn(
+            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
+            gapSubTab === "lista"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+              : "text-slate-500 hover:bg-slate-50",
+          )}
+        >
+          <List size={18} />
+          <span>Lista de Alunos</span>
+        </button>
       </div>
 
-      <div className="flex justify-between items-center">
+      {gapSubTab === "dashboard" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              title="Total Mat. Financeira"
+              value={stats.matFin}
+              icon={Users}
+              color="bg-blue-500"
+            />
+            <StatCard
+              title="Mat. Acadêmica OK"
+              value={stats.matAcadOk}
+              icon={CheckCircle2}
+              color="bg-emerald-500"
+            />
+            <StatCard
+              title="Gap (Docs Pendentes)"
+              value={stats.pendingDocs}
+              icon={Clock}
+              color="bg-amber-500"
+            />
+            <StatCard
+              title="Taxa Conv. Acad"
+              value={`${stats.conversionRate}%`}
+              icon={TrendingUp}
+              color="bg-purple-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <Target size={18} className="text-blue-500" />
+                Distribuição de Matrícula Acadêmica
+              </h3>
+              <div className="space-y-3">
+                {statsByStatus.map((s) => (
+                  <div key={s.name} className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-slate-600 flex items-center gap-1.5">
+                        <span className={cn(
+                          "w-2 h-2 rounded-full",
+                          s.name === "OK" && "bg-emerald-400",
+                          s.name === "Pendente" && "bg-amber-400",
+                          s.name === "Aguardando" && "bg-blue-400",
+                          s.name === "Desistente" && "bg-rose-400",
+                        )} />
+                        {s.name}
+                      </span>
+                      <span className="text-slate-800 font-bold">
+                        {s.count} <span className="text-slate-400 font-normal">({s.percentage}%)</span>
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          s.name === "OK" && "bg-emerald-400",
+                          s.name === "Pendente" && "bg-amber-400",
+                          s.name === "Aguardando" && "bg-blue-400",
+                          s.name === "Desistente" && "bg-rose-400",
+                        )}
+                        style={{ width: `${s.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <GraduationCap size={18} className="text-blue-500" />
+                Distribuição por Produto
+              </h3>
+              <div className="space-y-3">
+                {statsByProduct.map((p) => (
+                  <div key={p.name} className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-slate-600">{p.name}</span>
+                      <span className="text-slate-800 font-bold">
+                        {p.count} <span className="text-slate-400 font-normal">({p.percentage}%)</span>
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 rounded-full transition-all"
+                        style={{ width: `${p.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {gapSubTab === "lista" && (
+        <>
+          <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-800">GAP Acadêmico</h2>
         <div className="flex space-x-2">
           <button
@@ -12365,6 +12646,8 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
           </div>
         )}
       </AnimatePresence>
+        </>
+      )}
     </div>
   );
 }
@@ -12495,6 +12778,26 @@ function CalendarioAcoesView({
         }
       }
     }
+
+    // 3. Send to Gerentes Comerciais
+    const managers = (users || []).filter(
+      (u) =>
+        u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL ||
+        u.role === ROLES.GESTOR_COMERCIAL,
+    );
+    if (managers.length > 0) {
+      const fdvUser = action.colaboradorId
+        ? (users || []).find((u) => u.uid === action.colaboradorId)
+        : null;
+      const fdvInfo = fdvUser ? `\n*FDV Responsável:* ${fdvUser.name}` : "";
+
+      for (const manager of managers) {
+        if (manager.phone) {
+          const msg = `*Aviso de Nova Ação Criada (Gestão)*\n\nOlá, *${manager.name}*!\nUma nova ação foi criada no sistema:${fdvInfo}\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n\nPor favor, acompanhe no sistema.`;
+          await sendActionWhatsApp(manager.phone, msg);
+        }
+      }
+    }
   };
 
   // Background check for 1-day reminders and 1-day post-action requests
@@ -12579,6 +12882,7 @@ function CalendarioAcoesView({
   const [editingAction, setEditingAction] = useState<CalendarioAcao | null>(
     null,
   );
+  const [acoesSubTab, setAcoesSubTab] = useState<"dashboard" | "lista">("dashboard");
 
   const autoLeadsCount = editingAction
     ? (leads || []).filter((l) => l.acaoId === editingAction.id).length
@@ -12684,6 +12988,42 @@ function CalendarioAcoesView({
     }
     return matchesSearch && matchesStatus && matchesDate;
   });
+
+  const stats = useMemo(() => {
+    const total = data.length;
+    const completed = data.filter((a) => a.concluida).length;
+    const pending = total - completed;
+    const totalLeads = leads.length;
+    const completionRate = total > 0 ? ((completed / total) * 100).toFixed(1) : "0";
+
+    const byType: Record<string, number> = {};
+    data.forEach((a) => {
+      const t = a.tipoAtividade || "Ação";
+      byType[t] = (byType[t] || 0) + 1;
+    });
+
+    const byStatus = [
+      { name: "Concluídas", count: completed, color: "bg-emerald-400" },
+      { name: "Pendentes", count: pending, color: "bg-amber-400" },
+    ];
+
+    return { 
+      total, 
+      completed, 
+      pending, 
+      totalLeads, 
+      completionRate,
+      byType: Object.entries(byType).map(([name, count]) => ({
+        name,
+        count,
+        percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0"
+      })).sort((a, b) => b.count - a.count),
+      byStatus: byStatus.map(s => ({
+        ...s,
+        percentage: total > 0 ? ((s.count / total) * 100).toFixed(1) : "0"
+      }))
+    };
+  }, [data, leads]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -12942,7 +13282,123 @@ function CalendarioAcoesView({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-1 bg-white p-1 rounded-2xl shadow-sm border border-slate-100 w-fit">
+        <button
+          onClick={() => setAcoesSubTab("dashboard")}
+          className={cn(
+            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
+            acoesSubTab === "dashboard"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+              : "text-slate-500 hover:bg-slate-50",
+          )}
+        >
+          <BarChart3 size={18} />
+          <span>Dashboard</span>
+        </button>
+        <button
+          onClick={() => setAcoesSubTab("lista")}
+          className={cn(
+            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
+            acoesSubTab === "lista"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+              : "text-slate-500 hover:bg-slate-50",
+          )}
+        >
+          <List size={18} />
+          <span>Lista de Ações</span>
+        </button>
+      </div>
+
+      {acoesSubTab === "dashboard" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              title="Total de Ações"
+              value={stats.total}
+              icon={Calendar}
+              color="bg-blue-500"
+            />
+            <StatCard
+              title="Concluídas"
+              value={stats.completed}
+              icon={CheckCircle2}
+              color="bg-emerald-500"
+            />
+            <StatCard
+              title="Pendentes"
+              value={stats.pending}
+              icon={Clock}
+              color="bg-amber-500"
+            />
+            <StatCard
+              title="Total Leads"
+              value={stats.totalLeads}
+              icon={Users}
+              color="bg-purple-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <Target size={18} className="text-blue-500" />
+                Status das Ações
+              </h3>
+              <div className="space-y-3">
+                {stats.byStatus.map((s) => (
+                  <div key={s.name} className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-slate-600 flex items-center gap-1.5">
+                        <span className={cn("w-2 h-2 rounded-full", s.color)} />
+                        {s.name}
+                      </span>
+                      <span className="text-slate-800 font-bold">
+                        {s.count} <span className="text-slate-400 font-normal">({s.percentage}%)</span>
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div
+                        className={cn("h-full rounded-full transition-all", s.color)}
+                        style={{ width: `${s.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <LayoutDashboard size={18} className="text-blue-500" />
+                Tipos de Ação (Top 5)
+              </h3>
+              <div className="space-y-3">
+                {stats.byType.slice(0, 5).map((t) => (
+                  <div key={t.name} className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-slate-600">{t.name}</span>
+                      <span className="text-slate-800 font-bold">
+                        {t.count} <span className="text-slate-400 font-normal">({t.percentage}%)</span>
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 rounded-full transition-all"
+                        style={{ width: `${t.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {acoesSubTab === "lista" && (
+        <>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center space-x-3">
           <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200">
             <Calendar size={24} />
@@ -13906,6 +14362,8 @@ function CalendarioAcoesView({
           </motion.div>
         </div>
       )}
+        </>
+      )}
     </div>
   );
 }
@@ -14153,6 +14611,22 @@ function EmpresasParceirasView({
             const msg = `O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`;
             await onSendWhatsApp(matchedUser.phone, msg);
           }
+
+          // Notificar Gerente Comercial
+          const managers = (users || []).filter(
+            (u) =>
+              u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL ||
+              u.role === ROLES.GESTOR_COMERCIAL,
+          );
+          for (const manager of managers) {
+            if (manager.phone && onSendWhatsApp) {
+              const fdvInfo = matchedUser
+                ? `\n*FDV Responsável:* ${matchedUser.name}`
+                : "";
+              const msg = `*Aviso de Nova Tratativa (Gestão)*\n\nOlá, *${manager.name}*!\nUma nova tratativa foi iniciada com a empresa ${payload.nome}.${fdvInfo}\n\nPor favor, acompanhe no sistema.`;
+              await onSendWhatsApp(manager.phone, msg);
+            }
+          }
         } else {
           onToast("Empresa atualizada!");
         }
@@ -14166,6 +14640,22 @@ function EmpresasParceirasView({
           if (matchedUser && matchedUser.phone && onSendWhatsApp) {
             const msg = `O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`;
             await onSendWhatsApp(matchedUser.phone, msg);
+          }
+
+          // Notificar Gerente Comercial
+          const managers = (users || []).filter(
+            (u) =>
+              u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL ||
+              u.role === ROLES.GESTOR_COMERCIAL,
+          );
+          for (const manager of managers) {
+            if (manager.phone && onSendWhatsApp) {
+              const fdvInfo = matchedUser
+                ? `\n*FDV Responsável:* ${matchedUser.name}`
+                : "";
+              const msg = `*Aviso de Nova Tratativa (Gestão)*\n\nOlá, *${manager.name}*!\nUma nova tratativa foi iniciada com a empresa ${payload.nome}.${fdvInfo}\n\nPor favor, acompanhe no sistema.`;
+              await onSendWhatsApp(manager.phone, msg);
+            }
           }
         } else {
           onToast("Empresa cadastrada!");
