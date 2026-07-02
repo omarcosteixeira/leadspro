@@ -118,23 +118,52 @@ export function RelatoriosView({
     }
   };
 
+  // --- Filtering data for Gestor Unidade ---
+  const filteredLeads = useMemo(() => {
+    if (profile.role === "Gestor Unidade") {
+      return leads.filter(l => l.unidade === profile.unidade);
+    }
+    return leads;
+  }, [leads, profile]);
+
+  const filteredBases = useMemo(() => {
+    if (profile.role === "Gestor Unidade") {
+      return bases.filter(b => b.unidade === profile.unidade);
+    }
+    return bases;
+  }, [bases, profile]);
+
+  const filteredFiesProuni = useMemo(() => {
+    if (profile.role === "Gestor Unidade") {
+      return fiesProuni.filter(f => f.unidade === profile.unidade);
+    }
+    return fiesProuni;
+  }, [fiesProuni, profile]);
+
+  const filteredPlanoAcoes = useMemo(() => {
+    if (profile.role === "Gestor Unidade") {
+      return calendarioAcoes.filter(a => a.unidade === profile.unidade);
+    }
+    return calendarioAcoes;
+  }, [calendarioAcoes, profile]);
+
   // --- Historico Leads Stats ---
   const historicoStats = useMemo(() => {
-    const total = leads.length;
-    const conv = leads.filter((l) => l.converted).length;
+    const total = filteredLeads.length;
+    const conv = filteredLeads.filter((l) => l.converted).length;
     const rate = total > 0 ? ((conv / total) * 100).toFixed(1) : "0";
     
     const statusGroups: Record<string, number> = {
       "Pendente": 0, "Convertido": 0, "Sem retorno": 0, "Interessado": 0, "Não Interessado": 0,
     };
-    leads.forEach(l => {
+    filteredLeads.forEach(l => {
       const s = l.converted ? "Convertido" : (l.status || "Pendente");
       if (statusGroups[s] !== undefined) statusGroups[s] += 1;
       else statusGroups["Pendente"] += 1;
     });
 
     const courseGroups: Record<string, number> = {};
-    leads.forEach(l => {
+    filteredLeads.forEach(l => {
       const c = l.cursoInteresse || "Não Informado";
       courseGroups[c] = (courseGroups[c] || 0) + 1;
     });
@@ -148,19 +177,19 @@ export function RelatoriosView({
       .slice(0, 5);
 
     return { total, conv, rate, byStatus: Object.entries(statusGroups).map(([name, count]) => ({ name, count, percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0" })), byCourse };
-  }, [leads]);
+  }, [filteredLeads]);
 
   // --- Bases Stats ---
   const basesStats = useMemo(() => {
-    const total = bases.length;
+    const total = filteredBases.length;
     const groups: { [key: string]: number } = { "Pendente": 0, "Interessado": 0, "Convertido": 0, "Não tem interesse": 0, "Sem retorno": 0 };
-    bases.forEach((b) => {
+    filteredBases.forEach((b) => {
       const s = b.status || "Pendente";
       if (groups[s] !== undefined) groups[s] += 1;
     });
 
     const productGroups: { [key: string]: number } = { "Graduação": 0, "Técnico": 0, "Pós-graduação": 0 };
-    bases.forEach((b) => {
+    filteredBases.forEach((b) => {
       const p = b.produto || "Graduação";
       if (productGroups[p] !== undefined) productGroups[p] += 1;
     });
@@ -170,17 +199,17 @@ export function RelatoriosView({
       byStatus: Object.entries(groups).map(([name, count]) => ({ name, count, percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0" })),
       byProduct: Object.entries(productGroups).map(([name, count]) => ({ name, count, percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0" }))
     };
-  }, [bases]);
+  }, [filteredBases]);
 
   // --- Fies/Prouni Stats ---
   const fiesStats = useMemo(() => {
-    const total = fiesProuni.length;
-    const fies = fiesProuni.filter(i => i.tipo === "FIES").length;
-    const prouni = fiesProuni.filter(i => i.tipo === "PROUNI").length;
-    const matriculados = fiesProuni.filter(i => i.numeroMatricula).length;
+    const total = filteredFiesProuni.length;
+    const fies = filteredFiesProuni.filter(i => i.tipo === "FIES").length;
+    const prouni = filteredFiesProuni.filter(i => i.tipo === "PROUNI").length;
+    const matriculados = filteredFiesProuni.filter(i => i.numeroMatricula).length;
     
     return { total, fies, prouni, matriculados };
-  }, [fiesProuni]);
+  }, [filteredFiesProuni]);
 
   // --- Plano de Ação Stats ---
   const [planoDataInicio, setPlanoDataInicio] = useState("");
@@ -188,13 +217,13 @@ export function RelatoriosView({
   const [planoFiltroFdv, setPlanoFiltroFdv] = useState("");
 
   const filteredCalendarioAcoes = useMemo(() => {
-    return calendarioAcoes.filter((a) => {
+    return filteredPlanoAcoes.filter((a) => {
       if (planoDataInicio && a.dataInicio < planoDataInicio) return false;
       if (planoDataFim && a.dataInicio > planoDataFim) return false;
       if (planoFiltroFdv && a.colaboradorNome !== planoFiltroFdv) return false;
       return true;
     });
-  }, [calendarioAcoes, planoDataInicio, planoDataFim, planoFiltroFdv]);
+  }, [filteredPlanoAcoes, planoDataInicio, planoDataFim, planoFiltroFdv]);
 
   const planoStats = useMemo(() => {
     const total = filteredCalendarioAcoes.length;

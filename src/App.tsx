@@ -2070,6 +2070,13 @@ function FiesProuniView({
   }, [editingEntry, isModalOpen]);
 
   const filteredData = data.filter((item) => {
+    // Gestor Unidade filtering
+    if (profile.role === "Gestor Unidade") {
+      if (!profile.unidade || item.unidade !== profile.unidade) {
+        return false;
+      }
+    }
+
     const matchesSearch =
       item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.cpf.includes(searchTerm) ||
@@ -2180,6 +2187,7 @@ function FiesProuniView({
       } else {
         await addDoc(collection(db, COLLECTIONS.FIES_PROUNI), {
           ...payload,
+          unidade: profile.unidade || "",
           createdAt: serverTimestamp(),
         });
         onToast("Registro cadastrado!");
@@ -4960,6 +4968,7 @@ export default function App() {
                 <GapView
                   gap={gap}
                   onToast={showToast}
+                  profile={profile}
                   whatsappMessages={whatsappMessages}
                   botConfig={botConfig}
                   onSendBot={handleSendBotMessage}
@@ -5008,6 +5017,7 @@ export default function App() {
                 <BasesRenovacaoView
                   bases={basesRenovacao}
                   onToast={showToast}
+                  profile={profile}
                   whatsappMessages={whatsappMessages}
                   botConfig={botConfig}
                   onSendBot={handleSendBotMessage}
@@ -7415,6 +7425,7 @@ function CadastroView({
         promotorId: profile.uid,
         promotorName: profile.name,
         promotorRole: profile.role,
+        unidade: profile.unidade || "",
         servidor: profile.servidor || "principal",
       };
 
@@ -8060,6 +8071,13 @@ function HistoricoView({
   const filteredLeads = useMemo(() => {
     return leads
       .filter((l) => {
+        // Gestor Unidade filtering
+        if (profile.role === "Gestor Unidade") {
+          if (!profile.unidade || l.unidade !== profile.unidade) {
+            return false;
+          }
+        }
+
         const matchesSearch =
           !searchTerm ||
           l.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -8350,6 +8368,7 @@ function HistoricoView({
             promotorId: "import",
             promotorName: String(getVal(item, "Promotor", "promotorName") || "Sistema").trim(),
             converted: isConverted,
+            unidade: profile.unidade || "",
             createdAt: serverTimestamp(),
           };
         });
@@ -9293,6 +9312,13 @@ function BasesView({
   };
 
   const filteredBases = bases.filter((b) => {
+    // Gestor Unidade filtering
+    if (profile.role === "Gestor Unidade") {
+      if (!profile.unidade || b.unidade !== profile.unidade) {
+        return false;
+      }
+    }
+
     const matchesSearch = b.nome
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
@@ -9322,7 +9348,6 @@ function BasesView({
       matchesBlocked
     );
   });
-
   const uniqueBases = Array.from(new Set(bases.map((b) => b.nomeBase))).sort();
   const uniqueProdutos = ["Graduação", "Técnico", "Pós-graduação"];
   const uniqueCursos = Array.from(new Set(bases.map((b) => b.curso))).sort();
@@ -9352,6 +9377,7 @@ function BasesView({
       await addDoc(collection(db, COLLECTIONS.BASES), {
         ...formData,
         status: "Pendente",
+        unidade: profile.unidade || "",
         createdAt: serverTimestamp(),
       });
       onToast("Registro salvo na base!");
@@ -10670,6 +10696,7 @@ function BasesView({
 function BasesRenovacaoView({
   bases,
   onToast,
+  profile,
   whatsappMessages,
   botConfig,
   onSendBot,
@@ -10677,6 +10704,7 @@ function BasesRenovacaoView({
 }: {
   bases: BaseEntry[];
   onToast: (m: string, t?: "success" | "error") => void;
+  profile: UserProfile;
   whatsappMessages: WhatsAppMessage[];
   botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
@@ -10710,6 +10738,13 @@ function BasesRenovacaoView({
   const [newMsgData, setNewMsgData] = useState({ modelName: "", texto: "" });
 
   const filteredBases = bases.filter((b) => {
+    // Gestor Unidade filtering
+    if (profile.role === "Gestor Unidade") {
+      if (!profile.unidade || b.unidade !== profile.unidade) {
+        return false;
+      }
+    }
+
     const matchesSearch = b.nome
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
@@ -11519,6 +11554,7 @@ function BasesRenovacaoView({
 function GapView({
   gap,
   onToast,
+  profile,
   whatsappMessages,
   botConfig,
   onSendBot,
@@ -11527,6 +11563,7 @@ function GapView({
 }: {
   gap: GapEntry[];
   onToast: (m: string, t?: "success" | "error") => void;
+  profile: UserProfile;
   whatsappMessages: WhatsAppMessage[];
   botConfig: BotConfig;
   onSendBot: (tel: string, msg: string) => void;
@@ -11657,6 +11694,13 @@ function GapView({
 
   const filteredGap = useMemo(() => {
     return gap.filter((g) => {
+      // Gestor Unidade filtering
+      if (profile.role === "Gestor Unidade") {
+        if (!profile.unidade || g.unidade !== profile.unidade) {
+          return false;
+        }
+      }
+
       const matchesSearch = g.nome
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
@@ -11843,6 +11887,7 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
           ...formData,
           matAcad: false,
           documentos: {},
+          unidade: profile.unidade || "",
           createdAt: serverTimestamp(),
         });
         onToast("Candidato cadastrado no GAP!");
@@ -12811,15 +12856,32 @@ function CalendarioAcoesView({
     nome: string;
     local: string;
     dataInicio: string;
+    horario: string;
+    observacao?: string;
     colaboradorId?: string;
     promotoresSelecionados?: string[];
   }) => {
+    const info = `\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n*Horário:* ${action.horario || "Não informado"}\n*Objetivo:* ${action.observacao || "Não informado"}`;
+
     // 1. Send to FDV Comercial linked to action
     if (action.colaboradorId) {
       const fdvUser = (users || []).find((u) => u.uid === action.colaboradorId);
       if (fdvUser && fdvUser.phone) {
-        const msg = `*Aviso de Nova Ação Criada*\n\nOlá, *${fdvUser.name}*!\nUma nova ação foi criada no sistema e vinculada a você:\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n\nPor favor, acompanhe os detalhes no sistema.`;
+        const msg = `*Aviso de Nova Atividade Criada*\n\nOlá, *${fdvUser.name}*!\nUma nova ação foi criada no sistema e vinculada a você:${info}\n\nPor favor, acompanhe os detalhes no sistema.`;
         await sendActionWhatsApp(fdvUser.phone, msg);
+
+        // 1.1 Send to Gestor Unidade linked to the FDV's unit
+        if (fdvUser.unidade) {
+          const unitManagers = (users || []).filter(
+            (u) => u.role === ROLES.GESTOR_UNIDADE && u.unidade === fdvUser.unidade
+          );
+          for (const manager of unitManagers) {
+            if (manager.phone) {
+              const mMsg = `*Aviso de Nova Atividade Criada (Sua Unidade)*\n\nOlá, *${manager.name}*!\nUma nova ação foi criada pelo FDV *${fdvUser.name}* da sua unidade:${info}`;
+              await sendActionWhatsApp(manager.phone, mMsg);
+            }
+          }
+        }
       }
     }
 
@@ -12828,13 +12890,13 @@ function CalendarioAcoesView({
       for (const promoterId of action.promotoresSelecionados) {
         const promoterUser = (users || []).find((u) => u.uid === promoterId);
         if (promoterUser && promoterUser.phone) {
-          const msg = `*Aviso de Nova Ação Criada*\n\nOlá, *${promoterUser.name}*!\nUma nova ação foi criada com a sua participação:\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n\nPor favor, fique atento ao cronograma!`;
+          const msg = `*Aviso de Nova Atividade Criada*\n\nOlá, *${promoterUser.name}*!\nUma nova ação foi criada com a sua participação:${info}\n\nPor favor, fique atento ao cronograma!`;
           await sendActionWhatsApp(promoterUser.phone, msg);
         }
       }
     }
 
-    // 3. Send to Gerentes Comerciais
+    // 3. Send to Gerentes Comerciais and Gestores Comerciais
     const managers = (users || []).filter(
       (u) =>
         u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL ||
@@ -12848,7 +12910,7 @@ function CalendarioAcoesView({
 
       for (const manager of managers) {
         if (manager.phone) {
-          const msg = `*Aviso de Nova Ação Criada (Gestão)*\n\nOlá, *${manager.name}*!\nUma nova ação foi criada no sistema:${fdvInfo}\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n\nPor favor, acompanhe no sistema.`;
+          const msg = `*Aviso de Nova Atividade Criada (Gestão)*\n\nOlá, *${manager.name}*!\nUma nova ação foi criada no sistema:${fdvInfo}${info}\n\nPor favor, acompanhe no sistema.`;
           await sendActionWhatsApp(manager.phone, msg);
         }
       }
@@ -12878,12 +12940,25 @@ function CalendarioAcoesView({
               whatsappLembreteSent: true
             });
 
+            const info = `\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n*Horário:* ${action.horario || "Não informado"}\n*Objetivo:* ${action.observacao || "Não informado"}`;
+
             // Send to FDV
             if (action.colaboradorId) {
               const fdvUser = users.find((u) => u.uid === action.colaboradorId);
               if (fdvUser && fdvUser.phone) {
-                const msg = `*Lembrete de Ação Amanhã*\n\nOlá, *${fdvUser.name}*!\nLembrando que amanhã temos a seguinte ação programada:\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n\nAté lá!`;
+                const msg = `*Lembrete de Ação Amanhã*\n\nOlá, *${fdvUser.name}*!\nLembrando que amanhã temos a seguinte ação programada:${info}\n\nAté lá!`;
                 await sendActionWhatsApp(fdvUser.phone, msg);
+
+                // Send to Gestor Unidade of the FDV
+                if (fdvUser.unidade) {
+                  const unitManagers = users.filter(u => u.role === ROLES.GESTOR_UNIDADE && u.unidade === fdvUser.unidade);
+                  for (const manager of unitManagers) {
+                    if (manager.phone) {
+                      const mMsg = `*Lembrete de Ação Amanhã (Sua Unidade)*\n\nOlá, *${manager.name}*!\nLembrando que amanhã o FDV *${fdvUser.name}* tem uma ação programada:${info}`;
+                      await sendActionWhatsApp(manager.phone, mMsg);
+                    }
+                  }
+                }
               }
             }
 
@@ -12892,9 +12967,18 @@ function CalendarioAcoesView({
               for (const promoterId of action.promotoresSelecionados) {
                 const promoterUser = users.find((u) => u.uid === promoterId);
                 if (promoterUser && promoterUser.phone) {
-                  const msg = `*Lembrete de Ação Amanhã*\n\nOlá, *${promoterUser.name}*!\nLembrando que amanhã temos a seguinte ação programada:\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n\nAté lá!`;
+                  const msg = `*Lembrete de Ação Amanhã*\n\nOlá, *${promoterUser.name}*!\nLembrando que amanhã temos a seguinte ação programada:${info}\n\nAté lá!`;
                   await sendActionWhatsApp(promoterUser.phone, msg);
                 }
+              }
+            }
+
+            // Send to Managers/Gestores
+            const managers = users.filter(u => u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL || u.role === ROLES.GESTOR_COMERCIAL);
+            for (const manager of managers) {
+              if (manager.phone) {
+                const msg = `*Lembrete de Ação Amanhã (Gestão)*\n\nOlá, *${manager.name}*!\nAmanhã haverá a seguinte ação:${info}`;
+                await sendActionWhatsApp(manager.phone, msg);
               }
             }
           } catch (err) {
@@ -12910,11 +12994,23 @@ function CalendarioAcoesView({
               whatsappFechamentoSent: true
             });
 
+            const info = `\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n*Horário:* ${action.horario || "Não informado"}\n*Objetivo:* ${action.observacao || "Não informado"}`;
+
+            // Send to FDV
             if (action.colaboradorId) {
               const fdvUser = users.find((u) => u.uid === action.colaboradorId);
               if (fdvUser && fdvUser.phone) {
-                const msg = `*Solicitação de Fechamento no Sistema*\n\nOlá, *${fdvUser.name}*!\nA ação *${action.nome}* finalizou ontem (${formatBrazilianDate(action.dataFim)}).\n\nPor favor, acesse o sistema para realizar o fechamento formal, registrar fotos e confirmar as presenças dos promotores.`;
+                const msg = `*Lembrete de Fechar Ação*\n\nOlá, *${fdvUser.name}*!\nA ação *${action.nome}* finalizou ontem (${formatBrazilianDate(action.dataFim)}).${info}\n\nPor favor, acesse o sistema para realizar o fechamento formal, registrar fotos e confirmar as presenças dos promotores.`;
                 await sendActionWhatsApp(fdvUser.phone, msg);
+              }
+            }
+
+            // Send to Managers/Gestores
+            const managers = users.filter(u => u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL || u.role === ROLES.GESTOR_COMERCIAL);
+            for (const manager of managers) {
+              if (manager.phone) {
+                const msg = `*Lembrete de Fechar Ação (Gestão)*\n\nOlá, *${manager.name}*!\nA ação do colaborador abaixo finalizou ontem e ainda não foi fechada:${info}`;
+                await sendActionWhatsApp(manager.phone, msg);
               }
             }
           } catch (err) {
@@ -12967,6 +13063,7 @@ function CalendarioAcoesView({
     empresaParceiraNome: "",
     leadsFeitos: "" as number | "",
     boletosFeitos: "" as number | "",
+    horario: "",
   });
 
   const promotoresDisponiveis = (users || []).filter(
@@ -13016,6 +13113,7 @@ function CalendarioAcoesView({
         tipoAtividade: (initialData as any).tipoAtividade || "Ação",
         empresaParceiraId: (initialData as any).empresaParceiraId || "",
         empresaParceiraNome: (initialData as any).empresaParceiraNome || "",
+        horario: (initialData as any).horario || "",
       });
       setIsAdding(true);
       if (onClearInitialData) onClearInitialData();
@@ -13023,6 +13121,13 @@ function CalendarioAcoesView({
   }, [initialData]);
 
   const filteredData = data.filter((item) => {
+    // Gestor Unidade filtering: only see actions from the same unit
+    if (profile.role === ROLES.GESTOR_UNIDADE) {
+      if (!profile.unidade || item.unidade !== profile.unidade) {
+        return false;
+      }
+    }
+
     const matchesSearch =
       item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.local.toLowerCase().includes(searchTerm.toLowerCase());
@@ -13098,6 +13203,7 @@ function CalendarioAcoesView({
         boletosFeitos:
           newAction.boletosFeitos === "" ? "" : Number(newAction.boletosFeitos),
         fotos: newAction.fotos.filter((f) => f.trim() !== ""),
+        horario: newAction.horario || "",
         updatedAt: serverTimestamp(),
       };
 
@@ -13119,8 +13225,19 @@ function CalendarioAcoesView({
         );
         onToast("Ação updated com sucesso!");
       } else {
+        // Automatically set the unit based on the collaborator (FDV) or the creator
+        let targetUnidade = "";
+        if (payload.colaboradorId) {
+          const collab = (users || []).find(u => u.uid === payload.colaboradorId);
+          if (collab?.unidade) targetUnidade = collab.unidade;
+        }
+        if (!targetUnidade && profile.unidade) {
+          targetUnidade = profile.unidade;
+        }
+
         const docRef = await addDoc(collection(db, COLLECTIONS.CALENDARIO_ACOES), {
           ...payload,
+          unidade: targetUnidade,
           creatorId: profile.uid,
           creatorRole: profile.role,
           createdAt: serverTimestamp(),
@@ -13134,6 +13251,8 @@ function CalendarioAcoesView({
           nome: payload.nome,
           local: payload.local,
           dataInicio: payload.dataInicio,
+          horario: payload.horario,
+          observacao: payload.observacao,
           colaboradorId: payload.colaboradorId,
           promotoresSelecionados: payload.promotoresSelecionados,
         });
@@ -13161,6 +13280,7 @@ function CalendarioAcoesView({
         empresaParceiraNome: "",
         leadsFeitos: "",
         boletosFeitos: "",
+        horario: "",
       });
     } catch (err: any) {
       handleFirestoreError(
@@ -13624,6 +13744,7 @@ function CalendarioAcoesView({
                       empresaParceiraNome: action.empresaParceiraNome || "",
                       leadsFeitos: action.leadsFeitos !== undefined ? action.leadsFeitos : "",
                       boletosFeitos: action.boletosFeitos !== undefined ? action.boletosFeitos : "",
+                      horario: action.horario || "",
                     });
                     setIsAdding(true);
                   }}
@@ -14090,6 +14211,19 @@ function CalendarioAcoesView({
                     value={newAction.dataFim}
                     onChange={(e) =>
                       setNewAction({ ...newAction, dataFim: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Horário
+                  </label>
+                  <input
+                    type="time"
+                    value={newAction.horario}
+                    onChange={(e) =>
+                      setNewAction({ ...newAction, horario: e.target.value })
                     }
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                   />
@@ -16820,6 +16954,7 @@ function AdminView({
                       dataNascimento: formData.get("dataNascimento") as string,
                       chavePix: formData.get("chavePix") as string,
                       botNumber: formData.get("botNumber") as string,
+                      unidade: formData.get("unidade") as string,
                       role: formData.get("role") as string,
                     };
                     if (updateData.role === ROLES.PROMOTOR_RUA) {
@@ -16905,6 +17040,17 @@ function AdminView({
                       Este será o número de WhatsApp usado pelo sistema para
                       enviar mensagens desta conta.
                     </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Unidade (Para Gestor Unidade / FDV Comercial)
+                    </label>
+                    <input
+                      name="unidade"
+                      defaultValue={editingUser.unidade || ""}
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      placeholder="Ex: Unidade Centro"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">
@@ -17244,6 +17390,7 @@ function AdminView({
                           "principal",
                         phone: formData.get("phone") as string,
                         chavePix: formData.get("chavePix") as string,
+                        unidade: (formData.get("unidade") as string) || "",
                         blocked: false,
                         mustChangePassword: true,
                         createdAt: serverTimestamp(),
@@ -17385,6 +17532,16 @@ function AdminView({
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Unidade (Para Gestor Unidade / FDV Comercial)
+                      </label>
+                      <input
+                        name="unidade"
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                        placeholder="Ex: Unidade Centro"
+                      />
+                    </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-500 mb-1">
                         Telefone

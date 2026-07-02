@@ -125,6 +125,7 @@ export function IsencoesView({
         formaIngresso: "Isenção",
         matAcad: false,
         documentos: {},
+        unidade: profile.unidade || "",
         createdAt: serverTimestamp(),
       });
       onToast("Boleto Pago! Dados enviados automaticamente para o GAP Acadêmico.", "success");
@@ -153,6 +154,7 @@ export function IsencoesView({
       inseridoDigitaliza: formDigitaliza,
       status: formStatus,
       boletoPago: formBoletoPago,
+      unidade: profile.unidade || "",
       updatedAt: serverTimestamp(),
     };
 
@@ -238,6 +240,13 @@ export function IsencoesView({
   // Filter & Search Logic
   const filteredIsencoes = useMemo(() => {
     return isencoes.filter((item) => {
+      // Gestor Unidade filtering: only see actions from the same unit
+      if (profile.role === "Gestor Unidade") {
+        if (!profile.unidade || item.unidade !== profile.unidade) {
+          return false;
+        }
+      }
+
       const matchSearch =
         item.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.cpf?.includes(searchTerm) ||

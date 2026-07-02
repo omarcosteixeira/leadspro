@@ -18,6 +18,7 @@ export interface UserProfile {
   blocked?: boolean;
   mustChangePassword?: boolean;
   botNumber?: string;
+  unidade?: string;
   servidor?: 'principal' | 'comercial';
   linkadoA?: string; // used for Promotor/rua to link to FDV
   createdAt: any;
@@ -63,6 +64,8 @@ export interface CalendarioAcao {
   tipoAtividade?: 'Ação' | 'Visita';
   empresaParceiraId?: string;
   empresaParceiraNome?: string;
+  unidade?: string;
+  horario?: string;
 }
 
 export interface Campanha {
@@ -91,6 +94,7 @@ export interface Lead {
   promotorName: string;
   promotorRole?: string;
   linkadoA?: string;
+  unidade?: string;
 }
 
 export interface BaseEntry {
@@ -108,6 +112,7 @@ export interface BaseEntry {
   metodologia: string;
   formaIngresso: string;
   status: 'Pendente' | 'Interessado' | 'Convertido' | 'Não tem interesse' | 'Sem retorno';
+  unidade?: string;
   createdAt: any;
 }
 
@@ -137,6 +142,7 @@ export interface GapEntry {
   };
   acao?: string;
   acaoId?: string;
+  unidade?: string;
   createdAt: any;
 }
 
@@ -211,6 +217,7 @@ export interface FiesProuniEntry {
   lista: string;
   posicaoRanking: string;
   sisprouniStatus?: 'Pendente' | 'Aprovado' | 'Reprovado';
+  unidade?: string;
   createdAt: any;
 }
 
@@ -475,6 +482,7 @@ export interface IsencaoEntry {
   createdAt: any;
   updatedAt?: any;
   createdByNome?: string;
+  unidade?: string;
 }
 
 
