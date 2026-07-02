@@ -26,10 +26,16 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
-import { EmpresaParceira as Empresa } from "../types";
+import { 
+  EmpresaParceira as Empresa, 
+  Lead, 
+  CalendarioAcao as Acao 
+} from "../types";
 
 interface Mapa3DProps {
   empresas: Empresa[];
+  leads: Lead[];
+  acoes: Acao[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onGenerateAction: (empresa: Empresa) => void;
@@ -38,6 +44,8 @@ interface Mapa3DProps {
 
 export default function Mapa3D({
   empresas,
+  leads,
+  acoes,
   selectedId,
   onSelect,
   onGenerateAction,
@@ -60,32 +68,12 @@ export default function Mapa3D({
   const [filterBairro, setFilterBairro] = useState<string>("Todos");
   const [filterCidade, setFilterCidade] = useState<string>("Todas");
 
-  useEffect(() => {
-    if (filterCidade !== "Todas") {
-      setZoom(10);
-      // Let's rely on the first marker of the filtered companies
-      if (filteredEmpresas.length > 0) {
-        // We need to calculate its coordinate quickly
-        // getCoordinates is inside the component
-        const first = filteredEmpresas[0];
-        // The pos is in empresasWithPositions, let's just trigger a re-center if we find it
-      }
-    } else {
-      setCenter([-42.5, -22.2]);
-      setZoom(1);
-    }
-  }, [filterCidade]);
-
-  // Center on first company of the filtered list if city is selected
-  useEffect(() => {
-     if (filterCidade !== "Todas" && empresasWithPositions.length > 0) {
-        setCenter(empresasWithPositions[0].pos);
-     }
-  }, [filterCidade, empresasWithPositions]);
+  
   
   const [filterStatus, setFilterStatus] = useState<string>("Todos");
   const [filterClassificacao, setFilterClassificacao] = useState<string>("Todas");
   const [filterUnidade, setFilterUnidade] = useState<string>("Todas");
+  const [showHeatmap, setShowHeatmap] = useState<boolean>(false);
 
   // Helper to detect city from address
   
@@ -291,6 +279,29 @@ export default function Mapa3D({
     });
   }, [filteredEmpresas]);
 
+  useEffect(() => {
+    if (filterCidade !== "Todas") {
+      setZoom(10);
+      // Let's rely on the first marker of the filtered companies
+      if (filteredEmpresas.length > 0) {
+        // We need to calculate its coordinate quickly
+        // getCoordinates is inside the component
+        const first = filteredEmpresas[0];
+        // The pos is in empresasWithPositions, let's just trigger a re-center if we find it
+      }
+    } else {
+      setCenter([-42.5, -22.2]);
+      setZoom(1);
+    }
+  }, [filterCidade]);
+
+  // Center on first company of the filtered list if city is selected
+  useEffect(() => {
+     if (filterCidade !== "Todas" && empresasWithPositions.length > 0) {
+        setCenter(empresasWithPositions[0].pos);
+     }
+  }, [filterCidade, empresasWithPositions]);
+
   const stats = useMemo(() => {
     const counts = { conveniada: 0, tratativa: 0, cancelada: 0, naoVisitada: 0 };
     filteredEmpresas.forEach((e) => {
@@ -302,6 +313,34 @@ export default function Mapa3D({
     });
     return counts;
   }, [filteredEmpresas]);
+
+  const leadDensity = useMemo(() => {
+    const counts: Record<string, number> = {};
+    leads.forEach(lead => {
+      let companyId = "";
+      if (lead.acaoId) {
+        const acao = acoes.find(a => a.id === lead.acaoId);
+        if (acao?.empresaParceiraId) {
+          companyId = acao.empresaParceiraId;
+        }
+      }
+      
+      if (!companyId && lead.empresa) {
+        const matchedEmp = empresas.find(e => e.nome.toLowerCase() === lead.empresa?.toLowerCase());
+        if (matchedEmp) companyId = matchedEmp.id;
+      }
+
+      if (companyId) {
+        counts[companyId] = (counts[companyId] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [leads, acoes, empresas]);
+
+  const maxLeadCount = useMemo(() => {
+    const values = Object.values(leadDensity);
+    return values.length > 0 ? Math.max(...values) : 1;
+  }, [leadDensity]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
@@ -487,6 +526,23 @@ export default function Mapa3D({
             >
               <LocateFixed size={15} />
             </button>
+            <button
+              onClick={() => setShowHeatmap(!showHeatmap)}
+              title={showHeatmap ? "Ocultar Mapa de Calor" : "Exibir Mapa de Calor"}
+              className={cn(
+                "p-1.5 rounded-lg transition-all mt-1",
+                showHeatmap 
+                  ? "bg-orange-100 text-orange-600 shadow-inner" 
+                  : "text-slate-500 hover:text-orange-600 hover:bg-slate-100"
+              )}
+            >
+              <div className="relative">
+                <MapPin size={15} />
+                {showHeatmap && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full animate-ping" />
+                )}
+              </div>
+            </button>
           </div>
 
           <ComposableMap
@@ -535,6 +591,34 @@ export default function Mapa3D({
                   }}
                 </Geographies>
               )}
+
+              {/* Heatmap Layer */}
+              {showHeatmap && empresasWithPositions.map((emp) => {
+                const count = leadDensity[emp.id] || 0;
+                if (count === 0) return null;
+                
+                const normalizedDensity = count / maxLeadCount;
+                const radius = 5 + (normalizedDensity * 25);
+                const opacity = 0.2 + (normalizedDensity * 0.4);
+                
+                return (
+                  <Marker key={`heat-${emp.id}`} coordinates={emp.pos}>
+                    <circle 
+                      r={radius} 
+                      fill="rgba(249, 115, 22, 0.4)" // Orange-500
+                      stroke="rgba(249, 115, 22, 0.2)"
+                      strokeWidth={1}
+                      style={{ pointerEvents: 'none' }}
+                      className="animate-pulse"
+                    />
+                    <circle 
+                      r={radius * 0.6} 
+                      fill="rgba(234, 88, 12, 0.3)" // Orange-600
+                      style={{ pointerEvents: 'none' }}
+                    />
+                  </Marker>
+                );
+              })}
 
               {empresasWithPositions.map((emp) => {
                 const isSelected = selectedEmpresa?.id === emp.id;

@@ -4979,6 +4979,8 @@ export default function App() {
               {currentView === "empresas" && (
                 <EmpresasParceirasView
                   data={empresasParceiras}
+                  leads={leads}
+                  acoes={calendarioAcoes}
                   onToast={showToast}
                   cursos={cursos}
                   users={users}
@@ -13910,6 +13912,8 @@ function CalendarioAcoesView({
 
 function EmpresasParceirasView({
   data,
+  leads = [],
+  acoes = [],
   onToast,
   onGenerateAction,
   cursos = [],
@@ -13917,6 +13921,8 @@ function EmpresasParceirasView({
   onSendWhatsApp,
 }: {
   data: EmpresaParceira[];
+  leads?: Lead[];
+  acoes?: CalendarioAcao[];
   onToast: (m: string, t?: "success" | "error") => void;
   onGenerateAction: (empresa: EmpresaParceira) => void;
   cursos?: CursoDisponivel[];
@@ -14855,6 +14861,8 @@ function EmpresasParceirasView({
       {activeTab === "mapa" && (
         <Mapa3D
           empresas={data}
+          leads={leads}
+          acoes={acoes}
           selectedId={selectedMapEmpresaId}
           onSelect={setSelectedMapEmpresaId}
           onGenerateAction={onGenerateAction}
