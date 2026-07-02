@@ -183,19 +183,62 @@ export function RelatoriosView({
   }, [fiesProuni]);
 
   // --- Plano de Ação Stats ---
+  const [planoDataInicio, setPlanoDataInicio] = useState("");
+  const [planoDataFim, setPlanoDataFim] = useState("");
+  const [planoFiltroFdv, setPlanoFiltroFdv] = useState("");
+
+  const filteredCalendarioAcoes = useMemo(() => {
+    return calendarioAcoes.filter((a) => {
+      if (planoDataInicio && a.dataInicio < planoDataInicio) return false;
+      if (planoDataFim && a.dataInicio > planoDataFim) return false;
+      if (planoFiltroFdv && a.colaboradorNome !== planoFiltroFdv) return false;
+      return true;
+    });
+  }, [calendarioAcoes, planoDataInicio, planoDataFim, planoFiltroFdv]);
+
   const planoStats = useMemo(() => {
-    const total = calendarioAcoes.length;
-    const concluida = calendarioAcoes.filter(a => a.concluida).length;
+    const total = filteredCalendarioAcoes.length;
+    const concluida = filteredCalendarioAcoes.filter(a => a.concluida).length;
     const pendente = total - concluida;
     
     const typeGroups: Record<string, number> = {};
-    calendarioAcoes.forEach(a => {
+    filteredCalendarioAcoes.forEach(a => {
       const t = a.nome.split(" ")[0] || "Outros"; // Simple heuristic for type
       typeGroups[t] = (typeGroups[t] || 0) + 1;
     });
 
     return { total, concluida, pendente, byType: Object.entries(typeGroups).map(([name, count]) => ({ name, count, percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0" })).sort((a,b) => b.count - a.count).slice(0, 5) };
+  }, [filteredCalendarioAcoes]);
+
+  const fdvsComercialUnicos = useMemo(() => {
+    const fdvs = new Set<string>();
+    calendarioAcoes.forEach(a => {
+      if (a.colaboradorNome) fdvs.add(a.colaboradorNome);
+    });
+    return Array.from(fdvs).sort();
   }, [calendarioAcoes]);
+
+  const leadsPorPromotorPorAcao = useMemo(() => {
+    const result: Record<string, Record<string, number>> = {};
+    filteredCalendarioAcoes.forEach(a => {
+      result[a.nome] = {};
+    });
+    
+    leads.forEach(l => {
+      if (l.acaoId) {
+        const acao = filteredCalendarioAcoes.find(a => a.id === l.acaoId);
+        if (acao) {
+          const promotor = l.promotorName || "Sem promotor";
+          result[acao.nome][promotor] = (result[acao.nome][promotor] || 0) + 1;
+        }
+      }
+    });
+    return result;
+  }, [filteredCalendarioAcoes, leads]);
+
+  const acoesNaoConcluidas = useMemo(() => {
+    return filteredCalendarioAcoes.filter(a => !a.concluida);
+  }, [filteredCalendarioAcoes]);
 
   // --- Empresas Stats ---
   const empresasStats = useMemo(() => {
@@ -350,6 +393,26 @@ export function RelatoriosView({
 
         {activeTab === "planoAcao" && (
           <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-xl border border-slate-200">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-slate-500 mb-1">Data Início (a partir de)</label>
+                <input type="date" value={planoDataInicio} onChange={e => setPlanoDataInicio(e.target.value)} className="w-full text-sm border-slate-200 rounded-lg p-2" />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-slate-500 mb-1">Data Fim (até)</label>
+                <input type="date" value={planoDataFim} onChange={e => setPlanoDataFim(e.target.value)} className="w-full text-sm border-slate-200 rounded-lg p-2" />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-slate-500 mb-1">FDV Comercial</label>
+                <select value={planoFiltroFdv} onChange={e => setPlanoFiltroFdv(e.target.value)} className="w-full text-sm border-slate-200 rounded-lg p-2">
+                  <option value="">Todos</option>
+                  {fdvsComercialUnicos.map(fdv => (
+                    <option key={fdv} value={fdv}>{fdv}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <StatCard title="Total de Ações" value={planoStats.total} icon={Calendar} color="bg-blue-500" />
               <StatCard title="Concluídas" value={planoStats.concluida} icon={CheckCircle2} color="bg-emerald-500" />
@@ -362,7 +425,7 @@ export function RelatoriosView({
                 <div className="space-y-3">
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-500">Próximos 7 dias</span>
-                    <span className="font-bold">{calendarioAcoes.filter(a => {
+                    <span className="font-bold">{filteredCalendarioAcoes.filter(a => {
                       const d = new Date(a.dataInicio).getTime();
                       return d > Date.now() && d < Date.now() + 7 * 24 * 60 * 60 * 1000;
                     }).length}</span>
@@ -370,10 +433,69 @@ export function RelatoriosView({
                   <div className="w-full bg-slate-100 h-1.5 rounded-full" />
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-500">Em andamento (Hoje)</span>
-                    <span className="font-bold">{calendarioAcoes.filter(a => a.dataInicio === new Date().toISOString().split("T")[0]).length}</span>
+                    <span className="font-bold">{filteredCalendarioAcoes.filter(a => a.dataInicio === new Date().toISOString().split("T")[0]).length}</span>
                   </div>
                   <div className="w-full bg-slate-100 h-1.5 rounded-full" />
                 </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Leads por promotor em cada ação */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm max-h-96 overflow-y-auto">
+                <h4 className="text-sm font-bold text-slate-800 mb-4">Leads por Promotor em Cada Ação</h4>
+                {Object.keys(leadsPorPromotorPorAcao).length > 0 ? (
+                  <div className="space-y-4">
+                    {Object.entries(leadsPorPromotorPorAcao).map(([acaoNome, promotores]) => (
+                      <div key={acaoNome} className="border-b border-slate-100 pb-3 last:border-0">
+                        <div className="text-sm font-semibold text-slate-800 mb-2">{acaoNome}</div>
+                        {Object.keys(promotores).length > 0 ? (
+                          <div className="space-y-1">
+                            {Object.entries(promotores).map(([promotor, count]) => (
+                              <div key={promotor} className="flex justify-between text-xs items-center pl-2">
+                                <span className="text-slate-600">{promotor}</span>
+                                <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-full">{count} leads</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-400 pl-2">Nenhum lead registrado</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-400">Nenhuma ação encontrada.</div>
+                )}
+              </div>
+
+              {/* Ações Não Concluídas */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm max-h-96 overflow-y-auto">
+                <h4 className="text-sm font-bold text-slate-800 mb-4">Resumo das Ações Não Concluídas</h4>
+                {acoesNaoConcluidas.length > 0 ? (
+                  <div className="space-y-3">
+                    {acoesNaoConcluidas.map(acao => (
+                      <div key={acao.id} className="p-3 bg-rose-50/50 border border-rose-100 rounded-xl">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="text-sm font-bold text-slate-800">{acao.nome}</span>
+                          <span className="text-xs font-medium text-rose-600 px-2 py-0.5 bg-rose-100 rounded-full flex items-center gap-1">
+                            <Clock size={12} /> Pendente
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-500 mb-1 flex items-center gap-2">
+                          <Calendar size={12} /> {acao.dataInicio.split("-").reverse().join("/")} 
+                          {acao.dataFim && acao.dataFim !== acao.dataInicio ? ` a ${acao.dataFim.split("-").reverse().join("/")}` : ""}
+                        </div>
+                        <div className="text-xs text-slate-500 truncate"><strong className="font-medium text-slate-600">Local:</strong> {acao.local || "Não informado"}</div>
+                        {acao.colaboradorNome && <div className="text-xs text-slate-500 mt-1"><strong className="font-medium text-slate-600">Responsável (FDV):</strong> {acao.colaboradorNome}</div>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-emerald-600 flex items-center gap-2 p-3 bg-emerald-50 rounded-xl">
+                    <CheckCircle2 size={16} /> Todas as ações do período foram concluídas.
+                  </div>
+                )}
               </div>
             </div>
           </div>
