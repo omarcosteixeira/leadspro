@@ -115,6 +115,7 @@ import {
 } from "./lib/utils";
 import * as XLSX from "xlsx";
 import { EmailMarketingView } from "./components/EmailMarketingView";
+import { RelatoriosView } from "./components/RelatoriosView";
 import { ControleConcorrenciaView } from "./components/ControleConcorrenciaView";
 import Mapa3D from "./components/Mapa3D";
 import {
@@ -143,6 +144,7 @@ import {
   CursoDisponivel,
   InsumoPedido,
   InsumoEstoque,
+  InsumoBaixa,
   InsumoPedidoComercial,
   InsumoEstoqueComercial,
   IsencaoEntry,
@@ -158,7 +160,6 @@ import { ControleInsumosComercialView } from "./components/ControleInsumosComerc
 import { WhatsAppMessageEditor } from "./components/WhatsAppMessageEditor";
 import { AdminFuncionariosView } from "./components/AdminFuncionariosView";
 import { IsencoesView } from "./components/IsencoesView";
-import { RelatoriosView } from "./components/RelatoriosView";
 import { WhatsAppMessageSelector } from "./components/WhatsAppMessageSelector";
 import { MultiSelect } from "./components/MultiSelect";
 
@@ -355,6 +356,13 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.FINANCEIRO,
     ROLES.TECNICO,
   ],
+  relatorios: [
+    ROLES.ADMIN_MASTER,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ],
   cadastro: [
     ROLES.ADMIN_MASTER,
     ROLES.PROMOTOR,
@@ -434,7 +442,6 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.FDV_COMERCIAL,
     ROLES.GESTOR_COMERCIAL_COMERCIAL,
   ],
-  relatorios: [ROLES.ADMIN_MASTER, ROLES.LIDER_FDV],
   mapao: [
     ROLES.ADMIN_MASTER,
     ROLES.FDV,
@@ -3010,6 +3017,7 @@ export default function App() {
     type: "success" | "error";
   } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [insumosBaixas, setInsumosBaixas] = useState<InsumoBaixa[]>([]);
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== "undefined" ? navigator.onLine : true,
   );
@@ -4164,6 +4172,7 @@ export default function App() {
 
     let unsubInsumosPedidosComercial = () => {};
     let unsubInsumosEstoqueComercial = () => {};
+    let unsubInsumosBaixas = () => {};
     if (
       profile &&
       VIEW_PERMISSIONS.controleInsumosComercial.includes(profile.role)
@@ -4221,6 +4230,21 @@ export default function App() {
             COLLECTIONS.INSUMOS_ESTOQUE_COMERCIAL,
           ),
       );
+
+      unsubInsumosBaixas = onSnapshot(
+        collection(db, COLLECTIONS.INSUMOS_BAIXAS),
+        (snap) => {
+          setInsumosBaixas(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as InsumoBaixa),
+          );
+        },
+        (err) =>
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.INSUMOS_BAIXAS,
+          ),
+      );
     }
 
     return () => {
@@ -4250,6 +4274,7 @@ export default function App() {
       unsubInsumosEstoque();
       unsubInsumosPedidosComercial();
       unsubInsumosEstoqueComercial();
+      unsubInsumosBaixas();
     };
   }, [user, profile]);
 
@@ -4380,7 +4405,6 @@ export default function App() {
         "empresas",
         "calculo",
         "emailMarketing",
-        "relatorios",
         "admin",
         "controlePagamentos",
       ];
@@ -4657,7 +4681,8 @@ export default function App() {
 
           <nav className="flex-1 px-4 space-y-1 overflow-y-auto pr-2">
             {[
-              { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+              { id: "dashboard", label: "Rotina", icon: LayoutDashboard },
+              { id: "relatorios", label: "Relatórios", icon: BarChart3 },
               { id: "cadastro", label: "Novo Lead", icon: UserPlus },
               { id: "historico", label: "Histórico", icon: History },
               { id: "bases", label: "Bases", icon: Database },
@@ -4697,7 +4722,6 @@ export default function App() {
                 label: "Envio de e-mail Marketing",
                 icon: Mail,
               },
-              { id: "relatorios", label: "Relatórios", icon: FileText },
               { id: "admin", label: "Administração", icon: Settings },
             ].map(
               (item) =>
@@ -4836,6 +4860,20 @@ export default function App() {
                   users={users}
                 />
               )}
+              {currentView === "relatorios" && (
+                <RelatoriosView
+                  leads={leads}
+                  bases={bases}
+                  fiesProuni={fiesProuni}
+                  calendarioAcoes={calendarioAcoes}
+                  empresasParceiras={empresasParceiras}
+                  insumosPedidos={insumosPedidos}
+                  insumosEstoque={insumosEstoque}
+                  insumosBaixas={insumosBaixas}
+                  profile={profile!}
+                  onToast={showToast}
+                />
+              )}
               {currentView === "cadastro" && (
                 <CadastroView
                   onToast={showToast}
@@ -4935,9 +4973,6 @@ export default function App() {
               {currentView === "calculo" && <CalculoRemuneracaoView />}
               {currentView === "emailMarketing" && (
                 <EmailMarketingView onToast={showToast} />
-              )}
-              {currentView === "relatorios" && (
-                <RelatoriosView profile={profile!} botConfig={botConfig} />
               )}
               {currentView === "controlePagamentos" && (
                 <ControlePagamentosView
