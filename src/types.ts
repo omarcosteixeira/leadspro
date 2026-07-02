@@ -57,7 +57,7 @@ export interface CalendarioAcao {
   dadosPresencaPromotores?: { [promoterUid: string]: { empresa?: 'GR15' | 'RP7'; horas?: number } };
   valorPromotor?: number;
   valorOrcado?: number;
-  statusPagamentoPromotores?: { [promoterUid: string]: 'Agendada' | 'Recusada' | 'Realizada' };
+  statusPagamentoPromotores?: { [promoterUid: string]: 'Pendente' | 'Recusada' | 'Realizada' };
   colaboradorId?: string;
   colaboradorNome?: string;
   tipoAtividade?: 'Ação' | 'Visita';

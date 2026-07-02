@@ -1590,7 +1590,7 @@ function CampanhasView({
 
   const getEffectiveStatus = (camp: Campanha) => {
     const today = new Date().toISOString().split("T")[0];
-    if (today < camp.dataInicio) return "Agendada";
+    if (today < camp.dataInicio) return "Pendente";
     if (today > camp.dataFim) return "Finalizada";
     return "Ativa";
   };
@@ -1780,7 +1780,7 @@ function CampanhasView({
         >
           <option value="">Todos os Status</option>
           <option value="Ativa">Ativa</option>
-          <option value="Agendada">Agendada</option>
+          <option value="Pendente">Pendente</option>
           <option value="Finalizada">Finalizada</option>
         </select>
         <div className="flex items-center gap-2 flex-wrap">
@@ -1838,7 +1838,7 @@ function CampanhasView({
                       "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
                       effectiveStatus === "Ativa"
                         ? "bg-emerald-100 text-emerald-600"
-                        : effectiveStatus === "Agendada"
+                        : effectiveStatus === "Pendente"
                           ? "bg-blue-100 text-blue-600"
                           : "bg-slate-100 text-slate-600",
                     )}
@@ -19588,7 +19588,7 @@ export function ControlePagamentosView({
     "all",
   );
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "Agendada" | "Recusada" | "Realizada"
+    "all" | "Pendente" | "Recusada" | "Realizada"
   >("all");
   const [regionFilter, setRegionFilter] = useState("all");
 
@@ -19616,8 +19616,8 @@ export function ControlePagamentosView({
           empresa: "GR15",
           horas: 4,
         };
-        const statusPgt =
-          action.statusPagamentoPromotores?.[pUid] || "Agendada";
+        let statusPgt = (action.statusPagamentoPromotores?.[pUid] as string) || "Pendente";
+        if (statusPgt === "Agendada") statusPgt = "Pendente";
 
         const diarias = getDiarias(action.dataInicio, action.dataFim);
         const valorPromotor = action.valorPromotor || 0;
@@ -19700,7 +19700,7 @@ export function ControlePagamentosView({
       totalCusto += row.custoTotal;
       if (row.statusPagamento === "Realizada") {
         totalRealizado += row.custoTotal;
-      } else if (row.statusPagamento === "Agendada") {
+      } else if (row.statusPagamento === "Pendente") {
         totalAgendado += row.custoTotal;
       } else {
         totalRecusado += row.custoTotal;
@@ -19719,7 +19719,7 @@ export function ControlePagamentosView({
   const updatePaymentStatus = async (
     actionId: string,
     promoterUid: string,
-    status: "Agendada" | "Recusada" | "Realizada",
+    status: "Pendente" | "Recusada" | "Realizada",
   ) => {
     try {
       const action = calendarioAcoes.find((a) => a.id === actionId);
@@ -19883,7 +19883,7 @@ export function ControlePagamentosView({
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 appearance-none focus:bg-white focus:ring-2 focus:ring-slate-300 transition-all border-none outline-none cursor-pointer"
             >
               <option value="all">Todos os Status de Pagamento</option>
-              <option value="Agendada">Status: Agendada</option>
+              <option value="Pendente">Status: Agendada</option>
               <option value="Recusada">Status: Recusada</option>
               <option value="Realizada">Status: Realizada</option>
             </select>
@@ -19953,7 +19953,7 @@ export function ControlePagamentosView({
                   const todayStr = `${year}-${month}-${day}`;
                   const isOverdue =
                     row.dataFim < todayStr &&
-                    row.statusPagamento === "Agendada";
+                    row.statusPagamento === "Pendente";
 
                   return (
                     <tr
@@ -20070,7 +20070,7 @@ export function ControlePagamentosView({
                         <div className="flex items-center justify-center space-x-2">
                           <div className="flex items-center justify-center space-x-1.5 bg-slate-50/80 p-1.5 rounded-full border border-slate-100 w-fit">
                             {(
-                              ["Agendada", "Recusada", "Realizada"] as const
+                              ["Pendente", "Recusada", "Realizada"] as const
                             ).map((st) => {
                               const isSelected = row.statusPagamento === st;
                               let btnClass =
@@ -20080,7 +20080,7 @@ export function ControlePagamentosView({
                                 if (st === "Realizada")
                                   btnClass +=
                                     "bg-emerald-600 text-white shadow-sm";
-                                else if (st === "Agendada")
+                                else if (st === "Pendente")
                                   btnClass +=
                                     "bg-amber-500 text-white shadow-sm";
                                 else
@@ -20111,8 +20111,8 @@ export function ControlePagamentosView({
                                 >
                                   {st === "Realizada"
                                     ? "Paga"
-                                    : st === "Agendada"
-                                      ? "Agendada"
+                                    : st === "Pendente"
+                                      ? "Pendente"
                                       : "Recusada"}
                                 </button>
                               );
