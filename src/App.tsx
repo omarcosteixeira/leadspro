@@ -6919,7 +6919,9 @@ function DashboardView({
             <TrendingUp size={24} className="text-blue-600" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {forecast.map((f) => {
+            {[...forecast]
+              .sort((a, b) => a.nome.localeCompare(b.nome))
+              .map((f) => {
               const percFech =
                 f.metaFechamento > 0
                   ? ((f.realizado / f.metaFechamento) * 100).toFixed(1)
@@ -18685,7 +18687,9 @@ function AdminView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {forecast.map((f) => {
+                  {[...forecast]
+                    .sort((a, b) => a.nome.localeCompare(b.nome))
+                    .map((f) => {
                     const percYTD =
                       f.metaDiaYTD > 0
                         ? ((f.realizado / f.metaDiaYTD) * 100).toFixed(1)
