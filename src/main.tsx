@@ -3,6 +3,18 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// Ignore specific unhandled Firebase abort errors during React StrictMode unmounts
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    if (event.reason && typeof event.reason.message === 'string' && 
+        (event.reason.message.includes('The user aborted a request') || event.reason.message.includes('cancelled'))) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      console.debug('Ignored unhandled rejection (likely Firebase unsub):', event.reason.message);
+    }
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
