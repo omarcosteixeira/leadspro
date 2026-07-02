@@ -13682,7 +13682,7 @@ function CalendarioAcoesView({
               <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1">
-                    Valor Hora do Promotor (R$)
+                    Valor Diária Personalizado (R$) <span className="font-normal text-[9px] text-slate-400 block mt-0.5">(Será calculado auto p/ 4h, 6h, 8h ou 10h)</span>
                   </label>
                   <input
                     type="number"
@@ -19622,7 +19622,13 @@ export function ControlePagamentosView({
         const diarias = getDiarias(action.dataInicio, action.dataFim);
         const valorPromotor = action.valorPromotor || 0;
         const horasAtuadas = details.horas || 4;
-        const custoTotal = diarias * horasAtuadas * valorPromotor;
+        let valorDia = action.valorPromotor || 0;
+        if (horasAtuadas === 4) valorDia = 60;
+        else if (horasAtuadas === 6) valorDia = 90;
+        else if (horasAtuadas === 8) valorDia = 100;
+        else if (horasAtuadas === 10) valorDia = 150;
+        
+        const custoTotal = diarias * valorDia;
 
         result.push({
           actionId: action.id,
@@ -19636,7 +19642,7 @@ export function ControlePagamentosView({
               promoterObj.servidor.slice(1)
             : "Principal",
           diarias,
-          horas: details.horas || 4,
+          horas: horasAtuadas,
           solicitante:
             action.colaboradorNome ||
             (action.colaboradorId
@@ -19647,7 +19653,7 @@ export function ControlePagamentosView({
           tipoAcao: action.nome,
           dataInicio: action.dataInicio,
           dataFim: action.dataFim,
-          valorPromotor,
+          valorDia,
           custoTotal,
           valorOrcado: action.valorOrcado || 0,
           statusPagamento: statusPgt,
@@ -19752,7 +19758,7 @@ export function ControlePagamentosView({
         "Tipo de Ação": r.tipoAcao,
         "Data de Início": r.dataInicio,
         "Data Final": r.dataFim,
-        "Valor Hora (R$)": r.valorPromotor,
+        "Valor Dia (R$)": r.valorDia,
         "Custo Total (R$)": r.custoTotal,
         "Valor Orçado (R$)": r.valorOrcado,
         "Status de Pagamento": r.statusPagamento,
@@ -19934,7 +19940,7 @@ export function ControlePagamentosView({
                   <th className="px-5 py-4">Região</th>
                   <th className="px-5 py-4">Ação</th>
                   <th className="px-5 py-4">Datas</th>
-                  <th className="px-5 py-4 text-right">Valor Hora</th>
+                  <th className="px-5 py-4 text-right">Valor Dia</th>
                   <th className="px-5 py-4 text-right bg-slate-50 font-bold text-slate-600">
                     Custo Total
                   </th>
@@ -20050,9 +20056,9 @@ export function ControlePagamentosView({
                         </div>
                       </td>
 
-                      {/* Valor Hora */}
+                      {/* Valor Dia */}
                       <td className="px-5 py-4 text-right font-mono font-bold">
-                        R$ {row.valorPromotor.toFixed(2).replace(".", ",")}
+                        R$ {row.valorDia.toFixed(2).replace(".", ",")}
                       </td>
 
                       {/* Custo Total */}
