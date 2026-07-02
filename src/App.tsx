@@ -3430,6 +3430,53 @@ export default function App() {
     }
   };
 
+  const sendSilentWhatsApp = async (telefone: string, message: string) => {
+    const currentBotNumber = profile?.botNumber;
+    let safeBotNumber = currentBotNumber
+      ? currentBotNumber.replace(/\D/g, "")
+      : "";
+
+    const isUserBotOnline =
+      safeBotNumber && (botStatuses as any)[safeBotNumber]?.status === "online";
+
+    if (!isUserBotOnline) {
+      const firstOnlineBot = Object.entries(botStatuses).find(
+        ([_, info]) => (info as any)?.status === "online",
+      )?.[0];
+      if (firstOnlineBot) {
+        safeBotNumber = firstOnlineBot;
+      } else if (!safeBotNumber) {
+        return;
+      }
+    }
+
+    let rawPhone = telefone.replace(/\D/g, "");
+    if (rawPhone.startsWith("0")) rawPhone = rawPhone.substring(1);
+    if (rawPhone.length === 10 || rawPhone.length === 11) {
+      rawPhone = `55${rawPhone}`;
+    }
+
+    try {
+      const isTargetBot = safeBotNumber === "5524993346717";
+      const finalMessage = isTargetBot
+        ? message + "\n\nPor favor não responder nesse whatsapp. Pois ele é apenas um numero de assistência de envio."
+        : message;
+
+      await callBotApi("/api/send", {
+        method: "POST",
+        body: {
+          botNumber: safeBotNumber,
+          number: rawPhone,
+          message: finalMessage,
+          force: true,
+          manual: true,
+        },
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleMassSendBotMessages = async (
     messages: { telefone: string; message: string }[],
   ) => {
@@ -5011,6 +5058,7 @@ export default function App() {
                   callBotApi={callBotApi}
                   leads={leads}
                   gap={gap}
+                  onSendWhatsApp={sendSilentWhatsApp}
                 />
               )}
               {currentView === "empresas" && (
@@ -12700,6 +12748,7 @@ function CalendarioAcoesView({
   callBotApi,
   leads = [],
   gap = [],
+  onSendWhatsApp,
 }: {
   data: CalendarioAcao[];
   onToast: (m: string, t?: "success" | "error") => void;
@@ -12714,6 +12763,7 @@ function CalendarioAcoesView({
   ) => Promise<any>;
   leads?: Lead[];
   gap?: GapEntry[];
+  onSendWhatsApp?: (phone: string, message: string) => Promise<void>;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -12751,40 +12801,8 @@ function CalendarioAcoesView({
   }
 
   async function sendActionWhatsApp(recipientPhone: string, message: string) {
-    const cleanPhone = formatToWhatsAppPhone(recipientPhone);
-    if (!cleanPhone) return;
-
-    try {
-      const finalMessage = message + "\n\nPor favor não responder nesse whatsapp. Pois ele é apenas um numero de assistência de envio.";
-      if (callBotApi) {
-        await callBotApi("/api/send", {
-          method: "POST",
-          body: {
-            botNumber: "5524993346717",
-            number: cleanPhone,
-            message: finalMessage,
-            force: true,
-            manual: true,
-          },
-        });
-        console.log(`WhatsApp sent to ${cleanPhone} via bot 5524993346717`);
-      } else {
-        const directUrl = "https://argoscliente-production-170b.up.railway.app/api/send";
-        await fetch(directUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            botNumber: "5524993346717",
-            number: cleanPhone,
-            message: finalMessage,
-            force: true,
-            manual: true,
-          }),
-        });
-        console.log(`Direct WhatsApp sent to ${cleanPhone} via bot 5524993346717`);
-      }
-    } catch (err) {
-      console.error("Error sending WhatsApp notification:", err);
+    if (onSendWhatsApp) {
+      await onSendWhatsApp(recipientPhone, message);
     }
   }
 
