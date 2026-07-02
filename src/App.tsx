@@ -5096,30 +5096,31 @@ export default function App() {
                   onToast={showToast}
                 />
               )}
-              {currentView === "admin" && (
-                <AdminView
-                  profile={profile}
-                  users={users}
-                  links={links}
-                  onToast={showToast}
-                  leads={leads}
-                  bases={bases}
-                  gap={gap}
-                  planner={planner}
-                  campanhas={campanhas}
-                  bomDia={bomDia}
-                  forecast={forecast}
-                  periodos={periodos}
-                  whatsappMessages={whatsappMessages}
-                  empresasParceiras={empresasParceiras}
-                  botConfig={botConfig}
-                  botStatuses={botStatuses}
-                  setBotStatuses={setBotStatuses}
-                  callBotApi={callBotApi}
-                  metaDia={metaDia}
-                  qgLigacoes={qgLigacoes}
-                />
-              )}
+                  {currentView === "admin" && (
+                    <AdminView
+                      profile={profile}
+                      users={users}
+                      links={links}
+                      onToast={showToast}
+                      leads={leads}
+                      bases={bases}
+                      gap={gap}
+                      planner={planner}
+                      campanhas={campanhas}
+                      bomDia={bomDia}
+                      forecast={forecast}
+                      periodos={periodos}
+                      whatsappMessages={whatsappMessages}
+                      empresasParceiras={empresasParceiras}
+                      botConfig={botConfig}
+                      botStatuses={botStatuses}
+                      setBotStatuses={setBotStatuses}
+                      callBotApi={callBotApi}
+                      metaDia={metaDia}
+                      qgLigacoes={qgLigacoes}
+                      cursos={cursos}
+                    />
+                  )}
             </motion.div>
           </AnimatePresence>
 
@@ -16149,6 +16150,7 @@ function AdminView({
   callBotApi,
   metaDia,
   qgLigacoes,
+  cursos,
 }: {
   profile: UserProfile | null;
   users: UserProfile[];
@@ -16195,6 +16197,7 @@ function AdminView({
   ) => Promise<any>;
   metaDia: MetaDia[];
   qgLigacoes: QgLigacao[];
+  cursos: CursoDisponivel[];
 }) {
   const [activeTab, setActiveTab] = useState<
     | "usuarios"
@@ -16754,6 +16757,12 @@ function AdminView({
     onToast("Backup gerado com sucesso!");
   };
 
+  const uniqueUnidades = useMemo(() => {
+    return Array.from(
+      new Set((cursos || []).map((c) => c.nomeUnidade).filter(Boolean)),
+    ).sort();
+  }, [cursos]);
+
   return (
     <div className="space-y-8 pb-12">
       <div className="flex overflow-x-auto space-x-2 border-b border-slate-200 pb-4 mb-6 scrollbar-hide">
@@ -17045,12 +17054,18 @@ function AdminView({
                     <label className="block text-xs font-bold text-slate-500 mb-1">
                       Unidade (Para Gestor Unidade / FDV Comercial)
                     </label>
-                    <input
+                    <select
                       name="unidade"
                       defaultValue={editingUser.unidade || ""}
-                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                      placeholder="Ex: Unidade Centro"
-                    />
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                    >
+                      <option value="">Selecione uma unidade</option>
+                      {uniqueUnidades.map((unidade) => (
+                        <option key={unidade} value={unidade}>
+                          {unidade}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">
@@ -17536,11 +17551,17 @@ function AdminView({
                       <label className="block text-xs font-bold text-slate-500 mb-1">
                         Unidade (Para Gestor Unidade / FDV Comercial)
                       </label>
-                      <input
+                      <select
                         name="unidade"
-                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                        placeholder="Ex: Unidade Centro"
-                      />
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                      >
+                        <option value="">Selecione uma unidade</option>
+                        {uniqueUnidades.map((unidade) => (
+                          <option key={unidade} value={unidade}>
+                            {unidade}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-500 mb-1">
