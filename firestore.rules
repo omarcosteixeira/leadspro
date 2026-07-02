@@ -77,6 +77,7 @@ service cloud.firestore {
              (!('mustChangePassword' in data) || data.mustChangePassword is bool) &&
              (!('phone' in data) || data.phone is string) &&
              (!('botNumber' in data) || data.botNumber is string) &&
+             (!('unidade' in data) || data.unidade is string) &&
              (!('servidor' in data) || data.servidor is string);
     }
 
@@ -127,6 +128,21 @@ service cloud.firestore {
              (!('sisprouniStatus' in data) || data.sisprouniStatus in ['Pendente', 'Aprovado', 'Reprovado']);
     }
 
+    function isAuthorized(unidade) {
+      if (!isAuthenticated()) return false;
+      let user = getUserData();
+      let role = user.role;
+      // Admin/Master roles see everything
+      if (role == 'Admin Master' || role == 'Líder/FDV' || role == 'Sala de Matrícula' || role == 'QG') return true;
+      // Global roles
+      if (role == 'SSA' || role == 'Financeiro' || role == 'Acadêmico' || role == 'Técnico') return true;
+      // Comercial roles (except Gestor Unidade which is restricted)
+      if (role == 'FDV' || role == 'FDV (Comercial)' || role == 'Promotor' || role == 'Promotor/rua' || role == 'Gestor Comercial' || role == 'Gerente Comercial (Comercial)') return true;
+      // Restricted role
+      if (role == 'Gestor Unidade') return user.unidade == unidade;
+      return false;
+    }
+
     // ===============================================================
     // Default Catch-All Rule
     // ===============================================================
@@ -147,29 +163,29 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaopro-761e1/public/data/leads/{leadId} {
-      allow read: if isPrincipal() || isComercial() || request.auth == null;
-      allow create: if isPrincipal() || isComercial() || request.auth == null || request.resource.data.acao == 'Ação ( formulario)';
-      allow update: if isPrincipal() || isComercial();
+      allow read: if isAuthorized(resource.data.unidade) || request.auth == null;
+      allow create: if isAuthorized(request.resource.data.unidade) || request.auth == null || request.resource.data.acao == 'Ação ( formulario)';
+      allow update: if isAuthorized(resource.data.unidade);
       allow delete: if isPrincipal();
     }
 
     match /artifacts/gestaopro-761e1/public/data/bases/{baseId} {
-      allow read, create, update: if isPrincipal() || isComercial();
+      allow read, create, update: if isAuthorized(request.resource.data.unidade) || (resource != null && isAuthorized(resource.data.unidade));
       allow delete: if isPrincipal();
     }
 
     match /artifacts/gestaopro-761e1/public/data/gap_academico/{gapId} {
-      allow read, create, update: if isPrincipal() || isComercial() || isSSA();
+      allow read, create, update: if isAuthorized(request.resource.data.unidade) || (resource != null && isAuthorized(resource.data.unidade));
       allow delete: if isPrincipal();
     }
 
     match /artifacts/gestaopro-761e1/public/data/fies_prouni/{entryId} {
-      allow read, create, update: if isPrincipal() || isComercial() || isSSA();
+      allow read, create, update: if isAuthorized(request.resource.data.unidade) || (resource != null && isAuthorized(resource.data.unidade));
       allow delete: if isPrincipal();
     }
 
     match /artifacts/gestaopro-761e1/public/data/calendario_acoes/{acaoId} {
-      allow read, create, update: if isPrincipal() || isComercial() || isFinanceiro();
+      allow read, create, update: if isAuthorized(request.resource.data.unidade) || (resource != null && isAuthorized(resource.data.unidade));
       allow delete: if isPrincipal();
     }
 
@@ -233,7 +249,7 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaopro-761e1/public/data/bases_renovacao/{id} {
-      allow read, create, update: if isPrincipal() || isComercial() || isSSA();
+      allow read, create, update: if isAuthorized(request.resource.data.unidade) || (resource != null && isAuthorized(resource.data.unidade));
       allow delete: if isPrincipal();
     }
 
@@ -285,7 +301,7 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaopro-761e1/public/data/isencoes/{isencaoId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isAuthorized(request.resource.data.unidade) || (resource != null && isAuthorized(resource.data.unidade));
     }
   }
 }
