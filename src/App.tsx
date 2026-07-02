@@ -19883,7 +19883,7 @@ export function ControlePagamentosView({
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 appearance-none focus:bg-white focus:ring-2 focus:ring-slate-300 transition-all border-none outline-none cursor-pointer"
             >
               <option value="all">Todos os Status de Pagamento</option>
-              <option value="Pendente">Status: Agendada</option>
+              <option value="Pendente">Status: Pendente</option>
               <option value="Recusada">Status: Recusada</option>
               <option value="Realizada">Status: Realizada</option>
             </select>

@@ -17,8 +17,8 @@ service cloud.firestore {
     
     function isMasterUser() {
       return isAuthenticated() && (
-        request.auth.token.email == "canaldonutri@gmail.com" || 
-        request.auth.token.email == "marcos.teixeira@estacio.br" ||
+        ("email" in request.auth.token && request.auth.token.email == "canaldonutri@gmail.com") || 
+        ("email" in request.auth.token && request.auth.token.email == "marcos.teixeira@estacio.br") ||
         (
           exists(/databases/$(database)/documents/artifacts/gestaopro-761e1/public/data/users/$(request.auth.uid)) &&
           (
@@ -174,6 +174,13 @@ service cloud.firestore {
     }
 
     // Dashboard & Config Collections
+    match /artifacts/gestaopro-761e1/public/data/qg_ligacoes/{id} {
+      allow read, write: if isPrincipal() || isComercial();
+    }
+    match /artifacts/gestaopro-761e1/public/data/controle_concorrencia/{id} {
+      allow read, write: if isPrincipal() || isComercial();
+    }
+
     match /artifacts/gestaopro-761e1/public/data/campanhas/{id} {
       allow read, write: if isPrincipal() || isComercial();
     }
