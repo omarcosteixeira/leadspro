@@ -167,6 +167,10 @@ service cloud.firestore {
       allow read, create, update: if isPrincipal() || isComercial() || isSSA();
       allow delete: if isPrincipal();
     }
+    match /artifacts/gestaopro-761e1/public/data/fies_prouni_vagas/{entryId} {
+      allow read, create, update: if isPrincipal() || isComercial() || isSSA();
+      allow delete: if isPrincipal();
+    }
 
     match /artifacts/gestaopro-761e1/public/data/calendario_acoes/{acaoId} {
       allow read, create, update: if isPrincipal() || isComercial() || isFinanceiro();

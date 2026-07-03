@@ -192,6 +192,20 @@ export interface PlannerTask {
   baseName: string;
 }
 
+export interface FiesProuniVaga {
+  id: string;
+  periodo: string;
+  codCurso: string;
+  curso: string;
+  turno: string;
+  metodologia: string;
+  bolsa: '50%' | '100%';
+  vagas: number;
+  unidade?: string;
+  createdAt: any;
+  updatedAt?: any;
+}
+
 export interface FiesProuniEntry {
   id: string;
   nome: string;

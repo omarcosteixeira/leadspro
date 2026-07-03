@@ -127,6 +127,7 @@ import {
   LinkUtil,
   UserRole,
   FiesProuniEntry,
+  FiesProuniVaga,
   Campanha,
   BomDiaCaptacao,
   ForecastCaptacao,
@@ -2030,6 +2031,7 @@ function CampanhasView({
 
 function FiesProuniView({
   data,
+  vagas = [],
   onToast,
   profile,
   whatsappMessages,
@@ -2039,6 +2041,7 @@ function FiesProuniView({
   onMassSendBot,
 }: {
   data: FiesProuniEntry[];
+  vagas?: FiesProuniVaga[];
   onToast: (m: string, t?: "success" | "error") => void;
   profile: UserProfile;
   whatsappMessages: WhatsAppMessage[];
@@ -2047,6 +2050,7 @@ function FiesProuniView({
   onSendBot: (tel: string, msg: string) => void;
   onMassSendBot: (messages: { telefone: string; message: string }[]) => void;
 }) {
+  const [activeTab, setActiveTab] = useState<"lista" | "informacoes">("lista");
   const [searchTerm, setSearchTerm] = useState("");
   const [periodoFilter, setPeriodoFilter] = useState("");
   const [tipoFilter, setTipoFilter] = useState("");
@@ -2057,6 +2061,8 @@ function FiesProuniView({
   const [editingEntry, setEditingEntry] = useState<FiesProuniEntry | null>(
     null,
   );
+  const [isVagaModalOpen, setIsVagaModalOpen] = useState(false);
+  const [editingVaga, setEditingVaga] = useState<FiesProuniVaga | null>(null);
   const [cpfInput, setCpfInput] = useState("");
 
   const isAdmin = profile.role === ROLES.LIDER_FDV;
@@ -2125,6 +2131,57 @@ function FiesProuniView({
       .length,
     concluido: filteredData.filter((i) => i.digitalizaStatus === "Concluído")
       .length,
+  };
+
+  const vagasStats = {
+    totalVagas: vagas.reduce((acc, curr) => acc + curr.vagas, 0),
+    total100: vagas.filter(v => v.bolsa === "100%").reduce((acc, curr) => acc + curr.vagas, 0),
+    total50: vagas.filter(v => v.bolsa === "50%").reduce((acc, curr) => acc + curr.vagas, 0),
+  };
+
+  const handleSaveVaga = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const payload = {
+      periodo: formData.get("periodo") as string,
+      codCurso: formData.get("codCurso") as string,
+      curso: formData.get("curso") as string,
+      turno: formData.get("turno") as string,
+      metodologia: formData.get("metodologia") as string,
+      bolsa: formData.get("bolsa") as '50%' | '100%',
+      vagas: parseInt(formData.get("vagas") as string, 10) || 0,
+      unidade: (formData.get("unidade") as string) || "",
+    };
+
+    try {
+      if (editingVaga) {
+        await updateDoc(doc(db, COLLECTIONS.FIES_PROUNI_VAGAS, editingVaga.id), {
+          ...payload,
+          updatedAt: serverTimestamp(),
+        });
+        onToast("Vaga atualizada com sucesso!", "success");
+      } else {
+        await addDoc(collection(db, COLLECTIONS.FIES_PROUNI_VAGAS), {
+          ...payload,
+          createdAt: serverTimestamp(),
+        });
+        onToast("Vaga cadastrada com sucesso!", "success");
+      }
+      setIsVagaModalOpen(false);
+      setEditingVaga(null);
+    } catch (err) {
+      handleFirestoreError(err, editingVaga ? OperationType.UPDATE : OperationType.CREATE, COLLECTIONS.FIES_PROUNI_VAGAS);
+    }
+  };
+
+  const handleDeleteVaga = async (id: string) => {
+    if (!window.confirm("Deseja realmente excluir esta vaga?")) return;
+    try {
+      await deleteDoc(doc(db, COLLECTIONS.FIES_PROUNI_VAGAS, id));
+      onToast("Vaga excluída com sucesso!");
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, COLLECTIONS.FIES_PROUNI_VAGAS);
+    }
   };
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -2229,6 +2286,58 @@ function FiesProuniView({
     exportToExcel(exportData, "Fies_Prouni");
   };
 
+  const handleExportVagas = () => {
+    const exportData = vagas.map((v) => ({
+      "Período": v.periodo || "",
+      "Cod. Curso": v.codCurso || "",
+      "Curso": v.curso || "",
+      "Turno": v.turno || "",
+      "Metodologia": v.metodologia || "",
+      "Bolsa": v.bolsa || "",
+      "Vagas": v.vagas || 0,
+      "Unidade": v.unidade || "",
+    }));
+    exportToExcel(exportData, "Fies_Prouni_Vagas");
+  };
+
+  const handleImportVagas = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    importFromExcel(file, async (data) => {
+      onToast("Importando vagas...");
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const row of data) {
+        try {
+          const payload = {
+            periodo: String(row["Período"] || ""),
+            codCurso: String(row["Cod. Curso"] || ""),
+            curso: String(row["Curso"] || ""),
+            turno: String(row["Turno"] || ""),
+            metodologia: String(row["Metodologia"] || ""),
+            bolsa: String(row["Bolsa"] || "") as "50%" | "100%",
+            vagas: parseInt(String(row["Vagas"]), 10) || 0,
+            unidade: String(row["Unidade"] || ""),
+            createdAt: serverTimestamp(),
+          };
+
+          if (payload.curso && payload.periodo && payload.bolsa) {
+            await addDoc(collection(db, COLLECTIONS.FIES_PROUNI_VAGAS), payload);
+            successCount++;
+          }
+        } catch (err) {
+          console.error("Erro ao importar vaga:", err);
+          errorCount++;
+        }
+      }
+
+      onToast(`Importação concluída: ${successCount} sucesso, ${errorCount} erros`, successCount > 0 ? "success" : "error");
+    });
+    e.target.value = '';
+  };
+
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
 
   const handleBulkDelete = async () => {
@@ -2279,34 +2388,88 @@ function FiesProuniView({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">
-          Acompanhamento Fies/Prouni
-        </h2>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-bold text-gray-800">
+            Acompanhamento Fies/Prouni
+          </h2>
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            <button
+              onClick={() => setActiveTab("lista")}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "lista" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              Lista
+            </button>
+            <button
+              onClick={() => setActiveTab("informacoes")}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "informacoes" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              Informações
+            </button>
+          </div>
+        </div>
         <div className="flex space-x-2">
-          <button
-            onClick={() => {
-              setEditingEntry(null);
-              setIsModalOpen(true);
-            }}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-indigo-700 transition-colors"
-          >
-            <Plus size={20} />
-            <span>Novo Cadastro</span>
-          </button>
-          <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
-            <Upload size={18} />
-            <span>Importação indisponível</span>
-          </label>
-          <button
-            onClick={handleExport}
-            className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
-          >
-            <Download size={18} />
-            <span>Exportar Excel</span>
-          </button>
+          {activeTab === "lista" ? (
+            <>
+              <button
+                onClick={() => {
+                  setEditingEntry(null);
+                  setIsModalOpen(true);
+                }}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-indigo-700 transition-colors"
+              >
+                <Plus size={20} />
+                <span>Novo Cadastro</span>
+              </button>
+              <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
+                <Upload size={18} />
+                <span>Importação indisponível</span>
+              </label>
+              <button
+                onClick={handleExport}
+                className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
+              >
+                <Download size={18} />
+                <span>Exportar Excel</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  setEditingVaga(null);
+                  setIsVagaModalOpen(true);
+                }}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-indigo-700 transition-colors"
+              >
+                <Plus size={20} />
+                <span>Nova Vaga</span>
+              </button>
+              <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
+                <Upload size={18} />
+                <span>Importar Vagas</span>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  className="hidden"
+                  onChange={handleImportVagas}
+                />
+              </label>
+              <button
+                onClick={handleExportVagas}
+                className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
+              >
+                <Download size={18} />
+                <span>Exportar Excel</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
+
+      {activeTab === "lista" && (
+        <>
+
 
       {/* Dashboard Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2682,6 +2845,103 @@ function FiesProuniView({
           </table>
         </div>
       </div>
+      </>
+      )}
+
+      {activeTab === "informacoes" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+              <div className="p-3 bg-blue-500 rounded-xl text-white">
+                <FileText size={24} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-500">Total de Vagas</p>
+                <h3 className="text-2xl font-bold text-slate-900">{vagasStats.totalVagas}</h3>
+              </div>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 border-l-4 border-l-emerald-500">
+              <div className="p-3 bg-emerald-500 rounded-xl text-white">
+                <ShieldCheck size={24} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-500">Bolsas 100%</p>
+                <h3 className="text-2xl font-bold text-emerald-600">{vagasStats.total100}</h3>
+              </div>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 border-l-4 border-l-blue-500">
+              <div className="p-3 bg-blue-500 rounded-xl text-white">
+                <BookOpen size={24} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-500">Bolsas 50%</p>
+                <h3 className="text-2xl font-bold text-blue-600">{vagasStats.total50}</h3>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                    <th className="p-4 font-bold border-b border-slate-100">Período</th>
+                    <th className="p-4 font-bold border-b border-slate-100">Cod. Curso</th>
+                    <th className="p-4 font-bold border-b border-slate-100">Curso</th>
+                    <th className="p-4 font-bold border-b border-slate-100 text-center">Turno</th>
+                    <th className="p-4 font-bold border-b border-slate-100 text-center">Metodologia</th>
+                    <th className="p-4 font-bold border-b border-slate-100 text-center">Bolsa</th>
+                    <th className="p-4 font-bold border-b border-slate-100 text-center">Vagas</th>
+                    <th className="p-4 font-bold border-b border-slate-100 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm divide-y divide-slate-50">
+                  {vagas.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-slate-400">Nenhuma vaga cadastrada.</td>
+                    </tr>
+                  ) : (
+                    vagas.map((vaga) => (
+                      <tr key={vaga.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="p-4 font-medium text-slate-700">{vaga.periodo}</td>
+                        <td className="p-4 font-mono text-slate-500">{vaga.codCurso}</td>
+                        <td className="p-4 font-medium text-slate-800">{vaga.curso}</td>
+                        <td className="p-4 text-center text-slate-600">{vaga.turno}</td>
+                        <td className="p-4 text-center text-slate-600">{vaga.metodologia}</td>
+                        <td className="p-4 text-center">
+                          <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${vaga.bolsa === '100%' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {vaga.bolsa}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center font-bold text-slate-800">{vaga.vagas}</td>
+                        <td className="p-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingVaga(vaga);
+                                setIsVagaModalOpen(true);
+                              }}
+                              className="text-slate-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition-all"
+                            >
+                              <Edit size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteVaga(vaga.id)}
+                              className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       <AnimatePresence>
@@ -3007,6 +3267,123 @@ function FiesProuniView({
             </motion.div>
           </div>
         )}
+
+        {isVagaModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-lg"
+            >
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-2xl">
+                <h3 className="text-xl font-bold text-gray-800">
+                  {editingVaga ? "Editar Vaga" : "Nova Vaga"}
+                </h3>
+                <button
+                  onClick={() => setIsVagaModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveVaga} className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Período</label>
+                    <input
+                      name="periodo"
+                      required
+                      defaultValue={editingVaga?.periodo}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cod. Curso</label>
+                    <input
+                      name="codCurso"
+                      required
+                      defaultValue={editingVaga?.codCurso}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Curso</label>
+                    <input
+                      name="curso"
+                      required
+                      defaultValue={editingVaga?.curso}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Turno</label>
+                    <select
+                      name="turno"
+                      required
+                      defaultValue={editingVaga?.turno}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Selecione</option>
+                      <option value="Manhã">Manhã</option>
+                      <option value="Tarde">Tarde</option>
+                      <option value="Noite">Noite</option>
+                      <option value="Integral">Integral</option>
+                      <option value="EAD">EAD</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Metodologia</label>
+                    <select
+                      name="metodologia"
+                      required
+                      defaultValue={editingVaga?.metodologia}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Selecione</option>
+                      <option value="Presencial">Presencial</option>
+                      <option value="EAD">EAD</option>
+                      <option value="Híbrido">Híbrido</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Bolsa</label>
+                    <select
+                      name="bolsa"
+                      required
+                      defaultValue={editingVaga?.bolsa}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Selecione</option>
+                      <option value="50%">50%</option>
+                      <option value="100%">100%</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Vagas</label>
+                    <input
+                      name="vagas"
+                      type="number"
+                      required
+                      min="0"
+                      defaultValue={editingVaga?.vagas}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+                  >
+                    {editingVaga ? "Salvar Alterações" : "Cadastrar Vaga"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </div>
   );
@@ -3051,6 +3428,7 @@ export default function App() {
   const [gap, setGap] = useState<GapEntry[]>([]);
   const [isencoes, setIsencoes] = useState<IsencaoEntry[]>([]);
   const [fiesProuni, setFiesProuni] = useState<FiesProuniEntry[]>([]);
+  const [fiesProuniVagas, setFiesProuniVagas] = useState<FiesProuniVaga[]>([]);
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [bomDia, setBomDia] = useState<BomDiaCaptacao[]>([]);
   const [forecast, setForecast] = useState<ForecastCaptacao[]>([]);
@@ -3878,6 +4256,7 @@ export default function App() {
     }
 
     let unsubFiesProuni = () => {};
+    let unsubFiesProuniVagas = () => {};
     if (profile && VIEW_PERMISSIONS.fiesProuni.includes(profile.role)) {
       unsubFiesProuni = onSnapshot(
         collection(db, COLLECTIONS.FIES_PROUNI),
@@ -3894,6 +4273,17 @@ export default function App() {
             OperationType.LIST,
             COLLECTIONS.FIES_PROUNI,
           ),
+      );
+      unsubFiesProuniVagas = onSnapshot(
+        collection(db, COLLECTIONS.FIES_PROUNI_VAGAS),
+        (snap) => {
+          setFiesProuniVagas(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as FiesProuniVaga,
+            ),
+          );
+        },
+        (err) => console.error("Error fetching FIES_PROUNI_VAGAS:", err),
       );
     }
 
@@ -4311,6 +4701,7 @@ export default function App() {
       unsubGap();
       unsubIsencoes();
       unsubFiesProuni();
+      unsubFiesProuniVagas();
       unsubCampanhas();
       unsubBomDia();
       unsubForecast();
@@ -4925,6 +5316,7 @@ export default function App() {
                   insumosPedidos={insumosPedidos}
                   insumosEstoque={insumosEstoque}
                   insumosBaixas={insumosBaixas}
+                  isencoes={isencoes}
                   profile={profile!}
                   onToast={showToast}
                 />
@@ -4987,6 +5379,7 @@ export default function App() {
               {currentView === "fiesProuni" && (
                 <FiesProuniView
                   data={fiesProuni}
+                  vagas={fiesProuniVagas}
                   onToast={showToast}
                   profile={profile!}
                   whatsappMessages={whatsappMessages}
@@ -14179,7 +14572,9 @@ function CalendarioAcoesView({
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white text-slate-700 font-medium"
                   >
                     <option value="">Nenhuma (Não vincular)</option>
-                    {empresasParceiras.map((emp) => (
+                    {empresasParceiras
+                      .filter((emp) => !newAction.colaboradorId || emp.consultorId === newAction.colaboradorId)
+                      .map((emp) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.nome}
                       </option>
@@ -14269,10 +14664,24 @@ function CalendarioAcoesView({
                     const selectedUser = colaboradoresDisponiveis.find(
                       (u) => u.uid === selectedId,
                     );
+                    
+                    let nextEmpresaId = newAction.empresaParceiraId;
+                    let nextEmpresaNome = newAction.empresaParceiraNome;
+                    
+                    if (selectedId && nextEmpresaId) {
+                      const emp = empresasParceiras.find(e => e.id === nextEmpresaId);
+                      if (emp && emp.consultorId !== selectedId) {
+                        nextEmpresaId = "";
+                        nextEmpresaNome = "";
+                      }
+                    }
+
                     setNewAction({
                       ...newAction,
                       colaboradorId: selectedId,
                       colaboradorNome: selectedUser ? selectedUser.name : "",
+                      empresaParceiraId: nextEmpresaId,
+                      empresaParceiraNome: nextEmpresaNome,
                     });
                   }}
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"

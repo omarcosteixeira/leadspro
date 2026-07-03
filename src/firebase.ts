@@ -48,6 +48,7 @@ export const COLLECTIONS = {
   BASES: `artifacts/${appId}/public/data/bases`,
   LINKS: `artifacts/${appId}/public/data/linksUteis`,
   FIES_PROUNI: `artifacts/${appId}/public/data/fies_prouni`,
+  FIES_PROUNI_VAGAS: `artifacts/${appId}/public/data/fies_prouni_vagas`,
   CAMPANHAS: `artifacts/${appId}/public/data/campanhas`,
   BOM_DIA: `artifacts/${appId}/public/data/bom_dia`,
   FORECAST: `artifacts/${appId}/public/data/forecast`,

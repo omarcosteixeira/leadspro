@@ -325,9 +325,10 @@ export function IsencoesView({
     const pendente = isencoes.filter((i) => i.status === "Pendente").length;
     const solicitado = isencoes.filter((i) => i.status === "Solicitado").length;
     const deferido = isencoes.filter((i) => i.status === "Deferido").length;
+    const convertido = isencoes.filter((i) => i.resultado === "Convertido").length;
     const boletoPago = isencoes.filter((i) => i.boletoPago).length;
 
-    return { total, pendente, solicitado, deferido, boletoPago };
+    return { total, pendente, solicitado, deferido, convertido, boletoPago };
   }, [isencoes]);
 
   // EXPORT TO EXCEL
@@ -570,7 +571,7 @@ export function IsencoesView({
       </div>
 
       {/* Metrics Banner */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
           <span className="text-xs font-bold text-slate-400 uppercase">Total</span>
           <span className="text-2xl font-black text-slate-800 mt-2">{stats.total}</span>
@@ -587,9 +588,13 @@ export function IsencoesView({
           <span className="text-xs font-bold text-emerald-500 uppercase">Deferidos</span>
           <span className="text-2xl font-black text-emerald-600 mt-2">{stats.deferido}</span>
         </div>
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between border-l-4 border-l-purple-500 col-span-2 lg:col-span-1">
+        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between border-l-4 border-l-purple-500">
           <span className="text-xs font-bold text-purple-500 uppercase">Boleto Pago</span>
           <span className="text-2xl font-black text-purple-600 mt-2">{stats.boletoPago}</span>
+        </div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between border-l-4 border-l-emerald-600 col-span-2 lg:col-span-1">
+          <span className="text-xs font-bold text-emerald-600 uppercase">Convertidos</span>
+          <span className="text-2xl font-black text-emerald-700 mt-2">{stats.convertido}</span>
         </div>
       </div>
 
