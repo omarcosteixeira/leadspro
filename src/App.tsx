@@ -394,6 +394,7 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.SALA_MATRICULA,
     ROLES.LIDER_FDV,
     ROLES.SSA,
+    ROLES.GESTOR_UNIDADE,
   ],
   campanhas: [
     ROLES.ADMIN_MASTER,
