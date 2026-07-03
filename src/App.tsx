@@ -16818,6 +16818,7 @@ function AdminView({
                   <th className="px-6 py-4">Email</th>
                   <th className="px-6 py-4">CPF</th>
                   <th className="px-6 py-4">Telefone</th>
+                  <th className="px-6 py-4">Unidade</th>
                   <th className="px-6 py-4">Cargo</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Ações</th>
@@ -16850,6 +16851,24 @@ function AdminView({
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500">
                       {u.phone || "-"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={u.unidade || ""}
+                        onChange={(e) =>
+                          handleUpdateUser(u.uid, {
+                            unidade: e.target.value,
+                          })
+                        }
+                        className="text-xs font-bold border-none bg-transparent focus:ring-0 text-slate-700 w-full"
+                      >
+                        <option value="">Nenhuma</option>
+                        {uniqueUnidades.map((un) => (
+                          <option key={un} value={un}>
+                            {un}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-6 py-4">
                       <select
@@ -20276,7 +20295,10 @@ function AdminView({
       )}
 
       {activeTab === "funcionarios" && (
-        <AdminFuncionariosView onToast={onToast} />
+        <AdminFuncionariosView 
+          onToast={onToast} 
+          uniqueUnidades={uniqueUnidades}
+        />
       )}
 
       {activeTab === "backup" && (

@@ -21,6 +21,7 @@ import {
   doc,
   getDocs,
   onSnapshot,
+  serverTimestamp,
 } from "firebase/firestore";
 import {
   Plus,
@@ -305,7 +306,7 @@ export function ControleInsumosComercialView({
           unidadeMedida: stockUnidade,
           estoqueMinimo: stockMinimo,
           descricao: stockDescricao,
-          updatedAt: new Date().toISOString(),
+          updatedAt: serverTimestamp(),
         });
         onToast("Item de estoque atualizado com sucesso!", "success");
 
@@ -456,7 +457,7 @@ export function ControleInsumosComercialView({
       const newQty = selectedStockItem.quantidade - baixaQuantidade;
       await updateDoc(itemRef, {
         quantidade: newQty,
-        updatedAt: new Date().toISOString(),
+        updatedAt: serverTimestamp(),
       });
 
       const newBaixa: any = {
@@ -534,7 +535,7 @@ export function ControleInsumosComercialView({
 
       await updateDoc(pedidoRef, {
         status: newStatus,
-        updatedAt: new Date().toISOString(),
+        updatedAt: serverTimestamp(),
         ...(observacao ? { observacaoRejeicao: observacao } : {}),
       });
 

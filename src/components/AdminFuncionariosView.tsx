@@ -15,9 +15,10 @@ import * as XLSX from "xlsx";
 
 interface Props {
   onToast: (msg: string, type?: "success" | "error") => void;
+  uniqueUnidades?: string[];
 }
 
-export function AdminFuncionariosView({ onToast }: Props) {
+export function AdminFuncionariosView({ onToast, uniqueUnidades = [] }: Props) {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -30,6 +31,7 @@ export function AdminFuncionariosView({ onToast }: Props) {
   const [email, setEmail] = useState("");
   const [tipo, setTipo] = useState<"docente" | "administrativo">("docente");
   const [matricula, setMatricula] = useState("");
+  const [unidade, setUnidade] = useState("");
 
   // Fetch employees
   useEffect(() => {
@@ -76,6 +78,7 @@ export function AdminFuncionariosView({ onToast }: Props) {
         email: email.trim(),
         tipo,
         matricula: matricula.trim(),
+        unidade,
         createdAt: serverTimestamp(),
       });
       onToast("Funcionário cadastrado com sucesso!", "success");
@@ -83,6 +86,7 @@ export function AdminFuncionariosView({ onToast }: Props) {
       setEmail("");
       setTipo("docente");
       setMatricula("");
+      setUnidade("");
     } catch (error) {
       console.error(error);
       onToast("Erro ao cadastrar funcionário.", "error");
@@ -143,6 +147,7 @@ export function AdminFuncionariosView({ onToast }: Props) {
       "E-mail": f.email || "",
       Tipo: f.tipo === "administrativo" ? "Administrativo" : "Docente",
       Matrícula: f.matricula,
+      Unidade: f.unidade || "",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -192,12 +197,14 @@ export function AdminFuncionariosView({ onToast }: Props) {
         "E-mail": "joao@dominio.com",
         Tipo: "Administrativo",
         Matrícula: "123456",
+        Unidade: "Polo São Pedro",
       },
       {
         "Nome Completo": "Maria Oliveira",
         "E-mail": "maria@dominio.com",
         Tipo: "Docente",
         Matrícula: "789012",
+        Unidade: "Polo Araruama",
       },
     ];
 
@@ -258,6 +265,10 @@ export function AdminFuncionariosView({ onToast }: Props) {
           (k) =>
             k.toLowerCase().includes("matr") || k.toLowerCase().includes("id"),
         );
+        const colUnidade = keys.find(
+          (k) =>
+            k.toLowerCase().includes("unidade") || k.toLowerCase().includes("polo"),
+        );
 
         if (!colNome || !colMatricula) {
           onToast(
@@ -281,6 +292,7 @@ export function AdminFuncionariosView({ onToast }: Props) {
           }
 
           const rawEmail = colEmail ? String(row[colEmail] || "").trim() : "";
+          const rawUnidade = colUnidade ? String(row[colUnidade] || "").trim() : "";
           const rawTipoInput = colTipo
             ? String(row[colTipo] || "")
                 .trim()
@@ -315,6 +327,9 @@ export function AdminFuncionariosView({ onToast }: Props) {
             if (!existing.tipo && finalTipo) {
               updates.tipo = finalTipo;
             }
+            if ((!existing.unidade || existing.unidade.trim() === "") && rawUnidade) {
+              updates.unidade = rawUnidade;
+            }
 
             if (Object.keys(updates).length > 0) {
               const docRef = doc(db, COLLECTIONS.FUNCIONARIOS, existing.id);
@@ -331,6 +346,7 @@ export function AdminFuncionariosView({ onToast }: Props) {
               email: rawEmail,
               tipo: finalTipo,
               matricula: rawMatricula,
+              unidade: rawUnidade,
               createdAt: serverTimestamp(),
             });
             importedCount++;
@@ -516,6 +532,24 @@ export function AdminFuncionariosView({ onToast }: Props) {
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-500">
+              Unidade
+            </label>
+            <select
+              value={unidade}
+              onChange={(e) => setUnidade(e.target.value)}
+              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">Selecione uma Unidade</option>
+              {uniqueUnidades.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="flex justify-end pt-2">
           <button
@@ -588,6 +622,7 @@ export function AdminFuncionariosView({ onToast }: Props) {
                   </th>
                   <th className="px-6 py-3">Nome</th>
                   <th className="px-6 py-3">E-mail</th>
+                  <th className="px-6 py-3">Unidade</th>
                   <th className="px-6 py-3">Tipo</th>
                   <th className="px-6 py-3">Matrícula</th>
                   <th className="px-6 py-3 text-right">Ações</th>
@@ -614,6 +649,9 @@ export function AdminFuncionariosView({ onToast }: Props) {
                       </td>
                       <td className="px-6 py-3.5 text-slate-500">
                         {f.email || "—"}
+                      </td>
+                      <td className="px-6 py-3.5 text-slate-500">
+                        {f.unidade || "—"}
                       </td>
                       <td className="px-6 py-3.5">
                         <span

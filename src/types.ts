@@ -443,6 +443,7 @@ export interface Funcionario {
   email: string;
   tipo: 'docente' | 'administrativo';
   matricula: string;
+  unidade?: string;
   createdAt: any;
 }
 
