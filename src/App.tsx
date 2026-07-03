@@ -14910,9 +14910,9 @@ function EmpresasParceirasView({
       Seguimento: emp.seguimento || "",
       Classificação: emp.classificacao || "",
       Status: emp.statusEmpresa || "",
-      "Link Maps": emp.linkMaps,
+      "Link Maps": emp.linkMaps || "",
       "Link Sales": emp.linkSales || "",
-      "Consultor Vinculado": emp.consultorNome || "Sem consultor",
+      "Consultor Vinculado": emp.consultorNome || "",
       "Unidades Vinculadas": (emp.unidadesVinculadas || []).join(", "),
     }));
     exportToExcel(exportData, "Empresas_Parceiras");
@@ -14944,11 +14944,11 @@ function EmpresasParceirasView({
         };
 
         const batch = importData.map((item) => {
-          const importedConsultorNome = String(getVal(item, "Consultor", "consultor", "consultorNome", "consultor_vinculado") || "").trim();
+          const importedConsultorNome = String(getVal(item, "Consultor", "consultor", "consultorNome", "consultor_vinculado", "Consultor Vinculado") || "").trim();
           const matchedImportedUser = (users || []).find(u => u.name.trim().toLowerCase() === importedConsultorNome.toLowerCase());
           const consultorId = matchedImportedUser ? matchedImportedUser.uid : "";
 
-          const importedUnidadesRaw = String(getVal(item, "Unidades", "unidade", "unidadesVinculadas", "unidade_vinculada", "unidades_vinculadas") || "").trim();
+          const importedUnidadesRaw = String(getVal(item, "Unidades", "unidade", "unidadesVinculadas", "unidade_vinculada", "unidades_vinculadas", "Unidades Vinculadas") || "").trim();
           const unidadesVinculadas = importedUnidadesRaw ? importedUnidadesRaw.split(",").map(x => x.trim()).filter(Boolean) : [];
 
           return {
