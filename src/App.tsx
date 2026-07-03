@@ -2078,8 +2078,8 @@ function FiesProuniView({
 
   const filteredData = data.filter((item) => {
     // Gestor Unidade filtering
-    if (profile.role === "Gestor Unidade") {
-      if (!profile.unidade || item.unidade !== profile.unidade) {
+    if (profile.role === ROLES.GESTOR_UNIDADE) {
+      if (profile.unidade && item.unidade && item.unidade !== profile.unidade) {
         return false;
       }
     }
@@ -2134,10 +2134,21 @@ function FiesProuniView({
       .length,
   };
 
+  const safeVagas = Array.isArray(vagas) ? vagas : [];
+
+  const filteredVagas = safeVagas.filter((item) => {
+    if (profile.role === ROLES.GESTOR_UNIDADE) {
+      if (profile.unidade && item.unidade && item.unidade !== profile.unidade) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   const vagasStats = {
-    totalVagas: vagas.reduce((acc, curr) => acc + curr.vagas, 0),
-    total100: vagas.filter(v => v.bolsa === "100%").reduce((acc, curr) => acc + curr.vagas, 0),
-    total50: vagas.filter(v => v.bolsa === "50%").reduce((acc, curr) => acc + curr.vagas, 0),
+    totalVagas: filteredVagas.reduce((acc, curr) => acc + (Number(curr?.vagas) || 0), 0),
+    total100: filteredVagas.filter(v => v?.bolsa === "100%").reduce((acc, curr) => acc + (Number(curr?.vagas) || 0), 0),
+    total50: filteredVagas.filter(v => v?.bolsa === "50%").reduce((acc, curr) => acc + (Number(curr?.vagas) || 0), 0),
   };
 
   const handleSaveVaga = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -2424,7 +2435,13 @@ function FiesProuniView({
               </button>
               <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
                 <Upload size={18} />
-                <span>Importação indisponível</span>
+                <span>Importar Lista</span>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  className="hidden"
+                  onChange={handleImport}
+                />
               </label>
               <button
                 onClick={handleExport}
@@ -2897,12 +2914,12 @@ function FiesProuniView({
                   </tr>
                 </thead>
                 <tbody className="text-sm divide-y divide-slate-50">
-                  {vagas.length === 0 ? (
+                  {filteredVagas.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="p-8 text-center text-slate-400">Nenhuma vaga cadastrada.</td>
                     </tr>
                   ) : (
-                    vagas.map((vaga) => (
+                    filteredVagas.map((vaga) => (
                       <tr key={vaga.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="p-4 font-medium text-slate-700">{vaga.periodo}</td>
                         <td className="p-4 font-mono text-slate-500">{vaga.codCurso}</td>
