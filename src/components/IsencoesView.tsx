@@ -26,8 +26,11 @@ import {
   CheckCircle,
   TrendingUp,
   User,
+  Download,
+  Upload,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import * as XLSX from "xlsx";
 
 interface IsencoesViewProps {
   isencoes: IsencaoEntry[];
@@ -50,6 +53,17 @@ export function IsencoesView({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<IsencaoEntry | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Modal Sem Interesse State
+  const [resultadoModalState, setResultadoModalState] = useState<{
+    isOpen: boolean;
+    isencaoId: string | null;
+    observacao: string;
+  }>({
+    isOpen: false,
+    isencaoId: null,
+    observacao: "",
+  });
 
   // Form State
   const [formNome, setFormNome] = useState("");
@@ -213,6 +227,48 @@ export function IsencoesView({
     }
   };
 
+  const handleToggleResultado = async (
+    item: IsencaoEntry,
+    resultado: "Convertido" | "Sem interesse"
+  ) => {
+    if (resultado === "Sem interesse") {
+      setResultadoModalState({
+        isOpen: true,
+        isencaoId: item.id,
+        observacao: item.observacaoResultado || "",
+      });
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, COLLECTIONS.ISENCOES, item.id), {
+        resultado: resultado,
+        observacaoResultado: null,
+        updatedAt: serverTimestamp(),
+      });
+      onToast("Resultado atualizado para Convertido!", "success");
+    } catch (error) {
+      console.error(error);
+      onToast("Erro ao atualizar resultado.", "error");
+    }
+  };
+
+  const handleSaveSemInteresse = async () => {
+    if (!resultadoModalState.isencaoId) return;
+    try {
+      await updateDoc(doc(db, COLLECTIONS.ISENCOES, resultadoModalState.isencaoId), {
+        resultado: "Sem interesse",
+        observacaoResultado: resultadoModalState.observacao,
+        updatedAt: serverTimestamp(),
+      });
+      onToast("Observação salva com sucesso!", "success");
+      setResultadoModalState({ isOpen: false, isencaoId: null, observacao: "" });
+    } catch (error) {
+      console.error(error);
+      onToast("Erro ao salvar observação.", "error");
+    }
+  };
+
   const handleToggleBoleto = async (entry: IsencaoEntry) => {
     try {
       const nextBoletoStatus = !entry.boletoPago;
@@ -274,6 +330,186 @@ export function IsencoesView({
     return { total, pendente, solicitado, deferido, boletoPago };
   }, [isencoes]);
 
+  // EXPORT TO EXCEL
+  const handleExportExcel = () => {
+    if (filteredIsencoes.length === 0) {
+      onToast("Não existem dados para exportar.", "error");
+      return;
+    }
+
+    const dataToExport = filteredIsencoes.map((item) => ({
+      Nome: item.nome,
+      CPF: item.cpf,
+      Telefone: item.telefone,
+      Oportunidade: item.numeroOportunidade || "",
+      "Curso Interesse": item.curso,
+      "Curso Origem": item.cursoOrigem || "",
+      "Universidade Origem": item.universidadeOrigem || "",
+      Digitaliza: item.inseridoDigitaliza,
+      Status: item.status,
+      "Boleto Pago": item.boletoPago ? "Sim" : "Não",
+      Resultado: item.resultado || "",
+      Observacao: item.observacaoResultado || "",
+      Unidade: item.unidade || "",
+      CriadoPor: item.createdByNome || "",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Isencoes");
+
+    XLSX.writeFile(
+      workbook,
+      `Isencoes_Export_${new Date().toISOString().split("T")[0]}.xlsx`,
+    );
+    onToast("Excel exportado com sucesso!", "success");
+  };
+
+  // EXCEL TEMPLATE DOWNLOAD
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      {
+        Nome: "João da Silva",
+        CPF: "123.456.789-00",
+        Telefone: "(11) 99999-9999",
+        Oportunidade: "12345",
+        "Curso Interesse": "Direito",
+        "Curso Origem": "Administração",
+        "Universidade Origem": "Estácio",
+        Digitaliza: "Não",
+        Status: "Pendente",
+        "Boleto Pago": "Não",
+        Unidade: "Sede",
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Modelo Importação");
+
+    XLSX.writeFile(workbook, `Modelo_Isencoes.xlsx`);
+    onToast("Modelo baixado com sucesso!", "success");
+  };
+
+  // IMPORT FROM EXCEL
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const workbook = XLSX.read(bstr, { type: "binary" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rawData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        if (!rawData || rawData.length === 0) {
+          onToast(
+            "O arquivo Excel correspondente está vazio ou em formato inválido.",
+            "error",
+          );
+          return;
+        }
+
+        let importedCount = 0;
+        setLoading(true);
+
+        for (const row of rawData) {
+          const nome = row["Nome"] || row["nome"];
+          const cpf = row["CPF"] || row["cpf"];
+          const telefone = row["Telefone"] || row["telefone"];
+          const curso = row["Curso Interesse"] || row["curso"] || row["Curso"];
+          
+          if (!nome || !cpf || !telefone || !curso) continue;
+
+          let statusRaw = row["Status"] || row["status"] || "Pendente";
+          let status: "Pendente" | "Solicitado" | "Deferido" = "Pendente";
+          if (["Pendente", "Solicitado", "Deferido"].includes(statusRaw)) {
+             status = statusRaw as any;
+          }
+
+          let digitalizaRaw = row["Digitaliza"] || row["digitaliza"] || "Não";
+          let digitaliza: "Sim" | "Não" = "Não";
+          if (["Sim", "Não"].includes(digitalizaRaw)) {
+             digitaliza = digitalizaRaw as any;
+          }
+
+          let boletoRaw = row["Boleto Pago"] || row["boleto pago"] || row["BoletoPago"] || "Não";
+          let boletoPago = boletoRaw === "Sim";
+
+          const unidadeRaw = row["Unidade"] || row["unidade"];
+
+          const isencaoData = {
+            nome: String(nome).trim(),
+            cpf: String(cpf).trim(),
+            telefone: String(telefone).trim(),
+            numeroOportunidade: String(row["Oportunidade"] || row["oportunidade"] || "").trim(),
+            curso: String(curso).trim(),
+            cursoOrigem: String(row["Curso Origem"] || row["curso origem"] || "").trim(),
+            universidadeOrigem: String(row["Universidade Origem"] || row["universidade origem"] || "").trim(),
+            inseridoDigitaliza: digitaliza,
+            status,
+            boletoPago,
+            unidade: profile.role === "Gestor Unidade" ? (profile.unidade || "") : (unidadeRaw ? String(unidadeRaw).trim() : (profile.unidade || "")),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            createdByNome: profile.name || profile.email || "Usuário Desconhecido",
+          };
+
+          await addDoc(collection(db, COLLECTIONS.ISENCOES), isencaoData);
+          importedCount++;
+          
+          if (boletoPago) {
+             try {
+                const cleanCpf = isencaoData.cpf.replace(/\D/g, "");
+                const existsInGap = gap.some(
+                  (g) => (g.cpf || "").replace(/\D/g, "") === cleanCpf
+                );
+          
+                if (!existsInGap) {
+                  await addDoc(collection(db, COLLECTIONS.GAP), {
+                    nome: isencaoData.nome,
+                    cpf: isencaoData.cpf,
+                    telefone: isencaoData.telefone,
+                    produto: "Graduação",
+                    numeroOportunidade: isencaoData.numeroOportunidade || "",
+                    curso: isencaoData.curso,
+                    metodologia: "Isenção",
+                    formaIngresso: "Isenção",
+                    matAcad: false,
+                    documentos: {},
+                    unidade: isencaoData.unidade,
+                    createdAt: serverTimestamp(),
+                  });
+                }
+             } catch (e) {
+                console.error("Failed to copy imported isencao to gap", e);
+             }
+          }
+        }
+
+        if (importedCount > 0) {
+          onToast(`${importedCount} isenções importadas com sucesso!`, "success");
+        } else {
+          onToast(
+            "Nenhuma isenção válida encontrada. Verifique as colunas obrigatórias (Nome, CPF, Telefone, Curso Interesse).",
+            "error",
+          );
+        }
+      } catch (error) {
+        console.error("Erro na importação:", error);
+        onToast("Erro ao importar o arquivo Excel.", "error");
+      } finally {
+        setLoading(false);
+        // Reset file input
+        if (e.target) e.target.value = "";
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   return (
     <div className="space-y-6" id="isencoes-tracking-container">
       {/* Header and top metrics */}
@@ -287,13 +523,50 @@ export function IsencoesView({
             Gerencie o status e o pagamento de isenções acadêmicas integradas ao GAP.
           </p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
-        >
-          <Plus size={20} />
-          Nova Isenção
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition-all"
+            title="Exportar para Excel"
+          >
+            <Download size={20} />
+            <span className="hidden sm:inline">Exportar</span>
+          </button>
+          
+          <div className="relative">
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleImportExcel}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              title="Importar Excel"
+            />
+            <button
+              className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition-all"
+              title="Importar de Excel"
+            >
+              <Upload size={20} />
+              <span className="hidden sm:inline">Importar</span>
+            </button>
+          </div>
+
+          <button
+            onClick={handleDownloadTemplate}
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition-all"
+            title="Baixar Modelo de Excel"
+          >
+            <FileText size={20} />
+            <span className="hidden md:inline">Modelo</span>
+          </button>
+
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
+          >
+            <Plus size={20} />
+            Nova Isenção
+          </button>
+        </div>
       </div>
 
       {/* Metrics Banner */}
@@ -387,6 +660,7 @@ export function IsencoesView({
                 <th className="p-4 text-center">Digitaliza</th>
                 <th className="p-4 text-center">Status</th>
                 <th className="p-4 text-center">Boleto Pago</th>
+                <th className="p-4 text-center">Resultado</th>
                 <th className="p-4 text-center">Ações Rápidas</th>
                 <th className="p-4 text-right">Ações</th>
               </tr>
@@ -467,6 +741,37 @@ export function IsencoesView({
                           </>
                         )}
                       </button>
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="flex flex-col items-center gap-1.5">
+                        <button
+                          onClick={() => handleToggleResultado(item, "Convertido")}
+                          className={cn(
+                            "px-2 py-1 text-[10px] font-bold rounded-md transition-all w-full",
+                            item.resultado === "Convertido"
+                              ? "bg-emerald-500 text-white"
+                              : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+                          )}
+                        >
+                          Convertido
+                        </button>
+                        <button
+                          onClick={() => handleToggleResultado(item, "Sem interesse")}
+                          className={cn(
+                            "px-2 py-1 text-[10px] font-bold rounded-md transition-all w-full",
+                            item.resultado === "Sem interesse"
+                              ? "bg-rose-500 text-white"
+                              : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+                          )}
+                        >
+                          Sem interesse
+                        </button>
+                      </div>
+                      {item.resultado === "Sem interesse" && item.observacaoResultado && (
+                        <div className="text-[10px] text-slate-400 mt-1 max-w-[120px] truncate mx-auto" title={item.observacaoResultado}>
+                          {item.observacaoResultado}
+                        </div>
+                      )}
                     </td>
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-1.5">
@@ -714,6 +1019,56 @@ export function IsencoesView({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Sem Interesse */}
+      {resultadoModalState.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                Motivo - Sem interesse
+              </h3>
+              <button
+                onClick={() => setResultadoModalState({ isOpen: false, isencaoId: null, observacao: "" })}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Observação <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  required
+                  value={resultadoModalState.observacao}
+                  onChange={(e) => setResultadoModalState(prev => ({ ...prev, observacao: e.target.value }))}
+                  placeholder="Por que o candidato não tem interesse?"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none h-24"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button
+                type="button"
+                onClick={() => setResultadoModalState({ isOpen: false, isencaoId: null, observacao: "" })}
+                className="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-200 bg-slate-100 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSemInteresse}
+                disabled={!resultadoModalState.observacao.trim()}
+                className="px-4 py-2 font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Salvar
+              </button>
+            </div>
           </div>
         </div>
       )}

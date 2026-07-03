@@ -480,6 +480,8 @@ export interface IsencaoEntry {
   inseridoDigitaliza: 'Sim' | 'Não';
   status: 'Pendente' | 'Solicitado' | 'Deferido';
   boletoPago: boolean;
+  resultado?: 'Convertido' | 'Sem interesse';
+  observacaoResultado?: string;
   createdAt: any;
   updatedAt?: any;
   createdByNome?: string;
