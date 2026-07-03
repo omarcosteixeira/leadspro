@@ -2923,7 +2923,7 @@ function FiesProuniView({
                               }}
                               className="text-slate-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition-all"
                             >
-                              <Edit size={18} />
+                              <Edit2 size={18} />
                             </button>
                             <button
                               onClick={() => handleDeleteVaga(vaga.id)}
