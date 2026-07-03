@@ -28,11 +28,11 @@ import {
   InsumoPedido, 
   InsumoEstoque,
   InsumoBaixa,
-  IsencaoEntry
+  IsencaoEntry,
+  PedidoCursoEntry
 } from "../types";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-
 import { InsumosDashboard } from "./InsumosDashboard";
 
 // Reusing StatCard or defining it locally for portability
@@ -68,6 +68,7 @@ interface RelatoriosViewProps {
   insumosEstoque: InsumoEstoque[];
   insumosBaixas: InsumoBaixa[];
   isencoes: IsencaoEntry[];
+  pedidosCursos?: PedidoCursoEntry[];
   profile: UserProfile;
   onToast: (m: string, t?: "success" | "error") => void;
 }
@@ -82,11 +83,12 @@ export function RelatoriosView({
   insumosEstoque,
   insumosBaixas,
   isencoes,
+  pedidosCursos = [],
   profile,
   onToast
 }: RelatoriosViewProps) {
   const [activeTab, setActiveTab] = useState<
-    "historico" | "bases" | "fiesProuni" | "planoAcao" | "empresas" | "insumos" | "isencoes"
+    "historico" | "bases" | "fiesProuni" | "planoAcao" | "empresas" | "insumos" | "isencoes" | "pedidos_cursos"
   >("historico");
 
   const dashboardRef = useRef<HTMLDivElement>(null);
@@ -338,6 +340,30 @@ export function RelatoriosView({
     return { total, pendente, solicitado, deferido, convertido, boletoPago, byCurso, byOrigem };
   }, [isencoes]);
 
+  // --- Pedidos de Cursos Stats ---
+  const pedidosCursosStats = useMemo(() => {
+    const total = pedidosCursos.length;
+    
+    const byCursoMap: Record<string, number> = {};
+    pedidosCursos.forEach(p => {
+      if (p.curso) {
+        const cursoNorm = p.curso.trim();
+        byCursoMap[cursoNorm] = (byCursoMap[cursoNorm] || 0) + 1;
+      }
+    });
+
+    const byCurso = Object.entries(byCursoMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0",
+      }));
+
+    return { total, byCurso };
+  }, [pedidosCursos]);
+
   return (
     <div className="space-y-6 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -365,6 +391,7 @@ export function RelatoriosView({
           { id: "empresas", label: "Empresas", icon: Building2 },
           { id: "insumos", label: "Insumos", icon: Boxes },
           { id: "isencoes", label: "Isenções", icon: FileText },
+          { id: "pedidos_cursos", label: "Pedidos de Cursos", icon: UserPlus },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -393,12 +420,14 @@ export function RelatoriosView({
             {activeTab === "empresas" && <Building2 className="text-blue-600" />}
             {activeTab === "insumos" && <Boxes className="text-blue-600" />}
             {activeTab === "isencoes" && <FileText className="text-blue-600" />}
+            {activeTab === "pedidos_cursos" && <UserPlus className="text-blue-600" />}
             Dashboard: {activeTab === "historico" ? "Histórico de Leads" : 
                         activeTab === "bases" ? "Bases de Candidatos" :
                         activeTab === "fiesProuni" ? "Fies e Prouni" :
                         activeTab === "planoAcao" ? "Plano de Ação" :
                         activeTab === "empresas" ? "Empresas Parceiras" : 
-                        activeTab === "insumos" ? "Controle de Insumos" : "Acompanhamento de Isenções"}
+                        activeTab === "insumos" ? "Controle de Insumos" : 
+                        activeTab === "isencoes" ? "Acompanhamento de Isenções" : "Pedidos de Cursos"}
           </h3>
           <span className="text-xs font-mono text-slate-400">Gerado em: {new Date().toLocaleString("pt-BR")}</span>
         </div>
@@ -613,6 +642,17 @@ export function RelatoriosView({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ChartSection title="Cursos Mais Buscados (Top 5)" data={isencoesStats.byCurso} />
               <ChartSection title="Instituição de Origem (Top 5)" data={isencoesStats.byOrigem} />
+            </div>
+          </div>
+        )}
+
+        {activeTab === "pedidos_cursos" && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              <StatCard title="Total de Preenchimentos" value={pedidosCursosStats.total} icon={FileText} color="bg-blue-500" />
+            </div>
+            <div className="grid grid-cols-1 gap-6">
+              <ChartSection title="Cursos Mais Pedidos" data={pedidosCursosStats.byCurso} />
             </div>
           </div>
         )}

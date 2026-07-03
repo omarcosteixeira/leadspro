@@ -150,10 +150,12 @@ import {
   InsumoEstoqueComercial,
   IsencaoEntry,
   ControleConcorrencia,
+  PedidoCursoEntry,
 } from "./types";
 import { ProfileModal } from "./components/ProfileModal";
 import { PublicRegistrationForm } from "./components/PublicRegistrationForm";
 import { PublicInsumoForm } from "./components/PublicInsumoForm";
+import { PublicPedidoCursoForm } from "./components/PublicPedidoCursoForm";
 import { MessageTemplateModal } from "./components/MessageTemplateModal";
 import { CursosDisponiveisView } from "./components/CursosDisponiveisView";
 import { ControleInsumosView } from "./components/ControleInsumosView";
@@ -3467,6 +3469,7 @@ export default function App() {
   const [basesDisparo, setBasesDisparo] = useState<BaseDisparoEntry[]>([]);
   const [basesRenovacao, setBasesRenovacao] = useState<BaseEntry[]>([]);
   const [cursos, setCursos] = useState<CursoDisponivel[]>([]);
+  const [pedidosCursos, setPedidosCursos] = useState<PedidoCursoEntry[]>([]);
   const [insumosPedidos, setInsumosPedidos] = useState<InsumoPedido[]>([]);
   const [insumosEstoque, setInsumosEstoque] = useState<InsumoEstoque[]>([]);
   const [insumosPedidosComercial, setInsumosPedidosComercial] = useState<
@@ -4273,6 +4276,20 @@ export default function App() {
       );
     }
 
+    let unsubPedidosCursos = () => {};
+    if (profile && (VIEW_PERMISSIONS.historico.includes(profile.role) || VIEW_PERMISSIONS.relatorios.includes(profile.role))) {
+      unsubPedidosCursos = onSnapshot(
+        collection(db, COLLECTIONS.PEDIDO_CURSOS),
+        (snap) => {
+          setPedidosCursos(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as PedidoCursoEntry),
+          );
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.PEDIDO_CURSOS),
+      );
+    }
+
     let unsubFiesProuni = () => {};
     let unsubFiesProuniVagas = () => {};
     if (profile && VIEW_PERMISSIONS.fiesProuni.includes(profile.role)) {
@@ -4718,6 +4735,7 @@ export default function App() {
       unsubBases();
       unsubGap();
       unsubIsencoes();
+      unsubPedidosCursos();
       unsubFiesProuni();
       unsubFiesProuniVagas();
       unsubCampanhas();
@@ -4921,6 +4939,23 @@ export default function App() {
           )}
         </AnimatePresence>
         <PublicRegistrationForm onToast={showToast} />
+      </div>
+    );
+  }
+
+  if (currentView === "pedido-curso") {
+    return (
+      <div className="min-h-screen bg-[#01112c] flex flex-col justify-between">
+        <AnimatePresence>
+          {toast && (
+            <Toast
+              message={toast.message}
+              type={toast.type}
+              onClose={() => setToast(null)}
+            />
+          )}
+        </AnimatePresence>
+        <PublicPedidoCursoForm onToast={showToast} />
       </div>
     );
   }
@@ -5330,6 +5365,7 @@ export default function App() {
                   bases={bases}
                   fiesProuni={fiesProuni}
                   calendarioAcoes={calendarioAcoes}
+                  pedidosCursos={pedidosCursos}
                   empresasParceiras={empresasParceiras}
                   insumosPedidos={insumosPedidos}
                   insumosEstoque={insumosEstoque}
@@ -5359,6 +5395,7 @@ export default function App() {
                   gap={gap}
                   basesRenovacao={basesRenovacao}
                   calendarioAcoes={calendarioAcoes}
+                  pedidosCursos={pedidosCursos}
                 />
               )}
               {currentView === "bases" && (
@@ -8303,6 +8340,7 @@ function HistoricoView({
   gap,
   basesRenovacao,
   calendarioAcoes = [],
+  pedidosCursos = [],
 }: {
   leads: Lead[];
   profile: UserProfile;
@@ -8315,6 +8353,7 @@ function HistoricoView({
   gap: GapEntry[];
   basesRenovacao: BaseEntry[];
   calendarioAcoes?: CalendarioAcao[];
+  pedidosCursos?: PedidoCursoEntry[];
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [courseFilter, setCourseFilter] = useState("");
@@ -8335,7 +8374,7 @@ function HistoricoView({
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [historicoSubTab, setHistoricoSubTab] = useState<"dashboard" | "lista">("dashboard");
+  const [historicoSubTab, setHistoricoSubTab] = useState<"dashboard" | "lista" | "pedidos_cursos">("dashboard");
 
   const [editFormData, setEditFormData] = useState({
     nome: "",
@@ -8846,6 +8885,18 @@ function HistoricoView({
           <List size={18} />
           <span>Lista de Leads</span>
         </button>
+        <button
+          onClick={() => setHistoricoSubTab("pedidos_cursos")}
+          className={cn(
+            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
+            historicoSubTab === "pedidos_cursos"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+              : "text-slate-500 hover:bg-slate-50",
+          )}
+        >
+          <GraduationCap size={18} />
+          <span>Pedidos de Cursos</span>
+        </button>
       </div>
 
       {historicoSubTab === "dashboard" && (
@@ -9253,6 +9304,65 @@ function HistoricoView({
         </div>
       </div>
     </>
+  )}
+
+  {historicoSubTab === "pedidos_cursos" && (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">
+            Pedidos de Cursos
+          </h2>
+          <p className="text-slate-500 text-sm mt-1">
+            Gere o link e acompanhe os cursos solicitados.
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            const url = `${window.location.origin}${window.location.pathname}?view=pedido-curso`;
+            navigator.clipboard.writeText(url);
+            onToast("Link copiado para a área de transferência!", "success");
+          }}
+          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 flex items-center space-x-2"
+        >
+          <Copy size={18} />
+          <span>Gerar Link do Formulário</span>
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                <th className="p-4 font-bold border-b border-slate-100">Nome</th>
+                <th className="p-4 font-bold border-b border-slate-100">Telefone</th>
+                <th className="p-4 font-bold border-b border-slate-100">Curso</th>
+                <th className="p-4 font-bold border-b border-slate-100">Data</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm divide-y divide-slate-50">
+              {pedidosCursos.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-slate-400">Nenhum pedido registrado.</td>
+                </tr>
+              ) : (
+                pedidosCursos.map((pedido) => (
+                  <tr key={pedido.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 font-medium text-slate-700">{pedido.nome}</td>
+                    <td className="p-4 text-slate-600">{pedido.telefone}</td>
+                    <td className="p-4 text-slate-800 font-semibold">{pedido.curso}</td>
+                    <td className="p-4 text-slate-500">
+                      {pedido.createdAt ? new Date(pedido.createdAt.toDate()).toLocaleDateString() : "-"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   )}
 
       <WhatsAppMessageSelector

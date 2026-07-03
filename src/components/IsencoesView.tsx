@@ -73,6 +73,7 @@ export function IsencoesView({
   const [formCurso, setFormCurso] = useState("");
   const [formCursoOrigem, setFormCursoOrigem] = useState("");
   const [formUniversidadeOrigem, setFormUniversidadeOrigem] = useState("");
+  const [formFormaIngresso, setFormFormaIngresso] = useState("");
   const [formDigitaliza, setFormDigitaliza] = useState<"Sim" | "Não">("Não");
   const [formStatus, setFormStatus] = useState<"Pendente" | "Solicitado" | "Deferido">("Pendente");
   const [formBoletoPago, setFormBoletoPago] = useState(false);
@@ -86,6 +87,7 @@ export function IsencoesView({
     setFormCurso("");
     setFormCursoOrigem("");
     setFormUniversidadeOrigem("");
+    setFormFormaIngresso("");
     setFormDigitaliza("Não");
     setFormStatus("Pendente");
     setFormBoletoPago(false);
@@ -101,6 +103,7 @@ export function IsencoesView({
     setFormCurso(entry.curso || "");
     setFormCursoOrigem(entry.cursoOrigem || "");
     setFormUniversidadeOrigem(entry.universidadeOrigem || "");
+    setFormFormaIngresso(entry.formaIngresso || "");
     setFormDigitaliza(entry.inseridoDigitaliza || "Não");
     setFormStatus(entry.status || "Pendente");
     setFormBoletoPago(entry.boletoPago || false);
@@ -165,6 +168,7 @@ export function IsencoesView({
       curso: formCurso.trim(),
       cursoOrigem: formCursoOrigem.trim(),
       universidadeOrigem: formUniversidadeOrigem.trim(),
+      formaIngresso: formFormaIngresso.trim(),
       inseridoDigitaliza: formDigitaliza,
       status: formStatus,
       boletoPago: formBoletoPago,
@@ -346,6 +350,7 @@ export function IsencoesView({
       "Curso Interesse": item.curso,
       "Curso Origem": item.cursoOrigem || "",
       "Universidade Origem": item.universidadeOrigem || "",
+      "Forma de Ingresso": item.formaIngresso || "",
       Digitaliza: item.inseridoDigitaliza,
       Status: item.status,
       "Boleto Pago": item.boletoPago ? "Sim" : "Não",
@@ -662,6 +667,7 @@ export function IsencoesView({
                 <th className="p-4">Oportunidade</th>
                 <th className="p-4">Curso Interesse (Estácio)</th>
                 <th className="p-4">Origem (Curso/IES)</th>
+                <th className="p-4">Forma de Ingresso</th>
                 <th className="p-4 text-center">Digitaliza</th>
                 <th className="p-4 text-center">Status</th>
                 <th className="p-4 text-center">Boleto Pago</th>
@@ -673,7 +679,7 @@ export function IsencoesView({
             <tbody className="divide-y divide-slate-100 text-sm">
               {filteredIsencoes.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-slate-400">
+                  <td colSpan={12} className="p-8 text-center text-slate-400">
                     Nenhuma isenção cadastrada ou compatível com os filtros.
                   </td>
                 </tr>
@@ -699,6 +705,9 @@ export function IsencoesView({
                     <td className="p-4 text-slate-600">
                       <div className="text-xs font-bold text-slate-700">{item.cursoOrigem || "—"}</div>
                       <div className="text-xs text-slate-400 mt-0.5">{item.universidadeOrigem || "—"}</div>
+                    </td>
+                    <td className="p-4 text-slate-600">
+                      <div className="text-xs font-medium text-slate-700">{item.formaIngresso || "—"}</div>
                     </td>
                     <td className="p-4 text-center">
                       <span
@@ -957,6 +966,19 @@ export function IsencoesView({
                     onChange={(e) => setFormUniversidadeOrigem(e.target.value)}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
                     placeholder="Ex: IES de Origem"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Forma de Ingresso (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formFormaIngresso}
+                    onChange={(e) => setFormFormaIngresso(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                    placeholder="Ex: Transferência Externa"
                   />
                 </div>
 

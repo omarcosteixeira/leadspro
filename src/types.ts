@@ -482,6 +482,14 @@ export interface BotReport {
   sentAt: any;
 }
 
+export interface PedidoCursoEntry {
+  id: string;
+  nome: string;
+  telefone: string;
+  curso: string;
+  createdAt: any;
+}
+
 export interface IsencaoEntry {
   id: string;
   nome: string;
@@ -491,6 +499,7 @@ export interface IsencaoEntry {
   curso: string;
   cursoOrigem?: string;
   universidadeOrigem?: string;
+  formaIngresso?: string;
   inseridoDigitaliza: 'Sim' | 'Não';
   status: 'Pendente' | 'Solicitado' | 'Deferido';
   boletoPago: boolean;
