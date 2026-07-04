@@ -2087,9 +2087,9 @@ function FiesProuniView({
     }
 
     const matchesSearch =
-      item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.cpf.includes(searchTerm) ||
-      item.curso.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.cpf || "").includes(searchTerm) ||
+      (item.curso || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.lista &&
         item.lista.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (item.responsavelEntrevista &&
@@ -2709,12 +2709,12 @@ function FiesProuniView({
                     />
                   </td>
                   <td className="px-6 py-4">
-                    <div className="font-medium text-gray-900">{item.nome}</div>
+                    <div className="font-medium text-gray-900">{item.nome || "Sem nome"}</div>
                     <div className="text-[10px] font-bold text-indigo-500">
                       Ranking: {item.posicaoRanking || "-"}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {formatCPF(item.cpf)}
+                      {formatCPF(item.cpf || "")}
                     </div>
                     <div className="text-xs text-gray-400">{item.periodo}</div>
                   </td>
@@ -3006,7 +3006,7 @@ function FiesProuniView({
                     <input
                       name="cpf"
                       value={cpfInput}
-                      onChange={(e) => setCpfInput(formatCPF(e.target.value))}
+                      onChange={(e) => setCpfInput(formatCPF(e.target.value || ""))}
                       required
                       placeholder="000.000.000-00"
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"

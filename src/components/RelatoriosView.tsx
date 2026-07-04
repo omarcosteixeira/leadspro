@@ -139,8 +139,9 @@ export function RelatoriosView({
   }, [bases, profile]);
 
   const filteredFiesProuni = useMemo(() => {
+    if (!fiesProuni) return [];
     if (profile.role === "Gestor Unidade") {
-      return fiesProuni.filter(f => f.unidade === profile.unidade);
+      return fiesProuni.filter(f => f && f.unidade === profile.unidade);
     }
     return fiesProuni;
   }, [fiesProuni, profile]);
@@ -208,10 +209,11 @@ export function RelatoriosView({
 
   // --- Fies/Prouni Stats ---
   const fiesStats = useMemo(() => {
-    const total = filteredFiesProuni.length;
-    const fies = filteredFiesProuni.filter(i => i.tipo === "FIES").length;
-    const prouni = filteredFiesProuni.filter(i => i.tipo === "PROUNI").length;
-    const matriculados = filteredFiesProuni.filter(i => i.numeroMatricula).length;
+    const data = filteredFiesProuni || [];
+    const total = data.length;
+    const fies = data.filter(i => i && i.tipo === "FIES").length;
+    const prouni = data.filter(i => i && i.tipo === "PROUNI").length;
+    const matriculados = data.filter(i => i && i.numeroMatricula).length;
     
     return { total, fies, prouni, matriculados };
   }, [filteredFiesProuni]);
@@ -475,21 +477,21 @@ export function RelatoriosView({
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-slate-600 font-medium">Docs Entregues (Sim)</span>
-                    <span className="font-bold">{fiesProuni.filter(i => i.docsEntreguesStatus === "Sim").length}</span>
+                    <span className="font-bold">{filteredFiesProuni.filter(i => i && i.docsEntreguesStatus === "Sim").length}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-slate-600 font-medium">Entrevistas Realizadas</span>
-                    <span className="font-bold">{fiesProuni.filter(i => i.status === "Entrevistado").length}</span>
+                    <span className="font-bold">{filteredFiesProuni.filter(i => i && i.status === "Entrevistado").length}</span>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-slate-600 font-medium">TCB Assinado</span>
-                    <span className="font-bold">{fiesProuni.filter(i => i.tcbAssinado).length}</span>
+                    <span className="font-bold">{filteredFiesProuni.filter(i => i && i.tcbAssinado).length}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-slate-600 font-medium">Concluído Digitaliza</span>
-                    <span className="font-bold">{fiesProuni.filter(i => i.digitalizaStatus === "Concluído").length}</span>
+                    <span className="font-bold">{filteredFiesProuni.filter(i => i && i.digitalizaStatus === "Concluído").length}</span>
                   </div>
                 </div>
               </div>
