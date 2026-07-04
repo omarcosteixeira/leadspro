@@ -2271,6 +2271,62 @@ function FiesProuniView({
     }
   };
 
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    importFromExcel(file, async (data) => {
+      onToast("Importando registros...");
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const row of data) {
+        try {
+          const cpf = String(row["CPF"] || "").replace(/\D/g, "");
+          if (!cpf) continue;
+
+          const payload = {
+            nome: String(row["Nome"] || ""),
+            cpf,
+            telefone: String(row["Telefone"] || ""),
+            email: String(row["Email"] || ""),
+            endereco: String(row["Endereço"] || ""),
+            status: String(row["Status"] || "Pendente"),
+            tipo: (String(row["Tipo"] || "PROUNI").toUpperCase() === "FIES" ? "FIES" : "PROUNI") as "FIES" | "PROUNI",
+            bolsa: String(row["Bolsa"] || "Total") as "Parcial" | "Total",
+            curso: String(row["Curso"] || ""),
+            posicaoRanking: String(row["Ranking"] || ""),
+            lista: String(row["Lista"] || ""),
+            periodo: String(row["Periodo"] || ""),
+            metodologia: String(row["Metodologia"] || ""),
+            responsavelEntrevista: String(row["Responsável Entrevista"] || ""),
+            dataEntrevista: String(row["Data Entrevista"] || ""),
+            docsEntreguesStatus: String(row["Status Docs"] || "Pendente") as any,
+            inscricaoSales: String(row["Inscrição Sales"] || ""),
+            numeroMatricula: String(row["Número Matrícula"] || ""),
+            digitalizaStatus: String(row["Status Digitaliza"] || "Pendente") as any,
+            sisprouniStatus: String(row["SISPROUNI"] || "Pendente") as any,
+            tcbAssinado: String(row["TCB Assinado"]).toLowerCase() === "sim",
+            documentosEntregues: String(row["Documentos Entregues"] || "").split(",").map(s => s.trim()).filter(Boolean),
+            observacao: String(row["Observação"] || ""),
+            unidade: profile.unidade || "",
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          };
+
+          await addDoc(collection(db, COLLECTIONS.FIES_PROUNI), payload);
+          successCount++;
+        } catch (err) {
+          console.error("Erro ao importar registro Fies/Prouni:", err);
+          errorCount++;
+        }
+      }
+
+      onToast(`Importação concluída: ${successCount} sucesso, ${errorCount} erros`, successCount > 0 ? "success" : "error");
+    });
+    e.target.value = "";
+  };
+
   const handleExport = () => {
     const exportData = filteredData.map((item) => ({
       Nome: item.nome,
