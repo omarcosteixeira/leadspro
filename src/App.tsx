@@ -94,6 +94,8 @@ import {
   Chrome,
   BarChart3,
   List,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -2053,13 +2055,16 @@ function FiesProuniView({
   onSendBot: (tel: string, msg: string) => void;
   onMassSendBot: (messages: { telefone: string; message: string }[]) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"lista" | "informacoes">("lista");
+  const [activeTab, setActiveTab] = useState<"lista" | "informacoes">("informacoes");
   const [searchTerm, setSearchTerm] = useState("");
   const [periodoFilter, setPeriodoFilter] = useState("");
   const [tipoFilter, setTipoFilter] = useState("");
   const [listaFilter, setListaFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [bolsaFilter, setBolsaFilter] = useState("");
+  const [vagasPeriodoFilter, setVagasPeriodoFilter] = useState("");
+  const [vagasMetodologiaFilter, setVagasMetodologiaFilter] = useState("");
+  const [vagasBolsaFilter, setVagasBolsaFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<FiesProuniEntry | null>(
     null,
@@ -2144,8 +2149,16 @@ function FiesProuniView({
         return false;
       }
     }
-    return true;
+    const matchesPeriodo = !vagasPeriodoFilter || item.periodo === vagasPeriodoFilter;
+    const matchesMetodologia = !vagasMetodologiaFilter || item.metodologia === vagasMetodologiaFilter;
+    const matchesBolsa = !vagasBolsaFilter || item.bolsa === vagasBolsaFilter;
+    
+    return matchesPeriodo && matchesMetodologia && matchesBolsa;
   });
+
+  const uniqueMetodologias = Array.from(
+    new Set(safeVagas.map((i) => i.metodologia).filter(Boolean)),
+  ).sort();
 
   const vagasStats = {
     totalVagas: filteredVagas.reduce((acc, curr) => acc + (Number(curr?.vagas) || 0), 0),
@@ -2465,16 +2478,16 @@ function FiesProuniView({
           </h2>
           <div className="flex bg-slate-100 p-1 rounded-xl">
             <button
-              onClick={() => setActiveTab("lista")}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "lista" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-            >
-              Lista
-            </button>
-            <button
               onClick={() => setActiveTab("informacoes")}
               className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "informacoes" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
             >
               Informações
+            </button>
+            <button
+              onClick={() => setActiveTab("lista")}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "lista" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              Lista
             </button>
           </div>
         </div>
@@ -2926,6 +2939,52 @@ function FiesProuniView({
 
       {activeTab === "informacoes" && (
         <div className="space-y-6">
+          {/* Filters for Vagas */}
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Semestre / Período</label>
+              <select
+                className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                value={vagasPeriodoFilter}
+                onChange={(e) => setVagasPeriodoFilter(e.target.value)}
+              >
+                <option value="">Todos os Semestres</option>
+                {periodos.map((p) => (
+                  <option key={p.id} value={p.nome}>
+                    {p.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Metodologia</label>
+              <select
+                className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                value={vagasMetodologiaFilter}
+                onChange={(e) => setVagasMetodologiaFilter(e.target.value)}
+              >
+                <option value="">Todas as Metodologias</option>
+                {uniqueMetodologias.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Bolsa</label>
+              <select
+                className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                value={vagasBolsaFilter}
+                onChange={(e) => setVagasBolsaFilter(e.target.value)}
+              >
+                <option value="">Todas as Bolsas</option>
+                <option value="50%">50%</option>
+                <option value="100%">100%</option>
+              </select>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
               <div className="p-3 bg-blue-500 rounded-xl text-white">
@@ -5427,6 +5486,7 @@ export default function App() {
                   insumosEstoque={insumosEstoque}
                   insumosBaixas={insumosBaixas}
                   isencoes={isencoes}
+                  metaDia={metaDia}
                   profile={profile!}
                   onToast={showToast}
                 />
@@ -7258,7 +7318,7 @@ function DashboardView({
       )}
 
       {/* Bom Dia Captação (Complete - All cards) */}
-      {widgets.bomDia && bomDia.length > 0 && (
+      {widgets.bomDia && bomDia.filter(b => !b.oculto).length > 0 && (
         <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2 text-emerald-600">
@@ -7269,11 +7329,11 @@ function DashboardView({
             </div>
             <p className="text-xs text-slate-400 font-medium">
               Última atualização:{" "}
-              {new Date(bomDia[bomDia.length - 1].data).toLocaleDateString()}
+              {new Date(bomDia.filter(b => !b.oculto)[bomDia.filter(b => !b.oculto).length - 1].data).toLocaleDateString()}
             </p>
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
-            {bomDia.map((card) => (
+            {bomDia.filter(b => !b.oculto).map((card) => (
               <div
                 key={card.id}
                 className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden"
@@ -7473,7 +7533,7 @@ function DashboardView({
       )}
 
       {/* Forecasts (Complete - All cards) */}
-      {widgets.forecast && forecast.length > 0 && (
+      {widgets.forecast && forecast.filter(f => !f.oculto).length > 0 && (
         <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-slate-900">
@@ -7483,6 +7543,7 @@ function DashboardView({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {[...forecast]
+              .filter(f => !f.oculto)
               .sort((a, b) => a.nome.localeCompare(b.nome))
               .map((f) => {
               const percFech =
@@ -15358,6 +15419,7 @@ function EmpresasParceirasView({
       email: formData.get("email") as string,
       endereco: formData.get("endereco") as string,
       bairro: formData.get("bairro") as string,
+      cidade: formData.get("cidade") as string,
       linkMaps: formData.get("linkMaps") as string,
       classificacao: formData.get("classificacao") as string,
       seguimento: formData.get("seguimento") as string,
@@ -15500,6 +15562,7 @@ function EmpresasParceirasView({
       Email: emp.email,
       Endereço: emp.endereco,
       Bairro: emp.bairro || "",
+      Cidade: emp.cidade || "",
       Seguimento: emp.seguimento || "",
       Classificação: emp.classificacao || "",
       Status: emp.statusEmpresa || "",
@@ -15555,6 +15618,7 @@ function EmpresasParceirasView({
             email: String(getVal(item, "Email", "email") || "").trim(),
             endereco: String(getVal(item, "Endereço", "endereco", "endereço") || "").trim(),
             bairro: String(getVal(item, "Bairro", "bairro") || "").trim(),
+            cidade: String(getVal(item, "Cidade", "cidade") || "").trim(),
             seguimento: String(getVal(item, "Seguimento", "seguimento") || "").trim(),
             classificacao: String(getVal(item, "Classificação", "classificacao", "classificação") || "").trim(),
             statusEmpresa: normalizeStatusEmpresa(String(getVal(item, "Status", "statusEmpresa", "status") || "")),
@@ -16067,6 +16131,12 @@ function EmpresasParceirasView({
                           <span className="truncate">Bairro: {emp.bairro}</span>
                         </div>
                       )}
+                      {emp.cidade && (
+                        <div className="flex items-center space-x-3">
+                          <MapPin size={16} className="text-slate-400 opacity-50" />
+                          <span className="truncate">Cidade: {emp.cidade}</span>
+                        </div>
+                      )}
                     </div>
 
                     {emp.unidadesVinculadas && emp.unidadesVinculadas.length > 0 && (
@@ -16480,7 +16550,7 @@ function EmpresasParceirasView({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1">
                         Endereço
@@ -16498,6 +16568,16 @@ function EmpresasParceirasView({
                       <input
                         name="bairro"
                         defaultValue={editingEmpresa?.bairro}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">
+                        Cidade
+                      </label>
+                      <input
+                        name="cidade"
+                        defaultValue={editingEmpresa?.cidade}
                         className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
@@ -17071,6 +17151,9 @@ function AdminView({
     aaTecnico: 0,
     ytdTecnico: 0,
     realizadoTecnico: 0,
+    aaPosGraduacao: 0,
+    ytdPosGraduacao: 0,
+    realizadoPosGraduacao: 0,
   });
 
   const [editingQgLigacao, setEditingQgLigacao] = useState<QgLigacao | null>(null);
@@ -17099,6 +17182,9 @@ function AdminView({
         aaTecnico: Number(newMetaDia.aaTecnico || 0),
         ytdTecnico: Number(newMetaDia.ytdTecnico || 0),
         realizadoTecnico: Number(newMetaDia.realizadoTecnico || 0),
+        aaPosGraduacao: Number(newMetaDia.aaPosGraduacao || 0),
+        ytdPosGraduacao: Number(newMetaDia.ytdPosGraduacao || 0),
+        realizadoPosGraduacao: Number(newMetaDia.realizadoPosGraduacao || 0),
       };
 
       if (editingMetaDia) {
@@ -17130,6 +17216,9 @@ function AdminView({
         aaTecnico: 0,
         ytdTecnico: 0,
         realizadoTecnico: 0,
+        aaPosGraduacao: 0,
+        ytdPosGraduacao: 0,
+        realizadoPosGraduacao: 0,
       });
     } catch (err: any) {
       onToast(`Erro ao salvar Meta Diária: ${err.message}`, "error");
@@ -18238,6 +18327,9 @@ function AdminView({
                       aaTecnico: 0,
                       ytdTecnico: 0,
                       realizadoTecnico: 0,
+                      aaPosGraduacao: 0,
+                      ytdPosGraduacao: 0,
+                      realizadoPosGraduacao: 0,
                     });
                   }}
                   className="text-slate-400 hover:text-slate-600 text-sm font-bold"
@@ -18334,6 +18426,14 @@ function AdminView({
                   ytd: "ytdTecnico",
                   realizado: "realizadoTecnico",
                 },
+                {
+                  key: "PosGraduacao",
+                  label: "Pós-Graduação",
+                  color: "border-purple-100 bg-purple-50/10",
+                  aa: "aaPosGraduacao",
+                  ytd: "ytdPosGraduacao",
+                  realizado: "realizadoPosGraduacao",
+                },
               ].map((modal) => (
                 <div
                   key={modal.key}
@@ -18429,6 +18529,9 @@ function AdminView({
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase text-slate-400 tracking-wider">
                     <th className="p-4">Data</th>
+                    <th className="p-4 text-center text-teal-600 bg-teal-50/20">
+                      B.U Presencial (A.A / YTD / Real)
+                    </th>
                     <th className="p-4 text-center text-blue-600">
                       Presencial (A.A / YTD / Real)
                     </th>
@@ -18436,10 +18539,13 @@ function AdminView({
                       Semipresencial (A.A / YTD / Real)
                     </th>
                     <th className="p-4 text-center text-indigo-600">
-                      Digital (A.A / YTD / Real)
+                      EAD (A.A / YTD / Real)
                     </th>
                     <th className="p-4 text-center text-emerald-600">
                       Curso Técnico (A.A / YTD / Real)
+                    </th>
+                    <th className="p-4 text-center text-purple-600">
+                      Pós-Graduação (A.A / YTD / Real)
                     </th>
                     <th className="p-4 text-center bg-slate-50/50">
                       Total (A.A / YTD / Real)
@@ -18465,17 +18571,20 @@ function AdminView({
                           item.aaPresencial +
                           item.aaSemipresencial +
                           item.aaDigital +
-                          (item.aaTecnico || 0);
+                          (item.aaTecnico || 0) +
+                          (item.aaPosGraduacao || 0);
                         const totYTD =
                           item.ytdPresencial +
                           item.ytdSemipresencial +
                           item.ytdDigital +
-                          (item.ytdTecnico || 0);
+                          (item.ytdTecnico || 0) +
+                          (item.ytdPosGraduacao || 0);
                         const totReal =
                           item.realizadoPresencial +
                           item.realizadoSemipresencial +
                           item.realizadoDigital +
-                          (item.realizadoTecnico || 0);
+                          (item.realizadoTecnico || 0) +
+                          (item.realizadoPosGraduacao || 0);
 
                         // Function to get color class comparison Realizado vs YTD
                         const getColorClass = (real: number, ytd: number) => {
@@ -18494,6 +18603,26 @@ function AdminView({
                               {new Date(
                                 item.data + "T00:00:00",
                               ).toLocaleDateString("pt-BR")}
+                            </td>
+                            <td className="p-4 text-center bg-teal-50/20">
+                              <span className="text-slate-400">
+                                {item.aaPresencial + item.aaSemipresencial}
+                              </span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span className="text-slate-600 font-semibold">
+                                {item.ytdPresencial + item.ytdSemipresencial}
+                              </span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span
+                                className={cn(
+                                  getColorClass(
+                                    item.realizadoPresencial + item.realizadoSemipresencial,
+                                    item.ytdPresencial + item.ytdSemipresencial,
+                                  ),
+                                )}
+                              >
+                                {item.realizadoPresencial + item.realizadoSemipresencial}
+                              </span>
                             </td>
                             <td className="p-4 text-center">
                               <span className="text-slate-400">
@@ -18575,6 +18704,26 @@ function AdminView({
                                 {item.realizadoTecnico || 0}
                               </span>
                             </td>
+                            <td className="p-4 text-center">
+                              <span className="text-slate-400">
+                                {item.aaPosGraduacao || 0}
+                              </span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span className="text-slate-600 font-semibold">
+                                {item.ytdPosGraduacao || 0}
+                              </span>
+                              <span className="mx-1 text-slate-300">/</span>
+                              <span
+                                className={cn(
+                                  getColorClass(
+                                    item.realizadoPosGraduacao || 0,
+                                    item.ytdPosGraduacao || 0,
+                                  ),
+                                )}
+                              >
+                                {item.realizadoPosGraduacao || 0}
+                              </span>
+                            </td>
                             <td className="p-4 text-center bg-slate-50/20 font-bold">
                               <span className="text-slate-400">{totAA}</span>
                               <span className="mx-1 text-slate-300">/</span>
@@ -18609,6 +18758,9 @@ function AdminView({
                                       aaTecnico: item.aaTecnico || 0,
                                       ytdTecnico: item.ytdTecnico || 0,
                                       realizadoTecnico: item.realizadoTecnico || 0,
+                                      aaPosGraduacao: item.aaPosGraduacao || 0,
+                                      ytdPosGraduacao: item.ytdPosGraduacao || 0,
+                                      realizadoPosGraduacao: item.realizadoPosGraduacao || 0,
                                     });
                                     // Scroll to form smoothly
                                     window.scrollTo({
@@ -19309,6 +19461,22 @@ function AdminView({
                     </button>
                     <button
                       onClick={async () => {
+                        try {
+                          await updateDoc(doc(db, COLLECTIONS.BOM_DIA, card.id), {
+                            oculto: !card.oculto
+                          });
+                          onToast(`Card ${card.oculto ? "exibido" : "ocultado"} da rotina.`);
+                        } catch (err) {
+                          onToast("Erro ao alterar visibilidade.", "error");
+                        }
+                      }}
+                      className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-all"
+                      title={card.oculto ? "Mostrar na Rotina" : "Ocultar da Rotina"}
+                    >
+                      {card.oculto ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                    <button
+                      onClick={async () => {
                         if (window.confirm("Deseja excluir este card?")) {
                           try {
                             await deleteDoc(
@@ -19582,6 +19750,22 @@ function AdminView({
                               className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
                             >
                               <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await updateDoc(doc(db, COLLECTIONS.FORECAST, f.id), {
+                                    oculto: !f.oculto
+                                  });
+                                  onToast(`Forecast ${f.oculto ? "exibido" : "ocultado"} da rotina.`);
+                                } catch (err) {
+                                  onToast("Erro ao alterar visibilidade.", "error");
+                                }
+                              }}
+                              className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-all"
+                              title={f.oculto ? "Mostrar na Rotina" : "Ocultar da Rotina"}
+                            >
+                              {f.oculto ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
                             <button
                               onClick={async () => {

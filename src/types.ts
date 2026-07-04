@@ -171,6 +171,7 @@ export interface BomDiaCaptacao {
   anoAnterior: BomDiaMetrics;
   real: BomDiaMetrics;
   data: string;
+  oculto?: boolean;
   createdAt: any;
 }
 
@@ -182,6 +183,7 @@ export interface ForecastCaptacao {
   metaDiaYTD: number;
   realizado: number;
   metaFechamento: number;
+  oculto?: boolean;
   createdAt: any;
 }
 
@@ -261,6 +263,7 @@ export interface EmpresaParceira {
   email: string;
   endereco: string;
   bairro?: string;
+  cidade?: string;
   linkMaps: string;
   telefoneResponsavel?: string;
   classificacao?: 'Bronze' | 'Prata' | 'Ouro' | '';
@@ -338,6 +341,9 @@ export interface MetaDia {
   aaTecnico?: number;
   ytdTecnico?: number;
   realizadoTecnico?: number;
+  aaPosGraduacao?: number;
+  ytdPosGraduacao?: number;
+  realizadoPosGraduacao?: number;
   createdAt: any;
 }
 

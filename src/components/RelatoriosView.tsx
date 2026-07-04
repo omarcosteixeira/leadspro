@@ -29,7 +29,8 @@ import {
   InsumoEstoque,
   InsumoBaixa,
   IsencaoEntry,
-  PedidoCursoEntry
+  PedidoCursoEntry,
+  MetaDia
 } from "../types";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -69,6 +70,7 @@ interface RelatoriosViewProps {
   insumosBaixas: InsumoBaixa[];
   isencoes: IsencaoEntry[];
   pedidosCursos?: PedidoCursoEntry[];
+  metaDia?: MetaDia[];
   profile: UserProfile;
   onToast: (m: string, t?: "success" | "error") => void;
 }
@@ -84,11 +86,12 @@ export function RelatoriosView({
   insumosBaixas,
   isencoes,
   pedidosCursos = [],
+  metaDia = [],
   profile,
   onToast
 }: RelatoriosViewProps) {
   const [activeTab, setActiveTab] = useState<
-    "historico" | "bases" | "fiesProuni" | "planoAcao" | "empresas" | "insumos" | "isencoes" | "pedidos_cursos"
+    "historico" | "bases" | "fiesProuni" | "planoAcao" | "empresas" | "insumos" | "isencoes" | "pedidos_cursos" | "metaDia"
   >("historico");
 
   const dashboardRef = useRef<HTMLDivElement>(null);
@@ -342,6 +345,51 @@ export function RelatoriosView({
     return { total, pendente, solicitado, deferido, convertido, boletoPago, byCurso, byOrigem };
   }, [isencoes]);
 
+  const metaDiaStats = useMemo(() => {
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+    const initialStats = () => ({
+      aaPresencial: 0, ytdPresencial: 0, realizadoPresencial: 0,
+      aaSemipresencial: 0, ytdSemipresencial: 0, realizadoSemipresencial: 0,
+      aaDigital: 0, ytdDigital: 0, realizadoDigital: 0,
+      aaTecnico: 0, ytdTecnico: 0, realizadoTecnico: 0,
+      aaPosGraduacao: 0, ytdPosGraduacao: 0, realizadoPosGraduacao: 0,
+    });
+
+    const reduceMeta = (items: MetaDia[]) => items.reduce((acc, curr) => {
+      acc.aaPresencial += Number(curr.aaPresencial) || 0;
+      acc.ytdPresencial += Number(curr.ytdPresencial) || 0;
+      acc.realizadoPresencial += Number(curr.realizadoPresencial) || 0;
+
+      acc.aaSemipresencial += Number(curr.aaSemipresencial) || 0;
+      acc.ytdSemipresencial += Number(curr.ytdSemipresencial) || 0;
+      acc.realizadoSemipresencial += Number(curr.realizadoSemipresencial) || 0;
+
+      acc.aaDigital += Number(curr.aaDigital) || 0;
+      acc.ytdDigital += Number(curr.ytdDigital) || 0;
+      acc.realizadoDigital += Number(curr.realizadoDigital) || 0;
+
+      acc.aaTecnico += Number(curr.aaTecnico) || 0;
+      acc.ytdTecnico += Number(curr.ytdTecnico) || 0;
+      acc.realizadoTecnico += Number(curr.realizadoTecnico) || 0;
+
+      acc.aaPosGraduacao += Number(curr.aaPosGraduacao) || 0;
+      acc.ytdPosGraduacao += Number(curr.ytdPosGraduacao) || 0;
+      acc.realizadoPosGraduacao += Number(curr.realizadoPosGraduacao) || 0;
+
+      return acc;
+    }, initialStats());
+
+    const allTime = reduceMeta(metaDia);
+    const weekly = reduceMeta(metaDia.filter(m => m.data >= oneWeekAgo));
+    const monthly = reduceMeta(metaDia.filter(m => m.data >= oneMonthAgo));
+
+    return { allTime, weekly, monthly };
+  }, [metaDia]);
+
   // --- Pedidos de Cursos Stats ---
   const pedidosCursosStats = useMemo(() => {
     const total = pedidosCursos.length;
@@ -394,6 +442,7 @@ export function RelatoriosView({
           { id: "insumos", label: "Insumos", icon: Boxes },
           { id: "isencoes", label: "Isenções", icon: FileText },
           { id: "pedidos_cursos", label: "Pedidos de Cursos", icon: UserPlus },
+          { id: "metaDia", label: "Meta Dia", icon: Target },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -429,7 +478,8 @@ export function RelatoriosView({
                         activeTab === "planoAcao" ? "Plano de Ação" :
                         activeTab === "empresas" ? "Empresas Parceiras" : 
                         activeTab === "insumos" ? "Controle de Insumos" : 
-                        activeTab === "isencoes" ? "Acompanhamento de Isenções" : "Pedidos de Cursos"}
+                        activeTab === "isencoes" ? "Acompanhamento de Isenções" : 
+                        activeTab === "metaDia" ? "Meta Dia" : "Pedidos de Cursos"}
           </h3>
           <span className="text-xs font-mono text-slate-400">Gerado em: {new Date().toLocaleString("pt-BR")}</span>
         </div>
@@ -658,10 +708,83 @@ export function RelatoriosView({
             </div>
           </div>
         )}
+
+        {activeTab === "metaDia" && (
+          <div className="space-y-12">
+            {[
+              { title: "Geral (Todo o Período)", stats: metaDiaStats.allTime },
+              { title: "Mensal (Últimos 30 Dias)", stats: metaDiaStats.monthly },
+              { title: "Semanal (Últimos 7 Dias)", stats: metaDiaStats.weekly }
+            ].map(section => (
+              <div key={section.title} className="space-y-4">
+                <h4 className="font-bold text-slate-800 text-lg border-b pb-2">{section.title}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                  <ModalidadeCard 
+                    title="B.U Presencial" 
+                    aa={section.stats.aaPresencial + section.stats.aaSemipresencial} 
+                    realizado={section.stats.realizadoPresencial + section.stats.realizadoSemipresencial} 
+                  />
+                  <ModalidadeCard 
+                    title="Presencial" 
+                    aa={section.stats.aaPresencial} 
+                    realizado={section.stats.realizadoPresencial} 
+                  />
+                  <ModalidadeCard 
+                    title="Semipresencial" 
+                    aa={section.stats.aaSemipresencial} 
+                    realizado={section.stats.realizadoSemipresencial} 
+                  />
+                  <ModalidadeCard 
+                    title="EAD (Digital)" 
+                    aa={section.stats.aaDigital} 
+                    realizado={section.stats.realizadoDigital} 
+                  />
+                  <ModalidadeCard 
+                    title="Curso Técnico" 
+                    aa={section.stats.aaTecnico} 
+                    realizado={section.stats.realizadoTecnico} 
+                  />
+                  <ModalidadeCard 
+                    title="Pós-Graduação" 
+                    aa={section.stats.aaPosGraduacao} 
+                    realizado={section.stats.realizadoPosGraduacao} 
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+const ModalidadeCard = ({ title, aa, realizado }: { title: string, aa: number, realizado: number }) => {
+  const percent = aa > 0 ? ((realizado / aa) * 100).toFixed(1) : 0;
+  return (
+    <div className="p-4 rounded-xl border border-slate-100 shadow-sm bg-white flex flex-col justify-between">
+      <div>
+        <h5 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3 leading-tight h-8">{title}</h5>
+        <div className="flex justify-between items-end">
+          <div>
+            <div className="text-[10px] text-slate-400 font-bold uppercase">Realizado</div>
+            <div className="text-xl font-black text-slate-800">{realizado}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[10px] text-slate-400 font-bold uppercase">A.A</div>
+            <div className="text-sm font-bold text-slate-600">{aa}</div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 pt-2 border-t border-slate-50 flex items-center justify-between">
+        <span className="text-[10px] font-bold text-slate-400 uppercase">Curva A.A</span>
+        <span className={cn("text-xs font-bold", realizado >= aa ? "text-emerald-600" : "text-rose-500")}>
+          {percent}%
+        </span>
+      </div>
+    </div>
+  );
+};
 
 const ChartSection = ({ title, data }: { title: string; data: any[] }) => (
   <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
