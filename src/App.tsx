@@ -806,8 +806,7 @@ function MapaoAcademicoView({
     setFormData((prev) => ({ ...prev, disciplinas: newDisciplinas }));
   };
 
-  const canEdit =
-    profile.role === ROLES.LIDER_FDV || profile.role === ROLES.ACADEMICO;
+  const canEdit = true;
 
   return (
     <div className="space-y-6">
@@ -2073,7 +2072,7 @@ function FiesProuniView({
   const [editingVaga, setEditingVaga] = useState<FiesProuniVaga | null>(null);
   const [cpfInput, setCpfInput] = useState("");
 
-  const isAdmin = profile.role === ROLES.LIDER_FDV;
+  const isAdmin = true;
 
   useEffect(() => {
     if (editingEntry) {

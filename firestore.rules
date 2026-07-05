@@ -150,31 +150,31 @@ service cloud.firestore {
       allow read: if isPrincipal() || isComercial() || request.auth == null;
       allow create: if isPrincipal() || isComercial() || request.auth == null || request.resource.data.acao == 'Ação ( formulario)';
       allow update: if isPrincipal() || isComercial();
-      allow delete: if isPrincipal();
+      allow delete: if isPrincipal() || isComercial();
     }
 
     match /artifacts/gestaopro-761e1/public/data/bases/{baseId} {
       allow read, create, update: if isPrincipal() || isComercial();
-      allow delete: if isPrincipal();
+      allow delete: if isPrincipal() || isComercial();
     }
 
     match /artifacts/gestaopro-761e1/public/data/gap_academico/{gapId} {
       allow read, create, update: if isPrincipal() || isComercial() || isSSA();
-      allow delete: if isPrincipal();
+      allow delete: if isPrincipal() || isComercial() || isSSA();
     }
 
     match /artifacts/gestaopro-761e1/public/data/fies_prouni/{entryId} {
       allow read, create, update: if isPrincipal() || isComercial() || isSSA();
-      allow delete: if isPrincipal();
+      allow delete: if isPrincipal() || isComercial() || isSSA();
     }
     match /artifacts/gestaopro-761e1/public/data/fies_prouni_vagas/{entryId} {
       allow read, create, update: if isPrincipal() || isComercial() || isSSA();
-      allow delete: if isPrincipal();
+      allow delete: if isPrincipal() || isComercial() || isSSA();
     }
 
     match /artifacts/gestaopro-761e1/public/data/calendario_acoes/{acaoId} {
       allow read, create, update: if isPrincipal() || isComercial() || isFinanceiro();
-      allow delete: if isPrincipal();
+      allow delete: if isPrincipal() || isComercial() || isFinanceiro();
     }
 
     match /artifacts/gestaopro-761e1/public/data/pedido_cursos/{id} {
@@ -211,23 +211,23 @@ service cloud.firestore {
     match /artifacts/gestaopro-761e1/public/data/empresas_parceiras/{id} {
       allow read: if true;
       allow create, update: if (isPrincipal() || isComercial()) && isValidEmpresa(request.resource.data);
-      allow delete: if isPrincipal();
+      allow delete: if isPrincipal() || isComercial();
     }
     match /artifacts/gestaopro-761e1/public/data/whatsapp_messages/{id} {
       allow read: if isAuthenticated();
       allow create, update: if (isPrincipal() || isComercial() || isSSA()) && isValidWhatsAppMessage(request.resource.data);
-      allow delete: if isPrincipal();
+      allow delete: if isPrincipal() || isComercial() || isSSA();
     }
 
     match /artifacts/gestaopro-761e1/public/data/mapao_academico/{id} {
-      allow read: if isPrincipal() || isComercial() || isAcademico() || isSSA();
-      allow create, update: if (isPrincipal() || isComercial() || isAcademico()) && isValidMapaoAcademico(request.resource.data);
-      allow delete: if isPrincipal() || isAcademico();
+      allow read: if isPrincipal() || isComercial() || isAcademico() || isSSA() || isFinanceiro() || isTecnico();
+      allow create, update: if (isPrincipal() || isComercial() || isAcademico() || isSSA() || isFinanceiro() || isTecnico()) && isValidMapaoAcademico(request.resource.data);
+      allow delete: if isPrincipal() || isAcademico() || isSSA() || isFinanceiro() || isTecnico();
     }
 
     match /artifacts/gestaopro-761e1/public/data/bases_disparo/{id} {
       allow read, create, update: if isPrincipal() || isComercial();
-      allow delete: if isPrincipal();
+      allow delete: if isPrincipal() || isComercial();
     }
 
     match /artifacts/gestaopro-761e1/public/data/bot_config/{id} {
@@ -243,7 +243,7 @@ service cloud.firestore {
 
     match /artifacts/gestaopro-761e1/public/data/bases_renovacao/{id} {
       allow read, create, update: if isPrincipal() || isComercial() || isSSA();
-      allow delete: if isPrincipal();
+      allow delete: if isPrincipal() || isComercial() || isSSA();
     }
 
     match /artifacts/gestaopro-761e1/public/data/meta_dia/{id} {
@@ -257,7 +257,7 @@ service cloud.firestore {
 
     match /artifacts/gestaopro-761e1/public/data/cursos/{id} {
       allow read: if true;
-      allow write: if isPrincipal() || isComercial();
+      allow write: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isSSA() || isFinanceiro() || isTecnico());
     }
 
     match /artifacts/gestaopro-761e1/public/data/insumos_pedidos/{id} {

@@ -97,10 +97,7 @@ export function CursosDisponiveisView({
     [cursos],
   );
 
-  const canEdit =
-    profile.role === ROLES.ADMIN_MASTER ||
-    profile.role === ROLES.GESTOR_COMERCIAL ||
-    profile.role === ROLES.GESTOR_COMERCIAL_COMERCIAL;
+  const canEdit = true;
 
   const handleExport = () => {
     const exportData = filteredCursos.map((c) => ({
