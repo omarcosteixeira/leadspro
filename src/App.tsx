@@ -3741,6 +3741,44 @@ export default function App() {
     }
   };
 
+  const sendAppTelegram = async (telegramHandleOrId: string, message: string) => {
+    if (!telegramHandleOrId) return;
+    const targetUrl = botConfig?.telegramBotUrl || "";
+    const apiKey = botConfig?.telegramApiKey || "";
+    if (!targetUrl) {
+      console.log("Telegram Bot URL not configured in botConfig.");
+      return;
+    }
+    try {
+      const chatId = telegramHandleOrId.trim();
+      const response = await fetch("/api/bot-proxy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          targetUrl,
+          method: "POST",
+          headers: {
+            "x-api-key": apiKey,
+          },
+          body: {
+            chatId,
+            mensagem: message,
+          },
+        }),
+      });
+      const resData = await response.json();
+      if (!response.ok || !resData.success) {
+        console.error("Failed to send Telegram message at root:", resData.error || "Unknown error");
+      } else {
+        console.log(`Telegram message sent to ${chatId}`);
+      }
+    } catch (err) {
+      console.error("Error calling Telegram bot-proxy at root:", err);
+    }
+  };
+
   const handleSendBotMessage = async (telefone: string, message: string) => {
     const currentBotNumber = profile?.botNumber;
     let safeBotNumber = currentBotNumber
@@ -5643,6 +5681,7 @@ export default function App() {
                   cursos={cursos}
                   users={users}
                   onSendWhatsApp={sendAppWhatsApp}
+                  botConfig={botConfig}
                   onGenerateAction={(empresa) => {
                     setInitialActionData({
                       nome: `Ação na empresa ${empresa.nome}`,
@@ -15220,6 +15259,7 @@ function EmpresasParceirasView({
   cursos = [],
   users = [],
   onSendWhatsApp,
+  botConfig,
 }: {
   data: EmpresaParceira[];
   leads?: Lead[];
@@ -15229,7 +15269,46 @@ function EmpresasParceirasView({
   cursos?: CursoDisponivel[];
   users?: UserProfile[];
   onSendWhatsApp?: (phone: string, message: string) => Promise<void>;
+  botConfig?: BotConfig;
 }) {
+  const sendTelegramNotification = async (telegramHandleOrId: string, message: string) => {
+    if (!telegramHandleOrId) return;
+    const targetUrl = botConfig?.telegramBotUrl || "";
+    const apiKey = botConfig?.telegramApiKey || "";
+    if (!targetUrl) {
+      console.log("Telegram Bot URL not configured in botConfig.");
+      return;
+    }
+    try {
+      const chatId = telegramHandleOrId.trim();
+      const response = await fetch("/api/bot-proxy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          targetUrl,
+          method: "POST",
+          headers: {
+            "x-api-key": apiKey,
+          },
+          body: {
+            chatId,
+            mensagem: message,
+          },
+        }),
+      });
+      const resData = await response.json();
+      if (!response.ok || !resData.success) {
+        console.error("Failed to send Telegram message:", resData.error || "Unknown error");
+      } else {
+        console.log(`Telegram message sent to ${chatId}`);
+      }
+    } catch (err) {
+      console.error("Error calling Telegram bot-proxy:", err);
+    }
+  };
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Todas");
   const [unidadeFilter, setUnidadeFilter] = useState<string>("Todas");
@@ -15302,7 +15381,7 @@ function EmpresasParceirasView({
   const getTratativaAlert = (emp: EmpresaParceira) => {
     if (emp.statusEmpresa !== "Em tratativa") return null;
     const days = getTratativaDays(emp);
-    if (days >= 10) {
+    if (days >= 15) {
       return {
         level: "Emergência",
         days,
@@ -15455,6 +15534,10 @@ function EmpresasParceirasView({
             const msg = `O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`;
             await onSendWhatsApp(matchedUser.phone, msg);
           }
+          if (matchedUser && matchedUser.telegram) {
+            const telMsg = `O processo foi iniciado. Acompanhe a tratativa com a empresa <b>${payload.nome}</b> para iniciar as campanhas de trade.`;
+            await sendTelegramNotification(matchedUser.telegram, telMsg);
+          }
 
           // Notificar Gerente Comercial
           const managers = (users || []).filter(
@@ -15469,6 +15552,13 @@ function EmpresasParceirasView({
                 : "";
               const msg = `*Aviso de Nova Tratativa (Gestão)*\n\nOlá, *${manager.name}*!\nUma nova tratativa foi iniciada com a empresa ${payload.nome}.${fdvInfo}\n\nPor favor, acompanhe no sistema.`;
               await onSendWhatsApp(manager.phone, msg);
+            }
+            if (manager.telegram) {
+              const fdvInfo = matchedUser
+                ? `\n<b>FDV Responsável:</b> ${matchedUser.name}`
+                : "";
+              const telMsg = `<b>Aviso de Nova Tratativa (Gestão)</b>\n\nOlá, <b>${manager.name}</b>!\nUma nova tratativa foi iniciada com a empresa <b>${payload.nome}</b>.${fdvInfo}\n\nPor favor, acompanhe no sistema.`;
+              await sendTelegramNotification(manager.telegram, telMsg);
             }
           }
         } else {
@@ -15485,6 +15575,10 @@ function EmpresasParceirasView({
             const msg = `O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`;
             await onSendWhatsApp(matchedUser.phone, msg);
           }
+          if (matchedUser && matchedUser.telegram) {
+            const telMsg = `O processo foi iniciado. Acompanhe a tratativa com a empresa <b>${payload.nome}</b> para iniciar as campanhas de trade.`;
+            await sendTelegramNotification(matchedUser.telegram, telMsg);
+          }
 
           // Notificar Gerente Comercial
           const managers = (users || []).filter(
@@ -15499,6 +15593,13 @@ function EmpresasParceirasView({
                 : "";
               const msg = `*Aviso de Nova Tratativa (Gestão)*\n\nOlá, *${manager.name}*!\nUma nova tratativa foi iniciada com a empresa ${payload.nome}.${fdvInfo}\n\nPor favor, acompanhe no sistema.`;
               await onSendWhatsApp(manager.phone, msg);
+            }
+            if (manager.telegram) {
+              const fdvInfo = matchedUser
+                ? `\n<b>FDV Responsável:</b> ${matchedUser.name}`
+                : "";
+              const telMsg = `<b>Aviso de Nova Tratativa (Gestão)</b>\n\nOlá, <b>${manager.name}</b>!\nUma nova tratativa foi iniciada com a empresa <b>${payload.nome}</b>.${fdvInfo}\n\nPor favor, acompanhe no sistema.`;
+              await sendTelegramNotification(manager.telegram, telMsg);
             }
           }
         } else {
@@ -16248,7 +16349,7 @@ function EmpresasParceirasView({
               <div>
                 <h4 className="font-bold text-rose-900 text-sm">Retorno de Emergência</h4>
                 <p className="text-xs text-rose-700 mt-1">
-                  Ativado após <strong>10 dias</strong> ou mais. Tratativa crítica necessitando retorno imediato de emergência.
+                  Ativado após <strong>15 dias</strong> ou mais. Tratativa crítica necessitando retorno imediato de emergência.
                 </p>
               </div>
             </div>
@@ -17662,6 +17763,7 @@ function AdminView({
                       cpf: formData.get("cpf") as string,
                       dataNascimento: formData.get("dataNascimento") as string,
                       chavePix: formData.get("chavePix") as string,
+                      telegram: formData.get("telegram") as string,
                       botNumber: formData.get("botNumber") as string,
                       unidade: formData.get("unidade") as string,
                       role: formData.get("role") as string,
@@ -17836,6 +17938,17 @@ function AdminView({
                       defaultValue={editingUser.chavePix}
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                       placeholder="CPF, Email, Telefone ou Chave Aleatória"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Telegram (@username ou Chat ID) (Opcional)
+                    </label>
+                    <input
+                      name="telegram"
+                      defaultValue={editingUser.telegram || ""}
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      placeholder="@username ou Chat ID"
                     />
                   </div>
                   <button
@@ -18105,6 +18218,7 @@ function AdminView({
                           "principal",
                         phone: formData.get("phone") as string,
                         chavePix: formData.get("chavePix") as string,
+                        telegram: (formData.get("telegram") as string) || "",
                         unidade: (formData.get("unidade") as string) || "",
                         blocked: false,
                         mustChangePassword: true,
@@ -18282,6 +18396,16 @@ function AdminView({
                       </label>
                       <input
                         name="chavePix"
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Telegram (@username ou Chat ID)
+                      </label>
+                      <input
+                        name="telegram"
+                        placeholder="@username ou Chat ID"
                         className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
                       />
                     </div>
@@ -20295,6 +20419,76 @@ function AdminView({
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
                     Esta chave é utilizada diretamente pelo servidor do Goorq para processar relatórios de IA e realizar a correspondência inteligente de insumos via modelos Llama da Groq.
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    URL do Bot do Telegram (Railway)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="https://seu-bot.up.railway.app/api/enviar-aviso"
+                    defaultValue={botConfig.telegramBotUrl || ""}
+                    onBlur={async (e) => {
+                      const newUrl = e.target.value.trim();
+                      if (newUrl === (botConfig.telegramBotUrl || "")) return;
+                      try {
+                        await setDoc(
+                          doc(db, COLLECTIONS.BOT_CONFIG, "main"),
+                          {
+                            telegramBotUrl: newUrl,
+                            updatedAt: serverTimestamp(),
+                          },
+                          { merge: true },
+                        );
+                        onToast("URL do Bot do Telegram atualizada!");
+                      } catch (err: any) {
+                        onToast(
+                          `Erro ao salvar URL do Telegram: ${err.message}`,
+                          "error",
+                        );
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Insira a URL completa do endpoint de envio de mensagens do seu bot Telegram (ex: https://meu-bot.up.railway.app/api/enviar-aviso).
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Senha API do Bot do Telegram (x-api-key)
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="minha_senha_super_secreta_123"
+                    defaultValue={botConfig.telegramApiKey || ""}
+                    onBlur={async (e) => {
+                      const newKey = e.target.value.trim();
+                      if (newKey === (botConfig.telegramApiKey || "")) return;
+                      try {
+                        await setDoc(
+                          doc(db, COLLECTIONS.BOT_CONFIG, "main"),
+                          {
+                            telegramApiKey: newKey,
+                            updatedAt: serverTimestamp(),
+                          },
+                          { merge: true },
+                        );
+                        onToast("Chave API do Bot do Telegram atualizada!");
+                      } catch (err: any) {
+                        onToast(
+                          `Erro ao salvar Chave API do Telegram: ${err.message}`,
+                          "error",
+                        );
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    A mesma senha configurada na variável de ambiente do seu bot Telegram no Railway.
                   </p>
                 </div>
 

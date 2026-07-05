@@ -15,6 +15,7 @@ export interface UserProfile {
   phone?: string;
   role: UserRole;
   chavePix?: string;
+  telegram?: string;
   blocked?: boolean;
   mustChangePassword?: boolean;
   botNumber?: string;
@@ -275,6 +276,9 @@ export interface EmpresaParceira {
   unidadesVinculadas?: string[];
   consultorId?: string;
   consultorNome?: string;
+  notificado3d?: boolean;
+  notificado7d?: boolean;
+  notificado15d?: boolean;
 }
 
 export interface WhatsAppMessage {
@@ -363,6 +367,8 @@ export interface BotConfig {
   botNames?: Record<string, string>;
   loginLogo?: string;
   groqApiKey?: string;
+  telegramBotUrl?: string;
+  telegramApiKey?: string;
   updatedAt?: any;
 }
 

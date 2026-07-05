@@ -82,6 +82,12 @@ export function ProfileModal({
   const [isEditingBirthDate, setIsEditingBirthDate] = useState(false);
   const [submittingBirthDate, setSubmittingBirthDate] = useState(false);
 
+  const [telegramInput, setTelegramInput] = useState(
+    profile?.telegram || "",
+  );
+  const [isEditingTelegram, setIsEditingTelegram] = useState(false);
+  const [submittingTelegram, setSubmittingTelegram] = useState(false);
+
   const [activeTab, setActiveTab] = useState<"config" | "folgas">("config");
   const [tipo, setTipo] = useState<"Folga" | "Férias">("Folga");
   const [dataInicio, setDataInicio] = useState("");
@@ -141,6 +147,14 @@ export function ProfileModal({
     }
   }, [profile?.dataNascimento]);
 
+  useEffect(() => {
+    if (profile?.telegram) {
+      setTelegramInput(profile.telegram);
+    } else {
+      setTelegramInput("");
+    }
+  }, [profile?.telegram]);
+
   const handleSaveBirthDate = async () => {
     if (!profile?.uid) return;
     setSubmittingBirthDate(true);
@@ -165,6 +179,33 @@ export function ProfileModal({
       onToast("Erro ao atualizar data de nascimento.", "error");
     } finally {
       setSubmittingBirthDate(false);
+    }
+  };
+
+  const handleSaveTelegram = async () => {
+    if (!profile?.uid) return;
+    setSubmittingTelegram(true);
+    try {
+      const updatedData = {
+        telegram: telegramInput.trim(),
+        updatedAt: serverTimestamp(),
+      };
+      await updateDoc(doc(db, COLLECTIONS.USERS, profile.uid), updatedData);
+
+      setProfile((prev) =>
+        prev ? { ...prev, telegram: telegramInput.trim() } : null,
+      );
+      onToast("Telegram atualizado com sucesso!", "success");
+      setIsEditingTelegram(false);
+    } catch (err) {
+      handleFirestoreError(
+        err,
+        OperationType.UPDATE,
+        `${COLLECTIONS.USERS}/${profile.uid}`,
+      );
+      onToast("Erro ao atualizar Telegram.", "error");
+    } finally {
+      setSubmittingTelegram(false);
     }
   };
 
@@ -481,6 +522,57 @@ export function ProfileModal({
                       </div>
                     </div>
                   )}
+
+                  {/* Telegram */}
+                  <div className="flex items-start space-x-3">
+                    <div className="mt-0.5 text-slate-400">
+                      <Send size={16} />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-xs text-slate-400 block font-medium">
+                        Telegram (@username ou Chat ID)
+                      </span>
+                      {isEditingTelegram ? (
+                        <div className="flex items-center space-x-2 mt-1">
+                          <input
+                            type="text"
+                            placeholder="@username ou Chat ID"
+                            value={telegramInput}
+                            onChange={(e) => setTelegramInput(e.target.value)}
+                            className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium w-full max-w-[180px]"
+                          />
+                          <button
+                            disabled={submittingTelegram}
+                            onClick={handleSaveTelegram}
+                            className="p-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg transition-colors cursor-pointer shrink-0"
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsEditingTelegram(false);
+                              setTelegramInput(profile?.telegram || "");
+                            }}
+                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors cursor-pointer shrink-0"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-bold text-slate-800">
+                            {profile?.telegram || "Não informado"}
+                          </span>
+                          <button
+                            onClick={() => setIsEditingTelegram(true)}
+                            className="text-xs text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer"
+                          >
+                            Alterar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
                   {/* Link de Cadastro Público */}
                   <div className="mt-4 pt-4 border-t border-slate-200">
