@@ -62,6 +62,8 @@ export interface CalendarioAcao {
   statusPagamentoPromotores?: { [promoterUid: string]: 'Pendente' | 'Recusada' | 'Realizada' };
   colaboradorId?: string;
   colaboradorNome?: string;
+  colaboradoresIds?: string[];
+  colaboradoresNomes?: string[];
   tipoAtividade?: 'Ação' | 'Visita';
   empresaParceiraId?: string;
   empresaParceiraNome?: string;

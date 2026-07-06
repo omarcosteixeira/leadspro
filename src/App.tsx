@@ -4604,7 +4604,7 @@ export default function App() {
             where("creatorRole", "==", ROLES.PROMOTOR),
             where("creatorRole", "==", ROLES.PROMOTOR_RUA),
             where("colaboradorId", "==", user!.uid),
-            where("promotoresSelecionados", "array-contains", user!.uid),
+            where("colaboradoresIds", "array-contains", user!.uid),
           ),
         );
       } else if (
@@ -13547,13 +13547,16 @@ function CalendarioAcoesView({
     horario: string;
     observacao?: string;
     colaboradorId?: string;
+    colaboradoresIds?: string[];
     promotoresSelecionados?: string[];
   }) => {
     const info = `\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n*Horário:* ${action.horario || "Não informado"}\n*Objetivo:* ${action.observacao || "Não informado"}`;
 
-    // 1. Send to FDV Comercial linked to action
-    if (action.colaboradorId) {
-      const fdvUser = (users || []).find((u) => u.uid === action.colaboradorId);
+    // 1. Send to FDVs Comerciais linked to action
+    const ids = action.colaboradoresIds?.length ? action.colaboradoresIds : (action.colaboradorId ? [action.colaboradorId] : []);
+    
+    for (const id of ids) {
+      const fdvUser = (users || []).find((u) => u.uid === id);
       if (fdvUser && fdvUser.phone) {
         const msg = `*Aviso de Nova Atividade Criada*\n\nOlá, *${fdvUser.name}*!\nUma nova ação foi criada no sistema e vinculada a você:${info}\n\nPor favor, acompanhe os detalhes no sistema.`;
         await sendActionWhatsApp(fdvUser.phone, msg);
@@ -13746,6 +13749,8 @@ function CalendarioAcoesView({
     valorOrcado: "" as number | "",
     colaboradorId: "",
     colaboradorNome: "",
+    colaboradoresIds: [] as string[],
+    colaboradoresNomes: [] as string[],
     tipoAtividade: "Ação" as "Ação" | "Visita",
     empresaParceiraId: "",
     empresaParceiraNome: "",
@@ -13760,9 +13765,7 @@ function CalendarioAcoesView({
   const colaboradoresDisponiveis = (users || []).filter(
     (u) =>
       u.role === ROLES.FDV_COMERCIAL ||
-      u.role === ROLES.FDV ||
-      u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL ||
-      u.role === ROLES.GESTOR_COMERCIAL,
+      u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL,
   );
 
   useEffect(() => {
@@ -13798,6 +13801,8 @@ function CalendarioAcoesView({
             : "",
         colaboradorId: (initialData as any).colaboradorId || "",
         colaboradorNome: (initialData as any).colaboradorNome || "",
+        colaboradoresIds: (initialData as any).colaboradoresIds || [],
+        colaboradoresNomes: (initialData as any).colaboradoresNomes || [],
         tipoAtividade: (initialData as any).tipoAtividade || "Ação",
         empresaParceiraId: (initialData as any).empresaParceiraId || "",
         empresaParceiraNome: (initialData as any).empresaParceiraNome || "",
@@ -13963,6 +13968,8 @@ function CalendarioAcoesView({
         valorOrcado: "",
         colaboradorId: "",
         colaboradorNome: "",
+        colaboradoresIds: [],
+        colaboradoresNomes: [],
         tipoAtividade: "Ação",
         empresaParceiraId: "",
         empresaParceiraNome: "",
@@ -14427,6 +14434,8 @@ function CalendarioAcoesView({
                           : "",
                       colaboradorId: action.colaboradorId || "",
                       colaboradorNome: action.colaboradorNome || "",
+                      colaboradoresIds: action.colaboradoresIds || [],
+                      colaboradoresNomes: action.colaboradoresNomes || [],
                       tipoAtividade: action.tipoAtividade || "Ação",
                       empresaParceiraId: action.empresaParceiraId || "",
                       empresaParceiraNome: action.empresaParceiraNome || "",
@@ -14471,10 +14480,16 @@ function CalendarioAcoesView({
             <h3 className="text-lg font-bold text-slate-900 mb-1">
               {action.nome}
             </h3>
-            {action.colaboradorNome && (
-              <div className="flex items-center space-x-1.5 text-slate-600 text-xs mb-2 bg-blue-50/55 p-1 px-2 rounded-lg inline-flex">
-                <span className="font-bold text-blue-700">Colaborador:</span>
-                <span>{action.colaboradorNome}</span>
+            {(action.colaboradoresNomes?.length ? action.colaboradoresNomes : (action.colaboradorNome ? [action.colaboradorNome] : [])).length > 0 && (
+              <div className="flex flex-col gap-1 text-slate-600 text-xs mb-2">
+                <span className="font-bold text-blue-700">Colaboradores:</span>
+                <div className="flex flex-wrap gap-1">
+                  {(action.colaboradoresNomes?.length ? action.colaboradoresNomes : (action.colaboradorNome ? [action.colaboradorNome] : [])).map((nome, idx) => (
+                    <span key={idx} className="bg-blue-50 text-blue-800 p-1 px-2 rounded-lg inline-flex items-center">
+                      {nome}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
             <div className="flex items-center space-x-2 text-slate-500 text-xs mb-4">
@@ -14867,7 +14882,10 @@ function CalendarioAcoesView({
                   >
                     <option value="">Nenhuma (Não vincular)</option>
                     {empresasParceiras
-                      .filter((emp) => !newAction.colaboradorId || emp.consultorId === newAction.colaboradorId)
+                      .filter((emp) => {
+                        if (!newAction.colaboradoresIds || newAction.colaboradoresIds.length === 0) return true;
+                        return newAction.colaboradoresIds.includes(emp.consultorId || "");
+                      })
                       .map((emp) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.nome}
@@ -14947,24 +14965,26 @@ function CalendarioAcoesView({
                 />
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-bold text-slate-500 mb-1">
-                  Colaborador / FDV Responsável
+                  Colaboradores / FDVs Responsáveis
                 </label>
-                <select
-                  value={newAction.colaboradorId}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    const selectedUser = colaboradoresDisponiveis.find(
-                      (u) => u.uid === selectedId,
-                    );
-                    
+                <MultiSelect
+                  options={colaboradoresDisponiveis.map(u => u.name)}
+                  selectedValues={newAction.colaboradoresNomes?.length ? newAction.colaboradoresNomes : (newAction.colaboradorNome ? [newAction.colaboradorNome] : [])}
+                  onChange={(selectedNames) => {
+                    const selectedUsers = colaboradoresDisponiveis.filter(u => selectedNames.includes(u.name));
+                    const selectedIds = selectedUsers.map(u => u.uid);
+
+                    const firstId = selectedIds.length > 0 ? selectedIds[0] : "";
+                    const firstName = selectedNames.length > 0 ? selectedNames[0] : "";
+
                     let nextEmpresaId = newAction.empresaParceiraId;
                     let nextEmpresaNome = newAction.empresaParceiraNome;
-                    
-                    if (selectedId && nextEmpresaId) {
+
+                    if (nextEmpresaId) {
                       const emp = empresasParceiras.find(e => e.id === nextEmpresaId);
-                      if (emp && emp.consultorId !== selectedId) {
+                      if (emp && !selectedIds.includes(emp.consultorId || "")) {
                         nextEmpresaId = "";
                         nextEmpresaNome = "";
                       }
@@ -14972,21 +14992,18 @@ function CalendarioAcoesView({
 
                     setNewAction({
                       ...newAction,
-                      colaboradorId: selectedId,
-                      colaboradorNome: selectedUser ? selectedUser.name : "",
+                      colaboradorId: firstId,
+                      colaboradorNome: firstName,
+                      colaboradoresIds: selectedIds,
+                      colaboradoresNomes: selectedNames,
                       empresaParceiraId: nextEmpresaId,
                       empresaParceiraNome: nextEmpresaNome,
                     });
                   }}
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
-                >
-                  <option value="">Nenhum (Sem colaborador designado)</option>
-                  {colaboradoresDisponiveis.map((u) => (
-                    <option key={u.uid} value={u.uid}>
-                      {u.name} ({u.role})
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Selecione os colaboradores..."
+                  allLabel="Todos os colaboradores"
+                  className="w-full bg-white"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -21385,7 +21402,9 @@ export function ControlePagamentosView({
           diarias,
           horas: horasAtuadas,
           solicitante:
-            action.colaboradorNome ||
+            (action.colaboradoresNomes?.length
+              ? action.colaboradoresNomes.join(", ")
+              : action.colaboradorNome) ||
             (action.colaboradorId
               ? users.find((u) => u.uid === action.colaboradorId)?.name
               : null) ||

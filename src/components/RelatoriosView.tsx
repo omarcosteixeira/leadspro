@@ -230,7 +230,10 @@ export function RelatoriosView({
     return filteredPlanoAcoes.filter((a) => {
       if (planoDataInicio && a.dataInicio < planoDataInicio) return false;
       if (planoDataFim && a.dataInicio > planoDataFim) return false;
-      if (planoFiltroFdv && a.colaboradorNome !== planoFiltroFdv) return false;
+      if (planoFiltroFdv) {
+        const nomes = a.colaboradoresNomes?.length ? a.colaboradoresNomes : (a.colaboradorNome ? [a.colaboradorNome] : []);
+        if (!nomes.includes(planoFiltroFdv)) return false;
+      }
       return true;
     });
   }, [filteredPlanoAcoes, planoDataInicio, planoDataFim, planoFiltroFdv]);
@@ -252,7 +255,11 @@ export function RelatoriosView({
   const fdvsComercialUnicos = useMemo(() => {
     const fdvs = new Set<string>();
     calendarioAcoes.forEach(a => {
-      if (a.colaboradorNome) fdvs.add(a.colaboradorNome);
+      if (a.colaboradoresNomes && a.colaboradoresNomes.length > 0) {
+        a.colaboradoresNomes.forEach(n => fdvs.add(n));
+      } else if (a.colaboradorNome) {
+        fdvs.add(a.colaboradorNome);
+      }
     });
     return Array.from(fdvs).sort();
   }, [calendarioAcoes]);
@@ -645,7 +652,11 @@ export function RelatoriosView({
                           {acao.dataFim && acao.dataFim !== acao.dataInicio ? ` a ${acao.dataFim.split("-").reverse().join("/")}` : ""}
                         </div>
                         <div className="text-xs text-slate-500 truncate"><strong className="font-medium text-slate-600">Local:</strong> {acao.local || "Não informado"}</div>
-                        {acao.colaboradorNome && <div className="text-xs text-slate-500 mt-1"><strong className="font-medium text-slate-600">Responsável (FDV):</strong> {acao.colaboradorNome}</div>}
+                        {(acao.colaboradoresNomes?.length ? acao.colaboradoresNomes.join(", ") : acao.colaboradorNome) && (
+                          <div className="text-xs text-slate-500 mt-1">
+                            <strong className="font-medium text-slate-600">Responsável (FDV):</strong> {acao.colaboradoresNomes?.length ? acao.colaboradoresNomes.join(", ") : acao.colaboradorNome}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
