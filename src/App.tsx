@@ -96,6 +96,7 @@ import {
   List,
   Eye,
   EyeOff,
+  UserMinus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -167,6 +168,7 @@ import { AdminFuncionariosView } from "./components/AdminFuncionariosView";
 import { IsencoesView } from "./components/IsencoesView";
 import { WhatsAppMessageSelector } from "./components/WhatsAppMessageSelector";
 import { MultiSelect } from "./components/MultiSelect";
+import { EvasaoView } from "./components/EvasaoView";
 
 // --- Helpers ---
 export const replaceMessageVariables = (
@@ -517,6 +519,11 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.GESTOR_COMERCIAL,
     ROLES.GESTOR_COMERCIAL_COMERCIAL,
     ROLES.FDV_COMERCIAL,
+    ROLES.GESTOR_UNIDADE,
+  ],
+  evasao: [
+    ROLES.ADMIN_MASTER,
+    ROLES.SSA,
     ROLES.GESTOR_UNIDADE,
   ],
   cursos: [
@@ -5348,6 +5355,7 @@ export default function App() {
               { id: "calendario", label: "Plano de Ação", icon: Calendar },
               { id: "empresas", label: "Empresas Parceiras", icon: Building2 },
               { id: "controleConcorrencia", label: "Controle de Concorrência", icon: Target },
+              { id: "evasao", label: "Evasão", icon: UserMinus },
               {
                 id: "calculo",
                 label: "Cálculo de Remuneração",
@@ -5697,6 +5705,9 @@ export default function App() {
                   data={controleConcorrencia}
                   onToast={showToast}
                 />
+              )}
+              {currentView === "evasao" && (
+                <EvasaoView profile={profile} onToast={showToast} />
               )}
                   {currentView === "admin" && (
                     <AdminView

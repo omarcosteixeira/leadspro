@@ -320,6 +320,24 @@ export interface MapaoAcademicoEntry {
   createdAt: any;
 }
 
+export interface EvasaoRecord {
+  id: string;
+  num: string;
+  atendimento: string;
+  unidade: string;
+  modalidade: string;
+  matricula: string;
+  curso: string;
+  nome: string;
+  contato: string;
+  status: string;
+  pendencia: string;
+  resultado: string;
+  trancamentoCancelamento: string;
+  createdAt: any;
+  updatedAt?: any;
+}
+
 export interface BaseDisparoEntry {
   id: string;
   data: string;

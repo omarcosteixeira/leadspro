@@ -296,5 +296,9 @@ service cloud.firestore {
     match /artifacts/gestaopro-761e1/public/data/isencoes/{isencaoId} {
       allow read, write: if isAuthenticated();
     }
+
+    match /artifacts/gestaopro-761e1/public/data/evasao/{id} {
+      allow read, write: if isAuthenticated() && (isAdminMaster() || isSSA() || isGestorUnidade());
+    }
   }
 }

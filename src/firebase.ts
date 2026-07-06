@@ -73,6 +73,7 @@ export const COLLECTIONS = {
   INSUMOS_BAIXAS_COMERCIAL: `artifacts/${appId}/public/data/insumos_baixas_comercial`,
   FUNCIONARIOS: `artifacts/${appId}/public/data/funcionarios`,
   CONTROLE_CONCORRENCIA: `artifacts/${appId}/public/data/controle_concorrencia`,
+  EVASAO: `artifacts/${appId}/public/data/evasao`,
   PEDIDO_CURSOS: `artifacts/${appId}/public/data/pedido_cursos`,
 };
 
