@@ -329,6 +329,7 @@ export interface EvasaoRecord {
   modalidade: string;
   matricula: string;
   curso: string;
+  safra: string;
   nome: string;
   contato: string;
   status: string;

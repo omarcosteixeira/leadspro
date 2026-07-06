@@ -68,6 +68,7 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
     modalidade: "",
     matricula: "",
     curso: "",
+    safra: "",
     nome: "",
     contato: "",
     status: "",
@@ -146,6 +147,30 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       .slice(0, 5);
   }, [filteredData]);
 
+  // Evasão por Safra
+  const evasaoPorSafra = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredData.forEach(d => {
+      const safra = d.safra || "Não informada";
+      counts[safra] = (counts[safra] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filteredData]);
+
+  // Evasão por Modalidade
+  const evasaoPorModalidade = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredData.forEach(d => {
+      const modalidade = d.modalidade || "Não informada";
+      counts[modalidade] = (counts[modalidade] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filteredData]);
+
   // Tendência Mensal
   const trendMensal = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -221,6 +246,7 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       modalidade: "",
       matricula: "",
       curso: "",
+      safra: "",
       nome: "",
       contato: "",
       status: "",
@@ -246,6 +272,7 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       "Modalidade": item.modalidade || "",
       "Matrícula": item.matricula || "",
       "Curso": item.curso || "",
+      "Safra": item.safra || "",
       "Nome": item.nome || "",
       "Contato": item.contato || "",
       "Status": item.status || "",
@@ -276,6 +303,7 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
             modalidade: String(row["Modalidade"] || ""),
             matricula: String(row["Matrícula"] || ""),
             curso: String(row["Curso"] || ""),
+            safra: String(row["Safra"] || ""),
             nome: String(row["Nome"] || ""),
             contato: String(row["Contato"] || ""),
             status: String(row["Status"] || ""),
@@ -439,6 +467,78 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
             )}
           </div>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          {/* Evasão por Safra */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <PieChart size={20} className="text-indigo-500" />
+              Evasão por Safra
+            </h3>
+            {evasaoPorSafra.length > 0 ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RePieChart>
+                    <Pie
+                      data={evasaoPorSafra}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {evasaoPorSafra.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <ReTooltip />
+                    <Legend />
+                  </RePieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-slate-400">
+                Nenhum dado disponível.
+              </div>
+            )}
+          </div>
+
+          {/* Evasão por Modalidade */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <PieChart size={20} className="text-orange-500" />
+              Evasão por Modalidade
+            </h3>
+            {evasaoPorModalidade.length > 0 ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RePieChart>
+                    <Pie
+                      data={evasaoPorModalidade}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {evasaoPorModalidade.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <ReTooltip />
+                    <Legend />
+                  </RePieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-slate-400">
+                Nenhum dado disponível.
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -500,9 +600,16 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
                   </td>
                   <td className="p-4">
                     <div className="text-slate-800">{item.curso}</div>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-1">
-                      {item.modalidade}
-                    </span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                        {item.modalidade}
+                      </span>
+                      {item.safra && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                          {item.safra}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -659,6 +766,21 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
                       onChange={e => setFormData({...formData, curso: e.target.value})}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Safra</label>
+                    <select
+                      required
+                      value={formData.safra || ""}
+                      onChange={e => setFormData({...formData, safra: e.target.value})}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="Calouro">Calouro</option>
+                      <option value="Calouro 1R">Calouro 1R</option>
+                      <option value="Calouro 2R">Calouro 2R</option>
+                      <option value="Veterano">Veterano</option>
+                    </select>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-bold text-slate-700 mb-1">Nome do Aluno</label>
