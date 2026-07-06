@@ -61,8 +61,9 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
 
   // Form state
   const [formData, setFormData] = useState<Partial<EvasaoRecord>>({
-    num: "",
     atendimento: "",
+    tipoAtendimento: "",
+    horario: "",
     unidade: profile?.unidade || "",
     modalidade: "",
     matricula: "",
@@ -212,8 +213,9 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
     setIsModalOpen(false);
     setEditingEntry(null);
     setFormData({
-      num: "",
       atendimento: "",
+      tipoAtendimento: "",
+      horario: "",
       unidade: profile?.unidade || "",
       modalidade: "",
       matricula: "",
@@ -235,8 +237,9 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       return;
     }
     const exportData = filteredData.map(item => ({
-      "Num": item.num || "",
       "Atendimento": item.atendimento || "",
+      "Tipo de Atendimento": item.tipoAtendimento || "",
+      "Horário": item.horario || "",
       "Unidade": item.unidade || "",
       "Modalidade": item.modalidade || "",
       "Matrícula": item.matricula || "",
@@ -263,8 +266,9 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
           if (!row["Nome"] && !row["Matrícula"]) continue;
           
           await addDoc(collection(db, COLLECTIONS.EVASAO), {
-            num: String(row["Num"] || ""),
             atendimento: String(row["Atendimento"] || ""),
+            tipoAtendimento: String(row["Tipo de Atendimento"] || ""),
+            horario: String(row["Horário"] || ""),
             unidade: String(row["Unidade"] || profile?.unidade || ""),
             modalidade: String(row["Modalidade"] || ""),
             matricula: String(row["Matrícula"] || ""),
@@ -478,7 +482,11 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="p-4">
                     <div className="font-medium text-slate-800">{item.atendimento}</div>
-                    <div className="text-xs text-slate-500">Num: {item.num}</div>
+                    <div className="text-xs text-slate-500">
+                      {item.tipoAtendimento && <span>{item.tipoAtendimento}</span>}
+                      {item.tipoAtendimento && item.horario && <span> - </span>}
+                      {item.horario && <span>{item.horario}</span>}
+                    </div>
                   </td>
                   <td className="p-4 text-slate-700">{item.unidade}</td>
                   <td className="p-4">
@@ -567,12 +575,24 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
               <form id="evasaoForm" onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1">Número</label>
-                    <input
-                      type="text"
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Tipo Atendimento</label>
+                    <select
                       required
-                      value={formData.num || ""}
-                      onChange={e => setFormData({...formData, num: e.target.value})}
+                      value={formData.tipoAtendimento || ""}
+                      onChange={e => setFormData({...formData, tipoAtendimento: e.target.value})}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="Remoto">Remoto</option>
+                      <option value="Presencial">Presencial</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Horário</label>
+                    <input
+                      type="time"
+                      value={formData.horario || ""}
+                      onChange={e => setFormData({...formData, horario: e.target.value})}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>

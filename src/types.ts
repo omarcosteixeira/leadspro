@@ -322,8 +322,9 @@ export interface MapaoAcademicoEntry {
 
 export interface EvasaoRecord {
   id: string;
-  num: string;
   atendimento: string;
+  tipoAtendimento: string;
+  horario: string;
   unidade: string;
   modalidade: string;
   matricula: string;
