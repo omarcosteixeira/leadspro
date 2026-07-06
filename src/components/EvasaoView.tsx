@@ -74,6 +74,7 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
     pendencia: "",
     resultado: "",
     trancamentoCancelamento: "",
+    observacao: "",
   });
 
   useEffect(() => {
@@ -226,6 +227,7 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       pendencia: "",
       resultado: "",
       trancamentoCancelamento: "",
+      observacao: "",
     });
   };
 
@@ -249,7 +251,8 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       "Status": item.status || "",
       "Pendência": item.pendencia || "",
       "Resultado": item.resultado || "",
-      "Trancamento/Cancelamento": item.trancamentoCancelamento || ""
+      "Trancamento/Cancelamento": item.trancamentoCancelamento || "",
+      "Observação": item.observacao || ""
     }));
     exportToExcel(exportData, `Evasao_${new Date().getTime()}`);
     onToast("Excel exportado com sucesso!", "success");
@@ -279,6 +282,7 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
             pendencia: String(row["Pendência"] || ""),
             resultado: String(row["Resultado"] || ""),
             trancamentoCancelamento: String(row["Trancamento/Cancelamento"] || ""),
+            observacao: String(row["Observação"] || ""),
             createdAt: serverTimestamp(),
           });
           count++;
@@ -518,6 +522,11 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
                     <div className="text-slate-800 line-clamp-2" title={item.trancamentoCancelamento}>
                       {item.trancamentoCancelamento}
                     </div>
+                    {item.observacao && (
+                      <div className="text-xs text-slate-500 mt-1 line-clamp-2" title={item.observacao}>
+                        Obs: {item.observacao}
+                      </div>
+                    )}
                     {item.resultado && (
                       <div className="text-xs text-emerald-600 mt-1 font-bold">
                         Res: {item.resultado}
@@ -673,13 +682,16 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1">Status</label>
-                    <input
-                      type="text"
+                    <select
                       required
                       value={formData.status || ""}
                       onChange={e => setFormData({...formData, status: e.target.value})}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="Aguardando renovação">Aguardando renovação</option>
+                      <option value="Matriculado">Matriculado</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1">Pendência</label>
@@ -692,12 +704,17 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1">Resultado</label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.resultado || ""}
                       onChange={e => setFormData({...formData, resultado: e.target.value})}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="Faltou">Faltou</option>
+                      <option value="Cancelado pelo aluno">Cancelado pelo aluno</option>
+                      <option value="Evadido">Evadido</option>
+                      <option value="Revertido">Revertido</option>
+                    </select>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-bold text-slate-700 mb-1">Motivo (Trancamento/Cancelamento)</label>
@@ -707,6 +724,14 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
                       value={formData.trancamentoCancelamento || ""}
                       onChange={e => setFormData({...formData, trancamentoCancelamento: e.target.value})}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Observação (Opcional)</label>
+                    <textarea
+                      value={formData.observacao || ""}
+                      onChange={e => setFormData({...formData, observacao: e.target.value})}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px] resize-y"
                     />
                   </div>
                 </div>
