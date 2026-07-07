@@ -20415,28 +20415,28 @@ function AdminView({
 
                 <div className="pt-4 border-t border-slate-100">
                   <label className="block text-sm font-bold text-slate-700 mb-1">
-                    Chave de API do Groq (GROQ_API_KEY)
+                    Chave de API do OpenRouter (OPENROUTER_API_KEY)
                   </label>
                   <input
                     type="password"
-                    placeholder="gsk_..."
-                    defaultValue={botConfig.groqApiKey || ""}
+                    placeholder="sk-or-v1-..."
+                    defaultValue={botConfig.openRouterApiKey || ""}
                     onBlur={async (e) => {
                       const newKey = e.target.value.trim();
-                      if (newKey === (botConfig.groqApiKey || "")) return;
+                      if (newKey === (botConfig.openRouterApiKey || "")) return;
                       try {
                         await setDoc(
                           doc(db, COLLECTIONS.BOT_CONFIG, "main"),
                           {
-                            groqApiKey: newKey,
+                            openRouterApiKey: newKey,
                             updatedAt: serverTimestamp(),
                           },
                           { merge: true },
                         );
-                        onToast("Chave da API do Groq atualizada com sucesso!");
+                        onToast("Chave da API do OpenRouter atualizada com sucesso!");
                       } catch (err: any) {
                         onToast(
-                          `Erro ao salvar chave da API do Groq: ${err.message}`,
+                          `Erro ao salvar chave da API do OpenRouter: ${err.message}`,
                           "error",
                         );
                       }
@@ -20444,7 +20444,7 @@ function AdminView({
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
-                    Esta chave é utilizada diretamente pelo servidor do Goorq para processar relatórios de IA e realizar a correspondência inteligente de insumos via modelos Llama da Groq.
+                    Esta chave é a nova preferência para o processamento de IA (relatórios e insumos) através do OpenRouter.
                   </p>
                 </div>
 

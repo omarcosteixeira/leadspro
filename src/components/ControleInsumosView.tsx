@@ -441,7 +441,7 @@ export function ControleInsumosView({
         body: JSON.stringify({
           typedText: item.material,
           stockMaterials,
-          groqApiKey: botConfig?.groqApiKey,
+          openRouterApiKey: botConfig?.openRouterApiKey,
         }),
       });
 

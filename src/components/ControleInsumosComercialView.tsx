@@ -409,7 +409,7 @@ export function ControleInsumosComercialView({
         body: JSON.stringify({
           typedText: item.material,
           stockMaterials,
-          groqApiKey: botConfig?.groqApiKey,
+          openRouterApiKey: botConfig?.openRouterApiKey,
         }),
       });
 

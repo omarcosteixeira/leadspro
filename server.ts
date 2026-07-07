@@ -241,7 +241,7 @@ async function startServer() {
     }
   });
 
-  // API endpoint to fuzzy match typed material with current stock materials using AI (prioritizes Groq, falls back to Gemini)
+  // API endpoint to fuzzy match typed material with current stock materials using AI (prioritizes OpenRouter, falls back to Gemini)
   app.post("/api/match-material", async (req, res) => {
     try {
       const { typedText, stockMaterials } = req.body;
@@ -308,19 +308,21 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
         return JSON.parse(cleaned.trim());
       };
 
-      // 1. Try Groq API first (prioritizes key sent from database, falls back to env)
-      const groqApiKey = req.body.groqApiKey || process.env.GROQ_API_KEY || process.env.GROQ_API || process.env.GROQ_KEY || process.env.GROQ_SECRET;
-      if (groqApiKey) {
+      // 0. Try OpenRouter API first (user's new preference)
+      const openRouterApiKey = req.body.openRouterApiKey || process.env.OPENROUTER_API_KEY;
+      if (openRouterApiKey) {
         try {
-          console.log("[AI Match] Using Groq API key found in the system for material match...");
-          const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          console.log("[AI Match] Using OpenRouter API for material match...");
+          const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
-              "Authorization": `Bearer ${groqApiKey}`,
-              "Content-Type": "application/json"
+              "Authorization": `Bearer ${openRouterApiKey}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": process.env.APP_URL || "https://ais-build.app",
+              "X-Title": "Leads Pro"
             },
             body: JSON.stringify({
-              model: "llama-3.3-70b-versatile",
+              model: "google/gemini-2.0-flash-001", // Responsive and efficient model
               messages: [
                 {
                   role: "system",
@@ -352,28 +354,10 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
               });
             }
           } else {
-            const errText = await response.text();
-            console.error(`[AI Match] Groq API returned error status ${response.status}: ${errText}`);
-            if (!process.env.GEMINI_API_KEY) {
-              let parsedErr;
-              try {
-                parsedErr = JSON.parse(errText);
-              } catch (_) {}
-              const displayErr = parsedErr?.error?.message || errText || `Status ${response.status}`;
-              return res.status(200).json({
-                success: false,
-                error: `Erro retornado pela API da Groq: ${displayErr}`
-              });
-            }
+            console.error(`[AI Match] OpenRouter API returned error status ${response.status}`);
           }
-        } catch (groqErr: any) {
-          console.error("[AI Match] Groq direct API call failed:", groqErr.message);
-          if (!process.env.GEMINI_API_KEY) {
-            return res.status(200).json({
-              success: false,
-              error: `Falha ao conectar com a API da Groq: ${groqErr.message}`
-            });
-          }
+        } catch (openRouterErr: any) {
+          console.error("[AI Match] OpenRouter call failed:", openRouterErr.message);
         }
       }
 
@@ -383,7 +367,7 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
       if (!apiKey) {
         return res.status(200).json({
           success: false,
-          error: "A chave de API do Gemini (GEMINI_API_KEY) ou do Groq (GROQ_API_KEY) não está configurada no servidor."
+          error: "A chave de API do Gemini (GEMINI_API_KEY) não está configurada no servidor."
         });
       }
 
@@ -591,19 +575,21 @@ Caso contrário (se não houver correspondência lógica ou for um item completa
         return JSON.parse(cleaned.trim());
       };
 
-      // 2. Try Groq API directly (prioritizes key sent from database, falls back to env)
-      const groqApiKey = req.body.groqApiKey || process.env.GROQ_API_KEY || process.env.GROQ_API || process.env.GROQ_KEY || process.env.GROQ_SECRET;
-      if (groqApiKey) {
+      // 2. Try OpenRouter API first (user's new preference)
+      const openRouterApiKey = req.body.openRouterApiKey || process.env.OPENROUTER_API_KEY;
+      if (openRouterApiKey) {
         try {
-          console.log("[AI Reports] Using Groq API key found in the system...");
-          const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          console.log("[AI Reports] Using OpenRouter API for analysis...");
+          const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
-              "Authorization": `Bearer ${groqApiKey}`,
-              "Content-Type": "application/json"
+              "Authorization": `Bearer ${openRouterApiKey}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": process.env.APP_URL || "https://ais-build.app",
+              "X-Title": "Leads Pro"
             },
             body: JSON.stringify({
-              model: "llama-3.3-70b-versatile",
+              model: "google/gemini-2.0-flash-001",
               messages: [
                 {
                   role: "system",
@@ -647,28 +633,10 @@ Retorne exclusivamente o JSON puro. Não adicione textos adicionais antes ou dep
               });
             }
           } else {
-            const errText = await response.text();
-            console.error(`[AI Reports] Groq API returned error status ${response.status}: ${errText}`);
-            if (!process.env.GEMINI_API_KEY) {
-              let parsedErr;
-              try {
-                parsedErr = JSON.parse(errText);
-              } catch (_) {}
-              const displayErr = parsedErr?.error?.message || errText || `Status ${response.status}`;
-              return res.status(200).json({
-                success: false,
-                error: `Erro retornado pela API da Groq: ${displayErr}`
-              });
-            }
+            console.error(`[AI Reports] OpenRouter API returned error status ${response.status}`);
           }
-        } catch (groqErr: any) {
-          console.error("[AI Reports] Groq direct API call failed:", groqErr.message);
-          if (!process.env.GEMINI_API_KEY) {
-            return res.status(200).json({
-              success: false,
-              error: `Falha ao conectar com a API da Groq: ${groqErr.message}`
-            });
-          }
+        } catch (openRouterErr: any) {
+          console.error("[AI Reports] OpenRouter call failed:", openRouterErr.message);
         }
       }
 
@@ -678,7 +646,7 @@ Retorne exclusivamente o JSON puro. Não adicione textos adicionais antes ou dep
       if (!apiKey) {
         return res.status(200).json({
           success: false,
-          error: "A chave de API do Gemini (GEMINI_API_KEY) ou do Groq (GROQ_API_KEY) não está configurada no servidor. Por favor, adicione-a no painel de configurações para ativar os relatórios com inteligência artificial."
+          error: "A chave de API do Gemini (GEMINI_API_KEY) não está configurada no servidor. Por favor, adicione-a no painel de configurações para ativar os relatórios com inteligência artificial."
         });
       }
 
