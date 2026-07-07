@@ -55,6 +55,8 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [modalidadeFilter, setModalidadeFilter] = useState("Todas");
+  const [periodoFilter, setPeriodoFilter] = useState("Todos");
+  const [tipoSolicitacaoFilter, setTipoSolicitacaoFilter] = useState("Todos");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<EvasaoRecord | null>(null);
@@ -75,6 +77,8 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
     pendencia: "",
     resultado: "",
     trancamentoCancelamento: "",
+    periodo: "",
+    tipoSolicitacao: "",
     observacao: "",
   });
 
@@ -97,6 +101,13 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
     return () => unsubscribe();
   }, []);
 
+  const uniquePeriodos = useMemo(() => {
+    const periodos = data
+      .map(item => item.periodo)
+      .filter((p): p is string => !!p);
+    return Array.from(new Set(periodos)).sort();
+  }, [data]);
+
   const filteredData = useMemo(() => {
     let filtered = data;
     
@@ -109,17 +120,27 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       filtered = filtered.filter(item => item.modalidade === modalidadeFilter);
     }
 
+    if (periodoFilter !== "Todos") {
+      filtered = filtered.filter(item => item.periodo === periodoFilter);
+    }
+
+    if (tipoSolicitacaoFilter !== "Todos") {
+      filtered = filtered.filter(item => item.tipoSolicitacao === tipoSolicitacaoFilter);
+    }
+
     if (searchTerm) {
       const lower = searchTerm.toLowerCase();
       filtered = filtered.filter(item => 
         item.nome.toLowerCase().includes(lower) ||
         item.matricula.toLowerCase().includes(lower) ||
-        item.curso.toLowerCase().includes(lower)
+        item.curso.toLowerCase().includes(lower) ||
+        (item.periodo && item.periodo.toLowerCase().includes(lower)) ||
+        (item.tipoSolicitacao && item.tipoSolicitacao.toLowerCase().includes(lower))
       );
     }
 
     return filtered;
-  }, [data, profile, modalidadeFilter, searchTerm]);
+  }, [data, profile, modalidadeFilter, periodoFilter, tipoSolicitacaoFilter, searchTerm]);
 
   // Top 5 Cursos
   const topCursos = useMemo(() => {
@@ -253,6 +274,8 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       pendencia: "",
       resultado: "",
       trancamentoCancelamento: "",
+      periodo: "",
+      tipoSolicitacao: "",
       observacao: "",
     });
   };
@@ -279,6 +302,8 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       "Pendência": item.pendencia || "",
       "Resultado": item.resultado || "",
       "Trancamento/Cancelamento": item.trancamentoCancelamento || "",
+      "Período": item.periodo || "",
+      "Tipo de Solicitação": item.tipoSolicitacao || "",
       "Observação": item.observacao || ""
     }));
     exportToExcel(exportData, `Evasao_${new Date().getTime()}`);
@@ -310,6 +335,8 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
             pendencia: String(row["Pendência"] || ""),
             resultado: String(row["Resultado"] || ""),
             trancamentoCancelamento: String(row["Trancamento/Cancelamento"] || ""),
+            periodo: String(row["Período"] || row["Periodo"] || ""),
+            tipoSolicitacao: String(row["Tipo de Solicitação"] || row["Tipo de solicitação"] || ""),
             observacao: String(row["Observação"] || ""),
             createdAt: serverTimestamp(),
           });
@@ -553,17 +580,43 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
               className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
             <Filter size={20} className="text-slate-400" />
+            
+            {/* Modalidade Filter */}
             <select
               value={modalidadeFilter}
               onChange={(e) => setModalidadeFilter(e.target.value)}
-              className="px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
             >
               <option value="Todas">Todas Modalidades</option>
               <option value="Presencial">Presencial</option>
-              <option value="EAD">EAD</option>
+              <option value="DIGITAL">DIGITAL</option>
               <option value="Semipresencial">Semipresencial</option>
+            </select>
+
+            {/* Período Filter */}
+            <select
+              value={periodoFilter}
+              onChange={(e) => setPeriodoFilter(e.target.value)}
+              className="px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+            >
+              <option value="Todos">Todos Períodos</option>
+              {uniquePeriodos.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+
+            {/* Tipo de Solicitação Filter */}
+            <select
+              value={tipoSolicitacaoFilter}
+              onChange={(e) => setTipoSolicitacaoFilter(e.target.value)}
+              className="px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+            >
+              <option value="Todos">Todos Tipos</option>
+              <option value="Trancamento">Trancamento</option>
+              <option value="Cancelamento">Cancelamento</option>
+              <option value="Transferência externa">Transferência externa</option>
             </select>
           </div>
         </div>
@@ -607,6 +660,16 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
                       {item.safra && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
                           {item.safra}
+                        </span>
+                      )}
+                      {item.periodo && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                          {item.periodo}
+                        </span>
+                      )}
+                      {item.tipoSolicitacao && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                          {item.tipoSolicitacao}
                         </span>
                       )}
                     </div>
@@ -743,7 +806,7 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
                     >
                       <option value="">Selecione...</option>
                       <option value="Presencial">Presencial</option>
-                      <option value="EAD">EAD</option>
+                      <option value="DIGITAL">DIGITAL</option>
                       <option value="Semipresencial">Semipresencial</option>
                     </select>
                   </div>
@@ -780,6 +843,31 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
                       <option value="Calouro 1R">Calouro 1R</option>
                       <option value="Calouro 2R">Calouro 2R</option>
                       <option value="Veterano">Veterano</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Período</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: 1º, 2026.1"
+                      value={formData.periodo || ""}
+                      onChange={e => setFormData({...formData, periodo: e.target.value})}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Tipo de Solicitação</label>
+                    <select
+                      required
+                      value={formData.tipoSolicitacao || ""}
+                      onChange={e => setFormData({...formData, tipoSolicitacao: e.target.value})}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="Trancamento">Trancamento</option>
+                      <option value="Cancelamento">Cancelamento</option>
+                      <option value="Transferência externa">Transferência externa</option>
                     </select>
                   </div>
                   <div className="md:col-span-2">

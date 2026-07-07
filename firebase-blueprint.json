@@ -247,6 +247,33 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["nome", "cpf", "telefone", "curso", "inseridoDigitaliza", "status", "boletoPago"]
+    },
+    "EvasaoRecord": {
+      "title": "EvasaoRecord",
+      "description": "Evasao tracking record",
+      "type": "object",
+      "properties": {
+        "atendimento": { "type": "string" },
+        "tipoAtendimento": { "type": "string" },
+        "horario": { "type": "string" },
+        "unidade": { "type": "string" },
+        "modalidade": { "type": "string" },
+        "matricula": { "type": "string" },
+        "curso": { "type": "string" },
+        "safra": { "type": "string" },
+        "nome": { "type": "string" },
+        "contato": { "type": "string" },
+        "status": { "type": "string" },
+        "pendencia": { "type": "string" },
+        "resultado": { "type": "string" },
+        "trancamentoCancelamento": { "type": "string" },
+        "periodo": { "type": "string" },
+        "tipoSolicitacao": { "type": "string" },
+        "observacao": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["atendimento", "tipoAtendimento", "unidade", "modalidade", "matricula", "curso", "safra", "nome", "contato", "status", "trancamentoCancelamento"]
     }
   },
   "firestore": {
@@ -309,6 +336,10 @@
     "artifacts/gestaopro-761e1/public/data/isencoes/{isencaoId}": {
       "schema": "IsencaoEntry",
       "description": "Exemptions tracking data"
+    },
+    "artifacts/gestaopro-761e1/public/data/evasao/{evasaoId}": {
+      "schema": "EvasaoRecord",
+      "description": "Evasion tracking data"
     }
   }
 }

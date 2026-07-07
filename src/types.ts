@@ -338,6 +338,8 @@ export interface EvasaoRecord {
   pendencia: string;
   resultado: string;
   trancamentoCancelamento: string;
+  periodo?: string;
+  tipoSolicitacao?: string;
   observacao?: string;
   createdAt: any;
   updatedAt?: any;
