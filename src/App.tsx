@@ -13714,7 +13714,7 @@ function CalendarioAcoesView({
   }, [data, users]);
 
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "concluida" | "pendente"
+    "all" | "Não iniciada" | "Em andamento" | "Concluído" | "Cancelado"
   >("all");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
@@ -13737,6 +13737,7 @@ function CalendarioAcoesView({
     dataFim: "",
     local: "",
     observacao: "",
+    status: "Não iniciada",
     concluida: false,
     fotos: ["", "", ""],
     metaBoletos: "" as number | "",
@@ -13774,6 +13775,7 @@ function CalendarioAcoesView({
         dataFim: initialData.dataFim || "",
         local: initialData.local || "",
         observacao: initialData.observacao || "",
+        status: "Não iniciada",
         concluida: false,
         fotos: ["", "", ""],
         metaBoletos:
@@ -13822,12 +13824,12 @@ function CalendarioAcoesView({
     const matchesSearch =
       item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.local.toLowerCase().includes(searchTerm.toLowerCase());
+    const itemStatus = item.status || (item.concluida ? "Concluído" : "Não iniciada");
+
     const matchesStatus =
       statusFilter === "all"
         ? true
-        : statusFilter === "concluida"
-          ? item.concluida
-          : !item.concluida;
+        : statusFilter === itemStatus;
     let matchesDate = true;
     if (startDateFilter && endDateFilter) {
       matchesDate =
@@ -13956,6 +13958,7 @@ function CalendarioAcoesView({
         dataFim: "",
         local: "",
         observacao: "",
+        status: "Não iniciada",
         concluida: false,
         fotos: ["", "", ""],
         metaBoletos: "",
@@ -14054,14 +14057,13 @@ function CalendarioAcoesView({
     }
   };
 
-  const toggleStatus = async (action: CalendarioAcao) => {
+  const updateActionStatus = async (action: CalendarioAcao, newStatus: string) => {
     try {
       await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, action.id), {
-        concluida: !action.concluida,
+        status: newStatus,
+        concluida: newStatus === "Concluído",
       });
-      onToast(
-        action.concluida ? "Ação marcada como pendente" : "Ação concluída!",
-      );
+      onToast(`Status atualizado para: ${newStatus}`);
     } catch (err: any) {
       onToast("Erro ao atualizar status.", "error");
     }
@@ -14085,7 +14087,7 @@ function CalendarioAcoesView({
       "Data Fim": item.dataFim,
       Local: item.local,
       Observação: item.observacao,
-      Status: item.concluida ? "Concluída" : "Pendente",
+      Status: item.status || (item.concluida ? "Concluída" : "Não iniciada"),
     }));
     exportToExcel(exportData, "Calendario_Acoes");
   };
@@ -14106,8 +14108,14 @@ function CalendarioAcoesView({
         };
 
         const batch = importData.map((item) => {
-          const rawStatus = String(getVal(item, "Status", "status") || "").trim().toLowerCase();
+          const rawStatusOriginal = String(getVal(item, "Status", "status") || "").trim();
+          const rawStatus = rawStatusOriginal.toLowerCase();
           const isConcluida = ["concluída", "concluida", "sim", "true", "ok"].includes(rawStatus) || getVal(item, "concluida") === true;
+          
+          let parsedStatus = "Não iniciada";
+          if (isConcluida || rawStatus === "concluído") parsedStatus = "Concluído";
+          else if (rawStatus === "em andamento") parsedStatus = "Em andamento";
+          else if (rawStatus === "cancelado" || rawStatus === "cancelada") parsedStatus = "Cancelado";
 
           return {
             nome: String(getVal(item, "Nome", "nome") || "").trim(),
@@ -14115,6 +14123,7 @@ function CalendarioAcoesView({
             dataFim: String(getVal(item, "Data Fim", "dataFim", "data_fim") || "").trim(),
             local: String(getVal(item, "Local", "local") || "").trim(),
             observacao: String(getVal(item, "Observação", "observacao", "observação") || "").trim(),
+            status: parsedStatus,
             concluida: isConcluida,
             fotos: [],
             creatorId: profile.uid,
@@ -14335,8 +14344,10 @@ function CalendarioAcoesView({
             className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
           >
             <option value="all">Todos os Status</option>
-            <option value="concluida">Concluídas</option>
-            <option value="pendente">Pendentes</option>
+            <option value="Não iniciada">Não iniciadas</option>
+            <option value="Em andamento">Em andamento</option>
+            <option value="Concluído">Concluídas</option>
+            <option value="Cancelado">Canceladas</option>
           </select>
         </div>
         <div>
@@ -14383,18 +14394,26 @@ function CalendarioAcoesView({
             key={action.id}
             className={cn(
               "bg-white p-6 rounded-3xl shadow-sm border transition-all",
-              action.concluida
+              (action.status || (action.concluida ? "Concluído" : "Não iniciada")) === "Concluído"
                 ? "border-emerald-100 bg-emerald-50/10"
-                : "border-slate-100",
+                : (action.status === "Em andamento")
+                  ? "border-amber-100 bg-amber-50/10"
+                  : (action.status === "Cancelado")
+                    ? "border-rose-100 bg-rose-50/10"
+                    : "border-slate-100",
             )}
           >
             <div className="flex justify-between items-start mb-4">
               <div
                 className={cn(
                   "p-2 rounded-xl",
-                  action.concluida
+                  (action.status || (action.concluida ? "Concluído" : "Não iniciada")) === "Concluído"
                     ? "bg-emerald-100 text-emerald-600"
-                    : "bg-blue-100 text-blue-600",
+                    : (action.status === "Em andamento")
+                      ? "bg-amber-100 text-amber-600"
+                      : (action.status === "Cancelado")
+                        ? "bg-rose-100 text-rose-600"
+                        : "bg-blue-100 text-blue-600",
                 )}
               >
                 <Calendar size={20} />
@@ -14409,6 +14428,7 @@ function CalendarioAcoesView({
                       dataFim: action.dataFim,
                       local: action.local,
                       observacao: action.observacao,
+                      status: action.status || (action.concluida ? "Concluído" : "Não iniciada"),
                       concluida: action.concluida,
                       fotos: [...(action.fotos || []), "", "", ""].slice(0, 3),
                       metaBoletos:
@@ -14762,27 +14782,25 @@ function CalendarioAcoesView({
               </div>
             )}
 
-            <button
-              onClick={() => toggleStatus(action)}
+            <select
+              value={action.status || (action.concluida ? "Concluído" : "Não iniciada")}
+              onChange={(e) => updateActionStatus(action, e.target.value)}
               className={cn(
-                "w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center space-x-2",
-                action.concluida
+                "w-full py-3 px-4 rounded-xl font-bold text-sm text-center appearance-none cursor-pointer outline-none transition-all",
+                (action.status === "Concluído" || (!action.status && action.concluida))
                   ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                  : action.status === "Em andamento"
+                    ? "bg-amber-500 text-white hover:bg-amber-600"
+                    : action.status === "Cancelado"
+                      ? "bg-rose-500 text-white hover:bg-rose-600"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               )}
             >
-              {action.concluida ? (
-                <>
-                  <CheckCircle2 size={18} />
-                  <span>Concluída</span>
-                </>
-              ) : (
-                <>
-                  <Circle size={18} />
-                  <span>Marcar como Concluída</span>
-                </>
-              )}
-            </button>
+              <option value="Não iniciada">Não iniciada</option>
+              <option value="Em andamento">Em andamento</option>
+              <option value="Concluído">Concluída</option>
+              <option value="Cancelado">Cancelada</option>
+            </select>
           </motion.div>
         ))}
         {filteredData.length === 0 && (

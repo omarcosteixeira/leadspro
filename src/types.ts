@@ -45,6 +45,7 @@ export interface CalendarioAcao {
   local: string;
   observacao: string;
   concluida: boolean;
+  status?: string;
   fotos?: string[];
   creatorId?: string;
   creatorRole?: string;
