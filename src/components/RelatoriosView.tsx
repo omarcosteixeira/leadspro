@@ -150,7 +150,11 @@ export function RelatoriosView({
   }, [fiesProuni, profile]);
 
   const filteredPlanoAcoes = useMemo(() => {
-    if (profile.role === "Gestor Unidade") {
+    if (
+      profile.role !== "Admin Master" &&
+      profile.role !== "Gestor Comercial" &&
+      profile.role !== "Gerente Comercial (Comercial)"
+    ) {
       return calendarioAcoes.filter(a => a.unidade === profile.unidade);
     }
     return calendarioAcoes;

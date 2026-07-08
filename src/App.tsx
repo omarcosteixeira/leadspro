@@ -57,6 +57,8 @@ import {
   FileText,
   Clock,
   Calculator,
+  LayoutGrid,
+  List,
   ShieldCheck,
   Megaphone,
   Sun,
@@ -13723,6 +13725,7 @@ function CalendarioAcoesView({
     null,
   );
   const [acoesSubTab, setAcoesSubTab] = useState<"dashboard" | "lista">("dashboard");
+  const [viewFormat, setViewFormat] = useState<"card" | "list">("card");
 
   const autoLeadsCount = editingAction
     ? (leads || []).filter((l) => l.acaoId === editingAction.id).length
@@ -13758,9 +13761,21 @@ function CalendarioAcoesView({
     horario: "",
   });
 
-  const promotoresDisponiveis = (users || []).filter(
-    (u) => u.role === ROLES.PROMOTOR || u.role === ROLES.PROMOTOR_RUA,
-  );
+  const promotoresDisponiveis = (users || []).filter((u) => {
+    const isPromotor = u.role === ROLES.PROMOTOR || u.role === ROLES.PROMOTOR_RUA;
+    if (!isPromotor) return false;
+
+    if (
+      profile.role !== ROLES.ADMIN_MASTER &&
+      profile.role !== ROLES.GESTOR_COMERCIAL &&
+      profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL
+    ) {
+      if (profile.unidade && u.unidade !== profile.unidade) {
+        return false;
+      }
+    }
+    return true;
+  });
   const colaboradoresDisponiveis = (users || []).filter(
     (u) =>
       u.role === ROLES.FDV_COMERCIAL ||
@@ -13814,9 +13829,13 @@ function CalendarioAcoesView({
   }, [initialData]);
 
   const filteredData = data.filter((item) => {
-    // Gestor Unidade filtering: only see actions from the same unit
-    if (profile.role === ROLES.GESTOR_UNIDADE) {
-      if (!profile.unidade || item.unidade !== profile.unidade) {
+    // Restrict visibility to actions from the same unit, unless admin/gestor
+    if (
+      profile.role !== ROLES.ADMIN_MASTER &&
+      profile.role !== ROLES.GESTOR_COMERCIAL &&
+      profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL
+    ) {
+      if (profile.unidade && item.unidade !== profile.unidade) {
         return false;
       }
     }
@@ -14287,7 +14306,33 @@ function CalendarioAcoesView({
             </p>
           </div>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl mr-2">
+            <button
+              onClick={() => setViewFormat("card")}
+              className={cn(
+                "p-2 rounded-lg transition-all",
+                viewFormat === "card"
+                  ? "bg-white shadow-sm text-blue-600"
+                  : "text-slate-400 hover:text-slate-600"
+              )}
+              title="Formato de Cards"
+            >
+              <LayoutGrid size={18} />
+            </button>
+            <button
+              onClick={() => setViewFormat("list")}
+              className={cn(
+                "p-2 rounded-lg transition-all",
+                viewFormat === "list"
+                  ? "bg-white shadow-sm text-blue-600"
+                  : "text-slate-400 hover:text-slate-600"
+              )}
+              title="Formato de Lista"
+            >
+              <List size={18} />
+            </button>
+          </div>
           <button
             onClick={() => setIsAdding(true)}
             className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center space-x-2"
@@ -14387,8 +14432,9 @@ function CalendarioAcoesView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredData.map((action) => (
+      {viewFormat === "card" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredData.map((action) => (
           <motion.div
             layout
             key={action.id}
@@ -14813,7 +14859,128 @@ function CalendarioAcoesView({
             </p>
           </div>
         )}
-      </div>
+        </div>
+      ) : (
+        <div className="overflow-x-auto bg-white rounded-3xl shadow-sm border border-slate-100">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">
+                <th className="p-4 rounded-tl-3xl">Ação / Local</th>
+                <th className="p-4">Colaboradores</th>
+                <th className="p-4">Período</th>
+                <th className="p-4">Status</th>
+                <th className="p-4 text-center rounded-tr-3xl">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredData.map((action) => (
+                <tr key={action.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                  <td className="p-4">
+                    <div className="font-bold text-slate-900 mb-1">{action.nome}</div>
+                    <div className="text-xs text-slate-500 flex items-center space-x-1">
+                      <MapPin size={12} />
+                      <span>{action.local}</span>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex flex-wrap gap-1">
+                      {(action.colaboradoresNomes?.length ? action.colaboradoresNomes : (action.colaboradorNome ? [action.colaboradorNome] : [])).map((nome, idx) => (
+                        <span key={idx} className="bg-blue-50 text-blue-800 p-1 px-2 text-[10px] rounded-lg">
+                          {nome}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="p-4 text-xs font-bold text-slate-700">
+                    {formatLocalDateString(action.dataInicio)}
+                    {action.dataFim !== action.dataInicio && ` - ${formatLocalDateString(action.dataFim)}`}
+                  </td>
+                  <td className="p-4">
+                    <select
+                      value={action.status || (action.concluida ? "Concluído" : "Não iniciada")}
+                      onChange={(e) => updateActionStatus(action, e.target.value)}
+                      className={cn(
+                        "py-1.5 px-3 rounded-lg font-bold text-xs appearance-none cursor-pointer outline-none transition-all",
+                        (action.status === "Concluído" || (!action.status && action.concluida))
+                          ? "bg-emerald-100 text-emerald-800"
+                          : action.status === "Em andamento"
+                            ? "bg-amber-100 text-amber-800"
+                            : action.status === "Cancelado"
+                              ? "bg-rose-100 text-rose-800"
+                              : "bg-slate-100 text-slate-600"
+                      )}
+                    >
+                      <option value="Não iniciada">Não iniciada</option>
+                      <option value="Em andamento">Em andamento</option>
+                      <option value="Concluído">Concluída</option>
+                      <option value="Cancelado">Cancelada</option>
+                    </select>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center justify-center space-x-2">
+                      <button
+                        onClick={() => {
+                          setEditingAction(action);
+                          setNewAction({
+                            nome: action.nome,
+                            dataInicio: action.dataInicio,
+                            dataFim: action.dataFim,
+                            local: action.local,
+                            observacao: action.observacao,
+                            status: action.status || (action.concluida ? "Concluído" : "Não iniciada"),
+                            concluida: action.concluida,
+                            fotos: [...(action.fotos || []), "", "", ""].slice(0, 3),
+                            metaBoletos: action.metaBoletos !== undefined ? action.metaBoletos : "",
+                            metaInscritos: action.metaInscritos !== undefined ? action.metaInscritos : "",
+                            precisaPromotor: !!action.precisaPromotor,
+                            promotoresSelecionados: action.promotoresSelecionados || [],
+                            valorPromotor: action.valorPromotor !== undefined ? action.valorPromotor : "",
+                            valorOrcado: action.valorOrcado !== undefined ? action.valorOrcado : "",
+                            colaboradorId: action.colaboradorId || "",
+                            colaboradorNome: action.colaboradorNome || "",
+                            colaboradoresIds: action.colaboradoresIds || (action.colaboradorId ? [action.colaboradorId] : []),
+                            colaboradoresNomes: action.colaboradoresNomes || (action.colaboradorNome ? [action.colaboradorNome] : []),
+                            tipoAtividade: action.tipoAtividade || "Ação",
+                            empresaParceiraId: action.empresaParceiraId || "",
+                            empresaParceiraNome: action.empresaParceiraNome || "",
+                            leadsFeitos: action.leadsFeitos !== undefined ? action.leadsFeitos : "",
+                            boletosFeitos: action.boletosFeitos !== undefined ? action.boletosFeitos : "",
+                            horario: action.horario || "",
+                          });
+                          setIsAdding(true);
+                        }}
+                        className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                        title="Editar"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(action.id)}
+                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredData.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-20 text-center">
+                    <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                      <Calendar size={40} />
+                    </div>
+                    <p className="text-slate-400 italic">
+                      Nenhuma ação encontrada para os filtros aplicados.
+                    </p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {isAdding && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
