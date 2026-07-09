@@ -11,29 +11,26 @@ service cloud.firestore {
     }
     
     function getUserData() {
-      return get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data;
+      let path = /databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid);
+      return exists(path) ? get(path).data : {"role": "none", "unidade": "none"};
     }
     
     function isMasterUser() {
+      let path = /databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid);
+      let userDoc = exists(path) ? get(path).data : {"email": "none", "role": "none"};
       return isAuthenticated() && (
         request.auth.token.email in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"] ||
-        (
-          exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) &&
-          (
-            get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.email in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"] ||
-            get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.role == "Admin Master"
-          )
-        )
+        userDoc.email in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"] ||
+        userDoc.role == "Admin Master"
       );
     }
     
     function hasAnyRole(roles) {
+      let path = /databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid);
+      let userRole = exists(path) ? get(path).data.role : "none";
       return isAuthenticated() && (
         isMasterUser() ||
-        (
-          exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.role in roles
-        )
+        userRole in roles
       );
     }
     
@@ -108,197 +105,205 @@ service cloud.firestore {
     // ===============================================================
 
     match /artifacts/gestaodeleadspro-d4230/public/data/users/{userId} {
-      allow get: if isAuthenticated() && (userId == request.auth.uid || canAccessUnit(resource.data.unidade, getUserData().role, getUserData().unidade));
-      allow list: if isAuthenticated() && (!isRestrictedRole(getUserData().role) || resource.data.unidade == getUserData().unidade);
-      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (userId == request.auth.uid || isMasterUser());
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isMasterUser() || (userId == request.auth.uid && request.resource.data.role == resource.data.role && request.resource.data.unidade == resource.data.unidade));
-      allow delete: if isMasterUser();
+      allow get: if isAuthenticated() && (userId == request.auth.uid || isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']));
+      allow list: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (userId == request.auth.uid || isMasterUser() || isLider() || isGestorComercial());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isMasterUser() || isLider() || isGestorComercial() || (userId == request.auth.uid && request.resource.data.role == resource.data.role && request.resource.data.unidade == resource.data.unidade));
+      allow delete: if isMasterUser() || isLider() || isGestorComercial();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/leads/{leadId} {
-      allow get: if isAuthenticated() && canAccessUnit(resource.data.unidade, getUserData().role, getUserData().unidade) && (
-          isLider() || isSalaMatricula() || isQG() || isGestorUnidade() || isGestorComercial() ||
-          (isFDV() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole == 'Promotor' || resource.data.linkadoA == request.auth.uid)) ||
-          (isPromotor() && resource.data.promotorId == request.auth.uid) ||
-          request.auth == null
-        )
-      allow list: if isAuthenticated() && (!isRestrictedRole(getUserData().role) || resource.data.unidade == getUserData().unidade)
-      allow create: if (isMasterUser() || isComercial() || request.auth == null) && (
-        request.auth == null || canAccessUnit(request.resource.data.unidade, getUserData().role, getUserData().unidade)
-      )
-      allow update: if (isMasterUser() || isComercial() || isLider() || isSalaMatricula() || isQG() || isGestorUnidade() || isFDV() || isPromotor()) && 
-        canAccessUnit(resource.data.unidade, getUserData().role, getUserData().unidade) && 
-        canAccessUnit(request.resource.data.unidade, getUserData().role, getUserData().unidade) && (
-          isMasterUser() || isComercial() || isLider() || isSalaMatricula() || isQG() || isGestorUnidade() ||
-          (isFDV() && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole == 'Promotor' || resource.data.linkadoA == request.auth.uid)) ||
-          (isPromotor() && resource.data.promotorId == request.auth.uid)
-        )
-      allow delete: if isMasterUser() || isComercial() || isLider()
+      allow get: if isAuthenticated() && (isMasterUser() || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && (
+          hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || 
+          (get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade && (
+            isLider() || isSalaMatricula() || isQG() || isGestorUnidade() || isGestorComercial() ||
+            (hasAnyRole(['FDV', 'FDV (Comercial)']) && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole == 'Promotor' || resource.data.linkadoA == request.auth.uid)) ||
+            (hasAnyRole(['Promotor', 'Promotor/rua']) && resource.data.promotorId == request.auth.uid) ||
+            request.auth == null
+          ))
+        )));
+      allow list: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow create: if (isMasterUser() || isComercial() || isFDV() || isPromotor() || isLider() || isSalaMatricula() || isQG() || isGestorUnidade() || request.auth == null) && (
+        request.auth == null || isMasterUser() || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && (hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == request.resource.data.unidade))
+      );
+      allow update: if (isMasterUser() || isComercial() || isLider() || isSalaMatricula() || isQG() || isGestorUnidade() || isFDV() || isPromotor()) && (
+        isMasterUser() || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && (
+          hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (
+            get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade && 
+            get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == request.resource.data.unidade && (
+              isMasterUser() || isComercial() || isLider() || isSalaMatricula() || isQG() || isGestorUnidade() ||
+              (hasAnyRole(['FDV', 'FDV (Comercial)']) && (resource.data.promotorId == request.auth.uid || resource.data.promotorRole == 'Promotor' || resource.data.linkadoA == request.auth.uid)) ||
+              (hasAnyRole(['Promotor', 'Promotor/rua']) && resource.data.promotorId == request.auth.uid)
+            )
+          )
+        )));
+      allow delete: if isMasterUser() || isComercial() || isLider() || isSalaMatricula();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/bases/{baseId} {
-      allow get: if isAuthenticated() && canAccessUnit(resource.data.unidade, getUserData().role, getUserData().unidade)
-      allow list: if isAuthenticated() && (!isRestrictedRole(getUserData().role) || resource.data.unidade == getUserData().unidade)
-      allow create, update, delete: if isMasterUser() || isComercial() || isLider() || isSalaMatricula()
+      allow get: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow list: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow create, update, delete: if isMasterUser() || isComercial() || isLider() || isSalaMatricula() || isQG();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/gap_academico/{gapId} {
-      allow get: if isAuthenticated() && canAccessUnit(resource.data.unidade, getUserData().role, getUserData().unidade)
-      allow list: if isAuthenticated() && (!isRestrictedRole(getUserData().role) || resource.data.unidade == getUserData().unidade)
-      allow create, update: if (isMasterUser() || isComercial() || isLider() || isSalaMatricula()) && canAccessUnit(request.resource.data.unidade, getUserData().role, getUserData().unidade)
-      allow delete: if isMasterUser() || isComercial() || isLider()
+      allow get: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow list: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow create, update: if (isMasterUser() || isComercial() || isLider() || isSalaMatricula()) && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == request.resource.data.unidade));
+      allow delete: if isMasterUser() || isComercial() || isLider();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/fies_prouni/{entryId} {
-      allow get: if isAuthenticated() && canAccessUnit(resource.data.unidade, getUserData().role, getUserData().unidade)
-      allow list: if isAuthenticated() && (!isRestrictedRole(getUserData().role) || resource.data.unidade == getUserData().unidade)
-      allow create, update: if (isMasterUser() || isComercial() || isLider() || isSalaMatricula() || isSSA()) && canAccessUnit(request.resource.data.unidade, getUserData().role, getUserData().unidade)
-      allow delete: if isMasterUser() || isComercial() || isLider()
+      allow get: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow list: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow create, update: if (isMasterUser() || isComercial() || isLider() || isSalaMatricula() || isSSA()) && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == request.resource.data.unidade));
+      allow delete: if isMasterUser() || isComercial() || isLider();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/calendario_acoes/{acaoId} {
-      allow get: if isAuthenticated() && canAccessUnit(resource.data.unidade, getUserData().role, getUserData().unidade)
-      allow list: if isAuthenticated() && (!isRestrictedRole(getUserData().role) || resource.data.unidade == getUserData().unidade)
-      allow create: if (isMasterUser() || isComercial() || isFinanceiro() || isLider() || isFDV() || isPromotor()) && isValidCalendarioAcao(request.resource.data) && canAccessUnit(request.resource.data.unidade, getUserData().role, getUserData().unidade)
+      allow get: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow list: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow create: if (isMasterUser() || isComercial() || isFinanceiro() || isLider() || isFDV() || isPromotor()) && isValidCalendarioAcao(request.resource.data) && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == request.resource.data.unidade));
       allow update: if (isMasterUser() || isComercial() || isFinanceiro() || isLider() || isFDV() || isPromotor()) && isValidCalendarioAcao(request.resource.data) && 
-        canAccessUnit(resource.data.unidade, getUserData().role, getUserData().unidade) && 
-        canAccessUnit(request.resource.data.unidade, getUserData().role, getUserData().unidade)
-      allow delete: if (isMasterUser() || isComercial() || isLider())
+        (isMasterUser() || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && (hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (
+        get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade && 
+        get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == request.resource.data.unidade))));
+      allow delete: if (isMasterUser() || isComercial() || isLider() || isFinanceiro());
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/pedido_cursos/{id} {
-      allow create: if true
-      allow list: if isAuthenticated() && (!isRestrictedRole(getUserData().role) || resource.data.unidade == getUserData().unidade)
-      allow get, update, delete: if isAuthenticated() && (isMasterUser() || isComercial() || resource.data.unidade == getUserData().unidade)
+      allow create: if true;
+      allow list: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow get, update, delete: if isAuthenticated() && (isMasterUser() || isComercial() || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/qg_ligacoes/{id} {
-      allow read: if isAuthenticated()
-      allow write: if isPrincipal() || isComercial() || isSSA()
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal() || isComercial() || isSSA();
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/controle_concorrencia/{id} {
-      allow read: if isAuthenticated()
-      allow write: if isPrincipal() || isComercial() || isSSA()
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal() || isComercial() || isSSA();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/campanhas/{id} {
-      allow read: if isAuthenticated()
-      allow write: if isPrincipal() || isComercial() || isSSA()
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal() || isComercial() || isSSA();
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/bom_dia/{id} {
-      allow read: if isAuthenticated()
-      allow write: if isPrincipal() || isComercial() || isSSA()
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal() || isComercial() || isSSA();
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/forecast/{id} {
-      allow read: if isAuthenticated()
-      allow write: if isPrincipal() || isComercial() || isSSA()
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal() || isComercial() || isSSA();
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/planner/{id} {
-      allow read: if isAuthenticated()
-      allow write: if isPrincipal() || isComercial() || isSSA()
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal() || isComercial() || isSSA();
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/periodo_captacao/{id} {
-      allow read: if isAuthenticated()
-      allow write: if isPrincipal() || isComercial() || isSSA()
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal() || isComercial() || isSSA();
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/linksUteis/{id} {
-      allow read: if isAuthenticated()
-      allow write: if isPrincipal() || isComercial() || isSSA()
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal() || isComercial() || isSSA();
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/empresas_parceiras/{id} {
-      allow read: if true
-      allow create, update: if (isPrincipal() || isComercial()) && isValidEmpresa(request.resource.data)
-      allow delete: if isPrincipal() || isComercial()
+      allow read: if true;
+      allow create, update: if (isPrincipal() || isComercial()) && isValidEmpresa(request.resource.data);
+      allow delete: if isPrincipal() || isComercial();
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/whatsapp_messages/{id} {
-      allow read: if isAuthenticated()
-      allow create, update: if (hasAnyRole(["SSA", "Admin Master", "Gestor Unidade", "Líder/FDV", "Sala de Matrícula", "QG", "FDV", "FDV (Comercial)", "Promotor", "Promotor/rua", "Gestor Comercial", "Gerente Comercial (Comercial)"])) && isValidWhatsAppMessage(request.resource.data)
-      allow delete: if hasAnyRole(["SSA", "Admin Master", "Gestor Unidade", "Líder/FDV", "Sala de Matrícula", "QG", "FDV", "FDV (Comercial)", "Promotor", "Promotor/rua", "Gestor Comercial", "Gerente Comercial (Comercial)"])
+      allow read: if isAuthenticated();
+      allow create, update: if (hasAnyRole(["SSA", "Admin Master", "Gestor Unidade", "Líder/FDV", "Sala de Matrícula", "QG", "FDV", "FDV (Comercial)", "Promotor", "Promotor/rua", "Gestor Comercial", "Gerente Comercial (Comercial)"])) && isValidWhatsAppMessage(request.resource.data);
+      allow delete: if hasAnyRole(["SSA", "Admin Master", "Gestor Unidade", "Líder/FDV", "Sala de Matrícula", "QG", "FDV", "FDV (Comercial)", "Promotor", "Promotor/rua", "Gestor Comercial", "Gerente Comercial (Comercial)"]);
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/mapao_academico/{id} {
-      allow read: if isPrincipal() || isComercial() || isAcademico() || isSSA() || isFinanceiro() || isTecnico()
-      allow create, update: if (isPrincipal() || isComercial() || isAcademico() || isSSA() || isFinanceiro() || isTecnico()) && isValidMapaoAcademico(request.resource.data)
-      allow delete: if isPrincipal() || isAcademico() || isSSA() || isFinanceiro() || isTecnico()
+      allow read: if isPrincipal() || isComercial() || isAcademico() || isSSA() || isFinanceiro() || isTecnico();
+      allow create, update: if (isPrincipal() || isComercial() || isAcademico() || isSSA() || isFinanceiro() || isTecnico()) && isValidMapaoAcademico(request.resource.data);
+      allow delete: if isPrincipal() || isAcademico() || isSSA() || isFinanceiro() || isTecnico();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/bases_disparo/{id} {
-      allow read, create, update: if isPrincipal() || isComercial()
-      allow delete: if isPrincipal() || isComercial()
+      allow read, create, update: if isPrincipal() || isComercial();
+      allow delete: if isPrincipal() || isComercial();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/bot_config/{id} {
-      allow read: if true
-      allow write: if isAuthenticated()
+      allow read: if true;
+      allow write: if isAuthenticated();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/bot_reports/{id} {
-      allow read: if isPrincipal() || isComercial()
-      allow create: if isAuthenticated()
-      allow update, delete: if isPrincipal()
+      allow read: if isPrincipal() || isComercial();
+      allow create: if isAuthenticated();
+      allow update, delete: if isPrincipal();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/bases_renovacao/{id} {
-      allow read, create, update: if hasAnyRole(["SSA", "Admin Master", "Gestor Unidade", "Líder/FDV", "Sala de Matrícula", "QG", "FDV", "FDV (Comercial)", "Promotor", "Promotor/rua", "Gestor Comercial", "Gerente Comercial (Comercial)"])
-      allow delete: if hasAnyRole(["SSA", "Admin Master", "Gestor Unidade", "Líder/FDV", "Sala de Matrícula", "QG", "FDV", "FDV (Comercial)", "Promotor", "Promotor/rua", "Gestor Comercial", "Gerente Comercial (Comercial)"])
+      allow read, create, update: if hasAnyRole(["SSA", "Admin Master", "Gestor Unidade", "Líder/FDV", "Sala de Matrícula", "QG", "FDV", "FDV (Comercial)", "Promotor", "Promotor/rua", "Gestor Comercial", "Gerente Comercial (Comercial)"]);
+      allow delete: if hasAnyRole(["SSA", "Admin Master", "Gestor Unidade", "Líder/FDV", "Sala de Matrícula", "QG", "FDV", "FDV (Comercial)", "Promotor", "Promotor/rua", "Gestor Comercial", "Gerente Comercial (Comercial)"]);
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/meta_dia/{id} {
-      allow read: if isAuthenticated()
-      allow write: if isPrincipal() || isComercial()
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal() || isComercial();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/solicitacoes_folga/{id} {
-      allow read, write: if isAuthenticated()
+      allow read, write: if isAuthenticated();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/cursos/{id} {
-      allow read: if true
-      allow write: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isSSA() || isFinanceiro() || isTecnico())
+      allow read: if true;
+      allow write: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isSSA() || isFinanceiro() || isTecnico());
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/insumos_pedidos/{id} {
-      allow create: if true
-      allow read, update, delete: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isFinanceiro() || isTecnico())
+      allow create: if true;
+      allow read, update, delete: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isFinanceiro() || isTecnico());
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/insumos_estoque/{id} {
-      allow read, write: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isFinanceiro() || isTecnico())
+      allow read, write: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isFinanceiro() || isTecnico());
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/insumos_pedidos_comercial/{id} {
-      allow create: if true
-      allow read, update, delete: if isAuthenticated() && (isPrincipal() || isComercial())
+      allow create: if true;
+      allow read, update, delete: if isAuthenticated() && (isPrincipal() || isComercial());
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/insumos_estoque_comercial/{id} {
-      allow read, write: if isAuthenticated() && (isPrincipal() || isComercial())
+      allow read, write: if isAuthenticated() && (isPrincipal() || isComercial());
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/insumos_baixas/{id} {
-      allow create: if isAuthenticated()
-      allow read, update, delete: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isFinanceiro() || isTecnico())
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isFinanceiro() || isTecnico());
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/insumos_baixas_comercial/{id} {
-      allow create: if isAuthenticated()
-      allow read, update, delete: if isAuthenticated() && (isPrincipal() || isComercial())
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAuthenticated() && (isPrincipal() || isComercial());
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/funcionarios/{id} {
-      allow read: if true
-      allow write: if isAuthenticated() && (isPrincipal() || isComercial())
+      allow read: if true;
+      allow write: if isAuthenticated() && (isPrincipal() || isComercial());
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/isencoes/{isencaoId} {
-      allow list: if isAuthenticated() && (!isRestrictedRole(getUserData().role) || resource.data.unidade == getUserData().unidade)
-      allow get, write: if isAuthenticated() && (isMasterUser() || isComercial() || resource.data.unidade == getUserData().unidade)
+      allow list: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow get, write: if isAuthenticated() && (isMasterUser() || isComercial() || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/evasao/{id} {
-      allow list: if isAuthenticated() && (!isRestrictedRole(getUserData().role) || resource.data.unidade == getUserData().unidade)
-      allow get, write: if isAuthenticated() && (isMasterUser() || isComercial() || resource.data.unidade == getUserData().unidade) &&
-        hasAnyRole(["SSA", "Admin Master", "Gestor Unidade", "Líder/FDV", "Sala de Matrícula", "QG", "FDV", "FDV (Comercial)", "Promotor", "Promotor/rua", "Gestor Comercial", "Gerente Comercial (Comercial)"])
+      allow list: if isAuthenticated() && (isMasterUser() || hasAnyRole(['Admin Master', 'Gestor Comercial', 'Gerente Comercial (Comercial)']) || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade));
+      allow get, write: if isAuthenticated() && (isMasterUser() || isComercial() || (exists(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)) && get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid)).data.unidade == resource.data.unidade)) &&
+        hasAnyRole(["SSA", "Admin Master", "Gestor Unidade", "Líder/FDV", "Sala de Matrícula", "QG", "FDV", "FDV (Comercial)", "Promotor", "Promotor/rua", "Gestor Comercial", "Gerente Comercial (Comercial)"]);
     }
   }
 }

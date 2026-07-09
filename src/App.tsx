@@ -4298,7 +4298,10 @@ export default function App() {
       const isRestricted =
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
-        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
+          user?.email || "",
+        );
 
       let usersQuery = query(collection(db, COLLECTIONS.USERS));
       if (isRestricted && profile.unidade) {
@@ -4351,7 +4354,10 @@ export default function App() {
       const isRestricted =
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
-        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
+          user?.email || "",
+        );
 
       if (
         [
@@ -4428,7 +4434,10 @@ export default function App() {
       const isRestricted =
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
-        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
+          user?.email || "",
+        );
 
       let basesQuery = query(collection(db, COLLECTIONS.BASES));
       if (isRestricted && profile.unidade) {
@@ -4452,7 +4461,10 @@ export default function App() {
       const isRestricted =
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
-        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
+          user?.email || "",
+        );
 
       let gapQuery = query(collection(db, COLLECTIONS.GAP));
       if (isRestricted && profile.unidade) {
@@ -4473,7 +4485,10 @@ export default function App() {
       const isRestricted =
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
-        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
+          user?.email || "",
+        );
 
       let isencoesQuery = query(collection(db, COLLECTIONS.ISENCOES));
       if (isRestricted && profile.unidade) {
@@ -4495,6 +4510,31 @@ export default function App() {
       );
     }
 
+    let unsubEvasao = () => {};
+    if (profile && VIEW_PERMISSIONS.evasao.includes(profile.role)) {
+      const isRestricted =
+        profile.role !== ROLES.ADMIN_MASTER &&
+        profile.role !== ROLES.GESTOR_COMERCIAL &&
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
+          user?.email || "",
+        );
+
+      let evQuery = query(collection(db, COLLECTIONS.EVASAO));
+      if (isRestricted && profile.unidade) {
+        evQuery = query(evQuery, where("unidade", "==", profile.unidade));
+      }
+
+      unsubEvasao = onSnapshot(
+        evQuery,
+        (snap) => {
+          setEvasao(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as any));
+        },
+        (err) =>
+          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.EVASAO),
+      );
+    }
+
     let unsubPedidosCursos = () => {};
     if (
       profile &&
@@ -4504,7 +4544,10 @@ export default function App() {
       const isRestricted =
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
-        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
+          user?.email || "",
+        );
 
       let pcQuery = query(collection(db, COLLECTIONS.PEDIDO_CURSOS));
       if (isRestricted && profile.unidade) {
@@ -4535,7 +4578,10 @@ export default function App() {
       const isRestricted =
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
-        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
+          user?.email || "",
+        );
 
       let fpQuery = query(collection(db, COLLECTIONS.FIES_PROUNI));
       let fpvQuery = query(collection(db, COLLECTIONS.FIES_PROUNI_VAGAS));
@@ -4676,7 +4722,10 @@ export default function App() {
       const isRestricted =
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
-        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
+          user?.email || "",
+        );
 
       let calendarioQuery;
       if (
