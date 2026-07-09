@@ -8,7 +8,8 @@ import {
   doc, 
   serverTimestamp,
   query,
-  orderBy
+  orderBy,
+  where
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { COLLECTIONS } from "../firebase";
@@ -83,10 +84,19 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
   });
 
   useEffect(() => {
-    const q = query(
+    const isRestricted = 
+      profile?.role !== "Admin Master" && 
+      profile?.role !== "Gestor Comercial" && 
+      profile?.role !== "Gerente Comercial (Comercial)";
+
+    let q = query(
       collection(db, COLLECTIONS.EVASAO),
       orderBy("createdAt", "desc")
     );
+
+    if (isRestricted && profile?.unidade) {
+      q = query(q, where("unidade", "==", profile.unidade));
+    }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as EvasaoRecord));

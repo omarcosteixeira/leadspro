@@ -2090,8 +2090,12 @@ function FiesProuniView({
   }, [editingEntry, isModalOpen]);
 
   const filteredData = data.filter((item) => {
-    // Gestor Unidade filtering
-    if (profile.role === ROLES.GESTOR_UNIDADE) {
+    // Restrict visibility to entries from the same unit, unless admin/gestor
+    if (
+      profile.role !== ROLES.ADMIN_MASTER &&
+      profile.role !== ROLES.GESTOR_COMERCIAL &&
+      profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL
+    ) {
       if (profile.unidade && item.unidade && item.unidade !== profile.unidade) {
         return false;
       }
@@ -2150,7 +2154,11 @@ function FiesProuniView({
   const safeVagas = Array.isArray(vagas) ? vagas : [];
 
   const filteredVagas = safeVagas.filter((item) => {
-    if (profile.role === ROLES.GESTOR_UNIDADE) {
+    if (
+      profile.role !== ROLES.ADMIN_MASTER &&
+      profile.role !== ROLES.GESTOR_COMERCIAL &&
+      profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL
+    ) {
       if (profile.unidade && item.unidade && item.unidade !== profile.unidade) {
         return false;
       }
@@ -4286,9 +4294,19 @@ export default function App() {
 
     // Listeners for users require auth
     let unsubUsers = () => {};
-    if (user) {
+    if (user && profile) {
+      const isRestricted =
+        profile.role !== ROLES.ADMIN_MASTER &&
+        profile.role !== ROLES.GESTOR_COMERCIAL &&
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+
+      let usersQuery = query(collection(db, COLLECTIONS.USERS));
+      if (isRestricted && profile.unidade) {
+        usersQuery = query(usersQuery, where("unidade", "==", profile.unidade));
+      }
+
       unsubUsers = onSnapshot(
-        collection(db, COLLECTIONS.USERS),
+        usersQuery,
         (snap) => {
           setUsers(
             snap.docs.map((d) => ({ uid: d.id, ...d.data() }) as UserProfile),
@@ -4330,6 +4348,11 @@ export default function App() {
     let unsubLeads = () => {};
     if (profile) {
       let leadsQuery;
+      const isRestricted =
+        profile.role !== ROLES.ADMIN_MASTER &&
+        profile.role !== ROLES.GESTOR_COMERCIAL &&
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+
       if (
         [
           ROLES.ADMIN_MASTER,
@@ -4386,6 +4409,10 @@ export default function App() {
         );
       }
 
+      if (isRestricted && profile.unidade) {
+        leadsQuery = query(leadsQuery, where("unidade", "==", profile.unidade));
+      }
+
       unsubLeads = onSnapshot(
         leadsQuery,
         (snap) => {
@@ -4398,8 +4425,18 @@ export default function App() {
 
     let unsubBases = () => {};
     if (profile && VIEW_PERMISSIONS.bases.includes(profile.role)) {
+      const isRestricted =
+        profile.role !== ROLES.ADMIN_MASTER &&
+        profile.role !== ROLES.GESTOR_COMERCIAL &&
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+
+      let basesQuery = query(collection(db, COLLECTIONS.BASES));
+      if (isRestricted && profile.unidade) {
+        basesQuery = query(basesQuery, where("unidade", "==", profile.unidade));
+      }
+
       unsubBases = onSnapshot(
-        collection(db, COLLECTIONS.BASES),
+        basesQuery,
         (snap) => {
           setBases(
             snap.docs.map((d) => ({ id: d.id, ...d.data() }) as BaseEntry),
@@ -4412,8 +4449,18 @@ export default function App() {
 
     let unsubGap = () => {};
     if (profile && VIEW_PERMISSIONS.gap.includes(profile.role)) {
+      const isRestricted =
+        profile.role !== ROLES.ADMIN_MASTER &&
+        profile.role !== ROLES.GESTOR_COMERCIAL &&
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+
+      let gapQuery = query(collection(db, COLLECTIONS.GAP));
+      if (isRestricted && profile.unidade) {
+        gapQuery = query(gapQuery, where("unidade", "==", profile.unidade));
+      }
+
       unsubGap = onSnapshot(
-        collection(db, COLLECTIONS.GAP),
+        gapQuery,
         (snap) => {
           setGap(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as GapEntry));
         },
@@ -4423,8 +4470,21 @@ export default function App() {
 
     let unsubIsencoes = () => {};
     if (profile && VIEW_PERMISSIONS.isencoes.includes(profile.role)) {
+      const isRestricted =
+        profile.role !== ROLES.ADMIN_MASTER &&
+        profile.role !== ROLES.GESTOR_COMERCIAL &&
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+
+      let isencoesQuery = query(collection(db, COLLECTIONS.ISENCOES));
+      if (isRestricted && profile.unidade) {
+        isencoesQuery = query(
+          isencoesQuery,
+          where("unidade", "==", profile.unidade),
+        );
+      }
+
       unsubIsencoes = onSnapshot(
-        collection(db, COLLECTIONS.ISENCOES),
+        isencoesQuery,
         (snap) => {
           setIsencoes(
             snap.docs.map((d) => ({ id: d.id, ...d.data() }) as IsencaoEntry),
@@ -4436,24 +4496,57 @@ export default function App() {
     }
 
     let unsubPedidosCursos = () => {};
-    if (profile && (VIEW_PERMISSIONS.historico.includes(profile.role) || VIEW_PERMISSIONS.relatorios.includes(profile.role))) {
+    if (
+      profile &&
+      (VIEW_PERMISSIONS.historico.includes(profile.role) ||
+        VIEW_PERMISSIONS.relatorios.includes(profile.role))
+    ) {
+      const isRestricted =
+        profile.role !== ROLES.ADMIN_MASTER &&
+        profile.role !== ROLES.GESTOR_COMERCIAL &&
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+
+      let pcQuery = query(collection(db, COLLECTIONS.PEDIDO_CURSOS));
+      if (isRestricted && profile.unidade) {
+        pcQuery = query(pcQuery, where("unidade", "==", profile.unidade));
+      }
+
       unsubPedidosCursos = onSnapshot(
-        collection(db, COLLECTIONS.PEDIDO_CURSOS),
+        pcQuery,
         (snap) => {
           setPedidosCursos(
-            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as PedidoCursoEntry),
+            snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as PedidoCursoEntry,
+            ),
           );
         },
         (err) =>
-          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.PEDIDO_CURSOS),
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.PEDIDO_CURSOS,
+          ),
       );
     }
 
     let unsubFiesProuni = () => {};
     let unsubFiesProuniVagas = () => {};
     if (profile && VIEW_PERMISSIONS.fiesProuni.includes(profile.role)) {
+      const isRestricted =
+        profile.role !== ROLES.ADMIN_MASTER &&
+        profile.role !== ROLES.GESTOR_COMERCIAL &&
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+
+      let fpQuery = query(collection(db, COLLECTIONS.FIES_PROUNI));
+      let fpvQuery = query(collection(db, COLLECTIONS.FIES_PROUNI_VAGAS));
+
+      if (isRestricted && profile.unidade) {
+        fpQuery = query(fpQuery, where("unidade", "==", profile.unidade));
+        fpvQuery = query(fpvQuery, where("unidade", "==", profile.unidade));
+      }
+
       unsubFiesProuni = onSnapshot(
-        collection(db, COLLECTIONS.FIES_PROUNI),
+        fpQuery,
         (snap) => {
           setFiesProuni(
             snap.docs.map(
@@ -4469,7 +4562,7 @@ export default function App() {
           ),
       );
       unsubFiesProuniVagas = onSnapshot(
-        collection(db, COLLECTIONS.FIES_PROUNI_VAGAS),
+        fpvQuery,
         (snap) => {
           setFiesProuniVagas(
             snap.docs.map(
@@ -4580,6 +4673,11 @@ export default function App() {
         VIEW_PERMISSIONS.controlePagamentos.includes(profile.role) ||
         canView("controlePagamentos"))
     ) {
+      const isRestricted =
+        profile.role !== ROLES.ADMIN_MASTER &&
+        profile.role !== ROLES.GESTOR_COMERCIAL &&
+        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL;
+
       let calendarioQuery;
       if (
         [
@@ -4625,6 +4723,14 @@ export default function App() {
           where("creatorId", "==", "none"),
         );
       }
+
+      if (isRestricted && profile.unidade) {
+        calendarioQuery = query(
+          calendarioQuery,
+          where("unidade", "==", profile.unidade),
+        );
+      }
+
       unsubCalendario = onSnapshot(
         calendarioQuery,
         (snap) => {
@@ -13776,11 +13882,23 @@ function CalendarioAcoesView({
     }
     return true;
   });
-  const colaboradoresDisponiveis = (users || []).filter(
-    (u) =>
+  const colaboradoresDisponiveis = (users || []).filter((u) => {
+    const isTargetRole =
       u.role === ROLES.FDV_COMERCIAL ||
-      u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL,
-  );
+      u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL;
+    if (!isTargetRole) return false;
+
+    if (
+      profile.role !== ROLES.ADMIN_MASTER &&
+      profile.role !== ROLES.GESTOR_COMERCIAL &&
+      profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL
+    ) {
+      if (profile.unidade && u.unidade !== profile.unidade) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   useEffect(() => {
     if (initialData) {

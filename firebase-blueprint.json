@@ -10,7 +10,8 @@
         "name": { "type": "string" },
         "phone": { "type": "string" },
         "chavePix": { "type": "string" },
-        "role": { "type": "string", "enum": ["Promotor", "FDV", "Sala de Matrícula", "QG", "Líder/FDV", "SSA", "Gestor Unidade", "Gestor Comercial"] },
+        "role": { "type": "string", "enum": ["Promotor", "FDV", "Sala de Matrícula", "QG", "Líder/FDV", "SSA", "Gestor Unidade", "Gestor Comercial", "Acadêmico", "Gerente Comercial (Comercial)", "FDV (Comercial)", "Promotor/rua", "Financeiro", "Técnico", "Admin Master"] },
+        "unidade": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "dashboardWidgets": {
           "type": "object",
@@ -274,6 +275,43 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["atendimento", "tipoAtendimento", "unidade", "modalidade", "matricula", "curso", "safra", "nome", "contato", "status", "trancamentoCancelamento"]
+    },
+    "CalendarioAcao": {
+      "title": "CalendarioAcao",
+      "description": "Team action and event planning",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "dataInicio": { "type": "string", "format": "date" },
+        "dataFim": { "type": "string", "format": "date" },
+        "local": { "type": "string" },
+        "observacao": { "type": "string" },
+        "status": { "type": "string", "enum": ["Não iniciada", "Em andamento", "Concluído", "Cancelado"] },
+        "concluida": { "type": "boolean" },
+        "unidade": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "creatorRole": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "fotos": { "type": "array", "items": { "type": "string" } },
+        "metaBoletos": { "type": "number" },
+        "metaInscritos": { "type": "number" },
+        "precisaPromotor": { "type": "boolean" },
+        "promotoresSelecionados": { "type": "array", "items": { "type": "string" } },
+        "valorPromotor": { "type": "number" },
+        "valorOrcado": { "type": "number" },
+        "colaboradorId": { "type": "string" },
+        "colaboradorNome": { "type": "string" },
+        "colaboradoresIds": { "type": "array", "items": { "type": "string" } },
+        "colaboradoresNomes": { "type": "array", "items": { "type": "string" } },
+        "tipoAtividade": { "type": "string" },
+        "empresaParceiraId": { "type": "string" },
+        "empresaParceiraNome": { "type": "string" },
+        "leadsFeitos": { "type": "number" },
+        "boletosFeitos": { "type": "number" },
+        "horario": { "type": "string" }
+      },
+      "required": ["nome", "dataInicio", "dataFim", "local", "unidade", "creatorId", "createdAt"]
     }
   },
   "firestore": {
@@ -340,6 +378,10 @@
     "artifacts/gestaopro-761e1/public/data/evasao/{evasaoId}": {
       "schema": "EvasaoRecord",
       "description": "Evasion tracking data"
+    },
+    "artifacts/gestaopro-761e1/public/data/calendario_acoes/{acaoId}": {
+      "schema": "CalendarioAcao",
+      "description": "Team action and event planning data"
     }
   }
 }

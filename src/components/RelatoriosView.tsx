@@ -126,39 +126,40 @@ export function RelatoriosView({
     }
   };
 
-  // --- Filtering data for Gestor Unidade ---
+  // --- Filtering data for Unit Restriction ---
+  const isPrivileged = 
+    profile.role === "Admin Master" || 
+    profile.role === "Gestor Comercial" || 
+    profile.role === "Gerente Comercial (Comercial)";
+
   const filteredLeads = useMemo(() => {
-    if (profile.role === "Gestor Unidade") {
+    if (!isPrivileged) {
       return leads.filter(l => l.unidade === profile.unidade);
     }
     return leads;
-  }, [leads, profile]);
+  }, [leads, profile, isPrivileged]);
 
   const filteredBases = useMemo(() => {
-    if (profile.role === "Gestor Unidade") {
+    if (!isPrivileged) {
       return bases.filter(b => b.unidade === profile.unidade);
     }
     return bases;
-  }, [bases, profile]);
+  }, [bases, profile, isPrivileged]);
 
   const filteredFiesProuni = useMemo(() => {
     if (!fiesProuni) return [];
-    if (profile.role === "Gestor Unidade") {
+    if (!isPrivileged) {
       return fiesProuni.filter(f => f && f.unidade === profile.unidade);
     }
     return fiesProuni;
-  }, [fiesProuni, profile]);
+  }, [fiesProuni, profile, isPrivileged]);
 
   const filteredPlanoAcoes = useMemo(() => {
-    if (
-      profile.role !== "Admin Master" &&
-      profile.role !== "Gestor Comercial" &&
-      profile.role !== "Gerente Comercial (Comercial)"
-    ) {
+    if (!isPrivileged) {
       return calendarioAcoes.filter(a => a.unidade === profile.unidade);
     }
     return calendarioAcoes;
-  }, [calendarioAcoes, profile]);
+  }, [calendarioAcoes, profile, isPrivileged]);
 
   // --- Historico Leads Stats ---
   const historicoStats = useMemo(() => {
