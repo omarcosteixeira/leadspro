@@ -21,8 +21,7 @@ service cloud.firestore {
       return isAuthenticated() && (
         request.auth.token.email in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"] || 
         userDoc.email in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"] ||
-        userDoc.role == "Admin Master" || 
-        userDoc.role == "Líder/FDV"
+        userDoc.role == "Admin Master"
       );
     }
     
@@ -75,9 +74,10 @@ service cloud.firestore {
     }
 
     function isValidCalendarioAcao(data) {
-      return data.keys().hasAll(['nome', 'dataInicio', 'dataFim', 'unidade']) &&
+      return data.keys().hasAll(['nome', 'dataInicio', 'dataFim', 'unidade', 'creatorId']) &&
              data.nome is string && data.nome.size() <= 1000 &&
-             data.unidade is string;
+             data.unidade is string &&
+             data.creatorId == request.auth.uid;
     }
 
     function isValidEmpresa(data) {
@@ -117,7 +117,7 @@ service cloud.firestore {
       allow get: if isAuthenticated() && (userId == request.auth.uid || isMasterUser() || isComercial() || canAccessUnit(resource.data.unidade));
       allow list: if isAuthenticated() && (
         isMasterUser() || 
-        isComercial() || isSalaMatricula() || 
+        isComercial() || 
         (isGestorUnidade() && resource.data.unidade == getUserData().unidade && resource.data.role in ['FDV', 'FDV (Comercial)', 'Promotor', 'Promotor/rua']) ||
         (isFDV() && (resource.data.unidade == getUserData().unidade || resource.data.linkadoA == request.auth.uid || resource.data.uid == request.auth.uid))
       );
@@ -153,21 +153,21 @@ service cloud.firestore {
     match /artifacts/gestaodeleadspro-d4230/public/data/gap_academico/{gapId} {
       allow get, list: if isAuthenticated() && canAccessUnit(resource.data.unidade);
       allow create, update: if isAuthenticated() && canAccessUnit(request.resource.data.unidade) && (isMasterUser() || isComercial() || isLider() || isSalaMatricula());
-      allow delete: if isMasterUser() || isComercial() || isLider() || isSalaMatricula();
+      allow delete: if isMasterUser() || isComercial() || isLider();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/fies_prouni/{entryId} {
       allow get, list: if isAuthenticated() && (isMasterUser() || isComercial() || canAccessUnit(resource.data.unidade));
       allow create, update: if (isMasterUser() || isComercial() || isLider() || isSalaMatricula() || isSSA()) && (isMasterUser() || isComercial() || canAccessUnit(request.resource.data.unidade));
-      allow delete: if isMasterUser() || isComercial() || isLider() || isSalaMatricula();
+      allow delete: if isMasterUser() || isComercial() || isLider();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/calendario_acoes/{acaoId} {
       allow get, list: if isAuthenticated() && (isMasterUser() || isComercial() || canAccessUnit(resource.data.unidade));
-      allow create: if (isMasterUser() || isComercial() || isFinanceiro() || isLider() || isFDV() || isPromotor() || isSalaMatricula()) && isValidCalendarioAcao(request.resource.data) && (isMasterUser() || isComercial() || canAccessUnit(request.resource.data.unidade));
-      allow update: if (isMasterUser() || isComercial() || isFinanceiro() || isLider() || isFDV() || isPromotor() || isSalaMatricula()) && isValidCalendarioAcao(request.resource.data) && 
+      allow create: if (isMasterUser() || isComercial() || isFinanceiro() || isLider() || isFDV() || isPromotor()) && isValidCalendarioAcao(request.resource.data) && (isMasterUser() || isComercial() || canAccessUnit(request.resource.data.unidade));
+      allow update: if (isMasterUser() || isComercial() || isFinanceiro() || isLider() || isFDV() || isPromotor()) && isValidCalendarioAcao(request.resource.data) && 
         (isMasterUser() || isComercial() || (canAccessUnit(resource.data.unidade) && canAccessUnit(request.resource.data.unidade)));
-      allow delete: if (isMasterUser() || isComercial() || isLider() || isFinanceiro() || isSalaMatricula());
+      allow delete: if (isMasterUser() || isComercial() || isLider() || isFinanceiro());
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/pedido_cursos/{id} {
@@ -182,12 +182,12 @@ service cloud.firestore {
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/controle_concorrencia/{id} {
       allow read: if isAuthenticated();
-      allow write: if isPrincipal() || isComercial() || isSSA() || isSalaMatricula();
+      allow write: if isPrincipal() || isComercial() || isSSA();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/campanhas/{id} {
       allow read: if isAuthenticated();
-      allow write: if isPrincipal() || isComercial() || isSSA() || isSalaMatricula();
+      allow write: if isPrincipal() || isComercial() || isSSA();
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/bom_dia/{id} {
       allow read: if isAuthenticated();
@@ -216,8 +216,8 @@ service cloud.firestore {
         (isGestorUnidade() && getUserData().unidade in resource.data.unidadesVinculadas) ||
         (isFDV() && (resource.data.consultorId == request.auth.uid || resource.data.creatorId == request.auth.uid || getUserData().unidade in resource.data.unidadesVinculadas))
       );
-      allow create, update: if isAuthenticated() && (isMasterUser() || isComercial() || isLider() || isGestorUnidade() || isFDV() || isSalaMatricula()) && isValidEmpresa(request.resource.data);
-      allow delete: if isMasterUser() || isComercial() || isLider() || isSalaMatricula();
+      allow create, update: if isAuthenticated() && (isMasterUser() || isComercial() || isLider() || isGestorUnidade() || isFDV()) && isValidEmpresa(request.resource.data);
+      allow delete: if isMasterUser() || isComercial() || isLider();
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/whatsapp_messages/{id} {
       allow read: if isAuthenticated();
@@ -263,7 +263,7 @@ service cloud.firestore {
 
     match /artifacts/gestaodeleadspro-d4230/public/data/cursos/{id} {
       allow read: if true;
-      allow write: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isSSA() || isFinanceiro() || isTecnico() || isSalaMatricula());
+      allow write: if isAuthenticated() && (isPrincipal() || isComercial() || isAcademico() || isSSA() || isFinanceiro() || isTecnico());
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/insumos_pedidos/{id} {
