@@ -587,11 +587,15 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.ACADEMICO,
     ROLES.FINANCEIRO,
     ROLES.TECNICO,
+
+    ROLES.LIDER_FDV,
   ],
   controleInsumosComercial: [
     ROLES.ADMIN_MASTER,
     ROLES.FDV_COMERCIAL,
     ROLES.GESTOR_COMERCIAL_COMERCIAL,
+
+    ROLES.LIDER_FDV,
   ],
   isencoes: [
     ROLES.ADMIN_MASTER,
@@ -1739,20 +1743,35 @@ function CampanhasView({
         const getVal = (row: any, ...keys: string[]) => {
           const rowKeys = Object.keys(row);
           for (const key of keys) {
-            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            const foundKey = rowKeys.find(
+              (k) => k.toLowerCase() === key.toLowerCase(),
+            );
             if (foundKey && row[foundKey] !== undefined) return row[foundKey];
           }
           return undefined;
         };
 
         const batch = data.map((item) => {
-          const rawStatus = String(getVal(item, "Status", "status") || "").trim().toLowerCase();
-          const finalStatus = rawStatus === "ativa" ? "Ativa" : rawStatus === "inativa" ? "Inativa" : rawStatus === "pendente" ? "Pendente" : "Ativa";
+          const rawStatus = String(getVal(item, "Status", "status") || "")
+            .trim()
+            .toLowerCase();
+          const finalStatus =
+            rawStatus === "ativa"
+              ? "Ativa"
+              : rawStatus === "inativa"
+                ? "Inativa"
+                : rawStatus === "pendente"
+                  ? "Pendente"
+                  : "Ativa";
 
           return {
             nome: String(getVal(item, "Nome", "nome") || "").trim(),
-            dataInicio: String(getVal(item, "Data Início", "dataInicio", "data_inicio") || "").trim(),
-            dataFim: String(getVal(item, "Data Fim", "dataFim", "data_fim") || "").trim(),
+            dataInicio: String(
+              getVal(item, "Data Início", "dataInicio", "data_inicio") || "",
+            ).trim(),
+            dataFim: String(
+              getVal(item, "Data Fim", "dataFim", "data_fim") || "",
+            ).trim(),
             status: finalStatus,
             objetivo: String(getVal(item, "Objetivo", "objetivo") || "").trim(),
             createdAt: serverTimestamp(),
@@ -1765,8 +1784,13 @@ function CampanhasView({
         for (const entry of batch) {
           if (!entry.nome) continue;
           const isDup =
-            campanhas.some((c) => c.nome.trim().toLowerCase() === entry.nome.toLowerCase()) ||
-            Array.from(inserted).some((name: any) => String(name).toLowerCase() === entry.nome.toLowerCase());
+            campanhas.some(
+              (c) => c.nome.trim().toLowerCase() === entry.nome.toLowerCase(),
+            ) ||
+            Array.from(inserted).some(
+              (name: any) =>
+                String(name).toLowerCase() === entry.nome.toLowerCase(),
+            );
           if (!isDup) {
             await addDoc(collection(db, COLLECTIONS.CAMPANHAS), entry);
             inserted.add(entry.nome);
@@ -2100,7 +2124,9 @@ function FiesProuniView({
   onSendBot: (tel: string, msg: string) => void;
   onMassSendBot: (messages: { telefone: string; message: string }[]) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"lista" | "informacoes">("informacoes");
+  const [activeTab, setActiveTab] = useState<"lista" | "informacoes">(
+    "informacoes",
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [periodoFilter, setPeriodoFilter] = useState("");
   const [tipoFilter, setTipoFilter] = useState("");
@@ -2202,10 +2228,12 @@ function FiesProuniView({
         return false;
       }
     }
-    const matchesPeriodo = !vagasPeriodoFilter || item.periodo === vagasPeriodoFilter;
-    const matchesMetodologia = !vagasMetodologiaFilter || item.metodologia === vagasMetodologiaFilter;
+    const matchesPeriodo =
+      !vagasPeriodoFilter || item.periodo === vagasPeriodoFilter;
+    const matchesMetodologia =
+      !vagasMetodologiaFilter || item.metodologia === vagasMetodologiaFilter;
     const matchesBolsa = !vagasBolsaFilter || item.bolsa === vagasBolsaFilter;
-    
+
     return matchesPeriodo && matchesMetodologia && matchesBolsa;
   });
 
@@ -2214,9 +2242,16 @@ function FiesProuniView({
   ).sort();
 
   const vagasStats = {
-    totalVagas: filteredVagas.reduce((acc, curr) => acc + (Number(curr?.vagas) || 0), 0),
-    total100: filteredVagas.filter(v => v?.bolsa === "100%").reduce((acc, curr) => acc + (Number(curr?.vagas) || 0), 0),
-    total50: filteredVagas.filter(v => v?.bolsa === "50%").reduce((acc, curr) => acc + (Number(curr?.vagas) || 0), 0),
+    totalVagas: filteredVagas.reduce(
+      (acc, curr) => acc + (Number(curr?.vagas) || 0),
+      0,
+    ),
+    total100: filteredVagas
+      .filter((v) => v?.bolsa === "100%")
+      .reduce((acc, curr) => acc + (Number(curr?.vagas) || 0), 0),
+    total50: filteredVagas
+      .filter((v) => v?.bolsa === "50%")
+      .reduce((acc, curr) => acc + (Number(curr?.vagas) || 0), 0),
   };
 
   const handleSaveVaga = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -2228,17 +2263,20 @@ function FiesProuniView({
       curso: formData.get("curso") as string,
       turno: formData.get("turno") as string,
       metodologia: formData.get("metodologia") as string,
-      bolsa: formData.get("bolsa") as '50%' | '100%',
+      bolsa: formData.get("bolsa") as "50%" | "100%",
       vagas: parseInt(formData.get("vagas") as string, 10) || 0,
       unidade: (formData.get("unidade") as string) || "",
     };
 
     try {
       if (editingVaga) {
-        await updateDoc(doc(db, COLLECTIONS.FIES_PROUNI_VAGAS, editingVaga.id), {
-          ...payload,
-          updatedAt: serverTimestamp(),
-        });
+        await updateDoc(
+          doc(db, COLLECTIONS.FIES_PROUNI_VAGAS, editingVaga.id),
+          {
+            ...payload,
+            updatedAt: serverTimestamp(),
+          },
+        );
         onToast("Vaga atualizada com sucesso!", "success");
       } else {
         await addDoc(collection(db, COLLECTIONS.FIES_PROUNI_VAGAS), {
@@ -2250,7 +2288,11 @@ function FiesProuniView({
       setIsVagaModalOpen(false);
       setEditingVaga(null);
     } catch (err) {
-      handleFirestoreError(err, editingVaga ? OperationType.UPDATE : OperationType.CREATE, COLLECTIONS.FIES_PROUNI_VAGAS);
+      handleFirestoreError(
+        err,
+        editingVaga ? OperationType.UPDATE : OperationType.CREATE,
+        COLLECTIONS.FIES_PROUNI_VAGAS,
+      );
     }
   };
 
@@ -2260,7 +2302,11 @@ function FiesProuniView({
       await deleteDoc(doc(db, COLLECTIONS.FIES_PROUNI_VAGAS, id));
       onToast("Vaga excluída com sucesso!");
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, COLLECTIONS.FIES_PROUNI_VAGAS);
+      handleFirestoreError(
+        err,
+        OperationType.DELETE,
+        COLLECTIONS.FIES_PROUNI_VAGAS,
+      );
     }
   };
 
@@ -2358,7 +2404,9 @@ function FiesProuniView({
             email: String(row["Email"] || ""),
             endereco: String(row["Endereço"] || ""),
             status: String(row["Status"] || "Pendente"),
-            tipo: (String(row["Tipo"] || "PROUNI").toUpperCase() === "FIES" ? "FIES" : "PROUNI") as "FIES" | "PROUNI",
+            tipo: (String(row["Tipo"] || "PROUNI").toUpperCase() === "FIES"
+              ? "FIES"
+              : "PROUNI") as "FIES" | "PROUNI",
             bolsa: String(row["Bolsa"] || "Total") as "Parcial" | "Total",
             curso: String(row["Curso"] || ""),
             posicaoRanking: String(row["Ranking"] || ""),
@@ -2367,13 +2415,20 @@ function FiesProuniView({
             metodologia: String(row["Metodologia"] || ""),
             responsavelEntrevista: String(row["Responsável Entrevista"] || ""),
             dataEntrevista: String(row["Data Entrevista"] || ""),
-            docsEntreguesStatus: String(row["Status Docs"] || "Pendente") as any,
+            docsEntreguesStatus: String(
+              row["Status Docs"] || "Pendente",
+            ) as any,
             inscricaoSales: String(row["Inscrição Sales"] || ""),
             numeroMatricula: String(row["Número Matrícula"] || ""),
-            digitalizaStatus: String(row["Status Digitaliza"] || "Pendente") as any,
+            digitalizaStatus: String(
+              row["Status Digitaliza"] || "Pendente",
+            ) as any,
             sisprouniStatus: String(row["SISPROUNI"] || "Pendente") as any,
             tcbAssinado: String(row["TCB Assinado"]).toLowerCase() === "sim",
-            documentosEntregues: String(row["Documentos Entregues"] || "").split(",").map(s => s.trim()).filter(Boolean),
+            documentosEntregues: String(row["Documentos Entregues"] || "")
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
             observacao: String(row["Observação"] || ""),
             unidade: profile.unidade || "",
             createdAt: serverTimestamp(),
@@ -2388,7 +2443,10 @@ function FiesProuniView({
         }
       }
 
-      onToast(`Importação concluída: ${successCount} sucesso, ${errorCount} erros`, successCount > 0 ? "success" : "error");
+      onToast(
+        `Importação concluída: ${successCount} sucesso, ${errorCount} erros`,
+        successCount > 0 ? "success" : "error",
+      );
     });
     e.target.value = "";
   };
@@ -2424,14 +2482,14 @@ function FiesProuniView({
 
   const handleExportVagas = () => {
     const exportData = vagas.map((v) => ({
-      "Período": v.periodo || "",
+      Período: v.periodo || "",
       "Cod. Curso": v.codCurso || "",
-      "Curso": v.curso || "",
-      "Turno": v.turno || "",
-      "Metodologia": v.metodologia || "",
-      "Bolsa": v.bolsa || "",
-      "Vagas": v.vagas || 0,
-      "Unidade": v.unidade || "",
+      Curso: v.curso || "",
+      Turno: v.turno || "",
+      Metodologia: v.metodologia || "",
+      Bolsa: v.bolsa || "",
+      Vagas: v.vagas || 0,
+      Unidade: v.unidade || "",
     }));
     exportToExcel(exportData, "Fies_Prouni_Vagas");
   };
@@ -2460,7 +2518,10 @@ function FiesProuniView({
           };
 
           if (payload.curso && payload.periodo && payload.bolsa) {
-            await addDoc(collection(db, COLLECTIONS.FIES_PROUNI_VAGAS), payload);
+            await addDoc(
+              collection(db, COLLECTIONS.FIES_PROUNI_VAGAS),
+              payload,
+            );
             successCount++;
           }
         } catch (err) {
@@ -2469,9 +2530,12 @@ function FiesProuniView({
         }
       }
 
-      onToast(`Importação concluída: ${successCount} sucesso, ${errorCount} erros`, successCount > 0 ? "success" : "error");
+      onToast(
+        `Importação concluída: ${successCount} sucesso, ${errorCount} erros`,
+        successCount > 0 ? "success" : "error",
+      );
     });
-    e.target.value = '';
+    e.target.value = "";
   };
 
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
@@ -2611,383 +2675,395 @@ function FiesProuniView({
 
       {activeTab === "lista" && (
         <>
+          {/* Dashboard Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              title="Total Candidatos"
+              value={stats.total}
+              icon={Users}
+              color="bg-blue-500"
+            />
+            <StatCard
+              title="Pendentes Doc"
+              value={stats.pendentes}
+              icon={AlertCircle}
+              color="bg-red-500"
+            />
+            <StatCard
+              title="Docs Parciais"
+              value={stats.parcial}
+              icon={Clock}
+              color="bg-amber-500"
+            />
+            <StatCard
+              title="Docs Entregues"
+              value={stats.entregaram}
+              icon={CheckCircle2}
+              color="bg-green-500"
+            />
+            <StatCard
+              title="Com Inscrição"
+              value={stats.comInscricao}
+              icon={FileText}
+              color="bg-indigo-500"
+            />
+            <StatCard
+              title="Com Matrícula"
+              value={stats.comMatricula}
+              icon={GraduationCap}
+              color="bg-purple-500"
+            />
+            <StatCard
+              title="Em Análise"
+              value={stats.emAnalise}
+              icon={Clock}
+              color="bg-amber-500"
+            />
+            <StatCard
+              title="Docs OK"
+              value={stats.concluido}
+              icon={ShieldCheck}
+              color="bg-emerald-500"
+            />
+          </div>
 
-
-      {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Candidatos"
-          value={stats.total}
-          icon={Users}
-          color="bg-blue-500"
-        />
-        <StatCard
-          title="Pendentes Doc"
-          value={stats.pendentes}
-          icon={AlertCircle}
-          color="bg-red-500"
-        />
-        <StatCard
-          title="Docs Parciais"
-          value={stats.parcial}
-          icon={Clock}
-          color="bg-amber-500"
-        />
-        <StatCard
-          title="Docs Entregues"
-          value={stats.entregaram}
-          icon={CheckCircle2}
-          color="bg-green-500"
-        />
-        <StatCard
-          title="Com Inscrição"
-          value={stats.comInscricao}
-          icon={FileText}
-          color="bg-indigo-500"
-        />
-        <StatCard
-          title="Com Matrícula"
-          value={stats.comMatricula}
-          icon={GraduationCap}
-          color="bg-purple-500"
-        />
-        <StatCard
-          title="Em Análise"
-          value={stats.emAnalise}
-          icon={Clock}
-          color="bg-amber-500"
-        />
-        <StatCard
-          title="Docs OK"
-          value={stats.concluido}
-          icon={ShieldCheck}
-          color="bg-emerald-500"
-        />
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-4">
-        <div className="flex-1 min-w-[200px] relative">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Pesquisar por nome, CPF ou curso..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <select
-          className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
-          value={periodoFilter}
-          onChange={(e) => setPeriodoFilter(e.target.value)}
-        >
-          <option value="">Todos os Períodos</option>
-          {periodos.map((p) => (
-            <option key={p.id} value={p.nome}>
-              {p.nome}
-            </option>
-          ))}
-        </select>
-        <select
-          className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
-          value={tipoFilter}
-          onChange={(e) => setTipoFilter(e.target.value)}
-        >
-          <option value="">Fies & Prouni</option>
-          <option value="FIES">Apenas FIES</option>
-          <option value="PROUNI">Apenas PROUNI</option>
-        </select>
-        <select
-          className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
-          value={bolsaFilter}
-          onChange={(e) => setBolsaFilter(e.target.value)}
-        >
-          <option value="">Todas as Bolsas</option>
-          <option value="Total">Total</option>
-          <option value="Parcial">Parcial</option>
-        </select>
-        <select
-          className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
-          value={listaFilter}
-          onChange={(e) => setListaFilter(e.target.value)}
-        >
-          <option value="">Todas as Listas</option>
-          {uniqueListas.map((l) => (
-            <option key={l} value={l}>
-              {l}
-            </option>
-          ))}
-        </select>
-        <select
-          className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">Todos os Status</option>
-          {uniqueStatuses.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                <th className="px-6 py-4">
-                  <input
-                    type="checkbox"
-                    checked={
-                      selectedEntries.length === filteredData.length &&
-                      filteredData.length > 0
-                    }
-                    onChange={(e) => toggleSelectAll(e.target.checked)}
-                  />
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
-                  Candidato
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
-                  Lista/Status
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
-                  Tipo/Bolsa
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
-                  Curso/Metodologia
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
-                  Documentação
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
-                  Digitaliza
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">
-                  TCB
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600 flex items-center gap-4">
-                  {selectedEntries.length > 0 && (
-                    <button
-                      onClick={handleBulkDelete}
-                      className="text-rose-600 font-bold hover:underline"
-                    >
-                      excluir selecionados
-                    </button>
-                  )}
-                  {selectedEntries.length > 0 && botConfig.url && (
-                    <button
-                      onClick={() => {
-                        const selectedObjs = data.filter((g) =>
-                          selectedEntries.includes(g.id),
-                        );
-                        const payloads = selectedObjs.map((item) => {
-                          const isMatAcadOk =
-                            item.numeroMatricula &&
-                            item.numeroMatricula.trim().length > 0;
-                          const type = isMatAcadOk
-                            ? "fiesProuni_1"
-                            : "fiesProuni_0";
-                          const msgTemplate = whatsappMessages.find(
-                            (m) => m.tipo === type || m.tipo === "fiesProuni",
-                          );
-                          const text = msgTemplate
-                            ? replaceMessageVariables(msgTemplate.texto, item)
-                            : `Olá ${item.nome}, tudo bem?`;
-                          return {
-                            telefone: item.telefone,
-                            message: text,
-                          };
-                        });
-                        onMassSendBot(payloads);
-                        setSelectedEntries([]);
-                      }}
-                      className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
-                    >
-                      <Bot size={14} /> Em Massa
-                    </button>
-                  )}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filteredData.map((item) => (
-                <tr
-                  key={item.id}
-                  className="hover:bg-gray-50/50 transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedEntries.includes(item.id)}
-                      onChange={(e) => toggleSelect(item.id, e.target.checked)}
-                    />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-gray-900">{item.nome || "Sem nome"}</div>
-                    <div className="text-[10px] font-bold text-indigo-500">
-                      Ranking: {item.posicaoRanking || "-"}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {formatCPF(item.cpf || "")}
-                    </div>
-                    <div className="text-xs text-gray-400">{item.periodo}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-bold text-indigo-600">
-                      {item.lista || "-"}
-                    </div>
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">
-                      {item.status || "Sem Status"}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-bold ${item.tipo === "FIES" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}
-                    >
-                      {item.tipo}
-                    </span>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {item.bolsa}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-700">{item.curso}</div>
-                    <div className="text-xs text-gray-500">
-                      {item.metodologia}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-2 py-1 rounded-full text-[10px] font-bold ${
-                        item.docsEntreguesStatus === "Sim"
-                          ? "bg-green-100 text-green-700"
-                          : item.docsEntreguesStatus === "Parcial"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {item.docsEntreguesStatus || "Pendente"}
-                    </span>
-                    <div className="text-[10px] text-slate-400 mt-1">
-                      {item.documentosEntregues?.length || 0} docs
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        item.digitalizaStatus === "Concluído"
-                          ? "bg-green-100 text-green-700"
-                          : item.digitalizaStatus === "Em Análise"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {item.digitalizaStatus}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    {item.tcbAssinado ? (
-                      <CheckCircle2 className="text-green-500" size={20} />
-                    ) : (
-                      <Clock className="text-gray-300" size={20} />
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => {
-                          setEditingEntry(item);
-                          setIsModalOpen(true);
-                        }}
-                        className="text-indigo-600 hover:text-indigo-800 font-medium text-sm p-2 hover:bg-indigo-50 rounded-lg transition-all"
-                        title="Editar"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      {item.telefone && (
-                        <>
-                          {botConfig.url && (
-                            <button
-                              onClick={() => {
-                                const isMatAcadOk =
-                                  item.numeroMatricula &&
-                                  item.numeroMatricula.trim().length > 0;
-                                const type = isMatAcadOk
-                                  ? "fiesProuni_1"
-                                  : "fiesProuni_0";
-                                const msgObj = whatsappMessages.find(
-                                  (m) =>
-                                    m.tipo === type || m.tipo === "fiesProuni",
-                                );
-                                const msg = replaceMessageVariables(
-                                  msgObj
-                                    ? msgObj.texto
-                                    : `Olá [nome], tudo bem?`,
-                                  item,
-                                );
-                                onSendBot(item.telefone, msg);
-                              }}
-                              className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-all"
-                              title="Enviar pelo Bot ARGO'S"
-                            >
-                              <Bot size={18} />
-                            </button>
-                          )}
-                          <a
-                            href={getWhatsAppUrl(
-                              item.telefone,
-                              (() => {
-                                const isMatAcadOk =
-                                  item.numeroMatricula &&
-                                  item.numeroMatricula.trim().length > 0;
-                                const type = isMatAcadOk
-                                  ? "fiesProuni_1"
-                                  : "fiesProuni_0";
-                                const msg = whatsappMessages.find(
-                                  (m) =>
-                                    m.tipo === type || m.tipo === "fiesProuni",
-                                );
-                                if (msg)
-                                  return replaceMessageVariables(
-                                    msg.texto,
-                                    item,
-                                  );
-                                return `Olá ${item.nome}, tudo bem?`;
-                              })(),
-                            )}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-emerald-600 hover:text-emerald-800 p-2 hover:bg-emerald-50 rounded-lg transition-all"
-                            title="Enviar WhatsApp"
-                          >
-                            <MessageSquare size={18} />
-                          </a>
-                        </>
-                      )}
-                      <button
-                        onClick={() => handleDeleteIndividual(item.id)}
-                        className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
-                        title="Excluir"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+          {/* Filters */}
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[200px] relative">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+              <input
+                type="text"
+                placeholder="Pesquisar por nome, CPF ou curso..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <select
+              className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+              value={periodoFilter}
+              onChange={(e) => setPeriodoFilter(e.target.value)}
+            >
+              <option value="">Todos os Períodos</option>
+              {periodos.map((p) => (
+                <option key={p.id} value={p.nome}>
+                  {p.nome}
+                </option>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      </>
+            </select>
+            <select
+              className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+              value={tipoFilter}
+              onChange={(e) => setTipoFilter(e.target.value)}
+            >
+              <option value="">Fies & Prouni</option>
+              <option value="FIES">Apenas FIES</option>
+              <option value="PROUNI">Apenas PROUNI</option>
+            </select>
+            <select
+              className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+              value={bolsaFilter}
+              onChange={(e) => setBolsaFilter(e.target.value)}
+            >
+              <option value="">Todas as Bolsas</option>
+              <option value="Total">Total</option>
+              <option value="Parcial">Parcial</option>
+            </select>
+            <select
+              className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+              value={listaFilter}
+              onChange={(e) => setListaFilter(e.target.value)}
+            >
+              <option value="">Todas as Listas</option>
+              {uniqueListas.map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
+              ))}
+            </select>
+            <select
+              className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">Todos os Status</option>
+              {uniqueStatuses.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        checked={
+                          selectedEntries.length === filteredData.length &&
+                          filteredData.length > 0
+                        }
+                        onChange={(e) => toggleSelectAll(e.target.checked)}
+                      />
+                    </th>
+                    <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                      Candidato
+                    </th>
+                    <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                      Lista/Status
+                    </th>
+                    <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                      Tipo/Bolsa
+                    </th>
+                    <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                      Curso/Metodologia
+                    </th>
+                    <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                      Documentação
+                    </th>
+                    <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                      Digitaliza
+                    </th>
+                    <th className="px-6 py-4 text-sm font-semibold text-gray-600">
+                      TCB
+                    </th>
+                    <th className="px-6 py-4 text-sm font-semibold text-gray-600 flex items-center gap-4">
+                      {selectedEntries.length > 0 && (
+                        <button
+                          onClick={handleBulkDelete}
+                          className="text-rose-600 font-bold hover:underline"
+                        >
+                          excluir selecionados
+                        </button>
+                      )}
+                      {selectedEntries.length > 0 && botConfig.url && (
+                        <button
+                          onClick={() => {
+                            const selectedObjs = data.filter((g) =>
+                              selectedEntries.includes(g.id),
+                            );
+                            const payloads = selectedObjs.map((item) => {
+                              const isMatAcadOk =
+                                item.numeroMatricula &&
+                                item.numeroMatricula.trim().length > 0;
+                              const type = isMatAcadOk
+                                ? "fiesProuni_1"
+                                : "fiesProuni_0";
+                              const msgTemplate = whatsappMessages.find(
+                                (m) =>
+                                  m.tipo === type || m.tipo === "fiesProuni",
+                              );
+                              const text = msgTemplate
+                                ? replaceMessageVariables(
+                                    msgTemplate.texto,
+                                    item,
+                                  )
+                                : `Olá ${item.nome}, tudo bem?`;
+                              return {
+                                telefone: item.telefone,
+                                message: text,
+                              };
+                            });
+                            onMassSendBot(payloads);
+                            setSelectedEntries([]);
+                          }}
+                          className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                        >
+                          <Bot size={14} /> Em Massa
+                        </button>
+                      )}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filteredData.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-gray-50/50 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedEntries.includes(item.id)}
+                          onChange={(e) =>
+                            toggleSelect(item.id, e.target.checked)
+                          }
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-900">
+                          {item.nome || "Sem nome"}
+                        </div>
+                        <div className="text-[10px] font-bold text-indigo-500">
+                          Ranking: {item.posicaoRanking || "-"}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {formatCPF(item.cpf || "")}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {item.periodo}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-bold text-indigo-600">
+                          {item.lista || "-"}
+                        </div>
+                        <div className="text-[10px] text-slate-500 uppercase font-bold">
+                          {item.status || "Sem Status"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-bold ${item.tipo === "FIES" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}
+                        >
+                          {item.tipo}
+                        </span>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {item.bolsa}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-700">
+                          {item.curso}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {item.metodologia}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                            item.docsEntreguesStatus === "Sim"
+                              ? "bg-green-100 text-green-700"
+                              : item.docsEntreguesStatus === "Parcial"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {item.docsEntreguesStatus || "Pendente"}
+                        </span>
+                        <div className="text-[10px] text-slate-400 mt-1">
+                          {item.documentosEntregues?.length || 0} docs
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            item.digitalizaStatus === "Concluído"
+                              ? "bg-green-100 text-green-700"
+                              : item.digitalizaStatus === "Em Análise"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {item.digitalizaStatus}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {item.tcbAssinado ? (
+                          <CheckCircle2 className="text-green-500" size={20} />
+                        ) : (
+                          <Clock className="text-gray-300" size={20} />
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => {
+                              setEditingEntry(item);
+                              setIsModalOpen(true);
+                            }}
+                            className="text-indigo-600 hover:text-indigo-800 font-medium text-sm p-2 hover:bg-indigo-50 rounded-lg transition-all"
+                            title="Editar"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          {item.telefone && (
+                            <>
+                              {botConfig.url && (
+                                <button
+                                  onClick={() => {
+                                    const isMatAcadOk =
+                                      item.numeroMatricula &&
+                                      item.numeroMatricula.trim().length > 0;
+                                    const type = isMatAcadOk
+                                      ? "fiesProuni_1"
+                                      : "fiesProuni_0";
+                                    const msgObj = whatsappMessages.find(
+                                      (m) =>
+                                        m.tipo === type ||
+                                        m.tipo === "fiesProuni",
+                                    );
+                                    const msg = replaceMessageVariables(
+                                      msgObj
+                                        ? msgObj.texto
+                                        : `Olá [nome], tudo bem?`,
+                                      item,
+                                    );
+                                    onSendBot(item.telefone, msg);
+                                  }}
+                                  className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-all"
+                                  title="Enviar pelo Bot ARGO'S"
+                                >
+                                  <Bot size={18} />
+                                </button>
+                              )}
+                              <a
+                                href={getWhatsAppUrl(
+                                  item.telefone,
+                                  (() => {
+                                    const isMatAcadOk =
+                                      item.numeroMatricula &&
+                                      item.numeroMatricula.trim().length > 0;
+                                    const type = isMatAcadOk
+                                      ? "fiesProuni_1"
+                                      : "fiesProuni_0";
+                                    const msg = whatsappMessages.find(
+                                      (m) =>
+                                        m.tipo === type ||
+                                        m.tipo === "fiesProuni",
+                                    );
+                                    if (msg)
+                                      return replaceMessageVariables(
+                                        msg.texto,
+                                        item,
+                                      );
+                                    return `Olá ${item.nome}, tudo bem?`;
+                                  })(),
+                                )}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-emerald-600 hover:text-emerald-800 p-2 hover:bg-emerald-50 rounded-lg transition-all"
+                                title="Enviar WhatsApp"
+                              >
+                                <MessageSquare size={18} />
+                              </a>
+                            </>
+                          )}
+                          <button
+                            onClick={() => handleDeleteIndividual(item.id)}
+                            className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
+                            title="Excluir"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       {activeTab === "informacoes" && (
@@ -2995,7 +3071,9 @@ function FiesProuniView({
           {/* Filters for Vagas */}
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-4">
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Semestre / Período</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
+                Semestre / Período
+              </label>
               <select
                 className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                 value={vagasPeriodoFilter}
@@ -3010,7 +3088,9 @@ function FiesProuniView({
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Metodologia</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
+                Metodologia
+              </label>
               <select
                 className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                 value={vagasMetodologiaFilter}
@@ -3025,7 +3105,9 @@ function FiesProuniView({
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Bolsa</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
+                Bolsa
+              </label>
               <select
                 className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                 value={vagasBolsaFilter}
@@ -3044,8 +3126,12 @@ function FiesProuniView({
                 <FileText size={24} />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-500">Total de Vagas</p>
-                <h3 className="text-2xl font-bold text-slate-900">{vagasStats.totalVagas}</h3>
+                <p className="text-sm font-medium text-slate-500">
+                  Total de Vagas
+                </p>
+                <h3 className="text-2xl font-bold text-slate-900">
+                  {vagasStats.totalVagas}
+                </h3>
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 border-l-4 border-l-emerald-500">
@@ -3053,8 +3139,12 @@ function FiesProuniView({
                 <ShieldCheck size={24} />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-500">Bolsas 100%</p>
-                <h3 className="text-2xl font-bold text-emerald-600">{vagasStats.total100}</h3>
+                <p className="text-sm font-medium text-slate-500">
+                  Bolsas 100%
+                </p>
+                <h3 className="text-2xl font-bold text-emerald-600">
+                  {vagasStats.total100}
+                </h3>
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 border-l-4 border-l-blue-500">
@@ -3063,7 +3153,9 @@ function FiesProuniView({
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-500">Bolsas 50%</p>
-                <h3 className="text-2xl font-bold text-blue-600">{vagasStats.total50}</h3>
+                <h3 className="text-2xl font-bold text-blue-600">
+                  {vagasStats.total50}
+                </h3>
               </div>
             </div>
           </div>
@@ -3073,35 +3165,73 @@ function FiesProuniView({
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                    <th className="p-4 font-bold border-b border-slate-100">Período</th>
-                    <th className="p-4 font-bold border-b border-slate-100">Cod. Curso</th>
-                    <th className="p-4 font-bold border-b border-slate-100">Curso</th>
-                    <th className="p-4 font-bold border-b border-slate-100 text-center">Turno</th>
-                    <th className="p-4 font-bold border-b border-slate-100 text-center">Metodologia</th>
-                    <th className="p-4 font-bold border-b border-slate-100 text-center">Bolsa</th>
-                    <th className="p-4 font-bold border-b border-slate-100 text-center">Vagas</th>
-                    <th className="p-4 font-bold border-b border-slate-100 text-right">Ações</th>
+                    <th className="p-4 font-bold border-b border-slate-100">
+                      Período
+                    </th>
+                    <th className="p-4 font-bold border-b border-slate-100">
+                      Cod. Curso
+                    </th>
+                    <th className="p-4 font-bold border-b border-slate-100">
+                      Curso
+                    </th>
+                    <th className="p-4 font-bold border-b border-slate-100 text-center">
+                      Turno
+                    </th>
+                    <th className="p-4 font-bold border-b border-slate-100 text-center">
+                      Metodologia
+                    </th>
+                    <th className="p-4 font-bold border-b border-slate-100 text-center">
+                      Bolsa
+                    </th>
+                    <th className="p-4 font-bold border-b border-slate-100 text-center">
+                      Vagas
+                    </th>
+                    <th className="p-4 font-bold border-b border-slate-100 text-right">
+                      Ações
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="text-sm divide-y divide-slate-50">
                   {filteredVagas.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-400">Nenhuma vaga cadastrada.</td>
+                      <td
+                        colSpan={8}
+                        className="p-8 text-center text-slate-400"
+                      >
+                        Nenhuma vaga cadastrada.
+                      </td>
                     </tr>
                   ) : (
                     filteredVagas.map((vaga) => (
-                      <tr key={vaga.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-4 font-medium text-slate-700">{vaga.periodo}</td>
-                        <td className="p-4 font-mono text-slate-500">{vaga.codCurso}</td>
-                        <td className="p-4 font-medium text-slate-800">{vaga.curso}</td>
-                        <td className="p-4 text-center text-slate-600">{vaga.turno}</td>
-                        <td className="p-4 text-center text-slate-600">{vaga.metodologia}</td>
+                      <tr
+                        key={vaga.id}
+                        className="hover:bg-slate-50/50 transition-colors"
+                      >
+                        <td className="p-4 font-medium text-slate-700">
+                          {vaga.periodo}
+                        </td>
+                        <td className="p-4 font-mono text-slate-500">
+                          {vaga.codCurso}
+                        </td>
+                        <td className="p-4 font-medium text-slate-800">
+                          {vaga.curso}
+                        </td>
+                        <td className="p-4 text-center text-slate-600">
+                          {vaga.turno}
+                        </td>
+                        <td className="p-4 text-center text-slate-600">
+                          {vaga.metodologia}
+                        </td>
                         <td className="p-4 text-center">
-                          <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${vaga.bolsa === '100%' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                          <span
+                            className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${vaga.bolsa === "100%" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}
+                          >
                             {vaga.bolsa}
                           </span>
                         </td>
-                        <td className="p-4 text-center font-bold text-slate-800">{vaga.vagas}</td>
+                        <td className="p-4 text-center font-bold text-slate-800">
+                          {vaga.vagas}
+                        </td>
                         <td className="p-4 text-right">
                           <div className="flex justify-end gap-2">
                             <button
@@ -3174,7 +3304,9 @@ function FiesProuniView({
                     <input
                       name="cpf"
                       value={cpfInput}
-                      onChange={(e) => setCpfInput(formatCPF(e.target.value || ""))}
+                      onChange={(e) =>
+                        setCpfInput(formatCPF(e.target.value || ""))
+                      }
                       required
                       placeholder="000.000.000-00"
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
@@ -3479,7 +3611,9 @@ function FiesProuniView({
               <form onSubmit={handleSaveVaga} className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Período</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Período
+                    </label>
                     <input
                       name="periodo"
                       required
@@ -3488,7 +3622,9 @@ function FiesProuniView({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cod. Curso</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cod. Curso
+                    </label>
                     <input
                       name="codCurso"
                       required
@@ -3497,7 +3633,9 @@ function FiesProuniView({
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Curso</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Curso
+                    </label>
                     <input
                       name="curso"
                       required
@@ -3506,7 +3644,9 @@ function FiesProuniView({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Turno</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Turno
+                    </label>
                     <select
                       name="turno"
                       required
@@ -3522,7 +3662,9 @@ function FiesProuniView({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Metodologia</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Metodologia
+                    </label>
                     <select
                       name="metodologia"
                       required
@@ -3536,7 +3678,9 @@ function FiesProuniView({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Bolsa</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Bolsa
+                    </label>
                     <select
                       name="bolsa"
                       required
@@ -3549,7 +3693,9 @@ function FiesProuniView({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Vagas</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Vagas
+                    </label>
                     <input
                       name="vagas"
                       type="number"
@@ -3628,7 +3774,9 @@ export default function App() {
   const [empresasParceiras, setEmpresasParceiras] = useState<EmpresaParceira[]>(
     [],
   );
-  const [controleConcorrencia, setControleConcorrencia] = useState<ControleConcorrencia[]>([]);
+  const [controleConcorrencia, setControleConcorrencia] = useState<
+    ControleConcorrencia[]
+  >([]);
   const [whatsappMessages, setWhatsappMessages] = useState<WhatsAppMessage[]>(
     [],
   );
@@ -3740,7 +3888,9 @@ export default function App() {
 
     const response = await fetch(directUrl, fetchOptions);
     if (!response.ok) {
-      const isJson = response.headers.get("content-type")?.includes("application/json");
+      const isJson = response.headers
+        .get("content-type")
+        ?.includes("application/json");
       const json = isJson ? await response.json().catch(() => ({})) : {};
       throw new Error(
         json.error ||
@@ -3753,7 +3903,7 @@ export default function App() {
     if (!contentType.includes("application/json")) {
       const text = await response.text();
       throw new Error(
-        `O Bot no Railway retornou uma resposta inesperada (formato não-JSON). O bot pode estar offline ou em reinicialização.`
+        `O Bot no Railway retornou uma resposta inesperada (formato não-JSON). O bot pode estar offline ou em reinicialização.`,
       );
     }
 
@@ -3783,7 +3933,9 @@ export default function App() {
     if (!rawPhone) return;
 
     try {
-      const finalMessage = message + "\n\nPor favor não responder nesse whatsapp. Pois ele é apenas um numero de assistência de envio.";
+      const finalMessage =
+        message +
+        "\n\nPor favor não responder nesse whatsapp. Pois ele é apenas um numero de assistência de envio.";
       await callBotApi("/api/send", {
         method: "POST",
         body: {
@@ -3800,7 +3952,10 @@ export default function App() {
     }
   };
 
-  const sendAppTelegram = async (telegramHandleOrId: string, message: string) => {
+  const sendAppTelegram = async (
+    telegramHandleOrId: string,
+    message: string,
+  ) => {
     if (!telegramHandleOrId) return;
     const targetUrl = botConfig?.telegramBotUrl || "";
     const apiKey = botConfig?.telegramApiKey || "";
@@ -3829,7 +3984,10 @@ export default function App() {
       });
       const resData = await response.json();
       if (!response.ok || !resData.success) {
-        console.error("Failed to send Telegram message at root:", resData.error || "Unknown error");
+        console.error(
+          "Failed to send Telegram message at root:",
+          resData.error || "Unknown error",
+        );
       } else {
         console.log(`Telegram message sent to ${chatId}`);
       }
@@ -3878,7 +4036,8 @@ export default function App() {
     try {
       const isTargetBot = safeBotNumber === "5524993346717";
       const finalMessage = isTargetBot
-        ? message + "\n\nPor favor não responder nesse whatsapp. Pois ele é apenas um numero de assistência de envio."
+        ? message +
+          "\n\nPor favor não responder nesse whatsapp. Pois ele é apenas um numero de assistência de envio."
         : message;
 
       await callBotApi("/api/send", {
@@ -4077,7 +4236,8 @@ export default function App() {
     try {
       const isTargetBot = safeBotNumber === "5524993346717";
       const finalMessage = isTargetBot
-        ? message + "\n\nPor favor não responder nesse whatsapp. Pois ele é apenas um numero de assistência de envio."
+        ? message +
+          "\n\nPor favor não responder nesse whatsapp. Pois ele é apenas um numero de assistência de envio."
         : message;
 
       await callBotApi("/api/send", {
@@ -4124,7 +4284,10 @@ export default function App() {
     const waitWithCheck = async (seconds: number, labelPrefix: string) => {
       for (let s = 0; s < seconds; s++) {
         if (massSendControlRef.current.cancelled) return;
-        while (massSendControlRef.current.paused && !massSendControlRef.current.cancelled) {
+        while (
+          massSendControlRef.current.paused &&
+          !massSendControlRef.current.cancelled
+        ) {
           setMassSendProgress((prev) => ({
             ...prev,
             info: `Robô Pausado... (${prev.sent}/${messages.length})`,
@@ -4147,7 +4310,10 @@ export default function App() {
         break;
       }
 
-      while (massSendControlRef.current.paused && !massSendControlRef.current.cancelled) {
+      while (
+        massSendControlRef.current.paused &&
+        !massSendControlRef.current.cancelled
+      ) {
         setMassSendProgress((prev) => ({
           ...prev,
           info: `Robô Pausado... (${sentCount}/${messages.length})`,
@@ -4171,7 +4337,10 @@ export default function App() {
         break;
       }
 
-      while (massSendControlRef.current.paused && !massSendControlRef.current.cancelled) {
+      while (
+        massSendControlRef.current.paused &&
+        !massSendControlRef.current.cancelled
+      ) {
         setMassSendProgress((prev) => ({
           ...prev,
           info: `Robô Pausado... (${sentCount}/${messages.length})`,
@@ -4204,7 +4373,7 @@ export default function App() {
     const wasCancelled = massSendControlRef.current.cancelled;
     setMassSendProgress({ total: 0, sent: 0, active: false, info: "" });
     setIsMassSendPaused(false);
-    
+
     if (wasCancelled) {
       showToast("Envio em massa cancelado pelo usuário.", "error");
     } else {
@@ -4439,7 +4608,7 @@ export default function App() {
           collection(db, COLLECTIONS.LEADS),
           or(
             where("promotorId", "==", user!.uid),
-            where("linkadoA", "==", user!.uid)
+            where("linkadoA", "==", user!.uid),
           ),
           orderBy("createdAt", "desc"),
         );
@@ -4448,7 +4617,7 @@ export default function App() {
           collection(db, COLLECTIONS.LEADS),
           or(
             where("promotorId", "==", user!.uid),
-            where("linkadoA", "==", user!.uid)
+            where("linkadoA", "==", user!.uid),
           ),
           orderBy("createdAt", "desc"),
         );
@@ -4479,7 +4648,10 @@ export default function App() {
       }
 
       if (isRestricted) {
-        if (profile.role === ROLES.FDV || profile.role === ROLES.FDV_COMERCIAL) {
+        if (
+          profile.role === ROLES.FDV ||
+          profile.role === ROLES.FDV_COMERCIAL
+        ) {
           // Already restricted by promotorId/linkadoA above, but we keep unit filter to be safe or bypass it.
           // The user said ONLY what they or linked promotor filled.
           // If we add the unit filter, it might exclude their own leads if they are in a different unit (unlikely).
@@ -4515,26 +4687,29 @@ export default function App() {
 
       let basesQuery;
       if (isRestricted) {
-        if (profile.role === ROLES.FDV || profile.role === ROLES.FDV_COMERCIAL) {
+        if (
+          profile.role === ROLES.FDV ||
+          profile.role === ROLES.FDV_COMERCIAL
+        ) {
           basesQuery = query(
             collection(db, COLLECTIONS.BASES),
             or(
               where("promotorId", "==", user!.uid),
-              where("linkadoA", "==", user!.uid)
+              where("linkadoA", "==", user!.uid),
             ),
-            orderBy("createdAt", "desc")
+            orderBy("createdAt", "desc"),
           );
         } else {
           basesQuery = query(
             collection(db, COLLECTIONS.BASES),
             where("unidade", "==", profile.unidade || "Matriz"),
-            orderBy("createdAt", "desc")
+            orderBy("createdAt", "desc"),
           );
         }
       } else {
         basesQuery = query(
           collection(db, COLLECTIONS.BASES),
-          orderBy("createdAt", "desc")
+          orderBy("createdAt", "desc"),
         );
       }
 
@@ -4711,9 +4886,7 @@ export default function App() {
         fpvQuery,
         (snap) => {
           setFiesProuniVagas(
-            snap.docs.map(
-              (d) => ({ id: d.id, ...d.data() }) as FiesProuniVaga,
-            ),
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as FiesProuniVaga),
           );
         },
         (err) => console.error("Error fetching FIES_PROUNI_VAGAS:", err),
@@ -4788,7 +4961,11 @@ export default function App() {
           );
         },
         (err) =>
-          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.QG_LIGACOES),
+          handleFirestoreError(
+            err,
+            OperationType.LIST,
+            COLLECTIONS.QG_LIGACOES,
+          ),
       );
     }
 
@@ -4907,27 +5084,37 @@ export default function App() {
     if (profile && VIEW_PERMISSIONS.empresas.includes(profile.role)) {
       let empresasQuery = query(collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS));
 
-      const isRestricted =
-        ![
-          ROLES.ADMIN_MASTER,
-          ROLES.GESTOR_COMERCIAL,
-          ROLES.GESTOR_COMERCIAL_COMERCIAL,
-        ].includes(profile.role);
+      const isRestricted = ![
+        ROLES.ADMIN_MASTER,
+        ROLES.GESTOR_COMERCIAL,
+        ROLES.GESTOR_COMERCIAL_COMERCIAL,
+      ].includes(profile.role);
 
       if (isRestricted) {
         if (profile.role === ROLES.GESTOR_UNIDADE) {
           empresasQuery = query(
             empresasQuery,
-            where("unidadesVinculadas", "array-contains", profile.unidade || "")
+            where(
+              "unidadesVinculadas",
+              "array-contains",
+              profile.unidade || "",
+            ),
           );
-        } else if (profile.role === ROLES.FDV || profile.role === ROLES.FDV_COMERCIAL) {
+        } else if (
+          profile.role === ROLES.FDV ||
+          profile.role === ROLES.FDV_COMERCIAL
+        ) {
           empresasQuery = query(
             empresasQuery,
             or(
-              where("unidadesVinculadas", "array-contains", profile.unidade || ""),
+              where(
+                "unidadesVinculadas",
+                "array-contains",
+                profile.unidade || "",
+              ),
               where("consultorId", "==", user!.uid),
-              where("creatorId", "==", user!.uid)
-            )
+              where("creatorId", "==", user!.uid),
+            ),
           );
         }
       }
@@ -4951,7 +5138,10 @@ export default function App() {
     }
 
     let unsubControleConcorrencia = () => {};
-    if (profile && VIEW_PERMISSIONS.controleConcorrencia.includes(profile.role)) {
+    if (
+      profile &&
+      VIEW_PERMISSIONS.controleConcorrencia.includes(profile.role)
+    ) {
       unsubControleConcorrencia = onSnapshot(
         collection(db, COLLECTIONS.CONTROLE_CONCORRENCIA),
         (snap) => {
@@ -5518,7 +5708,7 @@ export default function App() {
                 }}
               />
             </div>
-            
+
             <div className="flex gap-2 w-full mt-2">
               <button
                 type="button"
@@ -5547,7 +5737,11 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm("Deseja realmente cancelar o envio em massa?")) {
+                  if (
+                    window.confirm(
+                      "Deseja realmente cancelar o envio em massa?",
+                    )
+                  ) {
                     massSendControlRef.current.cancelled = true;
                     massSendControlRef.current.paused = false;
                     setIsMassSendPaused(false);
@@ -5634,7 +5828,11 @@ export default function App() {
               { id: "historico", label: "Histórico", icon: History },
               { id: "bases", label: "Bases", icon: Database },
               { id: "gap", label: "GAP Acadêmico", icon: GraduationCap },
-              { id: "isencoes", label: "Acompanhamento de Isenções", icon: ShieldCheck },
+              {
+                id: "isencoes",
+                label: "Acompanhamento de Isenções",
+                icon: ShieldCheck,
+              },
               { id: "fiesProuni", label: "Fies/Prouni", icon: FileText },
               { id: "mapao", label: "Mapão Acadêmico", icon: MapPin },
               { id: "cursos", label: "Cursos Disponíveis", icon: BookOpen },
@@ -5643,7 +5841,11 @@ export default function App() {
               { id: "campanhas", label: "Campanhas", icon: Megaphone },
               { id: "calendario", label: "Plano de Ação", icon: Calendar },
               { id: "empresas", label: "Empresas Parceiras", icon: Building2 },
-              { id: "controleConcorrencia", label: "Controle de Concorrência", icon: Target },
+              {
+                id: "controleConcorrencia",
+                label: "Controle de Concorrência",
+                icon: Target,
+              },
               { id: "evasao", label: "Evasão", icon: UserMinus },
               {
                 id: "calculo",
@@ -6000,32 +6202,32 @@ export default function App() {
               {currentView === "evasao" && (
                 <EvasaoView profile={profile} onToast={showToast} />
               )}
-                  {currentView === "admin" && (
-                    <AdminView
-                      profile={profile}
-                      users={users}
-                      links={links}
-                      onToast={showToast}
-                      leads={leads}
-                      bases={bases}
-                      gap={gap}
-                      planner={planner}
-                      campanhas={campanhas}
-                      bomDia={bomDia}
-                      forecast={forecast}
-                      periodos={periodos}
-                      whatsappMessages={whatsappMessages}
-                      empresasParceiras={empresasParceiras}
-                      botConfig={botConfig}
-                      botStatuses={botStatuses}
-                      setBotStatuses={setBotStatuses}
-                      callBotApi={callBotApi}
-                      metaDia={metaDia}
-                      qgLigacoes={qgLigacoes}
-                      cursos={cursos}
-                      uniqueUnidades={uniqueUnidades}
-                    />
-                  )}
+              {currentView === "admin" && (
+                <AdminView
+                  profile={profile}
+                  users={users}
+                  links={links}
+                  onToast={showToast}
+                  leads={leads}
+                  bases={bases}
+                  gap={gap}
+                  planner={planner}
+                  campanhas={campanhas}
+                  bomDia={bomDia}
+                  forecast={forecast}
+                  periodos={periodos}
+                  whatsappMessages={whatsappMessages}
+                  empresasParceiras={empresasParceiras}
+                  botConfig={botConfig}
+                  botStatuses={botStatuses}
+                  setBotStatuses={setBotStatuses}
+                  callBotApi={callBotApi}
+                  metaDia={metaDia}
+                  qgLigacoes={qgLigacoes}
+                  cursos={cursos}
+                  uniqueUnidades={uniqueUnidades}
+                />
+              )}
             </motion.div>
           </AnimatePresence>
 
@@ -6333,15 +6535,23 @@ function AuthScreen({
                   onClick={async () => {
                     let resetEmail = email;
                     if (!resetEmail) {
-                      const inputEmail = window.prompt("Por favor, digite seu e-mail para receber o link de redefinição de senha:");
+                      const inputEmail = window.prompt(
+                        "Por favor, digite seu e-mail para receber o link de redefinição de senha:",
+                      );
                       if (!inputEmail) return;
                       resetEmail = inputEmail;
                     }
                     try {
                       await sendPasswordResetEmail(auth, resetEmail);
-                      onToast("E-mail de redefinição enviado com sucesso! Verifique sua caixa de entrada.", "success");
+                      onToast(
+                        "E-mail de redefinição enviado com sucesso! Verifique sua caixa de entrada.",
+                        "success",
+                      );
                     } catch (err: any) {
-                      onToast("Erro ao enviar e-mail. Verifique se o endereço é válido.", "error");
+                      onToast(
+                        "Erro ao enviar e-mail. Verifique se o endereço é válido.",
+                        "error",
+                      );
                     }
                   }}
                   className="text-xs font-bold text-sky-400 hover:text-sky-300 hover:underline transition-colors cursor-pointer"
@@ -7659,7 +7869,7 @@ function DashboardView({
       )}
 
       {/* Bom Dia Captação (Complete - All cards) */}
-      {widgets.bomDia && bomDia.filter(b => !b.oculto).length > 0 && (
+      {widgets.bomDia && bomDia.filter((b) => !b.oculto).length > 0 && (
         <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2 text-emerald-600">
@@ -7670,172 +7880,178 @@ function DashboardView({
             </div>
             <p className="text-xs text-slate-400 font-medium">
               Última atualização:{" "}
-              {new Date(bomDia.filter(b => !b.oculto)[bomDia.filter(b => !b.oculto).length - 1].data).toLocaleDateString()}
+              {new Date(
+                bomDia.filter((b) => !b.oculto)[
+                  bomDia.filter((b) => !b.oculto).length - 1
+                ].data,
+              ).toLocaleDateString()}
             </p>
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
-            {bomDia.filter(b => !b.oculto).map((card) => (
-              <div
-                key={card.id}
-                className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden"
-              >
-                <div className="bg-emerald-600 p-4">
-                  <h4 className="font-bold text-white text-sm uppercase tracking-wider">
-                    {card.titulo}
-                  </h4>
-                </div>
-                <div className="p-4">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-slate-400 font-bold uppercase tracking-tighter">
-                        <th className="text-left pb-2">Indicador</th>
-                        <th className="text-center pb-2">INSC</th>
-                        <th className="text-center pb-2">MAT FIN</th>
-                        <th className="text-center pb-2">MAT ACAD</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {[
-                        {
-                          label: "Meta Final",
-                          data: card.metaFinal,
-                          color: "text-slate-600",
-                        },
-                        {
-                          label: "Meta Dia",
-                          data: card.metaDia,
-                          color: "text-slate-600",
-                        },
-                        {
-                          label: "Ano Anterior",
-                          data: card.anoAnterior,
-                          color: "text-slate-400",
-                        },
-                        {
-                          label: "Real",
-                          data: card.real,
-                          color: "text-emerald-600 font-bold",
-                        },
-                      ].map((row, idx) => (
-                        <tr
-                          key={idx}
-                          className="hover:bg-white/50 transition-colors"
-                        >
-                          <td className="py-2 font-semibold text-slate-500">
-                            {row.label}
-                          </td>
-                          <td className={cn("py-2 text-center", row.color)}>
-                            {row.data?.insc ?? 0}
-                          </td>
-                          <td className={cn("py-2 text-center", row.color)}>
-                            {row.data?.matFin ?? 0}
-                          </td>
-                          <td className={cn("py-2 text-center", row.color)}>
-                            {row.data?.matAcad ?? 0}
-                          </td>
+            {bomDia
+              .filter((b) => !b.oculto)
+              .map((card) => (
+                <div
+                  key={card.id}
+                  className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden"
+                >
+                  <div className="bg-emerald-600 p-4">
+                    <h4 className="font-bold text-white text-sm uppercase tracking-wider">
+                      {card.titulo}
+                    </h4>
+                  </div>
+                  <div className="p-4">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-slate-400 font-bold uppercase tracking-tighter">
+                          <th className="text-left pb-2">Indicador</th>
+                          <th className="text-center pb-2">INSC</th>
+                          <th className="text-center pb-2">MAT FIN</th>
+                          <th className="text-center pb-2">MAT ACAD</th>
                         </tr>
-                      ))}
-                      {/* Calculated Rows */}
-                      {[
-                        {
-                          label: "% Meta Dia",
-                          calc: (m: keyof BomDiaMetrics) =>
-                            card.metaDia && card.metaDia[m] > 0 && card.real
-                              ? `${((card.real[m] / card.metaDia[m]) * 100).toFixed(0)}%`
-                              : "0%",
-                          color: "text-blue-600 font-bold",
-                        },
-                        {
-                          label: "% Ano Ant.",
-                          calc: (m: keyof BomDiaMetrics) =>
-                            card.anoAnterior &&
-                            card.anoAnterior[m] > 0 &&
-                            card.real
-                              ? `${((card.real[m] / card.anoAnterior[m]) * 100).toFixed(0)}%`
-                              : "0%",
-                          color: "text-slate-500 font-bold",
-                        },
-                        {
-                          label: "Gap Meta Dia",
-                          calc: (m: keyof BomDiaMetrics) =>
-                            card.real && card.metaDia
-                              ? card.real[m] - card.metaDia[m]
-                              : 0,
-                          color: (m: keyof BomDiaMetrics) =>
-                            card.real &&
-                            card.metaDia &&
-                            card.real[m] - card.metaDia[m] >= 0
-                              ? "text-emerald-600"
-                              : "text-rose-600",
-                        },
-                        {
-                          label: "Gap Ano Ant.",
-                          calc: (m: keyof BomDiaMetrics) =>
-                            card.real && card.anoAnterior
-                              ? card.real[m] - card.anoAnterior[m]
-                              : 0,
-                          color: (m: keyof BomDiaMetrics) =>
-                            card.real &&
-                            card.anoAnterior &&
-                            card.real[m] - card.anoAnterior[m] >= 0
-                              ? "text-emerald-600"
-                              : "text-rose-600",
-                        },
-                        {
-                          label: "Gap Meta Final",
-                          calc: (m: keyof BomDiaMetrics) =>
-                            card.real && card.metaFinal
-                              ? card.real[m] - card.metaFinal[m]
-                              : 0,
-                          color: (m: keyof BomDiaMetrics) =>
-                            card.real &&
-                            card.metaFinal &&
-                            card.real[m] - card.metaFinal[m] >= 0
-                              ? "text-emerald-600"
-                              : "text-rose-600",
-                        },
-                      ].map((row, idx) => (
-                        <tr key={`calc-${idx}`} className="bg-slate-100/50">
-                          <td className="py-1.5 font-bold text-[9px] text-slate-400 uppercase">
-                            {row.label}
-                          </td>
-                          <td
-                            className={cn(
-                              "py-1.5 text-center text-[10px] font-bold",
-                              typeof row.color === "function"
-                                ? row.color("insc")
-                                : row.color,
-                            )}
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {[
+                          {
+                            label: "Meta Final",
+                            data: card.metaFinal,
+                            color: "text-slate-600",
+                          },
+                          {
+                            label: "Meta Dia",
+                            data: card.metaDia,
+                            color: "text-slate-600",
+                          },
+                          {
+                            label: "Ano Anterior",
+                            data: card.anoAnterior,
+                            color: "text-slate-400",
+                          },
+                          {
+                            label: "Real",
+                            data: card.real,
+                            color: "text-emerald-600 font-bold",
+                          },
+                        ].map((row, idx) => (
+                          <tr
+                            key={idx}
+                            className="hover:bg-white/50 transition-colors"
                           >
-                            {row.calc("insc")}
-                          </td>
-                          <td
-                            className={cn(
-                              "py-1.5 text-center text-[10px] font-bold",
-                              typeof row.color === "function"
-                                ? row.color("matFin")
-                                : row.color,
-                            )}
-                          >
-                            {row.calc("matFin")}
-                          </td>
-                          <td
-                            className={cn(
-                              "py-1.5 text-center text-[10px] font-bold",
-                              typeof row.color === "function"
-                                ? row.color("matAcad")
-                                : row.color,
-                            )}
-                          >
-                            {row.calc("matAcad")}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            <td className="py-2 font-semibold text-slate-500">
+                              {row.label}
+                            </td>
+                            <td className={cn("py-2 text-center", row.color)}>
+                              {row.data?.insc ?? 0}
+                            </td>
+                            <td className={cn("py-2 text-center", row.color)}>
+                              {row.data?.matFin ?? 0}
+                            </td>
+                            <td className={cn("py-2 text-center", row.color)}>
+                              {row.data?.matAcad ?? 0}
+                            </td>
+                          </tr>
+                        ))}
+                        {/* Calculated Rows */}
+                        {[
+                          {
+                            label: "% Meta Dia",
+                            calc: (m: keyof BomDiaMetrics) =>
+                              card.metaDia && card.metaDia[m] > 0 && card.real
+                                ? `${((card.real[m] / card.metaDia[m]) * 100).toFixed(0)}%`
+                                : "0%",
+                            color: "text-blue-600 font-bold",
+                          },
+                          {
+                            label: "% Ano Ant.",
+                            calc: (m: keyof BomDiaMetrics) =>
+                              card.anoAnterior &&
+                              card.anoAnterior[m] > 0 &&
+                              card.real
+                                ? `${((card.real[m] / card.anoAnterior[m]) * 100).toFixed(0)}%`
+                                : "0%",
+                            color: "text-slate-500 font-bold",
+                          },
+                          {
+                            label: "Gap Meta Dia",
+                            calc: (m: keyof BomDiaMetrics) =>
+                              card.real && card.metaDia
+                                ? card.real[m] - card.metaDia[m]
+                                : 0,
+                            color: (m: keyof BomDiaMetrics) =>
+                              card.real &&
+                              card.metaDia &&
+                              card.real[m] - card.metaDia[m] >= 0
+                                ? "text-emerald-600"
+                                : "text-rose-600",
+                          },
+                          {
+                            label: "Gap Ano Ant.",
+                            calc: (m: keyof BomDiaMetrics) =>
+                              card.real && card.anoAnterior
+                                ? card.real[m] - card.anoAnterior[m]
+                                : 0,
+                            color: (m: keyof BomDiaMetrics) =>
+                              card.real &&
+                              card.anoAnterior &&
+                              card.real[m] - card.anoAnterior[m] >= 0
+                                ? "text-emerald-600"
+                                : "text-rose-600",
+                          },
+                          {
+                            label: "Gap Meta Final",
+                            calc: (m: keyof BomDiaMetrics) =>
+                              card.real && card.metaFinal
+                                ? card.real[m] - card.metaFinal[m]
+                                : 0,
+                            color: (m: keyof BomDiaMetrics) =>
+                              card.real &&
+                              card.metaFinal &&
+                              card.real[m] - card.metaFinal[m] >= 0
+                                ? "text-emerald-600"
+                                : "text-rose-600",
+                          },
+                        ].map((row, idx) => (
+                          <tr key={`calc-${idx}`} className="bg-slate-100/50">
+                            <td className="py-1.5 font-bold text-[9px] text-slate-400 uppercase">
+                              {row.label}
+                            </td>
+                            <td
+                              className={cn(
+                                "py-1.5 text-center text-[10px] font-bold",
+                                typeof row.color === "function"
+                                  ? row.color("insc")
+                                  : row.color,
+                              )}
+                            >
+                              {row.calc("insc")}
+                            </td>
+                            <td
+                              className={cn(
+                                "py-1.5 text-center text-[10px] font-bold",
+                                typeof row.color === "function"
+                                  ? row.color("matFin")
+                                  : row.color,
+                              )}
+                            >
+                              {row.calc("matFin")}
+                            </td>
+                            <td
+                              className={cn(
+                                "py-1.5 text-center text-[10px] font-bold",
+                                typeof row.color === "function"
+                                  ? row.color("matAcad")
+                                  : row.color,
+                              )}
+                            >
+                              {row.calc("matAcad")}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </section>
       )}
@@ -7862,7 +8078,9 @@ function DashboardView({
                   <span>{qg.nome}</span>
                 </div>
                 <div className="text-sm font-semibold text-slate-700">
-                  {Array.isArray(qg.diaSemana) ? qg.diaSemana.join(", ") : qg.diaSemana}
+                  {Array.isArray(qg.diaSemana)
+                    ? qg.diaSemana.join(", ")
+                    : qg.diaSemana}
                 </div>
                 <div className="text-xs text-slate-500 font-medium bg-emerald-100/50 px-2 py-1 rounded-md mt-2">
                   {qg.horario}
@@ -7874,7 +8092,7 @@ function DashboardView({
       )}
 
       {/* Forecasts (Complete - All cards) */}
-      {widgets.forecast && forecast.filter(f => !f.oculto).length > 0 && (
+      {widgets.forecast && forecast.filter((f) => !f.oculto).length > 0 && (
         <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-slate-900">
@@ -7884,102 +8102,106 @@ function DashboardView({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {[...forecast]
-              .filter(f => !f.oculto)
+              .filter((f) => !f.oculto)
               .sort((a, b) => a.nome.localeCompare(b.nome))
               .map((f) => {
-              const percFech =
-                f.metaFechamento > 0
-                  ? ((f.realizado / f.metaFechamento) * 100).toFixed(1)
-                  : "0";
-              const gapFech = f.realizado - f.metaFechamento;
-              const dataFim = new Date(f.dataFim);
-              const hoje = new Date();
-              const diffTime = dataFim.getTime() - hoje.getTime();
-              const diasRestantes = Math.max(
-                1,
-                Math.ceil(diffTime / (1000 * 60 * 60 * 24)),
-              );
-              const pacing = (Math.abs(gapFech) / diasRestantes).toFixed(1);
+                const percFech =
+                  f.metaFechamento > 0
+                    ? ((f.realizado / f.metaFechamento) * 100).toFixed(1)
+                    : "0";
+                const gapFech = f.realizado - f.metaFechamento;
+                const dataFim = new Date(f.dataFim);
+                const hoje = new Date();
+                const diffTime = dataFim.getTime() - hoje.getTime();
+                const diasRestantes = Math.max(
+                  1,
+                  Math.ceil(diffTime / (1000 * 60 * 60 * 24)),
+                );
+                const pacing = (Math.abs(gapFech) / diasRestantes).toFixed(1);
 
-              return (
-                <div
-                  key={f.id}
-                  className="bg-slate-50 p-5 rounded-2xl border border-slate-100"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h4 className="font-bold text-slate-900">{f.nome}</h4>
-                      <p className="text-[10px] text-slate-500 font-medium">
-                        Até{" "}
-                        {f.dataFim.split("T")[0].split("-").reverse().join("/")}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-1 rounded-full ${Number(percFech) >= 100 ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"}`}
-                    >
-                      {percFech}%
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">
-                        Realizado
-                      </p>
-                      <p className="text-lg font-bold text-emerald-600">
-                        {f.realizado || 0}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">
-                        Meta
-                      </p>
-                      <p className="text-lg font-bold text-slate-700">
-                        {f.metaFechamento || 0}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 pt-4 border-t border-slate-200/60">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-slate-400">
-                        Meta Dia YTD
-                      </span>
-                      <span className="text-xs font-bold text-slate-700">
-                        {f.metaDiaYTD || 0}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-rose-400">
-                        Gap Fechamento
-                      </span>
+                return (
+                  <div
+                    key={f.id}
+                    className="bg-slate-50 p-5 rounded-2xl border border-slate-100"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="font-bold text-slate-900">{f.nome}</h4>
+                        <p className="text-[10px] text-slate-500 font-medium">
+                          Até{" "}
+                          {f.dataFim
+                            .split("T")[0]
+                            .split("-")
+                            .reverse()
+                            .join("/")}
+                        </p>
+                      </div>
                       <span
-                        className={`text-xs font-bold ${gapFech >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                        className={`text-[10px] font-bold px-2 py-1 rounded-full ${Number(percFech) >= 100 ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"}`}
                       >
-                        {gapFech >= 0 ? "+" : ""}
-                        {gapFech}
+                        {percFech}%
                       </span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-blue-400">
-                        Pacing (por dia)
-                      </span>
-                      <span className="text-xs font-bold text-blue-600">
-                        {pacing}
-                      </span>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">
+                          Realizado
+                        </p>
+                        <p className="text-lg font-bold text-emerald-600">
+                          {f.realizado || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">
+                          Meta
+                        </p>
+                        <p className="text-lg font-bold text-slate-700">
+                          {f.metaFechamento || 0}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center bg-slate-200/50 p-2 rounded-lg mt-2">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Dias Restantes
-                      </span>
-                      <span className="text-xs font-bold text-slate-800">
-                        {diasRestantes}
-                      </span>
+
+                    <div className="space-y-3 pt-4 border-t border-slate-200/60">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-slate-400">
+                          Meta Dia YTD
+                        </span>
+                        <span className="text-xs font-bold text-slate-700">
+                          {f.metaDiaYTD || 0}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-rose-400">
+                          Gap Fechamento
+                        </span>
+                        <span
+                          className={`text-xs font-bold ${gapFech >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                        >
+                          {gapFech >= 0 ? "+" : ""}
+                          {gapFech}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1 border-l-2 border-blue-400">
+                          Pacing (por dia)
+                        </span>
+                        <span className="text-xs font-bold text-blue-600">
+                          {pacing}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center bg-slate-200/50 p-2 rounded-lg mt-2">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          Dias Restantes
+                        </span>
+                        <span className="text-xs font-bold text-slate-800">
+                          {diasRestantes}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </section>
       )}
@@ -8345,17 +8567,20 @@ function CadastroView({
       }
 
       await addDoc(collection(db, COLLECTIONS.LEADS), newLeadData);
-      
+
       if (newLeadData.acaoId && newLeadData.acaoId !== "manual") {
         try {
           const qLeads = query(
             collection(db, COLLECTIONS.LEADS),
-            where("acaoId", "==", newLeadData.acaoId)
+            where("acaoId", "==", newLeadData.acaoId),
           );
           const snapLeads = await getDocs(qLeads);
-          await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, newLeadData.acaoId), {
-            leadsFeitos: snapLeads.size
-          });
+          await updateDoc(
+            doc(db, COLLECTIONS.CALENDARIO_ACOES, newLeadData.acaoId),
+            {
+              leadsFeitos: snapLeads.size,
+            },
+          );
         } catch (error) {
           console.error("Error auto-updating action leadsCount:", error);
         }
@@ -8530,9 +8755,15 @@ function CadastroView({
                           onChange={(e) => {
                             const val = e.target.value;
                             if (val === "manual") {
-                              setFormData({ ...formData, acaoId: "manual", acao: "" });
+                              setFormData({
+                                ...formData,
+                                acaoId: "manual",
+                                acao: "",
+                              });
                             } else {
-                              const matched = calendarioAcoes.find((a) => a.id === val);
+                              const matched = calendarioAcoes.find(
+                                (a) => a.id === val,
+                              );
                               setFormData({
                                 ...formData,
                                 acaoId: val,
@@ -8548,7 +8779,9 @@ function CadastroView({
                               {act.nome} ({act.dataInicio})
                             </option>
                           ))}
-                          <option value="manual">Outro (Digitar manualmente)</option>
+                          <option value="manual">
+                            Outro (Digitar manualmente)
+                          </option>
                         </select>
                       </div>
                       {(formData.acaoId === "manual" || !formData.acaoId) && (
@@ -8558,7 +8791,9 @@ function CadastroView({
                           </span>
                           <input
                             type="text"
-                            required={!formData.acaoId || formData.acaoId === "manual"}
+                            required={
+                              !formData.acaoId || formData.acaoId === "manual"
+                            }
                             value={formData.acao}
                             onChange={(e) =>
                               setFormData({ ...formData, acao: e.target.value })
@@ -8779,7 +9014,10 @@ function CadastroView({
                     required
                     value={promotorData.unidade}
                     onChange={(e) =>
-                      setPromotorData({ ...promotorData, unidade: e.target.value })
+                      setPromotorData({
+                        ...promotorData,
+                        unidade: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm bg-white"
                   >
@@ -8873,7 +9111,9 @@ function HistoricoView({
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [historicoSubTab, setHistoricoSubTab] = useState<"dashboard" | "lista" | "pedidos_cursos">("dashboard");
+  const [historicoSubTab, setHistoricoSubTab] = useState<
+    "dashboard" | "lista" | "pedidos_cursos"
+  >("dashboard");
 
   const [editFormData, setEditFormData] = useState({
     nome: "",
@@ -9036,7 +9276,8 @@ function HistoricoView({
           l.acao.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCourse =
           !courseFilter || l.cursoInteresse === courseFilter;
-        const matchesBase = baseFilter.length === 0 || baseFilter.includes(l.acao);
+        const matchesBase =
+          baseFilter.length === 0 || baseFilter.includes(l.acao);
         const matchesStatus = !statusFilter || l.status === statusFilter;
         const matchesPromotor =
           !promotorFilter || l.promotorName === promotorFilter;
@@ -9074,10 +9315,10 @@ function HistoricoView({
     const userLeads = filteredLeads.filter(
       (l) => l.promotorId === profile.uid,
     ).length;
-    
+
     // Stats by Course (Top 5)
     const courseGroups: Record<string, number> = {};
-    filteredLeads.forEach(l => {
+    filteredLeads.forEach((l) => {
       const c = l.cursoInteresse || "Não Informado";
       courseGroups[c] = (courseGroups[c] || 0) + 1;
     });
@@ -9085,28 +9326,28 @@ function HistoricoView({
       .map(([name, count]) => ({
         name,
         count,
-        percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0"
+        percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0",
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
     // Stats by Status
     const statusGroups: Record<string, number> = {
-      "Pendente": 0,
-      "Convertido": 0,
+      Pendente: 0,
+      Convertido: 0,
       "Sem retorno": 0,
-      "Interessado": 0,
+      Interessado: 0,
       "Não Interessado": 0,
     };
-    filteredLeads.forEach(l => {
-      const s = l.converted ? "Convertido" : (l.status || "Pendente");
+    filteredLeads.forEach((l) => {
+      const s = l.converted ? "Convertido" : l.status || "Pendente";
       if (statusGroups[s] !== undefined) statusGroups[s] += 1;
       else statusGroups["Pendente"] += 1;
     });
     const byStatus = Object.entries(statusGroups).map(([name, count]) => ({
       name,
       count,
-      percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0"
+      percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0",
     }));
 
     return {
@@ -9115,7 +9356,7 @@ function HistoricoView({
       userLeads,
       rate: total > 0 ? ((conv / total) * 100).toFixed(1) : "0",
       byCourse,
-      byStatus
+      byStatus,
     };
   }, [filteredLeads, profile]);
 
@@ -9321,24 +9562,37 @@ function HistoricoView({
         const getVal = (row: any, ...keys: string[]) => {
           const rowKeys = Object.keys(row);
           for (const key of keys) {
-            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            const foundKey = rowKeys.find(
+              (k) => k.toLowerCase() === key.toLowerCase(),
+            );
             if (foundKey && row[foundKey] !== undefined) return row[foundKey];
           }
           return undefined;
         };
 
         const batch = data.map((item) => {
-          const rawStatus = String(getVal(item, "Status", "status") || "").trim().toLowerCase();
-          const isConverted = rawStatus === "convertido" || getVal(item, "converted") === true;
+          const rawStatus = String(getVal(item, "Status", "status") || "")
+            .trim()
+            .toLowerCase();
+          const isConverted =
+            rawStatus === "convertido" || getVal(item, "converted") === true;
 
           return {
             nome: String(getVal(item, "Nome", "nome") || "").trim(),
-            telefone: String(getVal(item, "Telefone", "telefone") || "").replace(/\D/g, ""),
+            telefone: String(
+              getVal(item, "Telefone", "telefone") || "",
+            ).replace(/\D/g, ""),
             cpf: String(getVal(item, "CPF", "cpf") || "").replace(/\D/g, ""),
-            cursoInteresse: String(getVal(item, "Curso", "cursoInteresse", "curso") || "").trim(),
-            acao: String(getVal(item, "Acao", "acao", "Ação", "ação") || "Importação").trim(),
+            cursoInteresse: String(
+              getVal(item, "Curso", "cursoInteresse", "curso") || "",
+            ).trim(),
+            acao: String(
+              getVal(item, "Acao", "acao", "Ação", "ação") || "Importação",
+            ).trim(),
             promotorId: "import",
-            promotorName: String(getVal(item, "Promotor", "promotorName") || "Sistema").trim(),
+            promotorName: String(
+              getVal(item, "Promotor", "promotorName") || "Sistema",
+            ).trim(),
             converted: isConverted,
             unidade: profile.unidade || "",
             createdAt: serverTimestamp(),
@@ -9460,18 +9714,23 @@ function HistoricoView({
                   <div key={s.name} className="space-y-1">
                     <div className="flex justify-between text-xs font-semibold">
                       <span className="text-slate-600 flex items-center gap-1.5">
-                        <span className={cn(
-                          "w-2 h-2 rounded-full",
-                          s.name === "Convertido" && "bg-emerald-400",
-                          s.name === "Pendente" && "bg-amber-400",
-                          s.name === "Interessado" && "bg-blue-400",
-                          s.name === "Não Interessado" && "bg-rose-400",
-                          s.name === "Sem retorno" && "bg-slate-400",
-                        )} />
+                        <span
+                          className={cn(
+                            "w-2 h-2 rounded-full",
+                            s.name === "Convertido" && "bg-emerald-400",
+                            s.name === "Pendente" && "bg-amber-400",
+                            s.name === "Interessado" && "bg-blue-400",
+                            s.name === "Não Interessado" && "bg-rose-400",
+                            s.name === "Sem retorno" && "bg-slate-400",
+                          )}
+                        />
                         {s.name}
                       </span>
                       <span className="text-slate-800 font-bold">
-                        {s.count} <span className="text-slate-400 font-normal">({s.percentage}%)</span>
+                        {s.count}{" "}
+                        <span className="text-slate-400 font-normal">
+                          ({s.percentage}%)
+                        </span>
                       </span>
                     </div>
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -9501,9 +9760,14 @@ function HistoricoView({
                 {stats.byCourse.map((p) => (
                   <div key={p.name} className="space-y-1">
                     <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-slate-600 truncate max-w-[200px]">{p.name}</span>
+                      <span className="text-slate-600 truncate max-w-[200px]">
+                        {p.name}
+                      </span>
                       <span className="text-slate-800 font-bold">
-                        {p.count} <span className="text-slate-400 font-normal">({p.percentage}%)</span>
+                        {p.count}{" "}
+                        <span className="text-slate-400 font-normal">
+                          ({p.percentage}%)
+                        </span>
                       </span>
                     </div>
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -9523,382 +9787,415 @@ function HistoricoView({
       {historicoSubTab === "lista" && (
         <>
           <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-800">
-          Histórico de Leads
-        </h2>
-        <div className="flex space-x-2">
-          {[ROLES.ADMIN_MASTER, ROLES.LIDER_FDV].includes(profile.role) && (
-            <button
-              onClick={handleVerificacao}
-              className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold"
-              title="Verificar se leads existem no GAP ou Base Líquida"
-            >
-              <Search size={18} />
-              <span>Verificação</span>
-            </button>
-          )}
-          <button
-            onClick={() => setIsAddMsgModalOpen(true)}
-            className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
-          >
-            <Plus size={18} />
-            <span>Inserir Mensagens</span>
-          </button>
-          <button
-            onClick={handleInsertDefaultHistoricoMessages}
-            className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold"
-            title="Inserir Mensagens Padrões"
-          >
-            <MessageSquare size={14} />
-          </button>
-          <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
-            <Upload size={18} />
-            <span>Importar</span>
-            <input
-              type="file"
-              accept=".xlsx, .xls"
-              onChange={handleImport}
-              className="hidden"
-            />
-          </label>
-          <button
-            onClick={handleExport}
-            className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
-          >
-            <Download size={18} />
-            <span>Exportar Excel</span>
-          </button>
-          <button
-            onClick={handleExportMalaDireta}
-            className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold shadow-sm"
-          >
-            <Mail size={18} />
-            <span>Mala Direta</span>
-          </button>
-          <button
-            onClick={handleExportSMS}
-            className="bg-orange-50 text-orange-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-orange-100 transition-all text-sm font-bold shadow-sm"
-          >
-            <MessageSquare size={18} />
-            <span>SMS (CSV)</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-          <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap font-sans tracking-tight">
-            Lista de Leads
-          </h3>
-          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto xl:justify-end">
-            <div className="relative flex-1 min-w-[200px] xl:flex-none">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                size={16}
-              />
-              <input
-                type="text"
-                placeholder="Buscar por nome, telefone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
-              />
-            </div>
-            <MultiSelect
-              options={uniqueBases}
-              selectedValues={baseFilter}
-              onChange={setBaseFilter}
-              placeholder="Todas as Origens / Ações"
-              allLabel="Todas as Origens"
-            />
-            <select
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 max-w-[150px] lg:max-w-[200px] truncate"
-              value={courseFilter}
-              onChange={(e) => setCourseFilter(e.target.value)}
-            >
-              <option value="">Todos os Cursos</option>
-              {uniqueCursos.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <select
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">Todos os Status</option>
-              {uniqueStatuses.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <select
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
-              value={blockedFilter}
-              onChange={(e) => setBlockedFilter(e.target.value as any)}
-            >
-              <option value="all">Verificação: Todos</option>
-              <option value="blocked">Verificação: Bloqueados</option>
-              <option value="unblocked">Verificação: Ativos</option>
-            </select>
-            {isAdmin && (
-              <select
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 max-w-[150px] lg:max-w-[200px] truncate"
-                value={promotorFilter}
-                onChange={(e) => setPromotorFilter(e.target.value)}
+            <h2 className="text-2xl font-bold text-slate-800">
+              Histórico de Leads
+            </h2>
+            <div className="flex space-x-2">
+              {[ROLES.ADMIN_MASTER, ROLES.LIDER_FDV].includes(profile.role) && (
+                <button
+                  onClick={handleVerificacao}
+                  className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold"
+                  title="Verificar se leads existem no GAP ou Base Líquida"
+                >
+                  <Search size={18} />
+                  <span>Verificação</span>
+                </button>
+              )}
+              <button
+                onClick={() => setIsAddMsgModalOpen(true)}
+                className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold"
               >
-                <option value="">Todos os Promotores</option>
-                {uniquePromotores.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            )}
+                <Plus size={18} />
+                <span>Inserir Mensagens</span>
+              </button>
+              <button
+                onClick={handleInsertDefaultHistoricoMessages}
+                className="bg-slate-50 text-slate-400 px-3 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-100 transition-all text-[10px] font-bold"
+                title="Inserir Mensagens Padrões"
+              >
+                <MessageSquare size={14} />
+              </button>
+              <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
+                <Upload size={18} />
+                <span>Importar</span>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={handleImport}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={handleExport}
+                className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
+              >
+                <Download size={18} />
+                <span>Exportar Excel</span>
+              </button>
+              <button
+                onClick={handleExportMalaDireta}
+                className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold shadow-sm"
+              >
+                <Mail size={18} />
+                <span>Mala Direta</span>
+              </button>
+              <button
+                onClick={handleExportSMS}
+                className="bg-orange-50 text-orange-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-orange-100 transition-all text-sm font-bold shadow-sm"
+              >
+                <MessageSquare size={18} />
+                <span>SMS (CSV)</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+              <h3 className="text-xl font-bold text-slate-900 whitespace-nowrap font-sans tracking-tight">
+                Lista de Leads
+              </h3>
+              <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto xl:justify-end">
+                <div className="relative flex-1 min-w-[200px] xl:flex-none">
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    size={16}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nome, telefone..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
+                  />
+                </div>
+                <MultiSelect
+                  options={uniqueBases}
+                  selectedValues={baseFilter}
+                  onChange={setBaseFilter}
+                  placeholder="Todas as Origens / Ações"
+                  allLabel="Todas as Origens"
+                />
+                <select
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 max-w-[150px] lg:max-w-[200px] truncate"
+                  value={courseFilter}
+                  onChange={(e) => setCourseFilter(e.target.value)}
+                >
+                  <option value="">Todos os Cursos</option>
+                  {uniqueCursos.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">Todos os Status</option>
+                  {uniqueStatuses.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                  value={blockedFilter}
+                  onChange={(e) => setBlockedFilter(e.target.value as any)}
+                >
+                  <option value="all">Verificação: Todos</option>
+                  <option value="blocked">Verificação: Bloqueados</option>
+                  <option value="unblocked">Verificação: Ativos</option>
+                </select>
+                {isAdmin && (
+                  <select
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 max-w-[150px] lg:max-w-[200px] truncate"
+                    value={promotorFilter}
+                    onChange={(e) => setPromotorFilter(e.target.value)}
+                  >
+                    <option value="">Todos os Promotores</option>
+                    {uniquePromotores.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                    <th className="px-6 py-4 w-12">
+                      <input
+                        type="checkbox"
+                        checked={
+                          filteredLeads.filter((l) => !invalidLeadIds.has(l.id))
+                            .length > 0 &&
+                          selectedEntries.length ===
+                            filteredLeads.filter(
+                              (l) => !invalidLeadIds.has(l.id),
+                            ).length
+                        }
+                        onChange={(e) => toggleSelectAll(e.target.checked)}
+                      />
+                    </th>
+                    <th className="px-3 py-4 w-12 text-slate-400">#</th>
+                    <th className="px-6 py-4">Candidato</th>
+                    <th className="px-6 py-4">Ação / Origem</th>
+                    <th className="px-6 py-4">Promotor</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 flex flex-col gap-2">
+                      {selectedEntries.length > 0 && botConfig.url && (
+                        <button
+                          onClick={() => setMassSelectorOpen(true)}
+                          className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                        >
+                          <Bot size={14} /> Em Massa
+                        </button>
+                      )}
+                      {selectedEntries.length > 0 && (
+                        <button
+                          onClick={handleBulkDelete}
+                          className="text-rose-600 font-bold hover:underline py-1 px-2 bg-rose-50 rounded-lg flex items-center gap-1"
+                        >
+                          <Trash2 size={14} /> Excluir ({selectedEntries.length}
+                          )
+                        </button>
+                      )}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredLeads.map((lead, index) => (
+                    <tr
+                      key={lead.id}
+                      className={cn(
+                        "hover:bg-slate-50/50 transition-all",
+                        invalidLeadIds.has(lead.id) && "bg-rose-50/50",
+                      )}
+                    >
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          disabled={invalidLeadIds.has(lead.id)}
+                          checked={selectedEntries.includes(lead.id)}
+                          onChange={(e) =>
+                            !invalidLeadIds.has(lead.id) &&
+                            toggleSelect(lead.id, e.target.checked)
+                          }
+                        />
+                      </td>
+                      <td className="px-3 py-4 text-xs font-bold text-slate-400 font-mono">
+                        {index + 1}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900">
+                            {lead.nome}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {formatPhone(lead.telefone)}
+                          </span>
+                          {lead.cursoInteresse && (
+                            <span className="text-xs text-slate-600 font-medium">
+                              Curso: {lead.cursoInteresse}
+                            </span>
+                          )}
+                          {lead.empresa && (
+                            <span className="text-[11px] text-indigo-600 font-bold mt-0.5 bg-indigo-50/60 border border-indigo-100/40 px-2 py-0.5 rounded-md self-start">
+                              Empresa: {lead.empresa}
+                            </span>
+                          )}
+                          {lead.cpf && (
+                            <span className="text-xs text-slate-400">
+                              CPF: {formatCPF(lead.cpf)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">
+                        {lead.acao}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 font-medium">
+                        {lead.promotorName}
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          value={lead.status || "Pendente"}
+                          onChange={(e) =>
+                            handleStatusChange(lead.id, e.target.value)
+                          }
+                          className={cn(
+                            "px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all border-none focus:ring-0",
+                            lead.status === "Convertido"
+                              ? "bg-emerald-100 text-emerald-600"
+                              : lead.status === "Interessado"
+                                ? "bg-blue-100 text-blue-600"
+                                : lead.status === "Não Interessado"
+                                  ? "bg-rose-100 text-rose-600"
+                                  : lead.status === "Sem retorno"
+                                    ? "bg-slate-100 text-slate-600"
+                                    : "bg-amber-100 text-amber-600",
+                          )}
+                        >
+                          <option value="Pendente">Pendente</option>
+                          <option value="Sem retorno">Sem retorno</option>
+                          <option value="Interessado">Interessado</option>
+                          <option value="Não Interessado">
+                            Não Interessado
+                          </option>
+                          <option value="Convertido">Convertido</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-3">
+                          {!invalidLeadIds.has(lead.id) && (
+                            <button
+                              onClick={() => {
+                                setSelectedLead(lead);
+                                setSelectorOpen(true);
+                              }}
+                              className="inline-flex items-center space-x-1 text-emerald-600 font-bold text-sm hover:text-emerald-700"
+                            >
+                              <MessageSquare size={14} />
+                              <span>WhatsApp</span>
+                            </button>
+                          )}
+                          {lead.status === "Convertido" && (
+                            <button
+                              onClick={() => handleMoveToGap(lead)}
+                              className="text-purple-600 hover:text-purple-700 font-bold text-sm flex items-center space-x-1"
+                              title="Mover para GAP Acadêmico"
+                            >
+                              <GraduationCap size={14} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleEditClick(lead)}
+                            className="text-slate-400 hover:text-blue-600 transition-colors"
+                            title="Editar Lead"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteLead(lead.id)}
+                            className="text-slate-400 hover:text-rose-600 transition-colors"
+                            title="Excluir Lead"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredLeads.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-6 py-12 text-center text-slate-400 italic"
+                      >
+                        Nenhum lead encontrado.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {historicoSubTab === "pedidos_cursos" && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800">
+                Pedidos de Cursos
+              </h2>
+              <p className="text-slate-500 text-sm mt-1">
+                Gere o link e acompanhe os cursos solicitados.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}${window.location.pathname}?view=pedido-curso`;
+                navigator.clipboard.writeText(url);
+                onToast(
+                  "Link copiado para a área de transferência!",
+                  "success",
+                );
+              }}
+              className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 flex items-center space-x-2"
+            >
+              <Copy size={18} />
+              <span>Gerar Link do Formulário</span>
+            </button>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                    <th className="p-4 font-bold border-b border-slate-100">
+                      Nome
+                    </th>
+                    <th className="p-4 font-bold border-b border-slate-100">
+                      Telefone
+                    </th>
+                    <th className="p-4 font-bold border-b border-slate-100">
+                      Curso
+                    </th>
+                    <th className="p-4 font-bold border-b border-slate-100">
+                      Data
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm divide-y divide-slate-50">
+                  {pedidosCursos.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="p-8 text-center text-slate-400"
+                      >
+                        Nenhum pedido registrado.
+                      </td>
+                    </tr>
+                  ) : (
+                    pedidosCursos.map((pedido) => (
+                      <tr
+                        key={pedido.id}
+                        className="hover:bg-slate-50/50 transition-colors"
+                      >
+                        <td className="p-4 font-medium text-slate-700">
+                          {pedido.nome}
+                        </td>
+                        <td className="p-4 text-slate-600">
+                          {pedido.telefone}
+                        </td>
+                        <td className="p-4 text-slate-800 font-semibold">
+                          {pedido.curso}
+                        </td>
+                        <td className="p-4 text-slate-500">
+                          {pedido.createdAt
+                            ? new Date(
+                                pedido.createdAt.toDate(),
+                              ).toLocaleDateString()
+                            : "-"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
-                <th className="px-6 py-4 w-12">
-                  <input
-                    type="checkbox"
-                    checked={
-                      filteredLeads.filter((l) => !invalidLeadIds.has(l.id))
-                        .length > 0 &&
-                      selectedEntries.length ===
-                        filteredLeads.filter((l) => !invalidLeadIds.has(l.id))
-                          .length
-                    }
-                    onChange={(e) => toggleSelectAll(e.target.checked)}
-                  />
-                </th>
-                <th className="px-3 py-4 w-12 text-slate-400">#</th>
-                <th className="px-6 py-4">Candidato</th>
-                <th className="px-6 py-4">Ação / Origem</th>
-                <th className="px-6 py-4">Promotor</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 flex flex-col gap-2">
-                  {selectedEntries.length > 0 && botConfig.url && (
-                    <button
-                      onClick={() => setMassSelectorOpen(true)}
-                      className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
-                    >
-                      <Bot size={14} /> Em Massa
-                    </button>
-                  )}
-                  {selectedEntries.length > 0 && (
-                    <button
-                      onClick={handleBulkDelete}
-                      className="text-rose-600 font-bold hover:underline py-1 px-2 bg-rose-50 rounded-lg flex items-center gap-1"
-                    >
-                      <Trash2 size={14} /> Excluir ({selectedEntries.length})
-                    </button>
-                  )}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredLeads.map((lead, index) => (
-                <tr
-                  key={lead.id}
-                  className={cn(
-                    "hover:bg-slate-50/50 transition-all",
-                    invalidLeadIds.has(lead.id) && "bg-rose-50/50",
-                  )}
-                >
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      disabled={invalidLeadIds.has(lead.id)}
-                      checked={selectedEntries.includes(lead.id)}
-                      onChange={(e) =>
-                        !invalidLeadIds.has(lead.id) &&
-                        toggleSelect(lead.id, e.target.checked)
-                      }
-                    />
-                  </td>
-                  <td className="px-3 py-4 text-xs font-bold text-slate-400 font-mono">
-                    {index + 1}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-slate-900">
-                        {lead.nome}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {formatPhone(lead.telefone)}
-                      </span>
-                      {lead.cursoInteresse && (
-                        <span className="text-xs text-slate-600 font-medium">
-                          Curso: {lead.cursoInteresse}
-                        </span>
-                      )}
-                      {lead.empresa && (
-                        <span className="text-[11px] text-indigo-600 font-bold mt-0.5 bg-indigo-50/60 border border-indigo-100/40 px-2 py-0.5 rounded-md self-start">
-                          Empresa: {lead.empresa}
-                        </span>
-                      )}
-                      {lead.cpf && (
-                        <span className="text-xs text-slate-400">
-                          CPF: {formatCPF(lead.cpf)}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {lead.acao}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600 font-medium">
-                    {lead.promotorName}
-                  </td>
-                  <td className="px-6 py-4">
-                    <select
-                      value={lead.status || "Pendente"}
-                      onChange={(e) =>
-                        handleStatusChange(lead.id, e.target.value)
-                      }
-                      className={cn(
-                        "px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all border-none focus:ring-0",
-                        lead.status === "Convertido"
-                          ? "bg-emerald-100 text-emerald-600"
-                          : lead.status === "Interessado"
-                            ? "bg-blue-100 text-blue-600"
-                            : lead.status === "Não Interessado"
-                              ? "bg-rose-100 text-rose-600"
-                              : lead.status === "Sem retorno"
-                                ? "bg-slate-100 text-slate-600"
-                                : "bg-amber-100 text-amber-600",
-                      )}
-                    >
-                      <option value="Pendente">Pendente</option>
-                      <option value="Sem retorno">Sem retorno</option>
-                      <option value="Interessado">Interessado</option>
-                      <option value="Não Interessado">Não Interessado</option>
-                      <option value="Convertido">Convertido</option>
-                    </select>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-3">
-                      {!invalidLeadIds.has(lead.id) && (
-                        <button
-                          onClick={() => {
-                            setSelectedLead(lead);
-                            setSelectorOpen(true);
-                          }}
-                          className="inline-flex items-center space-x-1 text-emerald-600 font-bold text-sm hover:text-emerald-700"
-                        >
-                          <MessageSquare size={14} />
-                          <span>WhatsApp</span>
-                        </button>
-                      )}
-                      {lead.status === "Convertido" && (
-                        <button
-                          onClick={() => handleMoveToGap(lead)}
-                          className="text-purple-600 hover:text-purple-700 font-bold text-sm flex items-center space-x-1"
-                          title="Mover para GAP Acadêmico"
-                        >
-                          <GraduationCap size={14} />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleEditClick(lead)}
-                        className="text-slate-400 hover:text-blue-600 transition-colors"
-                        title="Editar Lead"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteLead(lead.id)}
-                        className="text-slate-400 hover:text-rose-600 transition-colors"
-                        title="Excluir Lead"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredLeads.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-6 py-12 text-center text-slate-400 italic"
-                  >
-                    Nenhum lead encontrado.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </>
-  )}
-
-  {historicoSubTab === "pedidos_cursos" && (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">
-            Pedidos de Cursos
-          </h2>
-          <p className="text-slate-500 text-sm mt-1">
-            Gere o link e acompanhe os cursos solicitados.
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            const url = `${window.location.origin}${window.location.pathname}?view=pedido-curso`;
-            navigator.clipboard.writeText(url);
-            onToast("Link copiado para a área de transferência!", "success");
-          }}
-          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 flex items-center space-x-2"
-        >
-          <Copy size={18} />
-          <span>Gerar Link do Formulário</span>
-        </button>
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                <th className="p-4 font-bold border-b border-slate-100">Nome</th>
-                <th className="p-4 font-bold border-b border-slate-100">Telefone</th>
-                <th className="p-4 font-bold border-b border-slate-100">Curso</th>
-                <th className="p-4 font-bold border-b border-slate-100">Data</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-slate-50">
-              {pedidosCursos.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-slate-400">Nenhum pedido registrado.</td>
-                </tr>
-              ) : (
-                pedidosCursos.map((pedido) => (
-                  <tr key={pedido.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-4 font-medium text-slate-700">{pedido.nome}</td>
-                    <td className="p-4 text-slate-600">{pedido.telefone}</td>
-                    <td className="p-4 text-slate-800 font-semibold">{pedido.curso}</td>
-                    <td className="p-4 text-slate-500">
-                      {pedido.createdAt ? new Date(pedido.createdAt.toDate()).toLocaleDateString() : "-"}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  )}
+      )}
 
       <WhatsAppMessageSelector
         isOpen={selectorOpen}
@@ -10029,7 +10326,10 @@ function HistoricoView({
                     type="email"
                     value={editFormData.email}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, email: e.target.value })
+                      setEditFormData({
+                        ...editFormData,
+                        email: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="exemplo@gmail.com"
@@ -10078,9 +10378,15 @@ function HistoricoView({
                           onChange={(e) => {
                             const val = e.target.value;
                             if (val === "manual") {
-                              setEditFormData({ ...editFormData, acaoId: "manual", acao: "" });
+                              setEditFormData({
+                                ...editFormData,
+                                acaoId: "manual",
+                                acao: "",
+                              });
                             } else {
-                              const matched = calendarioAcoes.find((a) => a.id === val);
+                              const matched = calendarioAcoes.find(
+                                (a) => a.id === val,
+                              );
                               setEditFormData({
                                 ...editFormData,
                                 acaoId: val,
@@ -10096,20 +10402,29 @@ function HistoricoView({
                               {act.nome} ({act.dataInicio})
                             </option>
                           ))}
-                          <option value="manual">Outro (Digitar manualmente)</option>
+                          <option value="manual">
+                            Outro (Digitar manualmente)
+                          </option>
                         </select>
                       </div>
-                      {(editFormData.acaoId === "manual" || !editFormData.acaoId) && (
+                      {(editFormData.acaoId === "manual" ||
+                        !editFormData.acaoId) && (
                         <div>
                           <span className="block text-[10px] font-semibold text-slate-400 mb-1">
                             Digitar Nome da Ação/Origem
                           </span>
                           <input
                             type="text"
-                            required={!editFormData.acaoId || editFormData.acaoId === "manual"}
+                            required={
+                              !editFormData.acaoId ||
+                              editFormData.acaoId === "manual"
+                            }
                             value={editFormData.acao}
                             onChange={(e) =>
-                              setEditFormData({ ...editFormData, acao: e.target.value })
+                              setEditFormData({
+                                ...editFormData,
+                                acao: e.target.value,
+                              })
                             }
                             className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                             placeholder="Ex: Facebook, Panfletagem, etc."
@@ -10121,7 +10436,10 @@ function HistoricoView({
                     <input
                       value={editFormData.acao}
                       onChange={(e) =>
-                        setEditFormData({ ...editFormData, acao: e.target.value })
+                        setEditFormData({
+                          ...editFormData,
+                          acao: e.target.value,
+                        })
                       }
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -10196,8 +10514,12 @@ function BasesView({
   >("all");
 
   // New States for Sub-tabs and Candidates Editing
-  const [basesSubTab, setBasesSubTab] = useState<"dashboard" | "lista" | "novo">("dashboard");
-  const [editingCandidate, setEditingCandidate] = useState<BaseEntry | null>(null);
+  const [basesSubTab, setBasesSubTab] = useState<
+    "dashboard" | "lista" | "novo"
+  >("dashboard");
+  const [editingCandidate, setEditingCandidate] = useState<BaseEntry | null>(
+    null,
+  );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
     nomeBase: "",
@@ -10213,16 +10535,33 @@ function BasesView({
     metodologia: "",
     formaIngresso: "",
     numeroMatricula: "",
-    status: "Pendente" as 'Pendente' | 'Interessado' | 'Convertido' | 'Não tem interesse' | 'Sem retorno',
+    status: "Pendente" as
+      | "Pendente"
+      | "Interessado"
+      | "Convertido"
+      | "Não tem interesse"
+      | "Sem retorno",
   });
 
   // Memoized aggregations for Dashboard basic metrics
   const statsByBase = useMemo(() => {
-    const groups: { [key: string]: { total: number; converted: number; interested: number; pending: number } } = {};
+    const groups: {
+      [key: string]: {
+        total: number;
+        converted: number;
+        interested: number;
+        pending: number;
+      };
+    } = {};
     bases.forEach((b) => {
       const baseName = b.nomeBase || "Sem Nome";
       if (!groups[baseName]) {
-        groups[baseName] = { total: 0, converted: 0, interested: 0, pending: 0 };
+        groups[baseName] = {
+          total: 0,
+          converted: 0,
+          interested: 0,
+          pending: 0,
+        };
       }
       groups[baseName].total += 1;
       if (b.status === "Convertido") groups[baseName].converted += 1;
@@ -10230,18 +10569,27 @@ function BasesView({
       if (b.status === "Pendente") groups[baseName].pending += 1;
     });
 
-    return Object.entries(groups).map(([name, data]) => ({
-      name,
-      total: data.total,
-      converted: data.converted,
-      interested: data.interested,
-      pending: data.pending,
-      conversionRate: data.total > 0 ? ((data.converted / data.total) * 100).toFixed(1) : "0",
-    })).sort((a, b) => b.total - a.total);
+    return Object.entries(groups)
+      .map(([name, data]) => ({
+        name,
+        total: data.total,
+        converted: data.converted,
+        interested: data.interested,
+        pending: data.pending,
+        conversionRate:
+          data.total > 0
+            ? ((data.converted / data.total) * 100).toFixed(1)
+            : "0",
+      }))
+      .sort((a, b) => b.total - a.total);
   }, [bases]);
 
   const statsByProduct = useMemo(() => {
-    const groups: { [key: string]: number } = { "Graduação": 0, "Técnico": 0, "Pós-graduação": 0 };
+    const groups: { [key: string]: number } = {
+      Graduação: 0,
+      Técnico: 0,
+      "Pós-graduação": 0,
+    };
     bases.forEach((b) => {
       const p = b.produto || "Graduação";
       if (groups[p] !== undefined) {
@@ -10253,15 +10601,16 @@ function BasesView({
     return Object.entries(groups).map(([name, count]) => ({
       name,
       count,
-      percentage: bases.length > 0 ? ((count / bases.length) * 100).toFixed(1) : "0",
+      percentage:
+        bases.length > 0 ? ((count / bases.length) * 100).toFixed(1) : "0",
     }));
   }, [bases]);
 
   const statsByStatus = useMemo(() => {
     const groups: { [key: string]: number } = {
-      "Pendente": 0,
-      "Interessado": 0,
-      "Convertido": 0,
+      Pendente: 0,
+      Interessado: 0,
+      Convertido: 0,
       "Não tem interesse": 0,
       "Sem retorno": 0,
     };
@@ -10274,7 +10623,8 @@ function BasesView({
     return Object.entries(groups).map(([name, count]) => ({
       name,
       count,
-      percentage: bases.length > 0 ? ((count / bases.length) * 100).toFixed(1) : "0",
+      percentage:
+        bases.length > 0 ? ((count / bases.length) * 100).toFixed(1) : "0",
     }));
   }, [bases]);
 
@@ -10284,7 +10634,9 @@ function BasesView({
 
     setLoading(true);
     try {
-      const cleanCpf = editFormData.cpf ? editFormData.cpf.replace(/\D/g, "") : "";
+      const cleanCpf = editFormData.cpf
+        ? editFormData.cpf.replace(/\D/g, "")
+        : "";
       const cleanTelefone = editFormData.telefone.replace(/\D/g, "");
 
       const updatedData = {
@@ -10294,10 +10646,16 @@ function BasesView({
         updatedAt: serverTimestamp(),
       };
 
-      await updateDoc(doc(db, COLLECTIONS.BASES, editingCandidate.id), updatedData);
-      
+      await updateDoc(
+        doc(db, COLLECTIONS.BASES, editingCandidate.id),
+        updatedData,
+      );
+
       // If conversion status toggled to Convertido, check and sync with GAP
-      if (editFormData.status === "Convertido" && editingCandidate.status !== "Convertido") {
+      if (
+        editFormData.status === "Convertido" &&
+        editingCandidate.status !== "Convertido"
+      ) {
         const q = query(
           collection(db, COLLECTIONS.GAP),
           where("cpf", "==", cleanCpf || ""),
@@ -10318,7 +10676,10 @@ function BasesView({
             documentos: {},
             createdAt: serverTimestamp(),
           });
-          onToast("Candidato atualizado e enviado para o GAP (Convertido)!", "success");
+          onToast(
+            "Candidato atualizado e enviado para o GAP (Convertido)!",
+            "success",
+          );
         } else {
           onToast("Status atualizado com sucesso!", "success");
         }
@@ -10395,7 +10756,8 @@ function BasesView({
     const matchesSearch = b.nome
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    const matchesBase = baseFilter.length === 0 || baseFilter.includes(b.nomeBase);
+    const matchesBase =
+      baseFilter.length === 0 || baseFilter.includes(b.nomeBase);
     const matchesStatus = !statusFilter || b.status === statusFilter;
     const matchesProduto = !produtoFilter || b.produto === produtoFilter;
     const matchesCurso =
@@ -10671,7 +11033,9 @@ function BasesView({
         const getVal = (row: any, ...keys: string[]) => {
           const rowKeys = Object.keys(row);
           for (const key of keys) {
-            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            const foundKey = rowKeys.find(
+              (k) => k.toLowerCase() === key.toLowerCase(),
+            );
             if (foundKey && row[foundKey] !== undefined) return row[foundKey];
           }
           return undefined;
@@ -10681,8 +11045,10 @@ function BasesView({
           if (!val) return "Graduação";
           const lower = val.trim().toLowerCase();
           if (lower.includes("gradua")) return "Graduação";
-          if (lower.includes("tecnic") || lower.includes("técnic")) return "Técnico";
-          if (lower.includes("pos") || lower.includes("pós")) return "Pós-graduação";
+          if (lower.includes("tecnic") || lower.includes("técnic"))
+            return "Técnico";
+          if (lower.includes("pos") || lower.includes("pós"))
+            return "Pós-graduação";
           return val;
         };
 
@@ -10703,25 +11069,62 @@ function BasesView({
           const lower = val.trim().toLowerCase();
           if (lower === "pendente") return "Pendente";
           if (lower === "matriculado") return "Matriculado";
-          if (lower === "ligacao efetuada" || lower === "ligação efetuada" || lower.includes("liga")) return "Ligação Efetuada";
-          if (lower === "sem interesse" || lower.includes("sem inter")) return "Sem Interesse";
+          if (
+            lower === "ligacao efetuada" ||
+            lower === "ligação efetuada" ||
+            lower.includes("liga")
+          )
+            return "Ligação Efetuada";
+          if (lower === "sem interesse" || lower.includes("sem inter"))
+            return "Sem Interesse";
           return val.charAt(0).toUpperCase() + val.slice(1);
         };
 
         const batch = data.map((item) => ({
           nome: String(getVal(item, "Nome", "nome") || "").trim(),
-          telefone: String(getVal(item, "Telefone", "telefone") || "").replace(/\D/g, ""),
+          telefone: String(getVal(item, "Telefone", "telefone") || "").replace(
+            /\D/g,
+            "",
+          ),
           cpf: String(getVal(item, "CPF", "cpf") || "").replace(/\D/g, ""),
           curso: String(getVal(item, "Curso", "curso") || "").trim(),
-          produto: normalizeProduto(String(getVal(item, "Produto", "produto") || "")),
-          numeroOportunidade: String(getVal(item, "Nº Oportunidade", "numeroOportunidade", "oportunidade") || "").trim(),
+          produto: normalizeProduto(
+            String(getVal(item, "Produto", "produto") || ""),
+          ),
+          numeroOportunidade: String(
+            getVal(
+              item,
+              "Nº Oportunidade",
+              "numeroOportunidade",
+              "oportunidade",
+            ) || "",
+          ).trim(),
           semestre: String(getVal(item, "Semestre", "semestre") || "").trim(),
-          periodo: String(getVal(item, "Periodo", "periodo", "período") || "").trim(),
-          metodologia: normalizeMetodologia(String(getVal(item, "Metodologia", "metodologia") || "")),
-          formaIngresso: String(getVal(item, "Forma de Ingresso", "formaIngresso", "ingresso") || "").trim(),
-          numeroMatricula: String(getVal(item, "Nº Matrícula", "numeroMatricula", "matricula", "matrícula") || "").trim(),
-          nomeBase: String(getVal(item, "Base", "nomeBase") || "Importado").trim(),
-          status: normalizeStatusBase(String(getVal(item, "Status", "status") || "")),
+          periodo: String(
+            getVal(item, "Periodo", "periodo", "período") || "",
+          ).trim(),
+          metodologia: normalizeMetodologia(
+            String(getVal(item, "Metodologia", "metodologia") || ""),
+          ),
+          formaIngresso: String(
+            getVal(item, "Forma de Ingresso", "formaIngresso", "ingresso") ||
+              "",
+          ).trim(),
+          numeroMatricula: String(
+            getVal(
+              item,
+              "Nº Matrícula",
+              "numeroMatricula",
+              "matricula",
+              "matrícula",
+            ) || "",
+          ).trim(),
+          nomeBase: String(
+            getVal(item, "Base", "nomeBase") || "Importado",
+          ).trim(),
+          status: normalizeStatusBase(
+            String(getVal(item, "Status", "status") || ""),
+          ),
           createdAt: serverTimestamp(),
         }));
 
@@ -10768,7 +11171,8 @@ function BasesView({
             Acompanhamento de Bases
           </h2>
           <p className="text-sm text-slate-500">
-            Gerencie e analise as bases de captação de candidatos da sua unidade.
+            Gerencie e analise as bases de captação de candidatos da sua
+            unidade.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -10838,7 +11242,7 @@ function BasesView({
             "px-5 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap",
             basesSubTab === "dashboard"
               ? "border-b-2 border-blue-600 text-blue-600 font-bold"
-              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
+              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800",
           )}
         >
           <LayoutDashboard size={16} />
@@ -10850,7 +11254,7 @@ function BasesView({
             "px-5 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap",
             basesSubTab === "lista"
               ? "border-b-2 border-blue-600 text-blue-600 font-bold"
-              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
+              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800",
           )}
         >
           <Database size={16} />
@@ -10862,7 +11266,7 @@ function BasesView({
             "px-5 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap",
             basesSubTab === "novo"
               ? "border-b-2 border-blue-600 text-blue-600 font-bold"
-              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
+              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800",
           )}
         >
           <UserPlus size={16} />
@@ -10880,8 +11284,12 @@ function BasesView({
                 <Users size={24} />
               </div>
               <div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total de Cadastros</span>
-                <span className="text-2xl font-black text-slate-800">{bases.length}</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                  Total de Cadastros
+                </span>
+                <span className="text-2xl font-black text-slate-800">
+                  {bases.length}
+                </span>
               </div>
             </div>
 
@@ -10890,13 +11298,24 @@ function BasesView({
                 <CheckCircle2 size={24} />
               </div>
               <div>
-                <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider block">Convertidos</span>
+                <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider block">
+                  Convertidos
+                </span>
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-black text-slate-800">
                     {bases.filter((b) => b.status === "Convertido").length}
                   </span>
                   <span className="text-xs font-bold text-emerald-600">
-                    ({bases.length > 0 ? ((bases.filter((b) => b.status === "Convertido").length / bases.length) * 100).toFixed(1) : "0"}%)
+                    (
+                    {bases.length > 0
+                      ? (
+                          (bases.filter((b) => b.status === "Convertido")
+                            .length /
+                            bases.length) *
+                          100
+                        ).toFixed(1)
+                      : "0"}
+                    %)
                   </span>
                 </div>
               </div>
@@ -10907,13 +11326,24 @@ function BasesView({
                 <TrendingUp size={24} />
               </div>
               <div>
-                <span className="text-xs font-bold text-blue-500 uppercase tracking-wider block">Interessados</span>
+                <span className="text-xs font-bold text-blue-500 uppercase tracking-wider block">
+                  Interessados
+                </span>
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-black text-slate-800">
                     {bases.filter((b) => b.status === "Interessado").length}
                   </span>
                   <span className="text-xs font-bold text-blue-600">
-                    ({bases.length > 0 ? ((bases.filter((b) => b.status === "Interessado").length / bases.length) * 100).toFixed(1) : "0"}%)
+                    (
+                    {bases.length > 0
+                      ? (
+                          (bases.filter((b) => b.status === "Interessado")
+                            .length /
+                            bases.length) *
+                          100
+                        ).toFixed(1)
+                      : "0"}
+                    %)
                   </span>
                 </div>
               </div>
@@ -10924,13 +11354,23 @@ function BasesView({
                 <Clock size={24} />
               </div>
               <div>
-                <span className="text-xs font-bold text-amber-500 uppercase tracking-wider block">Pendentes</span>
+                <span className="text-xs font-bold text-amber-500 uppercase tracking-wider block">
+                  Pendentes
+                </span>
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-black text-slate-800">
                     {bases.filter((b) => b.status === "Pendente").length}
                   </span>
                   <span className="text-xs font-bold text-amber-600">
-                    ({bases.length > 0 ? ((bases.filter((b) => b.status === "Pendente").length / bases.length) * 100).toFixed(1) : "0"}%)
+                    (
+                    {bases.length > 0
+                      ? (
+                          (bases.filter((b) => b.status === "Pendente").length /
+                            bases.length) *
+                          100
+                        ).toFixed(1)
+                      : "0"}
+                    %)
                   </span>
                 </div>
               </div>
@@ -10958,16 +11398,25 @@ function BasesView({
                   <tbody className="divide-y divide-slate-50">
                     {statsByBase.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="py-4 text-center text-slate-400 italic">
+                        <td
+                          colSpan={4}
+                          className="py-4 text-center text-slate-400 italic"
+                        >
                           Nenhuma base registrada ainda.
                         </td>
                       </tr>
                     ) : (
                       statsByBase.slice(0, 10).map((b) => (
                         <tr key={b.name} className="hover:bg-slate-50/50">
-                          <td className="py-3 font-semibold text-slate-700">{b.name}</td>
-                          <td className="py-3 text-center font-bold text-slate-600">{b.total}</td>
-                          <td className="py-3 text-center text-emerald-600 font-bold">{b.converted}</td>
+                          <td className="py-3 font-semibold text-slate-700">
+                            {b.name}
+                          </td>
+                          <td className="py-3 text-center font-bold text-slate-600">
+                            {b.total}
+                          </td>
+                          <td className="py-3 text-center text-emerald-600 font-bold">
+                            {b.converted}
+                          </td>
                           <td className="py-3 text-right">
                             <span className="inline-block px-2 py-0.5 rounded-full font-black bg-emerald-50 text-emerald-700 text-[10px]">
                               {b.conversionRate}%
@@ -10994,18 +11443,23 @@ function BasesView({
                     <div key={s.name} className="space-y-1">
                       <div className="flex justify-between text-xs font-semibold">
                         <span className="text-slate-600 flex items-center gap-1.5">
-                          <span className={cn(
-                            "w-2 h-2 rounded-full",
-                            s.name === "Pendente" && "bg-slate-400",
-                            s.name === "Interessado" && "bg-blue-400",
-                            s.name === "Convertido" && "bg-emerald-400",
-                            s.name === "Não tem interesse" && "bg-rose-400",
-                            s.name === "Sem retorno" && "bg-orange-400",
-                          )} />
+                          <span
+                            className={cn(
+                              "w-2 h-2 rounded-full",
+                              s.name === "Pendente" && "bg-slate-400",
+                              s.name === "Interessado" && "bg-blue-400",
+                              s.name === "Convertido" && "bg-emerald-400",
+                              s.name === "Não tem interesse" && "bg-rose-400",
+                              s.name === "Sem retorno" && "bg-orange-400",
+                            )}
+                          />
                           {s.name}
                         </span>
                         <span className="text-slate-800 font-bold">
-                          {s.count} <span className="text-slate-400 font-normal">({s.percentage}%)</span>
+                          {s.count}{" "}
+                          <span className="text-slate-400 font-normal">
+                            ({s.percentage}%)
+                          </span>
                         </span>
                       </div>
                       <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -11038,7 +11492,10 @@ function BasesView({
                       <div className="flex justify-between text-xs font-semibold">
                         <span className="text-slate-600">{p.name}</span>
                         <span className="text-slate-800 font-bold">
-                          {p.count} <span className="text-slate-400 font-normal">({p.percentage}%)</span>
+                          {p.count}{" "}
+                          <span className="text-slate-400 font-normal">
+                            ({p.percentage}%)
+                          </span>
                         </span>
                       </div>
                       <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -11186,7 +11643,10 @@ function BasesView({
                   placeholder="Nº Matrícula"
                   value={formData.numeroMatricula}
                   onChange={(e) =>
-                    setFormData({ ...formData, numeroMatricula: e.target.value })
+                    setFormData({
+                      ...formData,
+                      numeroMatricula: e.target.value,
+                    })
                   }
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
@@ -11524,7 +11984,10 @@ function BasesView({
                     required
                     value={editFormData.nomeBase}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, nomeBase: e.target.value })
+                      setEditFormData({
+                        ...editFormData,
+                        nomeBase: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
                     placeholder="Ex: Junho 2024"
@@ -11572,7 +12035,10 @@ function BasesView({
                     type="email"
                     value={editFormData.email}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, email: e.target.value })
+                      setEditFormData({
+                        ...editFormData,
+                        email: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
                     placeholder="exemplo@gmail.com"
@@ -11587,7 +12053,10 @@ function BasesView({
                     type="text"
                     value={editFormData.cpf}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, cpf: formatCPF(e.target.value) })
+                      setEditFormData({
+                        ...editFormData,
+                        cpf: formatCPF(e.target.value),
+                      })
                     }
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
                   />
@@ -11619,7 +12088,10 @@ function BasesView({
                     required
                     value={editFormData.curso}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, curso: e.target.value })
+                      setEditFormData({
+                        ...editFormData,
+                        curso: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
                   />
@@ -11632,7 +12104,10 @@ function BasesView({
                   <select
                     value={editFormData.produto}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, produto: e.target.value as any })
+                      setEditFormData({
+                        ...editFormData,
+                        produto: e.target.value as any,
+                      })
                     }
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500 bg-white"
                   >
@@ -11653,7 +12128,10 @@ function BasesView({
                     required
                     value={editFormData.semestre}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, semestre: e.target.value })
+                      setEditFormData({
+                        ...editFormData,
+                        semestre: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
                   />
@@ -11667,7 +12145,10 @@ function BasesView({
                     type="text"
                     value={editFormData.periodo}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, periodo: e.target.value })
+                      setEditFormData({
+                        ...editFormData,
+                        periodo: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
                   />
@@ -11681,7 +12162,10 @@ function BasesView({
                     type="text"
                     value={editFormData.metodologia}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, metodologia: e.target.value })
+                      setEditFormData({
+                        ...editFormData,
+                        metodologia: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
                   />
@@ -11695,7 +12179,10 @@ function BasesView({
                     type="text"
                     value={editFormData.formaIngresso}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, formaIngresso: e.target.value })
+                      setEditFormData({
+                        ...editFormData,
+                        formaIngresso: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
                   />
@@ -11709,7 +12196,10 @@ function BasesView({
                     type="text"
                     value={editFormData.numeroMatricula}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, numeroMatricula: e.target.value })
+                      setEditFormData({
+                        ...editFormData,
+                        numeroMatricula: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
                   />
@@ -11722,7 +12212,10 @@ function BasesView({
                   <select
                     value={editFormData.status}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, status: e.target.value as any })
+                      setEditFormData({
+                        ...editFormData,
+                        status: e.target.value as any,
+                      })
                     }
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500 bg-white"
                   >
@@ -11889,7 +12382,8 @@ function BasesRenovacaoView({
     const matchesSearch = b.nome
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    const matchesBase = baseFilter.length === 0 || baseFilter.includes(b.nomeBase);
+    const matchesBase =
+      baseFilter.length === 0 || baseFilter.includes(b.nomeBase);
     const matchesStatus = !statusFilter || b.status === statusFilter;
     const matchesProduto = !produtoFilter || b.produto === produtoFilter;
     const matchesCurso =
@@ -12049,7 +12543,9 @@ function BasesRenovacaoView({
         const getVal = (row: any, ...keys: string[]) => {
           const rowKeys = Object.keys(row);
           for (const key of keys) {
-            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            const foundKey = rowKeys.find(
+              (k) => k.toLowerCase() === key.toLowerCase(),
+            );
             if (foundKey && row[foundKey] !== undefined) return row[foundKey];
           }
           return undefined;
@@ -12059,8 +12555,10 @@ function BasesRenovacaoView({
           if (!val) return "Graduação";
           const lower = val.trim().toLowerCase();
           if (lower.includes("gradua")) return "Graduação";
-          if (lower.includes("tecnic") || lower.includes("técnic")) return "Técnico";
-          if (lower.includes("pos") || lower.includes("pós")) return "Pós-graduação";
+          if (lower.includes("tecnic") || lower.includes("técnic"))
+            return "Técnico";
+          if (lower.includes("pos") || lower.includes("pós"))
+            return "Pós-graduação";
           return val;
         };
 
@@ -12081,25 +12579,62 @@ function BasesRenovacaoView({
           const lower = val.trim().toLowerCase();
           if (lower === "pendente") return "Pendente";
           if (lower === "matriculado") return "Matriculado";
-          if (lower === "ligacao efetuada" || lower === "ligação efetuada" || lower.includes("liga")) return "Ligação Efetuada";
-          if (lower === "sem interesse" || lower.includes("sem inter")) return "Sem Interesse";
+          if (
+            lower === "ligacao efetuada" ||
+            lower === "ligação efetuada" ||
+            lower.includes("liga")
+          )
+            return "Ligação Efetuada";
+          if (lower === "sem interesse" || lower.includes("sem inter"))
+            return "Sem Interesse";
           return val.charAt(0).toUpperCase() + val.slice(1);
         };
 
         const batch = data.map((item) => ({
           nome: String(getVal(item, "Nome", "nome") || "").trim(),
-          telefone: String(getVal(item, "Telefone", "telefone") || "").replace(/\D/g, ""),
+          telefone: String(getVal(item, "Telefone", "telefone") || "").replace(
+            /\D/g,
+            "",
+          ),
           cpf: String(getVal(item, "CPF", "cpf") || "").replace(/\D/g, ""),
           curso: String(getVal(item, "Curso", "curso") || "").trim(),
-          produto: normalizeProduto(String(getVal(item, "Produto", "produto") || "")),
-          numeroOportunidade: String(getVal(item, "Nº Oportunidade", "numeroOportunidade", "oportunidade") || "").trim(),
+          produto: normalizeProduto(
+            String(getVal(item, "Produto", "produto") || ""),
+          ),
+          numeroOportunidade: String(
+            getVal(
+              item,
+              "Nº Oportunidade",
+              "numeroOportunidade",
+              "oportunidade",
+            ) || "",
+          ).trim(),
           semestre: String(getVal(item, "Semestre", "semestre") || "").trim(),
-          periodo: String(getVal(item, "Periodo", "periodo", "período") || "").trim(),
-          metodologia: normalizeMetodologia(String(getVal(item, "Metodologia", "metodologia") || "")),
-          formaIngresso: String(getVal(item, "Forma de Ingresso", "formaIngresso", "ingresso") || "").trim(),
-          numeroMatricula: String(getVal(item, "Nº Matrícula", "numeroMatricula", "matricula", "matrícula") || "").trim(),
-          nomeBase: String(getVal(item, "Base", "nomeBase") || "Importado Renovação").trim(),
-          status: normalizeStatusBase(String(getVal(item, "Status", "status") || "")),
+          periodo: String(
+            getVal(item, "Periodo", "periodo", "período") || "",
+          ).trim(),
+          metodologia: normalizeMetodologia(
+            String(getVal(item, "Metodologia", "metodologia") || ""),
+          ),
+          formaIngresso: String(
+            getVal(item, "Forma de Ingresso", "formaIngresso", "ingresso") ||
+              "",
+          ).trim(),
+          numeroMatricula: String(
+            getVal(
+              item,
+              "Nº Matrícula",
+              "numeroMatricula",
+              "matricula",
+              "matrícula",
+            ) || "",
+          ).trim(),
+          nomeBase: String(
+            getVal(item, "Base", "nomeBase") || "Importado Renovação",
+          ).trim(),
+          status: normalizeStatusBase(
+            String(getVal(item, "Status", "status") || ""),
+          ),
           createdAt: serverTimestamp(),
         }));
 
@@ -12723,7 +13258,9 @@ function GapView({
   const [editingEntry, setEditingEntry] = useState<GapEntry | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
-  const [gapSubTab, setGapSubTab] = useState<"dashboard" | "lista">("dashboard");
+  const [gapSubTab, setGapSubTab] = useState<"dashboard" | "lista">(
+    "dashboard",
+  );
 
   const handleBulkDelete = async () => {
     if (selectedEntries.length === 0) return;
@@ -12802,7 +13339,11 @@ function GapView({
   }, [gap]);
 
   const statsByProduct = useMemo(() => {
-    const groups: { [key: string]: number } = { "Graduação": 0, "Técnico": 0, "Pós-graduação": 0 };
+    const groups: { [key: string]: number } = {
+      Graduação: 0,
+      Técnico: 0,
+      "Pós-graduação": 0,
+    };
     gap.forEach((g) => {
       const p = g.produto || "Graduação";
       if (groups[p] !== undefined) groups[p] += 1;
@@ -12810,27 +13351,36 @@ function GapView({
     return Object.entries(groups).map(([name, count]) => ({
       name,
       count,
-      percentage: gap.length > 0 ? ((count / gap.length) * 100).toFixed(1) : "0",
+      percentage:
+        gap.length > 0 ? ((count / gap.length) * 100).toFixed(1) : "0",
     }));
   }, [gap]);
 
   const statsByStatus = useMemo(() => {
     const groups: { [key: string]: number } = {
-      "OK": 0,
-      "Pendente": 0,
-      "Aguardando": 0,
-      "Desistente": 0,
+      OK: 0,
+      Pendente: 0,
+      Aguardando: 0,
+      Desistente: 0,
     };
     gap.forEach((g) => {
-      const s = g.matAcad === true || g.matAcad === "Matrícula Gerada" || g.matAcad === "OK" ? "OK" : 
-                g.matAcad === "Aguardando N° de Matrícula" ? "Aguardando" :
-                g.matAcad === "Desistente" ? "Desistente" : "Pendente";
+      const s =
+        g.matAcad === true ||
+        g.matAcad === "Matrícula Gerada" ||
+        g.matAcad === "OK"
+          ? "OK"
+          : g.matAcad === "Aguardando N° de Matrícula"
+            ? "Aguardando"
+            : g.matAcad === "Desistente"
+              ? "Desistente"
+              : "Pendente";
       if (groups[s] !== undefined) groups[s] += 1;
     });
     return Object.entries(groups).map(([name, count]) => ({
       name,
       count,
-      percentage: gap.length > 0 ? ((count / gap.length) * 100).toFixed(1) : "0",
+      percentage:
+        gap.length > 0 ? ((count / gap.length) * 100).toFixed(1) : "0",
     }));
   }, [gap]);
 
@@ -13126,29 +13676,64 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
         const getVal = (row: any, ...keys: string[]) => {
           const rowKeys = Object.keys(row);
           for (const key of keys) {
-            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            const foundKey = rowKeys.find(
+              (k) => k.toLowerCase() === key.toLowerCase(),
+            );
             if (foundKey && row[foundKey] !== undefined) return row[foundKey];
           }
           return undefined;
         };
 
         const batch = data.map((item) => {
-          const matAcadRaw = String(getVal(item, "MatAcad", "matAcad", "Mat. Acad.", "mat_acad") || "").trim().toLowerCase();
-          const isMatAcad = matAcadRaw === "sim" || matAcadRaw === "ok" || matAcadRaw === "yes" || matAcadRaw === "true" || getVal(item, "matAcad") === true;
+          const matAcadRaw = String(
+            getVal(item, "MatAcad", "matAcad", "Mat. Acad.", "mat_acad") || "",
+          )
+            .trim()
+            .toLowerCase();
+          const isMatAcad =
+            matAcadRaw === "sim" ||
+            matAcadRaw === "ok" ||
+            matAcadRaw === "yes" ||
+            matAcadRaw === "true" ||
+            getVal(item, "matAcad") === true;
 
           return {
             nome: String(getVal(item, "Nome", "nome") || "").trim(),
             cpf: String(getVal(item, "CPF", "cpf") || "").replace(/\D/g, ""),
-            telefone: String(getVal(item, "Telefone", "telefone") || "").replace(/\D/g, ""),
+            telefone: String(
+              getVal(item, "Telefone", "telefone") || "",
+            ).replace(/\D/g, ""),
             produto: String(getVal(item, "Produto", "produto") || "").trim(),
             curso: String(getVal(item, "Curso", "curso") || "").trim(),
             semestre: String(getVal(item, "Semestre", "semestre") || "").trim(),
-            metodologia: String(getVal(item, "Metodologia", "metodologia") || "").trim(),
-            formaIngresso: String(getVal(item, "Forma de Ingresso", "formaIngresso", "ingresso") || "").trim(),
-            numeroOportunidade: String(getVal(item, "Nº Oportunidade", "numeroOportunidade", "oportunidade") || "").trim(),
-            periodo: String(getVal(item, "Periodo", "periodo", "período") || "").trim(),
+            metodologia: String(
+              getVal(item, "Metodologia", "metodologia") || "",
+            ).trim(),
+            formaIngresso: String(
+              getVal(item, "Forma de Ingresso", "formaIngresso", "ingresso") ||
+                "",
+            ).trim(),
+            numeroOportunidade: String(
+              getVal(
+                item,
+                "Nº Oportunidade",
+                "numeroOportunidade",
+                "oportunidade",
+              ) || "",
+            ).trim(),
+            periodo: String(
+              getVal(item, "Periodo", "periodo", "período") || "",
+            ).trim(),
             numeroMatricula: String(
-              getVal(item, "Matricula", "numeroMatricula", "Nº Matrícula", "Matrícula", "Nº Matricula", "matricula") || "",
+              getVal(
+                item,
+                "Matricula",
+                "numeroMatricula",
+                "Nº Matrícula",
+                "Matrícula",
+                "Nº Matricula",
+                "matricula",
+              ) || "",
             ).trim(),
             matAcad: isMatAcad,
             documentos: {},
@@ -13259,17 +13844,22 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
                   <div key={s.name} className="space-y-1">
                     <div className="flex justify-between text-xs font-semibold">
                       <span className="text-slate-600 flex items-center gap-1.5">
-                        <span className={cn(
-                          "w-2 h-2 rounded-full",
-                          s.name === "OK" && "bg-emerald-400",
-                          s.name === "Pendente" && "bg-amber-400",
-                          s.name === "Aguardando" && "bg-blue-400",
-                          s.name === "Desistente" && "bg-rose-400",
-                        )} />
+                        <span
+                          className={cn(
+                            "w-2 h-2 rounded-full",
+                            s.name === "OK" && "bg-emerald-400",
+                            s.name === "Pendente" && "bg-amber-400",
+                            s.name === "Aguardando" && "bg-blue-400",
+                            s.name === "Desistente" && "bg-rose-400",
+                          )}
+                        />
                         {s.name}
                       </span>
                       <span className="text-slate-800 font-bold">
-                        {s.count} <span className="text-slate-400 font-normal">({s.percentage}%)</span>
+                        {s.count}{" "}
+                        <span className="text-slate-400 font-normal">
+                          ({s.percentage}%)
+                        </span>
                       </span>
                     </div>
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -13300,7 +13890,10 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
                     <div className="flex justify-between text-xs font-semibold">
                       <span className="text-slate-600">{p.name}</span>
                       <span className="text-slate-800 font-bold">
-                        {p.count} <span className="text-slate-400 font-normal">({p.percentage}%)</span>
+                        {p.count}{" "}
+                        <span className="text-slate-400 font-normal">
+                          ({p.percentage}%)
+                        </span>
                       </span>
                     </div>
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -13320,604 +13913,626 @@ Pela internet: https://sia.estacio.br/sianet/Logon`);
       {gapSubTab === "lista" && (
         <>
           <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-800">GAP Acadêmico</h2>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => {
-              setEditingEntry(null);
-              setFormData({
-                nome: "",
-                telefone: "",
-                cpf: "",
-                produto: "Graduação",
-                numeroOportunidade: "",
-                curso: "",
-                metodologia: "",
-                formaIngresso: "",
-                numeroMatricula: "",
-                periodo: "",
-              } as any);
-              setIsModalOpen(true);
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
-          >
-            <Plus size={20} />
-            <span>Cadastrar</span>
-          </button>
-          <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
-            <Upload size={18} />
-            <span>Importar</span>
+            <h2 className="text-2xl font-bold text-slate-800">GAP Acadêmico</h2>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => {
+                  setEditingEntry(null);
+                  setFormData({
+                    nome: "",
+                    telefone: "",
+                    cpf: "",
+                    produto: "Graduação",
+                    numeroOportunidade: "",
+                    curso: "",
+                    metodologia: "",
+                    formaIngresso: "",
+                    numeroMatricula: "",
+                    periodo: "",
+                  } as any);
+                  setIsModalOpen(true);
+                }}
+                className="bg-blue-600 text-white px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+              >
+                <Plus size={20} />
+                <span>Cadastrar</span>
+              </button>
+              <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
+                <Upload size={18} />
+                <span>Importar</span>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={handleImport}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={handleExport}
+                className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
+              >
+                <Download size={18} />
+                <span>Exportar</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <input
-              type="file"
-              accept=".xlsx, .xls"
-              onChange={handleImport}
-              className="hidden"
+              placeholder="Nome..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </label>
-          <button
-            onClick={handleExport}
-            className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
-          >
-            <Download size={18} />
-            <span>Exportar</span>
-          </button>
-        </div>
-      </div>
+            <input
+              placeholder="CPF..."
+              value={cpfFilter}
+              onChange={(e) => setCpfFilter(e.target.value)}
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <select
+              value={produtoFilter}
+              onChange={(e) => setProdutoFilter(e.target.value)}
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Produto</option>
+              <option value="Graduação">Graduação</option>
+              <option value="Técnico">Técnico</option>
+              <option value="Pós-graduação">Pós-graduação</option>
+            </select>
+            <input
+              placeholder="Curso..."
+              value={cursoFilter}
+              onChange={(e) => setCursoFilter(e.target.value)}
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              placeholder="Período..."
+              value={periodoFilter}
+              onChange={(e) => setPeriodoFilter(e.target.value)}
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <select
+              value={matAcadFilter}
+              onChange={(e) => setMatAcadFilter(e.target.value)}
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Mat. Acadêmica</option>
+              <option value="Matrícula Gerada">Matrícula Gerada</option>
+              <option value="Aguardando N° de Matrícula">
+                Aguardando N° de Matrícula
+              </option>
+              <option value="Pendente">Pendente</option>
+              <option value="Desistente">Desistente</option>
+            </select>
+            <select
+              value={gapFilter}
+              onChange={(e) => setGapFilter(e.target.value)}
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Gap (Docs)</option>
+              <option value="Sim">Com Pendência</option>
+              <option value="Não">Sem Pendência</option>
+            </select>
+          </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <input
-          placeholder="Nome..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <input
-          placeholder="CPF..."
-          value={cpfFilter}
-          onChange={(e) => setCpfFilter(e.target.value)}
-          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <select
-          value={produtoFilter}
-          onChange={(e) => setProdutoFilter(e.target.value)}
-          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Produto</option>
-          <option value="Graduação">Graduação</option>
-          <option value="Técnico">Técnico</option>
-          <option value="Pós-graduação">Pós-graduação</option>
-        </select>
-        <input
-          placeholder="Curso..."
-          value={cursoFilter}
-          onChange={(e) => setCursoFilter(e.target.value)}
-          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <input
-          placeholder="Período..."
-          value={periodoFilter}
-          onChange={(e) => setPeriodoFilter(e.target.value)}
-          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <select
-          value={matAcadFilter}
-          onChange={(e) => setMatAcadFilter(e.target.value)}
-          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Mat. Acadêmica</option>
-          <option value="Matrícula Gerada">Matrícula Gerada</option>
-          <option value="Aguardando N° de Matrícula">
-            Aguardando N° de Matrícula
-          </option>
-          <option value="Pendente">Pendente</option>
-          <option value="Desistente">Desistente</option>
-        </select>
-        <select
-          value={gapFilter}
-          onChange={(e) => setGapFilter(e.target.value)}
-          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Gap (Docs)</option>
-          <option value="Sim">Com Pendência</option>
-          <option value="Não">Sem Pendência</option>
-        </select>
-      </div>
-
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-6 py-4 w-12">
-                  <input
-                    type="checkbox"
-                    checked={
-                      selectedEntries.length === filteredGap.length &&
-                      filteredGap.length > 0
-                    }
-                    onChange={(e) => toggleSelectAll(e.target.checked)}
-                  />
-                </th>
-                <th className="px-6 py-4">Candidato</th>
-                <th className="px-6 py-4">Curso / Produto</th>
-                <th className="px-6 py-4">Documentação</th>
-                <th className="px-6 py-4">Mat. Acad.</th>
-                <th className="px-6 py-4 flex items-center gap-4">
-                  {selectedEntries.length > 0 && (
-                    <button
-                      onClick={handleBulkDelete}
-                      className="text-rose-600 font-bold hover:underline"
-                    >
-                      excluir selecionados
-                    </button>
-                  )}
-                  {selectedEntries.length > 0 && botConfig.url && (
-                    <button
-                      onClick={() => {
-                        const selectedObjs = gap.filter((g) =>
-                          selectedEntries.includes(g.id),
-                        );
-                        const payloads = selectedObjs.map((g) => ({
-                          telefone: g.telefone,
-                          message: getGapWhatsAppMessage(g),
-                        }));
-                        onMassSendBot(payloads);
-                        setSelectedEntries([]);
-                      }}
-                      className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
-                    >
-                      <Bot size={14} /> Em Massa
-                    </button>
-                  )}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredGap.map((entry) => (
-                <tr
-                  key={entry.id}
-                  className="hover:bg-slate-50/50 transition-all"
-                >
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedEntries.includes(entry.id)}
-                      onChange={(e) => toggleSelect(entry.id, e.target.checked)}
-                    />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-slate-900">
-                        {entry.nome}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {entry.cpf}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {formatPhone(entry.telefone)}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-slate-700">
-                        {entry.curso}
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-[10px] text-slate-400">
-                          {entry.produto}
-                        </span>
-                        {entry.periodo && (
-                          <span className="text-[10px] text-slate-400">
-                            • {entry.periodo}
-                          </span>
-                        )}
-                      </div>
-                      {entry.numeroMatricula && (
-                        <span className="text-[10px] font-bold text-blue-600">
-                          Mat: {entry.numeroMatricula}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1 max-w-[200px]">
-                      {Object.entries(docLabels).map(([key, label]) => (
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="px-6 py-4 w-12">
+                      <input
+                        type="checkbox"
+                        checked={
+                          selectedEntries.length === filteredGap.length &&
+                          filteredGap.length > 0
+                        }
+                        onChange={(e) => toggleSelectAll(e.target.checked)}
+                      />
+                    </th>
+                    <th className="px-6 py-4">Candidato</th>
+                    <th className="px-6 py-4">Curso / Produto</th>
+                    <th className="px-6 py-4">Documentação</th>
+                    <th className="px-6 py-4">Mat. Acad.</th>
+                    <th className="px-6 py-4 flex items-center gap-4">
+                      {selectedEntries.length > 0 && (
                         <button
-                          key={key}
-                          onClick={() =>
-                            toggleDoc(
-                              entry.id,
-                              key,
-                              !!(entry.documentos as any)?.[key],
-                            )
+                          onClick={handleBulkDelete}
+                          className="text-rose-600 font-bold hover:underline"
+                        >
+                          excluir selecionados
+                        </button>
+                      )}
+                      {selectedEntries.length > 0 && botConfig.url && (
+                        <button
+                          onClick={() => {
+                            const selectedObjs = gap.filter((g) =>
+                              selectedEntries.includes(g.id),
+                            );
+                            const payloads = selectedObjs.map((g) => ({
+                              telefone: g.telefone,
+                              message: getGapWhatsAppMessage(g),
+                            }));
+                            onMassSendBot(payloads);
+                            setSelectedEntries([]);
+                          }}
+                          className="text-blue-600 font-bold hover:underline py-1 px-2 bg-blue-50 rounded-lg flex items-center gap-1"
+                        >
+                          <Bot size={14} /> Em Massa
+                        </button>
+                      )}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredGap.map((entry) => (
+                    <tr
+                      key={entry.id}
+                      className="hover:bg-slate-50/50 transition-all"
+                    >
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedEntries.includes(entry.id)}
+                          onChange={(e) =>
+                            toggleSelect(entry.id, e.target.checked)
                           }
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900">
+                            {entry.nome}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {entry.cpf}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {formatPhone(entry.telefone)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-slate-700">
+                            {entry.curso}
+                          </span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-[10px] text-slate-400">
+                              {entry.produto}
+                            </span>
+                            {entry.periodo && (
+                              <span className="text-[10px] text-slate-400">
+                                • {entry.periodo}
+                              </span>
+                            )}
+                          </div>
+                          {entry.numeroMatricula && (
+                            <span className="text-[10px] font-bold text-blue-600">
+                              Mat: {entry.numeroMatricula}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1 max-w-[200px]">
+                          {Object.entries(docLabels).map(([key, label]) => (
+                            <button
+                              key={key}
+                              onClick={() =>
+                                toggleDoc(
+                                  entry.id,
+                                  key,
+                                  !!(entry.documentos as any)?.[key],
+                                )
+                              }
+                              className={cn(
+                                "px-2 py-0.5 rounded text-[9px] font-bold transition-all",
+                                (entry.documentos as any)?.[key]
+                                  ? "bg-emerald-100 text-emerald-600"
+                                  : "bg-slate-100 text-slate-400",
+                              )}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          value={String(entry.matAcad)}
+                          onChange={(e) => {
+                            let selectedValue: string | boolean =
+                              e.target.value;
+                            if (selectedValue === "false")
+                              selectedValue = false;
+                            if (selectedValue === "true") selectedValue = true;
+                            updateMatAcadStatus(entry.id, selectedValue);
+                          }}
                           className={cn(
-                            "px-2 py-0.5 rounded text-[9px] font-bold transition-all",
-                            (entry.documentos as any)?.[key]
+                            "px-2 py-1 rounded-lg text-[10px] font-bold uppercase outline-none",
+                            entry.matAcad === true ||
+                              String(entry.matAcad) === "true" ||
+                              entry.matAcad === "Matrícula Gerada" ||
+                              entry.matAcad === "OK"
                               ? "bg-emerald-100 text-emerald-600"
-                              : "bg-slate-100 text-slate-400",
+                              : entry.matAcad === "Aguardando N° de Matrícula"
+                                ? "bg-blue-100 text-blue-600"
+                                : entry.matAcad === "Desistente"
+                                  ? "bg-rose-100 text-rose-600"
+                                  : "bg-amber-100 text-amber-600",
                           )}
                         >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <select
-                      value={String(entry.matAcad)}
-                      onChange={(e) => {
-                        let selectedValue: string | boolean = e.target.value;
-                        if (selectedValue === "false") selectedValue = false;
-                        if (selectedValue === "true") selectedValue = true;
-                        updateMatAcadStatus(entry.id, selectedValue);
-                      }}
-                      className={cn(
-                        "px-2 py-1 rounded-lg text-[10px] font-bold uppercase outline-none",
-                        entry.matAcad === true ||
-                          String(entry.matAcad) === "true" ||
-                          entry.matAcad === "Matrícula Gerada" ||
-                          entry.matAcad === "OK"
-                          ? "bg-emerald-100 text-emerald-600"
-                          : entry.matAcad === "Aguardando N° de Matrícula"
-                            ? "bg-blue-100 text-blue-600"
-                            : entry.matAcad === "Desistente"
-                              ? "bg-rose-100 text-rose-600"
-                              : "bg-amber-100 text-amber-600",
-                      )}
-                    >
-                      <option value="false">Pendente</option>
-                      <option value="Matrícula Gerada">Matrícula Gerada</option>
-                      <option value="Aguardando N° de Matrícula">
-                        Aguardando N° de Matrícula
-                      </option>
-                      <option value="Desistente">Desistente</option>
-                    </select>
-                  </td>
-                  <td className="px-6 py-4 flex items-center space-x-2">
-                    {botConfig.url && (
-                      <button
-                        onClick={() =>
-                          onSendBot(
+                          <option value="false">Pendente</option>
+                          <option value="Matrícula Gerada">
+                            Matrícula Gerada
+                          </option>
+                          <option value="Aguardando N° de Matrícula">
+                            Aguardando N° de Matrícula
+                          </option>
+                          <option value="Desistente">Desistente</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 flex items-center space-x-2">
+                        {botConfig.url && (
+                          <button
+                            onClick={() =>
+                              onSendBot(
+                                entry.telefone,
+                                getGapWhatsAppMessage(entry),
+                              )
+                            }
+                            className="text-blue-600 hover:text-blue-700 font-bold text-sm bg-blue-50 p-2 rounded-lg"
+                            title="Enviar pelo Bot ARGO'S"
+                          >
+                            <Bot size={16} />
+                          </button>
+                        )}
+                        <a
+                          href={getWhatsAppUrl(
                             entry.telefone,
                             getGapWhatsAppMessage(entry),
-                          )
-                        }
-                        className="text-blue-600 hover:text-blue-700 font-bold text-sm bg-blue-50 p-2 rounded-lg"
-                        title="Enviar pelo Bot ARGO'S"
-                      >
-                        <Bot size={16} />
-                      </button>
-                    )}
-                    <a
-                      href={getWhatsAppUrl(
-                        entry.telefone,
-                        getGapWhatsAppMessage(entry),
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-emerald-600 hover:text-emerald-700 font-bold text-sm bg-emerald-50 p-2 rounded-lg"
-                      title="Abrir WhatsApp"
-                    >
-                      <MessageSquare size={16} />
-                    </a>
-                    <button
-                      onClick={() => {
-                        setEditingEntry(entry);
-                        setFormData({
-                          nome: entry.nome || "",
-                          telefone: entry.telefone || "",
-                          cpf: entry.cpf || "",
-                          produto: entry.produto || "Graduação",
-                          numeroOportunidade: entry.numeroOportunidade || "",
-                          curso: entry.curso || "",
-                          semestre: entry.semestre || "",
-                          metodologia: entry.metodologia || "",
-                          formaIngresso: entry.formaIngresso || "",
-                          numeroMatricula: entry.numeroMatricula || "",
-                          periodo: entry.periodo || "",
-                          acao: entry.acao || "",
-                          acaoId: entry.acaoId || "",
-                        });
-                        setIsModalOpen(true);
-                      }}
-                      className="text-blue-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition-all"
-                      title="Editar"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteGap(entry.id)}
-                      className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
-                      title="Excluir"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredGap.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-12 text-center text-slate-400 italic"
-                  >
-                    Nenhum registro no GAP.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden"
-            >
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                <h3 className="text-xl font-bold text-slate-900">
-                  {editingEntry ? "Editar Candidato" : "Cadastrar no GAP"}
-                </h3>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="text-slate-400 hover:text-slate-600"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              <form
-                onSubmit={handleRegister}
-                className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
-              >
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Nome Completo
-                  </label>
-                  <input
-                    required
-                    value={formData.nome}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nome: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    CPF
-                  </label>
-                  <input
-                    required
-                    value={formData.cpf}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        cpf: formatCPF(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Telefone
-                  </label>
-                  <input
-                    required
-                    value={formData.telefone}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        telefone: formatPhone(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Produto
-                  </label>
-                  <select
-                    value={formData.produto}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        produto: e.target.value as any,
-                      })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  >
-                    <option value="Graduação">Graduação</option>
-                    <option value="Técnico">Técnico</option>
-                    <option value="Pós-graduação">Pós-graduação</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    N° Oportunidade
-                  </label>
-                  <input
-                    value={formData.numeroOportunidade}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        numeroOportunidade: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Curso
-                  </label>
-                  <input
-                    required
-                    value={formData.curso}
-                    onChange={(e) =>
-                      setFormData({ ...formData, curso: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Período
-                  </label>
-                  <input
-                    value={formData.periodo}
-                    onChange={(e) =>
-                      setFormData({ ...formData, periodo: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                    placeholder="Ex: 2024.1"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Semestre
-                  </label>
-                  <input
-                    value={formData.semestre}
-                    onChange={(e) =>
-                      setFormData({ ...formData, semestre: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Metodologia
-                  </label>
-                  <input
-                    value={formData.metodologia}
-                    onChange={(e) =>
-                      setFormData({ ...formData, metodologia: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Forma de Ingresso
-                  </label>
-                  <input
-                    value={formData.formaIngresso}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        formaIngresso: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Nº Matrícula
-                  </label>
-                  <input
-                    value={formData.numeroMatricula}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        numeroMatricula: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Ação Vinculada (Opcional)
-                  </label>
-                  {calendarioAcoes && calendarioAcoes.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <span className="block text-[10px] font-semibold text-slate-400 mb-1">
-                          Selecionar do Calendário
-                        </span>
-                        <select
-                          value={formData.acaoId || ""}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === "manual") {
-                              setFormData({ ...formData, acaoId: "manual", acao: "" });
-                            } else {
-                              const matched = calendarioAcoes.find((a) => a.id === val);
-                              setFormData({
-                                ...formData,
-                                acaoId: val,
-                                acao: matched ? matched.nome : "",
-                              });
-                            }
-                          }}
-                          className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-600 hover:text-emerald-700 font-bold text-sm bg-emerald-50 p-2 rounded-lg"
+                          title="Abrir WhatsApp"
                         >
-                          <option value="">Nenhuma ação vinculada</option>
-                          {calendarioAcoes.map((act) => (
-                            <option key={act.id} value={act.id}>
-                              {act.nome} ({act.dataInicio})
-                            </option>
-                          ))}
-                          <option value="manual">Outro (Digitar manualmente)</option>
-                        </select>
-                      </div>
-                      {(formData.acaoId === "manual" || !formData.acaoId) && (
-                        <div>
-                          <span className="block text-[10px] font-semibold text-slate-400 mb-1">
-                            Digitar Nome da Ação/Origem
-                          </span>
-                          <input
-                            type="text"
-                            required={formData.acaoId === "manual"}
-                            value={formData.acao}
-                            onChange={(e) =>
-                              setFormData({ ...formData, acao: e.target.value })
-                            }
-                            className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                            placeholder="Ex: Facebook, Panfletagem, etc."
-                          />
+                          <MessageSquare size={16} />
+                        </a>
+                        <button
+                          onClick={() => {
+                            setEditingEntry(entry);
+                            setFormData({
+                              nome: entry.nome || "",
+                              telefone: entry.telefone || "",
+                              cpf: entry.cpf || "",
+                              produto: entry.produto || "Graduação",
+                              numeroOportunidade:
+                                entry.numeroOportunidade || "",
+                              curso: entry.curso || "",
+                              semestre: entry.semestre || "",
+                              metodologia: entry.metodologia || "",
+                              formaIngresso: entry.formaIngresso || "",
+                              numeroMatricula: entry.numeroMatricula || "",
+                              periodo: entry.periodo || "",
+                              acao: entry.acao || "",
+                              acaoId: entry.acaoId || "",
+                            });
+                            setIsModalOpen(true);
+                          }}
+                          className="text-blue-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition-all"
+                          title="Editar"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteGap(entry.id)}
+                          className="text-rose-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg transition-all"
+                          title="Excluir"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredGap.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-6 py-12 text-center text-slate-400 italic"
+                      >
+                        Nenhum registro no GAP.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {isModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden"
+                >
+                  <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <h3 className="text-xl font-bold text-slate-900">
+                      {editingEntry ? "Editar Candidato" : "Cadastrar no GAP"}
+                    </h3>
+                    <button
+                      onClick={() => setIsModalOpen(false)}
+                      className="text-slate-400 hover:text-slate-600"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+                  <form
+                    onSubmit={handleRegister}
+                    className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+                  >
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Nome Completo
+                      </label>
+                      <input
+                        required
+                        value={formData.nome}
+                        onChange={(e) =>
+                          setFormData({ ...formData, nome: e.target.value })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        CPF
+                      </label>
+                      <input
+                        required
+                        value={formData.cpf}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            cpf: formatCPF(e.target.value),
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Telefone
+                      </label>
+                      <input
+                        required
+                        value={formData.telefone}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            telefone: formatPhone(e.target.value),
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Produto
+                      </label>
+                      <select
+                        value={formData.produto}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            produto: e.target.value as any,
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      >
+                        <option value="Graduação">Graduação</option>
+                        <option value="Técnico">Técnico</option>
+                        <option value="Pós-graduação">Pós-graduação</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        N° Oportunidade
+                      </label>
+                      <input
+                        value={formData.numeroOportunidade}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            numeroOportunidade: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Curso
+                      </label>
+                      <input
+                        required
+                        value={formData.curso}
+                        onChange={(e) =>
+                          setFormData({ ...formData, curso: e.target.value })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Período
+                      </label>
+                      <input
+                        value={formData.periodo}
+                        onChange={(e) =>
+                          setFormData({ ...formData, periodo: e.target.value })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                        placeholder="Ex: 2024.1"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Semestre
+                      </label>
+                      <input
+                        value={formData.semestre}
+                        onChange={(e) =>
+                          setFormData({ ...formData, semestre: e.target.value })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Metodologia
+                      </label>
+                      <input
+                        value={formData.metodologia}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            metodologia: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Forma de Ingresso
+                      </label>
+                      <input
+                        value={formData.formaIngresso}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            formaIngresso: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Nº Matrícula
+                      </label>
+                      <input
+                        value={formData.numeroMatricula}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            numeroMatricula: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Ação Vinculada (Opcional)
+                      </label>
+                      {calendarioAcoes && calendarioAcoes.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <span className="block text-[10px] font-semibold text-slate-400 mb-1">
+                              Selecionar do Calendário
+                            </span>
+                            <select
+                              value={formData.acaoId || ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "manual") {
+                                  setFormData({
+                                    ...formData,
+                                    acaoId: "manual",
+                                    acao: "",
+                                  });
+                                } else {
+                                  const matched = calendarioAcoes.find(
+                                    (a) => a.id === val,
+                                  );
+                                  setFormData({
+                                    ...formData,
+                                    acaoId: val,
+                                    acao: matched ? matched.nome : "",
+                                  });
+                                }
+                              }}
+                              className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                            >
+                              <option value="">Nenhuma ação vinculada</option>
+                              {calendarioAcoes.map((act) => (
+                                <option key={act.id} value={act.id}>
+                                  {act.nome} ({act.dataInicio})
+                                </option>
+                              ))}
+                              <option value="manual">
+                                Outro (Digitar manualmente)
+                              </option>
+                            </select>
+                          </div>
+                          {(formData.acaoId === "manual" ||
+                            !formData.acaoId) && (
+                            <div>
+                              <span className="block text-[10px] font-semibold text-slate-400 mb-1">
+                                Digitar Nome da Ação/Origem
+                              </span>
+                              <input
+                                type="text"
+                                required={formData.acaoId === "manual"}
+                                value={formData.acao}
+                                onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    acao: e.target.value,
+                                  })
+                                }
+                                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                                placeholder="Ex: Facebook, Panfletagem, etc."
+                              />
+                            </div>
+                          )}
                         </div>
+                      ) : (
+                        <input
+                          value={formData.acao}
+                          onChange={(e) =>
+                            setFormData({ ...formData, acao: e.target.value })
+                          }
+                          className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                          placeholder="Ex: Evento Junino, Facebook, etc."
+                        />
                       )}
                     </div>
-                  ) : (
-                    <input
-                      value={formData.acao}
-                      onChange={(e) =>
-                        setFormData({ ...formData, acao: e.target.value })
-                      }
-                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                      placeholder="Ex: Evento Junino, Facebook, etc."
-                    />
-                  )}
-                </div>
-                <div className="md:col-span-2">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
-                  >
-                    {loading
-                      ? "Salvando..."
-                      : editingEntry
-                        ? "Salvar Alterações"
-                        : "Cadastrar Candidato"}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                    <div className="md:col-span-2">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
+                      >
+                        {loading
+                          ? "Salvando..."
+                          : editingEntry
+                            ? "Salvar Alterações"
+                            : "Cadastrar Candidato"}
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </>
       )}
     </div>
@@ -13957,22 +14572,26 @@ function CalendarioAcoesView({
   // Helper functions for automatic WhatsApp notifications
   const getLocalDateString = (d: Date = new Date()) => {
     const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
 
   const addDays = (dateStr: string, days: number): string => {
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return '';
-    const date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return "";
+    const date = new Date(
+      Number(parts[0]),
+      Number(parts[1]) - 1,
+      Number(parts[2]),
+    );
     date.setDate(date.getDate() + days);
     return getLocalDateString(date);
   };
 
   const formatBrazilianDate = (dateStr?: string): string => {
     if (!dateStr) return "";
-    const parts = dateStr.split('-');
+    const parts = dateStr.split("-");
     if (parts.length !== 3) return dateStr;
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   };
@@ -14007,8 +14626,12 @@ function CalendarioAcoesView({
     const info = `\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n*Horário:* ${action.horario || "Não informado"}\n*Objetivo:* ${action.observacao || "Não informado"}`;
 
     // 1. Send to FDVs Comerciais linked to action
-    const ids = action.colaboradoresIds?.length ? action.colaboradoresIds : (action.colaboradorId ? [action.colaboradorId] : []);
-    
+    const ids = action.colaboradoresIds?.length
+      ? action.colaboradoresIds
+      : action.colaboradorId
+        ? [action.colaboradorId]
+        : [];
+
     for (const id of ids) {
       const fdvUser = (users || []).find((u) => u.uid === id);
       if (fdvUser && fdvUser.phone) {
@@ -14018,7 +14641,8 @@ function CalendarioAcoesView({
         // 1.1 Send to Gestor Unidade linked to the FDV's unit
         if (fdvUser.unidade) {
           const unitManagers = (users || []).filter(
-            (u) => u.role === ROLES.GESTOR_UNIDADE && u.unidade === fdvUser.unidade
+            (u) =>
+              u.role === ROLES.GESTOR_UNIDADE && u.unidade === fdvUser.unidade,
           );
           for (const manager of unitManagers) {
             if (manager.phone) {
@@ -14031,7 +14655,10 @@ function CalendarioAcoesView({
     }
 
     // 2. Send to Promotores (if any selected)
-    if (action.promotoresSelecionados && action.promotoresSelecionados.length > 0) {
+    if (
+      action.promotoresSelecionados &&
+      action.promotoresSelecionados.length > 0
+    ) {
       for (const promoterId of action.promotoresSelecionados) {
         const promoterUser = (users || []).find((u) => u.uid === promoterId);
         if (promoterUser && promoterUser.phone) {
@@ -14079,10 +14706,15 @@ function CalendarioAcoesView({
       for (const action of data) {
         // --- 1. Reminder 1 day before action start date ---
         const oneDayBeforeStart = addDays(action.dataInicio, -1);
-        if (oneDayBeforeStart && todayStr === oneDayBeforeStart && !action.concluida && !(action as any).whatsappLembreteSent) {
+        if (
+          oneDayBeforeStart &&
+          todayStr === oneDayBeforeStart &&
+          !action.concluida &&
+          !(action as any).whatsappLembreteSent
+        ) {
           try {
             await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, action.id), {
-              whatsappLembreteSent: true
+              whatsappLembreteSent: true,
             });
 
             const info = `\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n*Horário:* ${action.horario || "Não informado"}\n*Objetivo:* ${action.observacao || "Não informado"}`;
@@ -14096,7 +14728,11 @@ function CalendarioAcoesView({
 
                 // Send to Gestor Unidade of the FDV
                 if (fdvUser.unidade) {
-                  const unitManagers = users.filter(u => u.role === ROLES.GESTOR_UNIDADE && u.unidade === fdvUser.unidade);
+                  const unitManagers = users.filter(
+                    (u) =>
+                      u.role === ROLES.GESTOR_UNIDADE &&
+                      u.unidade === fdvUser.unidade,
+                  );
                   for (const manager of unitManagers) {
                     if (manager.phone) {
                       const mMsg = `*Lembrete de Ação Amanhã (Sua Unidade)*\n\nOlá, *${manager.name}*!\nLembrando que amanhã o FDV *${fdvUser.name}* tem uma ação programada:${info}`;
@@ -14108,7 +14744,10 @@ function CalendarioAcoesView({
             }
 
             // Send to selected promoters
-            if (action.promotoresSelecionados && action.promotoresSelecionados.length > 0) {
+            if (
+              action.promotoresSelecionados &&
+              action.promotoresSelecionados.length > 0
+            ) {
               for (const promoterId of action.promotoresSelecionados) {
                 const promoterUser = users.find((u) => u.uid === promoterId);
                 if (promoterUser && promoterUser.phone) {
@@ -14119,7 +14758,11 @@ function CalendarioAcoesView({
             }
 
             // Send to Managers/Gestores
-            const managers = users.filter(u => u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL || u.role === ROLES.GESTOR_COMERCIAL);
+            const managers = users.filter(
+              (u) =>
+                u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL ||
+                u.role === ROLES.GESTOR_COMERCIAL,
+            );
             for (const manager of managers) {
               if (manager.phone) {
                 const msg = `*Lembrete de Ação Amanhã (Gestão)*\n\nOlá, *${manager.name}*!\nAmanhã haverá a seguinte ação:${info}`;
@@ -14127,16 +14770,25 @@ function CalendarioAcoesView({
               }
             }
           } catch (err) {
-            console.error("Failed to send 1-day-before reminder", action.id, err);
+            console.error(
+              "Failed to send 1-day-before reminder",
+              action.id,
+              err,
+            );
           }
         }
 
         // --- 2. Closure Request 1 day after action end date ---
         const oneDayAfterEnd = addDays(action.dataFim, 1);
-        if (oneDayAfterEnd && todayStr === oneDayAfterEnd && !action.concluida && !(action as any).whatsappFechamentoSent) {
+        if (
+          oneDayAfterEnd &&
+          todayStr === oneDayAfterEnd &&
+          !action.concluida &&
+          !(action as any).whatsappFechamentoSent
+        ) {
           try {
             await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, action.id), {
-              whatsappFechamentoSent: true
+              whatsappFechamentoSent: true,
             });
 
             const info = `\n\n*Ação:* ${action.nome}\n*Local:* ${action.local}\n*Data:* ${formatBrazilianDate(action.dataInicio)}\n*Horário:* ${action.horario || "Não informado"}\n*Objetivo:* ${action.observacao || "Não informado"}`;
@@ -14151,7 +14803,11 @@ function CalendarioAcoesView({
             }
 
             // Send to Managers/Gestores
-            const managers = users.filter(u => u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL || u.role === ROLES.GESTOR_COMERCIAL);
+            const managers = users.filter(
+              (u) =>
+                u.role === ROLES.GESTOR_COMERCIAL_COMERCIAL ||
+                u.role === ROLES.GESTOR_COMERCIAL,
+            );
             for (const manager of managers) {
               if (manager.phone) {
                 const msg = `*Lembrete de Fechar Ação (Gestão)*\n\nOlá, *${manager.name}*!\nA ação do colaborador abaixo finalizou ontem e ainda não foi fechada:${info}`;
@@ -14180,7 +14836,9 @@ function CalendarioAcoesView({
   const [editingAction, setEditingAction] = useState<CalendarioAcao | null>(
     null,
   );
-  const [acoesSubTab, setAcoesSubTab] = useState<"dashboard" | "lista">("dashboard");
+  const [acoesSubTab, setAcoesSubTab] = useState<"dashboard" | "lista">(
+    "dashboard",
+  );
   const [viewFormat, setViewFormat] = useState<"card" | "list">("card");
 
   const autoLeadsCount = editingAction
@@ -14218,7 +14876,8 @@ function CalendarioAcoesView({
   });
 
   const promotoresDisponiveis = (users || []).filter((u) => {
-    const isPromotor = u.role === ROLES.PROMOTOR || u.role === ROLES.PROMOTOR_RUA;
+    const isPromotor =
+      u.role === ROLES.PROMOTOR || u.role === ROLES.PROMOTOR_RUA;
     if (!isPromotor) return false;
 
     if (
@@ -14269,8 +14928,14 @@ function CalendarioAcoesView({
           (initialData as any).metaInscritos !== undefined
             ? (initialData as any).metaInscritos
             : "",
-        leadsFeitos: (initialData as any).leadsFeitos !== undefined ? (initialData as any).leadsFeitos : "",
-        boletosFeitos: (initialData as any).boletosFeitos !== undefined ? (initialData as any).boletosFeitos : "",
+        leadsFeitos:
+          (initialData as any).leadsFeitos !== undefined
+            ? (initialData as any).leadsFeitos
+            : "",
+        boletosFeitos:
+          (initialData as any).boletosFeitos !== undefined
+            ? (initialData as any).boletosFeitos
+            : "",
         precisaPromotor: !!(initialData as any).precisaPromotor,
         promotoresSelecionados:
           (initialData as any).promotoresSelecionados || [],
@@ -14311,17 +14976,17 @@ function CalendarioAcoesView({
     const matchesSearch =
       item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.local.toLowerCase().includes(searchTerm.toLowerCase());
-    const itemStatus = item.status || (item.concluida ? "Concluído" : "Não iniciada");
+    const itemStatus =
+      item.status || (item.concluida ? "Concluído" : "Não iniciada");
 
     const matchesStatus =
-      statusFilter === "all"
-        ? true
-        : statusFilter === itemStatus;
+      statusFilter === "all" ? true : statusFilter === itemStatus;
 
     const matchesColaborador =
       colaboradorFilter === "all" ||
       item.colaboradorId === colaboradorFilter ||
-      (item.colaboradoresIds && item.colaboradoresIds.includes(colaboradorFilter));
+      (item.colaboradoresIds &&
+        item.colaboradoresIds.includes(colaboradorFilter));
 
     const matchesUnidade =
       unidadeFilter === "all" || item.unidade === unidadeFilter;
@@ -14335,7 +15000,13 @@ function CalendarioAcoesView({
     } else if (endDateFilter) {
       matchesDate = item.dataInicio <= endDateFilter;
     }
-    return matchesSearch && matchesStatus && matchesDate && matchesColaborador && matchesUnidade;
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesDate &&
+      matchesColaborador &&
+      matchesUnidade
+    );
   });
 
   const stats = useMemo(() => {
@@ -14343,9 +15014,16 @@ function CalendarioAcoesView({
     const completed = filteredData.filter((a) => a.concluida).length;
     const pending = total - completed;
     const totalLeads = leads.length;
-    const totalLeadsFeitos = filteredData.reduce((acc, a) => acc + (Number(a.leadsFeitos) || 0), 0);
-    const totalBoletosFeitos = filteredData.reduce((acc, a) => acc + (Number(a.boletosFeitos) || 0), 0);
-    const completionRate = total > 0 ? ((completed / total) * 100).toFixed(1) : "0";
+    const totalLeadsFeitos = filteredData.reduce(
+      (acc, a) => acc + (Number(a.leadsFeitos) || 0),
+      0,
+    );
+    const totalBoletosFeitos = filteredData.reduce(
+      (acc, a) => acc + (Number(a.boletosFeitos) || 0),
+      0,
+    );
+    const completionRate =
+      total > 0 ? ((completed / total) * 100).toFixed(1) : "0";
 
     const byType: Record<string, number> = {};
     filteredData.forEach((a) => {
@@ -14358,23 +15036,25 @@ function CalendarioAcoesView({
       { name: "Pendentes", count: pending, color: "bg-amber-400" },
     ];
 
-    return { 
-      total, 
-      completed, 
-      pending, 
-      totalLeads, 
+    return {
+      total,
+      completed,
+      pending,
+      totalLeads,
       totalLeadsFeitos,
       totalBoletosFeitos,
       completionRate,
-      byType: Object.entries(byType).map(([name, count]) => ({
-        name,
-        count,
-        percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0"
-      })).sort((a, b) => b.count - a.count),
-      byStatus: byStatus.map(s => ({
+      byType: Object.entries(byType)
+        .map(([name, count]) => ({
+          name,
+          count,
+          percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0",
+        }))
+        .sort((a, b) => b.count - a.count),
+      byStatus: byStatus.map((s) => ({
         ...s,
-        percentage: total > 0 ? ((s.count / total) * 100).toFixed(1) : "0"
-      }))
+        percentage: total > 0 ? ((s.count / total) * 100).toFixed(1) : "0",
+      })),
     };
   }, [filteredData, leads]);
 
@@ -14421,21 +15101,26 @@ function CalendarioAcoesView({
         // Automatically set the unit based on the collaborator (FDV) or the creator
         let targetUnidade = "";
         if (payload.colaboradorId) {
-          const collab = (users || []).find(u => u.uid === payload.colaboradorId);
+          const collab = (users || []).find(
+            (u) => u.uid === payload.colaboradorId,
+          );
           if (collab?.unidade) targetUnidade = collab.unidade;
         }
         if (!targetUnidade && profile.unidade) {
           targetUnidade = profile.unidade;
         }
 
-        const docRef = await addDoc(collection(db, COLLECTIONS.CALENDARIO_ACOES), {
-          ...payload,
-          unidade: targetUnidade,
-          creatorId: profile.uid,
-          creatorRole: profile.role,
-          createdAt: serverTimestamp(),
-          whatsappMomentoSent: true,
-        });
+        const docRef = await addDoc(
+          collection(db, COLLECTIONS.CALENDARIO_ACOES),
+          {
+            ...payload,
+            unidade: targetUnidade,
+            creatorId: profile.uid,
+            creatorRole: profile.role,
+            createdAt: serverTimestamp(),
+            whatsappMomentoSent: true,
+          },
+        );
         onToast("Ação agendada com sucesso!");
 
         // Send automatic WhatsApp notifications at creation time
@@ -14557,7 +15242,10 @@ function CalendarioAcoesView({
     }
   };
 
-  const updateActionStatus = async (action: CalendarioAcao, newStatus: string) => {
+  const updateActionStatus = async (
+    action: CalendarioAcao,
+    newStatus: string,
+  ) => {
     try {
       await updateDoc(doc(db, COLLECTIONS.CALENDARIO_ACOES, action.id), {
         status: newStatus,
@@ -14601,28 +15289,43 @@ function CalendarioAcoesView({
         const getVal = (row: any, ...keys: string[]) => {
           const rowKeys = Object.keys(row);
           for (const key of keys) {
-            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            const foundKey = rowKeys.find(
+              (k) => k.toLowerCase() === key.toLowerCase(),
+            );
             if (foundKey && row[foundKey] !== undefined) return row[foundKey];
           }
           return undefined;
         };
 
         const batch = importData.map((item) => {
-          const rawStatusOriginal = String(getVal(item, "Status", "status") || "").trim();
+          const rawStatusOriginal = String(
+            getVal(item, "Status", "status") || "",
+          ).trim();
           const rawStatus = rawStatusOriginal.toLowerCase();
-          const isConcluida = ["concluída", "concluida", "sim", "true", "ok"].includes(rawStatus) || getVal(item, "concluida") === true;
-          
+          const isConcluida =
+            ["concluída", "concluida", "sim", "true", "ok"].includes(
+              rawStatus,
+            ) || getVal(item, "concluida") === true;
+
           let parsedStatus = "Não iniciada";
-          if (isConcluida || rawStatus === "concluído") parsedStatus = "Concluído";
+          if (isConcluida || rawStatus === "concluído")
+            parsedStatus = "Concluído";
           else if (rawStatus === "em andamento") parsedStatus = "Em andamento";
-          else if (rawStatus === "cancelado" || rawStatus === "cancelada") parsedStatus = "Cancelado";
+          else if (rawStatus === "cancelado" || rawStatus === "cancelada")
+            parsedStatus = "Cancelado";
 
           return {
             nome: String(getVal(item, "Nome", "nome") || "").trim(),
-            dataInicio: String(getVal(item, "Data Início", "dataInicio", "data_inicio") || "").trim(),
-            dataFim: String(getVal(item, "Data Fim", "dataFim", "data_fim") || "").trim(),
+            dataInicio: String(
+              getVal(item, "Data Início", "dataInicio", "data_inicio") || "",
+            ).trim(),
+            dataFim: String(
+              getVal(item, "Data Fim", "dataFim", "data_fim") || "",
+            ).trim(),
             local: String(getVal(item, "Local", "local") || "").trim(),
-            observacao: String(getVal(item, "Observação", "observacao", "observação") || "").trim(),
+            observacao: String(
+              getVal(item, "Observação", "observacao", "observação") || "",
+            ).trim(),
             status: parsedStatus,
             concluida: isConcluida,
             fotos: [],
@@ -14743,12 +15446,18 @@ function CalendarioAcoesView({
                         {s.name}
                       </span>
                       <span className="text-slate-800 font-bold">
-                        {s.count} <span className="text-slate-400 font-normal">({s.percentage}%)</span>
+                        {s.count}{" "}
+                        <span className="text-slate-400 font-normal">
+                          ({s.percentage}%)
+                        </span>
                       </span>
                     </div>
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                       <div
-                        className={cn("h-full rounded-full transition-all", s.color)}
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          s.color,
+                        )}
                         style={{ width: `${s.percentage}%` }}
                       />
                     </div>
@@ -14768,7 +15477,10 @@ function CalendarioAcoesView({
                     <div className="flex justify-between text-xs font-semibold">
                       <span className="text-slate-600">{t.name}</span>
                       <span className="text-slate-800 font-bold">
-                        {t.count} <span className="text-slate-400 font-normal">({t.percentage}%)</span>
+                        {t.count}{" "}
+                        <span className="text-slate-400 font-normal">
+                          ({t.percentage}%)
+                        </span>
                       </span>
                     </div>
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -14788,659 +15500,220 @@ function CalendarioAcoesView({
       {acoesSubTab === "lista" && (
         <>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200">
-            <Calendar size={24} />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">Plano de Ação</h2>
-            <p className="text-slate-500 text-sm">
-              Gerencie as ações e eventos da equipe
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl mr-2">
-            <button
-              onClick={() => setViewFormat("card")}
-              className={cn(
-                "p-2 rounded-lg transition-all",
-                viewFormat === "card"
-                  ? "bg-white shadow-sm text-blue-600"
-                  : "text-slate-400 hover:text-slate-600"
-              )}
-              title="Formato de Cards"
-            >
-              <LayoutGrid size={18} />
-            </button>
-            <button
-              onClick={() => setViewFormat("list")}
-              className={cn(
-                "p-2 rounded-lg transition-all",
-                viewFormat === "list"
-                  ? "bg-white shadow-sm text-blue-600"
-                  : "text-slate-400 hover:text-slate-600"
-              )}
-              title="Formato de Lista"
-            >
-              <List size={18} />
-            </button>
-          </div>
-          <button
-            onClick={() => setIsAdding(true)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center space-x-2"
-          >
-            <Plus size={20} />
-            <span>Nova Ação</span>
-          </button>
-          <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
-            <Upload size={18} />
-            <span>Importar</span>
-            <input
-              type="file"
-              accept=".xlsx, .xls"
-              onChange={handleImport}
-              className="hidden"
-            />
-          </label>
-          <button
-            onClick={handleExport}
-            className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
-          >
-            <Download size={18} />
-            <span>Exportar</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
-            Pesquisar
-          </label>
-          <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              size={18}
-            />
-            <input
-              type="text"
-              placeholder="Nome ou local..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
-            FDV Comercial
-          </label>
-          <select
-            value={colaboradorFilter}
-            onChange={(e) => setColaboradorFilter(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-          >
-            <option value="all">Todos os FDVs</option>
-            {colaboradoresDisponiveis.map(u => (
-              <option key={u.uid} value={u.uid}>{u.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
-            Unidade
-          </label>
-          <select
-            value={unidadeFilter}
-            onChange={(e) => setUnidadeFilter(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-          >
-            <option value="all">Todas as Unidades</option>
-            {Array.from(new Set((users || []).map(u => u.unidade).filter(Boolean))).sort().map(u => (
-              <option key={u} value={u}>{u}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
-            Status
-          </label>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-          >
-            <option value="all">Todos os Status</option>
-            <option value="Não iniciada">Não iniciadas</option>
-            <option value="Em andamento">Em andamento</option>
-            <option value="Concluído">Concluídas</option>
-            <option value="Cancelado">Canceladas</option>
-          </select>
-        </div>
-        <div>
-          <div className="flex justify-between items-center mb-1 ml-1">
-            <label className="block text-[10px] font-bold text-slate-400 uppercase">
-              Data Início
-            </label>
-            {(startDateFilter || endDateFilter) && (
+            <div className="flex items-center space-x-3">
+              <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200">
+                <Calendar size={24} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Plano de Ação
+                </h2>
+                <p className="text-slate-500 text-sm">
+                  Gerencie as ações e eventos da equipe
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl mr-2">
+                <button
+                  onClick={() => setViewFormat("card")}
+                  className={cn(
+                    "p-2 rounded-lg transition-all",
+                    viewFormat === "card"
+                      ? "bg-white shadow-sm text-blue-600"
+                      : "text-slate-400 hover:text-slate-600",
+                  )}
+                  title="Formato de Cards"
+                >
+                  <LayoutGrid size={18} />
+                </button>
+                <button
+                  onClick={() => setViewFormat("list")}
+                  className={cn(
+                    "p-2 rounded-lg transition-all",
+                    viewFormat === "list"
+                      ? "bg-white shadow-sm text-blue-600"
+                      : "text-slate-400 hover:text-slate-600",
+                  )}
+                  title="Formato de Lista"
+                >
+                  <List size={18} />
+                </button>
+              </div>
               <button
-                onClick={() => {
-                  setStartDateFilter("");
-                  setEndDateFilter("");
-                }}
-                className="text-[10px] text-red-500 font-bold hover:underline"
+                onClick={() => setIsAdding(true)}
+                className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center space-x-2"
               >
-                Limpar
+                <Plus size={20} />
+                <span>Nova Ação</span>
               </button>
-            )}
+              <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-blue-100 transition-all text-sm font-bold cursor-pointer">
+                <Upload size={18} />
+                <span>Importar</span>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={handleImport}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={handleExport}
+                className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
+              >
+                <Download size={18} />
+                <span>Exportar</span>
+              </button>
+            </div>
           </div>
-          <input
-            type="date"
-            value={startDateFilter}
-            onChange={(e) => setStartDateFilter(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-          />
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
-            Data Fim
-          </label>
-          <input
-            type="date"
-            value={endDateFilter}
-            onChange={(e) => setEndDateFilter(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-          />
-        </div>
-      </div>
 
-      {viewFormat === "card" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredData.map((action) => (
-          <motion.div
-            layout
-            key={action.id}
-            className={cn(
-              "bg-white p-6 rounded-3xl shadow-sm border transition-all",
-              (action.status || (action.concluida ? "Concluído" : "Não iniciada")) === "Concluído"
-                ? "border-emerald-100 bg-emerald-50/10"
-                : (action.status === "Em andamento")
-                  ? "border-amber-100 bg-amber-50/10"
-                  : (action.status === "Cancelado")
-                    ? "border-rose-100 bg-rose-50/10"
-                    : "border-slate-100",
-            )}
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div
-                className={cn(
-                  "p-2 rounded-xl",
-                  (action.status || (action.concluida ? "Concluído" : "Não iniciada")) === "Concluído"
-                    ? "bg-emerald-100 text-emerald-600"
-                    : (action.status === "Em andamento")
-                      ? "bg-amber-100 text-amber-600"
-                      : (action.status === "Cancelado")
-                        ? "bg-rose-100 text-rose-600"
-                        : "bg-blue-100 text-blue-600",
-                )}
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+                Pesquisar
+              </label>
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  placeholder="Nome ou local..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+                FDV Comercial
+              </label>
+              <select
+                value={colaboradorFilter}
+                onChange={(e) => setColaboradorFilter(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
               >
-                <Calendar size={20} />
-              </div>
-              <div className="flex space-x-1">
-                <button
-                  onClick={() => {
-                    setEditingAction(action);
-                    setNewAction({
-                      nome: action.nome,
-                      dataInicio: action.dataInicio,
-                      dataFim: action.dataFim,
-                      local: action.local,
-                      observacao: action.observacao,
-                      status: action.status || (action.concluida ? "Concluído" : "Não iniciada"),
-                      concluida: action.concluida,
-                      fotos: [...(action.fotos || []), "", "", ""].slice(0, 3),
-                      metaBoletos:
-                        action.metaBoletos !== undefined
-                          ? action.metaBoletos
-                          : "",
-                      metaInscritos:
-                        action.metaInscritos !== undefined
-                          ? action.metaInscritos
-                          : "",
-                      precisaPromotor: !!action.precisaPromotor,
-                      promotoresSelecionados:
-                        action.promotoresSelecionados || [],
-                      valorPromotor:
-                        action.valorPromotor !== undefined
-                          ? action.valorPromotor
-                          : "",
-                      valorOrcado:
-                        action.valorOrcado !== undefined
-                          ? action.valorOrcado
-                          : "",
-                      colaboradorId: action.colaboradorId || "",
-                      colaboradorNome: action.colaboradorNome || "",
-                      colaboradoresIds: action.colaboradoresIds || [],
-                      colaboradoresNomes: action.colaboradoresNomes || [],
-                      tipoAtividade: action.tipoAtividade || "Ação",
-                      empresaParceiraId: action.empresaParceiraId || "",
-                      empresaParceiraNome: action.empresaParceiraNome || "",
-                      leadsFeitos: action.leadsFeitos !== undefined ? action.leadsFeitos : "",
-                      boletosFeitos: action.boletosFeitos !== undefined ? action.boletosFeitos : "",
-                      horario: action.horario || "",
-                    });
-                    setIsAdding(true);
-                  }}
-                  className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all"
-                >
-                  <Edit2 size={16} />
-                </button>
-                <button
-                  onClick={() => handleDelete(action.id)}
-                  className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-all"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5 mb-2 shrink-0">
-              <span
-                className={cn(
-                  "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border",
-                  action.tipoAtividade === "Visita"
-                    ? "bg-amber-50 text-amber-600 border-amber-200/60"
-                    : "bg-indigo-50 text-indigo-600 border-indigo-200/60",
-                )}
-              >
-                {action.tipoAtividade || "Ação"}
-              </span>
-              {action.empresaParceiraNome && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200/60 flex items-center gap-1">
-                  <Building2 size={10} />
-                  {action.empresaParceiraNome}
-                </span>
-              )}
-            </div>
-
-            <h3 className="text-lg font-bold text-slate-900 mb-1">
-              {action.nome}
-            </h3>
-            {(action.colaboradoresNomes?.length ? action.colaboradoresNomes : (action.colaboradorNome ? [action.colaboradorNome] : [])).length > 0 && (
-              <div className="flex flex-col gap-1 text-slate-600 text-xs mb-2">
-                <span className="font-bold text-blue-700">Colaboradores:</span>
-                <div className="flex flex-wrap gap-1">
-                  {(action.colaboradoresNomes?.length ? action.colaboradoresNomes : (action.colaboradorNome ? [action.colaboradorNome] : [])).map((nome, idx) => (
-                    <span key={idx} className="bg-blue-50 text-blue-800 p-1 px-2 rounded-lg inline-flex items-center">
-                      {nome}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="flex items-center space-x-2 text-slate-500 text-xs mb-4">
-              <MapPin size={14} />
-              <span>{action.local}</span>
-            </div>
-
-            <div className="bg-slate-50 p-3 rounded-2xl mb-4">
-              <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase mb-1">
-                <span>Período</span>
-              </div>
-              <p className="text-xs font-bold text-slate-700">
-                {formatLocalDateString(action.dataInicio)}{" "}
-                {action.dataFim !== action.dataInicio &&
-                  `- ${formatLocalDateString(action.dataFim)}`}
-              </p>
-            </div>
-
-            {/* Metas da Ação */}
-            {((action.metaBoletos !== undefined && action.metaBoletos > 0) ||
-              (action.metaInscritos !== undefined &&
-                action.metaInscritos > 0)) && (
-              <div className="grid grid-cols-2 gap-2 mb-4 bg-slate-50 p-3 rounded-2xl">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
-                    Meta Boletos
-                  </span>
-                  <span className="text-xs font-bold text-slate-700">
-                    {action.metaBoletos || 0}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
-                    Meta Inscritos
-                  </span>
-                  <span className="text-xs font-bold text-slate-700">
-                    {action.metaInscritos || 0}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Resultados da Ação */}
-            <div className="grid grid-cols-2 gap-2 mb-4 bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100/50">
-              <div>
-                <span className="text-[10px] font-bold text-emerald-600 uppercase block">
-                  Leads Feitos
-                </span>
-                <span className="text-xs font-bold text-emerald-800">
-                  {typeof action.leadsFeitos === "number"
-                    ? action.leadsFeitos
-                    : (leads || []).filter((l) => l.acaoId === action.id).length}
-                </span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-emerald-600 uppercase block">
-                  Boletos Feitos
-                </span>
-                <span className="text-xs font-bold text-emerald-800">
-                  {typeof action.boletosFeitos === "number"
-                    ? action.boletosFeitos
-                    : (gap || []).filter((g) => g.acaoId === action.id).length}
-                </span>
-              </div>
-            </div>
-
-            {/* Promotores e Presenças */}
-            {action.precisaPromotor && (
-              <div className="bg-slate-50 p-3 rounded-2xl mb-4 border border-slate-100">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block mb-2">
-                  Promotores Escala
-                </span>
-                {!action.promotoresSelecionados ||
-                action.promotoresSelecionados.length === 0 ? (
-                  <span className="text-xs text-slate-400 italic">
-                    Nenhum promotor escalado
-                  </span>
-                ) : (
-                  <div className="space-y-2">
-                    {action.promotoresSelecionados.map((pUid) => {
-                      const promoterObj = (users || []).find(
-                        (u) => u.uid === pUid,
-                      );
-                      const isPresent = !!action.presencaPromotores?.[pUid];
-                      const details = action.dadosPresencaPromotores?.[
-                        pUid
-                      ] || { empresa: "GR15", horas: 4 };
-
-                      return (
-                        <div
-                          key={pUid}
-                          className="p-2.5 rounded-xl border border-slate-100 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-2"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2 overflow-hidden mr-1">
-                              <div
-                                className={cn(
-                                  "w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0",
-                                  isPresent
-                                    ? "bg-emerald-100 text-emerald-800"
-                                    : "bg-slate-100 text-slate-500",
-                                )}
-                              >
-                                {promoterObj
-                                  ? promoterObj.name.charAt(0).toUpperCase()
-                                  : "?"}
-                              </div>
-                              <div className="flex flex-col overflow-hidden">
-                                <span className="text-xs font-bold text-slate-700 truncate">
-                                  {promoterObj
-                                    ? promoterObj.name
-                                    : "Promotor Removido"}
-                                </span>
-                                <span className="text-[9px] text-slate-400 font-medium truncate">
-                                  {promoterObj ? promoterObj.role : ""}
-                                </span>
-                              </div>
-                            </div>
-
-                            <button
-                              onClick={() =>
-                                togglePromoterAttendance(action, pUid)
-                              }
-                              className={cn(
-                                "text-[10px] px-2.5 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 shrink-0 transition-colors cursor-pointer",
-                                isPresent
-                                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                  : "bg-slate-100 text-slate-500 hover:bg-slate-200",
-                              )}
-                            >
-                              {isPresent ? (
-                                <CheckSquare size={13} />
-                              ) : (
-                                <Square size={13} />
-                              )}
-                              <span>
-                                {isPresent ? "Participou" : "Ausente"}
-                              </span>
-                            </button>
-                          </div>
-
-                          {isPresent && (
-                            <div className="mt-2 text-[11px] pt-2 border-t border-dashed border-slate-100 space-y-2">
-                              {/* Empresa Selector */}
-                              <div className="flex items-center justify-between">
-                                <span className="font-semibold text-slate-500">
-                                  Pagas por:
-                                </span>
-                                <div className="flex space-x-1">
-                                  {(["GR15", "RP7"] as const).map((emp) => (
-                                    <button
-                                      type="button"
-                                      key={emp}
-                                      onClick={() =>
-                                        updatePromoterPresenceDetails(
-                                          action,
-                                          pUid,
-                                          emp,
-                                          details.horas,
-                                        )
-                                      }
-                                      className={cn(
-                                        "px-2 py-0.5 rounded-md font-bold transition-all text-[10px] cursor-pointer",
-                                        details.empresa === emp
-                                          ? "bg-blue-600 text-white shadow-sm"
-                                          : "bg-slate-100 text-slate-600 hover:bg-slate-200",
-                                      )}
-                                    >
-                                      {emp}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* Horas de Atuação Selector */}
-                              <div className="flex items-center justify-between">
-                                <span className="font-semibold text-slate-500">
-                                  Horas de atuação:
-                                </span>
-                                <div className="flex items-center space-x-1">
-                                  {([4, 6, 8, 10] as const).map((hr) => (
-                                    <button
-                                      type="button"
-                                      key={hr}
-                                      onClick={() =>
-                                        updatePromoterPresenceDetails(
-                                          action,
-                                          pUid,
-                                          details.empresa as "GR15" | "RP7",
-                                          hr,
-                                        )
-                                      }
-                                      className={cn(
-                                        "px-1.5 py-0.5 rounded-md font-bold transition-all text-[10px] cursor-pointer",
-                                        details.horas === hr
-                                          ? "bg-indigo-600 text-white shadow-sm"
-                                          : "bg-slate-100 text-slate-600 hover:bg-slate-200",
-                                      )}
-                                    >
-                                      {hr}h
-                                    </button>
-                                  ))}
-
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    max="100"
-                                    value={details.horas || ""}
-                                    onChange={(e) => {
-                                      const val =
-                                        e.target.value === ""
-                                          ? 0
-                                          : Number(e.target.value);
-                                      updatePromoterPresenceDetails(
-                                        action,
-                                        pUid,
-                                        details.empresa as "GR15" | "RP7",
-                                        val,
-                                      );
-                                    }}
-                                    className="w-10 px-1 py-0.5 border border-slate-200 rounded-md text-[10px] text-center font-bold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                    placeholder="Outro"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {action.fotos && action.fotos.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {action.fotos.map((foto, idx) => (
-                  <div
-                    key={idx}
-                    className="aspect-square rounded-xl overflow-hidden bg-slate-100 border border-slate-200 relative group"
-                  >
-                    <img
-                      src={foto}
-                      alt={`Foto ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                    <a
-                      href={foto}
-                      download={`foto_${idx + 1}.jpg`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
-                      title="Fazer Download"
-                    >
-                      <Download size={20} />
-                    </a>
-                  </div>
+                <option value="all">Todos os FDVs</option>
+                {colaboradoresDisponiveis.map((u) => (
+                  <option key={u.uid} value={u.uid}>
+                    {u.name}
+                  </option>
                 ))}
-              </div>
-            )}
-
-            {action.observacao && (
-              <div className="mb-4">
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
-                  Observações
-                </p>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  {action.observacao}
-                </p>
-              </div>
-            )}
-
-            <select
-              value={action.status || (action.concluida ? "Concluído" : "Não iniciada")}
-              onChange={(e) => updateActionStatus(action, e.target.value)}
-              className={cn(
-                "w-full py-3 px-4 rounded-xl font-bold text-sm text-center appearance-none cursor-pointer outline-none transition-all",
-                (action.status === "Concluído" || (!action.status && action.concluida))
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                  : action.status === "Em andamento"
-                    ? "bg-amber-500 text-white hover:bg-amber-600"
-                    : action.status === "Cancelado"
-                      ? "bg-rose-500 text-white hover:bg-rose-600"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              )}
-            >
-              <option value="Não iniciada">Não iniciada</option>
-              <option value="Em andamento">Em andamento</option>
-              <option value="Concluído">Concluída</option>
-              <option value="Cancelado">Cancelada</option>
-            </select>
-          </motion.div>
-        ))}
-        {filteredData.length === 0 && (
-          <div className="col-span-full py-20 text-center">
-            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
-              <Calendar size={40} />
+              </select>
             </div>
-            <p className="text-slate-400 italic">
-              Nenhuma ação encontrada para os filtros aplicados.
-            </p>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+                Unidade
+              </label>
+              <select
+                value={unidadeFilter}
+                onChange={(e) => setUnidadeFilter(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              >
+                <option value="all">Todas as Unidades</option>
+                {Array.from(
+                  new Set((users || []).map((u) => u.unidade).filter(Boolean)),
+                )
+                  .sort()
+                  .map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+                Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              >
+                <option value="all">Todos os Status</option>
+                <option value="Não iniciada">Não iniciadas</option>
+                <option value="Em andamento">Em andamento</option>
+                <option value="Concluído">Concluídas</option>
+                <option value="Cancelado">Canceladas</option>
+              </select>
+            </div>
+            <div>
+              <div className="flex justify-between items-center mb-1 ml-1">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">
+                  Data Início
+                </label>
+                {(startDateFilter || endDateFilter) && (
+                  <button
+                    onClick={() => {
+                      setStartDateFilter("");
+                      setEndDateFilter("");
+                    }}
+                    className="text-[10px] text-red-500 font-bold hover:underline"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+              <input
+                type="date"
+                value={startDateFilter}
+                onChange={(e) => setStartDateFilter(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+                Data Fim
+              </label>
+              <input
+                type="date"
+                value={endDateFilter}
+                onChange={(e) => setEndDateFilter(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
           </div>
-        )}
-        </div>
-      ) : (
-        <div className="overflow-x-auto bg-white rounded-3xl shadow-sm border border-slate-100">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">
-                <th className="p-4 rounded-tl-3xl">Ação / Local</th>
-                <th className="p-4">Colaboradores</th>
-                <th className="p-4">Período</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-center rounded-tr-3xl">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
+
+          {viewFormat === "card" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredData.map((action) => (
-                <tr key={action.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
-                  <td className="p-4">
-                    <div className="font-bold text-slate-900 mb-1">{action.nome}</div>
-                    <div className="text-xs text-slate-500 flex items-center space-x-1">
-                      <MapPin size={12} />
-                      <span>{action.local}</span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex flex-wrap gap-1">
-                      {(action.colaboradoresNomes?.length ? action.colaboradoresNomes : (action.colaboradorNome ? [action.colaboradorNome] : [])).map((nome, idx) => (
-                        <span key={idx} className="bg-blue-50 text-blue-800 p-1 px-2 text-[10px] rounded-lg">
-                          {nome}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="p-4 text-xs font-bold text-slate-700">
-                    {formatLocalDateString(action.dataInicio)}
-                    {action.dataFim !== action.dataInicio && ` - ${formatLocalDateString(action.dataFim)}`}
-                  </td>
-                  <td className="p-4">
-                    <select
-                      value={action.status || (action.concluida ? "Concluído" : "Não iniciada")}
-                      onChange={(e) => updateActionStatus(action, e.target.value)}
+                <motion.div
+                  layout
+                  key={action.id}
+                  className={cn(
+                    "bg-white p-6 rounded-3xl shadow-sm border transition-all",
+                    (action.status ||
+                      (action.concluida ? "Concluído" : "Não iniciada")) ===
+                      "Concluído"
+                      ? "border-emerald-100 bg-emerald-50/10"
+                      : action.status === "Em andamento"
+                        ? "border-amber-100 bg-amber-50/10"
+                        : action.status === "Cancelado"
+                          ? "border-rose-100 bg-rose-50/10"
+                          : "border-slate-100",
+                  )}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div
                       className={cn(
-                        "py-1.5 px-3 rounded-lg font-bold text-xs appearance-none cursor-pointer outline-none transition-all",
-                        (action.status === "Concluído" || (!action.status && action.concluida))
-                          ? "bg-emerald-100 text-emerald-800"
+                        "p-2 rounded-xl",
+                        (action.status ||
+                          (action.concluida ? "Concluído" : "Não iniciada")) ===
+                          "Concluído"
+                          ? "bg-emerald-100 text-emerald-600"
                           : action.status === "Em andamento"
-                            ? "bg-amber-100 text-amber-800"
+                            ? "bg-amber-100 text-amber-600"
                             : action.status === "Cancelado"
-                              ? "bg-rose-100 text-rose-800"
-                              : "bg-slate-100 text-slate-600"
+                              ? "bg-rose-100 text-rose-600"
+                              : "bg-blue-100 text-blue-600",
                       )}
                     >
-                      <option value="Não iniciada">Não iniciada</option>
-                      <option value="Em andamento">Em andamento</option>
-                      <option value="Concluído">Concluída</option>
-                      <option value="Cancelado">Cancelada</option>
-                    </select>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center justify-center space-x-2">
+                      <Calendar size={20} />
+                    </div>
+                    <div className="flex space-x-1">
                       <button
                         onClick={() => {
                           setEditingAction(action);
@@ -15450,534 +15723,1141 @@ function CalendarioAcoesView({
                             dataFim: action.dataFim,
                             local: action.local,
                             observacao: action.observacao,
-                            status: action.status || (action.concluida ? "Concluído" : "Não iniciada"),
+                            status:
+                              action.status ||
+                              (action.concluida ? "Concluído" : "Não iniciada"),
                             concluida: action.concluida,
-                            fotos: [...(action.fotos || []), "", "", ""].slice(0, 3),
-                            metaBoletos: action.metaBoletos !== undefined ? action.metaBoletos : "",
-                            metaInscritos: action.metaInscritos !== undefined ? action.metaInscritos : "",
+                            fotos: [...(action.fotos || []), "", "", ""].slice(
+                              0,
+                              3,
+                            ),
+                            metaBoletos:
+                              action.metaBoletos !== undefined
+                                ? action.metaBoletos
+                                : "",
+                            metaInscritos:
+                              action.metaInscritos !== undefined
+                                ? action.metaInscritos
+                                : "",
                             precisaPromotor: !!action.precisaPromotor,
-                            promotoresSelecionados: action.promotoresSelecionados || [],
-                            valorPromotor: action.valorPromotor !== undefined ? action.valorPromotor : "",
-                            valorOrcado: action.valorOrcado !== undefined ? action.valorOrcado : "",
+                            promotoresSelecionados:
+                              action.promotoresSelecionados || [],
+                            valorPromotor:
+                              action.valorPromotor !== undefined
+                                ? action.valorPromotor
+                                : "",
+                            valorOrcado:
+                              action.valorOrcado !== undefined
+                                ? action.valorOrcado
+                                : "",
                             colaboradorId: action.colaboradorId || "",
                             colaboradorNome: action.colaboradorNome || "",
-                            colaboradoresIds: action.colaboradoresIds || (action.colaboradorId ? [action.colaboradorId] : []),
-                            colaboradoresNomes: action.colaboradoresNomes || (action.colaboradorNome ? [action.colaboradorNome] : []),
+                            colaboradoresIds: action.colaboradoresIds || [],
+                            colaboradoresNomes: action.colaboradoresNomes || [],
                             tipoAtividade: action.tipoAtividade || "Ação",
                             empresaParceiraId: action.empresaParceiraId || "",
-                            empresaParceiraNome: action.empresaParceiraNome || "",
-                            leadsFeitos: action.leadsFeitos !== undefined ? action.leadsFeitos : "",
-                            boletosFeitos: action.boletosFeitos !== undefined ? action.boletosFeitos : "",
+                            empresaParceiraNome:
+                              action.empresaParceiraNome || "",
+                            leadsFeitos:
+                              action.leadsFeitos !== undefined
+                                ? action.leadsFeitos
+                                : "",
+                            boletosFeitos:
+                              action.boletosFeitos !== undefined
+                                ? action.boletosFeitos
+                                : "",
                             horario: action.horario || "",
                           });
                           setIsAdding(true);
                         }}
-                        className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                        title="Editar"
+                        className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all"
                       >
                         <Edit2 size={16} />
                       </button>
                       <button
                         onClick={() => handleDelete(action.id)}
-                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                        title="Excluir"
+                        className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-all"
                       >
                         <Trash2 size={16} />
                       </button>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5 mb-2 shrink-0">
+                    <span
+                      className={cn(
+                        "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border",
+                        action.tipoAtividade === "Visita"
+                          ? "bg-amber-50 text-amber-600 border-amber-200/60"
+                          : "bg-indigo-50 text-indigo-600 border-indigo-200/60",
+                      )}
+                    >
+                      {action.tipoAtividade || "Ação"}
+                    </span>
+                    {action.empresaParceiraNome && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200/60 flex items-center gap-1">
+                        <Building2 size={10} />
+                        {action.empresaParceiraNome}
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className="text-lg font-bold text-slate-900 mb-1">
+                    {action.nome}
+                  </h3>
+                  {(action.colaboradoresNomes?.length
+                    ? action.colaboradoresNomes
+                    : action.colaboradorNome
+                      ? [action.colaboradorNome]
+                      : []
+                  ).length > 0 && (
+                    <div className="flex flex-col gap-1 text-slate-600 text-xs mb-2">
+                      <span className="font-bold text-blue-700">
+                        Colaboradores:
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {(action.colaboradoresNomes?.length
+                          ? action.colaboradoresNomes
+                          : action.colaboradorNome
+                            ? [action.colaboradorNome]
+                            : []
+                        ).map((nome, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-blue-50 text-blue-800 p-1 px-2 rounded-lg inline-flex items-center"
+                          >
+                            {nome}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2 text-slate-500 text-xs mb-4">
+                    <MapPin size={14} />
+                    <span>{action.local}</span>
+                  </div>
+
+                  <div className="bg-slate-50 p-3 rounded-2xl mb-4">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      <span>Período</span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-700">
+                      {formatLocalDateString(action.dataInicio)}{" "}
+                      {action.dataFim !== action.dataInicio &&
+                        `- ${formatLocalDateString(action.dataFim)}`}
+                    </p>
+                  </div>
+
+                  {/* Metas da Ação */}
+                  {((action.metaBoletos !== undefined &&
+                    action.metaBoletos > 0) ||
+                    (action.metaInscritos !== undefined &&
+                      action.metaInscritos > 0)) && (
+                    <div className="grid grid-cols-2 gap-2 mb-4 bg-slate-50 p-3 rounded-2xl">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                          Meta Boletos
+                        </span>
+                        <span className="text-xs font-bold text-slate-700">
+                          {action.metaBoletos || 0}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                          Meta Inscritos
+                        </span>
+                        <span className="text-xs font-bold text-slate-700">
+                          {action.metaInscritos || 0}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Resultados da Ação */}
+                  <div className="grid grid-cols-2 gap-2 mb-4 bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100/50">
+                    <div>
+                      <span className="text-[10px] font-bold text-emerald-600 uppercase block">
+                        Leads Feitos
+                      </span>
+                      <span className="text-xs font-bold text-emerald-800">
+                        {typeof action.leadsFeitos === "number"
+                          ? action.leadsFeitos
+                          : (leads || []).filter((l) => l.acaoId === action.id)
+                              .length}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-emerald-600 uppercase block">
+                        Boletos Feitos
+                      </span>
+                      <span className="text-xs font-bold text-emerald-800">
+                        {typeof action.boletosFeitos === "number"
+                          ? action.boletosFeitos
+                          : (gap || []).filter((g) => g.acaoId === action.id)
+                              .length}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Promotores e Presenças */}
+                  {action.precisaPromotor && (
+                    <div className="bg-slate-50 p-3 rounded-2xl mb-4 border border-slate-100">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block mb-2">
+                        Promotores Escala
+                      </span>
+                      {!action.promotoresSelecionados ||
+                      action.promotoresSelecionados.length === 0 ? (
+                        <span className="text-xs text-slate-400 italic">
+                          Nenhum promotor escalado
+                        </span>
+                      ) : (
+                        <div className="space-y-2">
+                          {action.promotoresSelecionados.map((pUid) => {
+                            const promoterObj = (users || []).find(
+                              (u) => u.uid === pUid,
+                            );
+                            const isPresent =
+                              !!action.presencaPromotores?.[pUid];
+                            const details = action.dadosPresencaPromotores?.[
+                              pUid
+                            ] || { empresa: "GR15", horas: 4 };
+
+                            return (
+                              <div
+                                key={pUid}
+                                className="p-2.5 rounded-xl border border-slate-100 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-2"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2 overflow-hidden mr-1">
+                                    <div
+                                      className={cn(
+                                        "w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0",
+                                        isPresent
+                                          ? "bg-emerald-100 text-emerald-800"
+                                          : "bg-slate-100 text-slate-500",
+                                      )}
+                                    >
+                                      {promoterObj
+                                        ? promoterObj.name
+                                            .charAt(0)
+                                            .toUpperCase()
+                                        : "?"}
+                                    </div>
+                                    <div className="flex flex-col overflow-hidden">
+                                      <span className="text-xs font-bold text-slate-700 truncate">
+                                        {promoterObj
+                                          ? promoterObj.name
+                                          : "Promotor Removido"}
+                                      </span>
+                                      <span className="text-[9px] text-slate-400 font-medium truncate">
+                                        {promoterObj ? promoterObj.role : ""}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    onClick={() =>
+                                      togglePromoterAttendance(action, pUid)
+                                    }
+                                    className={cn(
+                                      "text-[10px] px-2.5 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 shrink-0 transition-colors cursor-pointer",
+                                      isPresent
+                                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                        : "bg-slate-100 text-slate-500 hover:bg-slate-200",
+                                    )}
+                                  >
+                                    {isPresent ? (
+                                      <CheckSquare size={13} />
+                                    ) : (
+                                      <Square size={13} />
+                                    )}
+                                    <span>
+                                      {isPresent ? "Participou" : "Ausente"}
+                                    </span>
+                                  </button>
+                                </div>
+
+                                {isPresent && (
+                                  <div className="mt-2 text-[11px] pt-2 border-t border-dashed border-slate-100 space-y-2">
+                                    {/* Empresa Selector */}
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-semibold text-slate-500">
+                                        Pagas por:
+                                      </span>
+                                      <div className="flex space-x-1">
+                                        {(["GR15", "RP7"] as const).map(
+                                          (emp) => (
+                                            <button
+                                              type="button"
+                                              key={emp}
+                                              onClick={() =>
+                                                updatePromoterPresenceDetails(
+                                                  action,
+                                                  pUid,
+                                                  emp,
+                                                  details.horas,
+                                                )
+                                              }
+                                              className={cn(
+                                                "px-2 py-0.5 rounded-md font-bold transition-all text-[10px] cursor-pointer",
+                                                details.empresa === emp
+                                                  ? "bg-blue-600 text-white shadow-sm"
+                                                  : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                                              )}
+                                            >
+                                              {emp}
+                                            </button>
+                                          ),
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Horas de Atuação Selector */}
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-semibold text-slate-500">
+                                        Horas de atuação:
+                                      </span>
+                                      <div className="flex items-center space-x-1">
+                                        {([4, 6, 8, 10] as const).map((hr) => (
+                                          <button
+                                            type="button"
+                                            key={hr}
+                                            onClick={() =>
+                                              updatePromoterPresenceDetails(
+                                                action,
+                                                pUid,
+                                                details.empresa as
+                                                  "GR15" | "RP7",
+                                                hr,
+                                              )
+                                            }
+                                            className={cn(
+                                              "px-1.5 py-0.5 rounded-md font-bold transition-all text-[10px] cursor-pointer",
+                                              details.horas === hr
+                                                ? "bg-indigo-600 text-white shadow-sm"
+                                                : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                                            )}
+                                          >
+                                            {hr}h
+                                          </button>
+                                        ))}
+
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          max="100"
+                                          value={details.horas || ""}
+                                          onChange={(e) => {
+                                            const val =
+                                              e.target.value === ""
+                                                ? 0
+                                                : Number(e.target.value);
+                                            updatePromoterPresenceDetails(
+                                              action,
+                                              pUid,
+                                              details.empresa as "GR15" | "RP7",
+                                              val,
+                                            );
+                                          }}
+                                          className="w-10 px-1 py-0.5 border border-slate-200 rounded-md text-[10px] text-center font-bold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                          placeholder="Outro"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {action.fotos && action.fotos.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {action.fotos.map((foto, idx) => (
+                        <div
+                          key={idx}
+                          className="aspect-square rounded-xl overflow-hidden bg-slate-100 border border-slate-200 relative group"
+                        >
+                          <img
+                            src={foto}
+                            alt={`Foto ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                          <a
+                            href={foto}
+                            download={`foto_${idx + 1}.jpg`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+                            title="Fazer Download"
+                          >
+                            <Download size={20} />
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {action.observacao && (
+                    <div className="mb-4">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        Observações
+                      </p>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {action.observacao}
+                      </p>
+                    </div>
+                  )}
+
+                  <select
+                    value={
+                      action.status ||
+                      (action.concluida ? "Concluído" : "Não iniciada")
+                    }
+                    onChange={(e) => updateActionStatus(action, e.target.value)}
+                    className={cn(
+                      "w-full py-3 px-4 rounded-xl font-bold text-sm text-center appearance-none cursor-pointer outline-none transition-all",
+                      action.status === "Concluído" ||
+                        (!action.status && action.concluida)
+                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                        : action.status === "Em andamento"
+                          ? "bg-amber-500 text-white hover:bg-amber-600"
+                          : action.status === "Cancelado"
+                            ? "bg-rose-500 text-white hover:bg-rose-600"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                    )}
+                  >
+                    <option value="Não iniciada">Não iniciada</option>
+                    <option value="Em andamento">Em andamento</option>
+                    <option value="Concluído">Concluída</option>
+                    <option value="Cancelado">Cancelada</option>
+                  </select>
+                </motion.div>
               ))}
               {filteredData.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-20 text-center">
-                    <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
-                      <Calendar size={40} />
-                    </div>
-                    <p className="text-slate-400 italic">
-                      Nenhuma ação encontrada para os filtros aplicados.
-                    </p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {isAdding && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-          >
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
-              <h3 className="text-xl font-bold text-slate-900">
-                {editingAction ? "Editar Ação" : "Nova Ação"}
-              </h3>
-              <button
-                onClick={() => {
-                  setIsAdding(false);
-                  setEditingAction(null);
-                }}
-                className="text-slate-400 hover:bg-slate-50 p-2 rounded-lg"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <form
-              onSubmit={handleSubmit}
-              className="p-6 space-y-4 overflow-y-auto flex-1"
-            >
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">
-                  Nome da Ação / Visita *
-                </label>
-                <input
-                  required
-                  value={newAction.nome}
-                  onChange={(e) =>
-                    setNewAction({ ...newAction, nome: e.target.value })
-                  }
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  placeholder="Ex: Blitz no Centro ou Visita Institucional"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Tipo de Atividade *
-                  </label>
-                  <select
-                    value={newAction.tipoAtividade}
-                    onChange={(e) =>
-                      setNewAction({
-                        ...newAction,
-                        tipoAtividade: e.target.value as "Ação" | "Visita",
-                      })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white font-semibold text-slate-700"
-                  >
-                    <option value="Ação">Ação</option>
-                    <option value="Visita">Visita</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Empresa Vinculada (Opcional)
-                  </label>
-                  <select
-                    value={newAction.empresaParceiraId}
-                    onChange={(e) => {
-                      const selId = e.target.value;
-                      const selEmp = empresasParceiras.find(
-                        (emp) => emp.id === selId,
-                      );
-                      setNewAction({
-                        ...newAction,
-                        empresaParceiraId: selId,
-                        empresaParceiraNome: selEmp ? selEmp.nome : "",
-                        local: selEmp
-                          ? selEmp.endereco || newAction.local
-                          : newAction.local,
-                      });
-                    }}
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white text-slate-700 font-medium"
-                  >
-                    <option value="">Nenhuma (Não vincular)</option>
-                    {empresasParceiras
-                      .filter((emp) => {
-                        if (!newAction.colaboradoresIds || newAction.colaboradoresIds.length === 0) return true;
-                        return newAction.colaboradoresIds.includes(emp.consultorId || "");
-                      })
-                      .map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Data Início *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={newAction.dataInicio}
-                    onChange={(e) =>
-                      setNewAction({ ...newAction, dataInicio: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Data Fim *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={newAction.dataFim}
-                    onChange={(e) =>
-                      setNewAction({ ...newAction, dataFim: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Horário
-                  </label>
-                  <input
-                    type="time"
-                    value={newAction.horario}
-                    onChange={(e) =>
-                      setNewAction({ ...newAction, horario: e.target.value })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">
-                  Local *
-                </label>
-                <input
-                  required
-                  value={newAction.local}
-                  onChange={(e) =>
-                    setNewAction({ ...newAction, local: e.target.value })
-                  }
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                  placeholder="Ex: Praça Central"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">
-                  Observações
-                </label>
-                <textarea
-                  value={newAction.observacao}
-                  onChange={(e) =>
-                    setNewAction({ ...newAction, observacao: e.target.value })
-                  }
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm min-h-[100px]"
-                  placeholder="O que será feito?"
-                />
-              </div>
-
-              <div className="relative">
-                <label className="block text-xs font-bold text-slate-500 mb-1">
-                  Colaboradores / FDVs Responsáveis
-                </label>
-                <MultiSelect
-                  options={colaboradoresDisponiveis.map(u => u.name)}
-                  selectedValues={newAction.colaboradoresNomes?.length ? newAction.colaboradoresNomes : (newAction.colaboradorNome ? [newAction.colaboradorNome] : [])}
-                  onChange={(selectedNames) => {
-                    const selectedUsers = colaboradoresDisponiveis.filter(u => selectedNames.includes(u.name));
-                    const selectedIds = selectedUsers.map(u => u.uid);
-
-                    const firstId = selectedIds.length > 0 ? selectedIds[0] : "";
-                    const firstName = selectedNames.length > 0 ? selectedNames[0] : "";
-
-                    let nextEmpresaId = newAction.empresaParceiraId;
-                    let nextEmpresaNome = newAction.empresaParceiraNome;
-
-                    if (nextEmpresaId) {
-                      const emp = empresasParceiras.find(e => e.id === nextEmpresaId);
-                      if (emp && !selectedIds.includes(emp.consultorId || "")) {
-                        nextEmpresaId = "";
-                        nextEmpresaNome = "";
-                      }
-                    }
-
-                    setNewAction({
-                      ...newAction,
-                      colaboradorId: firstId,
-                      colaboradorNome: firstName,
-                      colaboradoresIds: selectedIds,
-                      colaboradoresNomes: selectedNames,
-                      empresaParceiraId: nextEmpresaId,
-                      empresaParceiraNome: nextEmpresaNome,
-                    });
-                  }}
-                  placeholder="Selecione os colaboradores..."
-                  allLabel="Todos os colaboradores"
-                  className="w-full bg-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Meta de Boletos da Ação
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={newAction.metaBoletos}
-                    onChange={(e) =>
-                      setNewAction({
-                        ...newAction,
-                        metaBoletos:
-                          e.target.value === "" ? "" : Number(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                    placeholder="Ex: 5"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    Meta de Inscritos da Ação
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={newAction.metaInscritos}
-                    onChange={(e) =>
-                      setNewAction({
-                        ...newAction,
-                        metaInscritos:
-                          e.target.value === "" ? "" : Number(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                    placeholder="Ex: 20"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">
-                    Valor Diária Personalizado (R$) <span className="font-normal text-[9px] text-slate-400 block mt-0.5">(Será calculado auto p/ 4h, 6h, 8h ou 10h)</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={newAction.valorPromotor}
-                    onChange={(e) =>
-                      setNewAction({
-                        ...newAction,
-                        valorPromotor:
-                          e.target.value === "" ? "" : Number(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
-                    placeholder="Ex: 15.00"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">
-                    Valor Orçado Total (R$)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={newAction.valorOrcado}
-                    onChange={(e) =>
-                      setNewAction({
-                        ...newAction,
-                        valorOrcado:
-                          e.target.value === "" ? "" : Number(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
-                    placeholder="Ex: R$ 500,00"
-                  />
-                </div>
-              </div>
-
-              {/* Se vai precisar de Promotor */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={newAction.precisaPromotor}
-                    onChange={(e) =>
-                      setNewAction({
-                        ...newAction,
-                        precisaPromotor: e.target.checked,
-                      })
-                    }
-                    className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                  />
-                  <div>
-                    <span className="text-sm font-bold text-slate-800">
-                      Precisa de Promotores?
-                    </span>
-                    <span className="text-xs text-slate-400 block">
-                      Ative para atribuir promotores na ação
-                    </span>
+                <div className="col-span-full py-20 text-center">
+                  <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                    <Calendar size={40} />
                   </div>
-                </label>
-
-                {newAction.precisaPromotor && (
-                  <div className="mt-4 border-t border-slate-200/60 pt-3 space-y-2">
-                    <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider mb-2">
-                      Selecione os Promotores Escalados:
-                    </span>
-                    {promotoresDisponiveis.length === 0 ? (
-                      <span className="text-xs text-slate-400 italic block">
-                        Nenhum promotor cadastrado neste servidor comercial ou
-                        principal.
-                      </span>
-                    ) : (
-                      <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
-                        {promotoresDisponiveis.map((promoter) => {
-                          const isSelected =
-                            newAction.promotoresSelecionados.includes(
-                              promoter.uid,
-                            );
-                          return (
-                            <button
-                              type="button"
-                              key={promoter.uid}
-                              onClick={() => {
-                                const isSel =
-                                  newAction.promotoresSelecionados.includes(
-                                    promoter.uid,
-                                  );
-                                const updated = isSel
-                                  ? newAction.promotoresSelecionados.filter(
-                                      (id) => id !== promoter.uid,
-                                    )
-                                  : [
-                                      ...newAction.promotoresSelecionados,
-                                      promoter.uid,
-                                    ];
-                                setNewAction({
-                                  ...newAction,
-                                  promotoresSelecionados: updated,
-                                });
-                              }}
-                              className={cn(
-                                "w-full flex items-center justify-between p-2 rounded-lg text-xs font-semibold text-left transition-colors border",
-                                isSelected
-                                  ? "bg-blue-50/80 border-blue-200 text-blue-700"
-                                  : "bg-white border-slate-100 hover:bg-slate-50 text-slate-600",
-                              )}
+                  <p className="text-slate-400 italic">
+                    Nenhuma ação encontrada para os filtros aplicados.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto bg-white rounded-3xl shadow-sm border border-slate-100">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">
+                    <th className="p-4 rounded-tl-3xl">Ação / Local</th>
+                    <th className="p-4">Colaboradores</th>
+                    <th className="p-4">Período</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-center rounded-tr-3xl">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map((action) => (
+                    <tr
+                      key={action.id}
+                      className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors"
+                    >
+                      <td className="p-4">
+                        <div className="font-bold text-slate-900 mb-1">
+                          {action.nome}
+                        </div>
+                        <div className="text-xs text-slate-500 flex items-center space-x-1">
+                          <MapPin size={12} />
+                          <span>{action.local}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-1">
+                          {(action.colaboradoresNomes?.length
+                            ? action.colaboradoresNomes
+                            : action.colaboradorNome
+                              ? [action.colaboradorNome]
+                              : []
+                          ).map((nome, idx) => (
+                            <span
+                              key={idx}
+                              className="bg-blue-50 text-blue-800 p-1 px-2 text-[10px] rounded-lg"
                             >
-                              <div className="flex items-center space-x-2">
-                                <div
+                              {nome}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="p-4 text-xs font-bold text-slate-700">
+                        {formatLocalDateString(action.dataInicio)}
+                        {action.dataFim !== action.dataInicio &&
+                          ` - ${formatLocalDateString(action.dataFim)}`}
+                      </td>
+                      <td className="p-4">
+                        <select
+                          value={
+                            action.status ||
+                            (action.concluida ? "Concluído" : "Não iniciada")
+                          }
+                          onChange={(e) =>
+                            updateActionStatus(action, e.target.value)
+                          }
+                          className={cn(
+                            "py-1.5 px-3 rounded-lg font-bold text-xs appearance-none cursor-pointer outline-none transition-all",
+                            action.status === "Concluído" ||
+                              (!action.status && action.concluida)
+                              ? "bg-emerald-100 text-emerald-800"
+                              : action.status === "Em andamento"
+                                ? "bg-amber-100 text-amber-800"
+                                : action.status === "Cancelado"
+                                  ? "bg-rose-100 text-rose-800"
+                                  : "bg-slate-100 text-slate-600",
+                          )}
+                        >
+                          <option value="Não iniciada">Não iniciada</option>
+                          <option value="Em andamento">Em andamento</option>
+                          <option value="Concluído">Concluída</option>
+                          <option value="Cancelado">Cancelada</option>
+                        </select>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center justify-center space-x-2">
+                          <button
+                            onClick={() => {
+                              setEditingAction(action);
+                              setNewAction({
+                                nome: action.nome,
+                                dataInicio: action.dataInicio,
+                                dataFim: action.dataFim,
+                                local: action.local,
+                                observacao: action.observacao,
+                                status:
+                                  action.status ||
+                                  (action.concluida
+                                    ? "Concluído"
+                                    : "Não iniciada"),
+                                concluida: action.concluida,
+                                fotos: [
+                                  ...(action.fotos || []),
+                                  "",
+                                  "",
+                                  "",
+                                ].slice(0, 3),
+                                metaBoletos:
+                                  action.metaBoletos !== undefined
+                                    ? action.metaBoletos
+                                    : "",
+                                metaInscritos:
+                                  action.metaInscritos !== undefined
+                                    ? action.metaInscritos
+                                    : "",
+                                precisaPromotor: !!action.precisaPromotor,
+                                promotoresSelecionados:
+                                  action.promotoresSelecionados || [],
+                                valorPromotor:
+                                  action.valorPromotor !== undefined
+                                    ? action.valorPromotor
+                                    : "",
+                                valorOrcado:
+                                  action.valorOrcado !== undefined
+                                    ? action.valorOrcado
+                                    : "",
+                                colaboradorId: action.colaboradorId || "",
+                                colaboradorNome: action.colaboradorNome || "",
+                                colaboradoresIds:
+                                  action.colaboradoresIds ||
+                                  (action.colaboradorId
+                                    ? [action.colaboradorId]
+                                    : []),
+                                colaboradoresNomes:
+                                  action.colaboradoresNomes ||
+                                  (action.colaboradorNome
+                                    ? [action.colaboradorNome]
+                                    : []),
+                                tipoAtividade: action.tipoAtividade || "Ação",
+                                empresaParceiraId:
+                                  action.empresaParceiraId || "",
+                                empresaParceiraNome:
+                                  action.empresaParceiraNome || "",
+                                leadsFeitos:
+                                  action.leadsFeitos !== undefined
+                                    ? action.leadsFeitos
+                                    : "",
+                                boletosFeitos:
+                                  action.boletosFeitos !== undefined
+                                    ? action.boletosFeitos
+                                    : "",
+                                horario: action.horario || "",
+                              });
+                              setIsAdding(true);
+                            }}
+                            className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                            title="Editar"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(action.id)}
+                            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                            title="Excluir"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredData.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-20 text-center">
+                        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                          <Calendar size={40} />
+                        </div>
+                        <p className="text-slate-400 italic">
+                          Nenhuma ação encontrada para os filtros aplicados.
+                        </p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {isAdding && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              >
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
+                  <h3 className="text-xl font-bold text-slate-900">
+                    {editingAction ? "Editar Ação" : "Nova Ação"}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setIsAdding(false);
+                      setEditingAction(null);
+                    }}
+                    className="text-slate-400 hover:bg-slate-50 p-2 rounded-lg"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <form
+                  onSubmit={handleSubmit}
+                  className="p-6 space-y-4 overflow-y-auto flex-1"
+                >
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Nome da Ação / Visita *
+                    </label>
+                    <input
+                      required
+                      value={newAction.nome}
+                      onChange={(e) =>
+                        setNewAction({ ...newAction, nome: e.target.value })
+                      }
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      placeholder="Ex: Blitz no Centro ou Visita Institucional"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Tipo de Atividade *
+                      </label>
+                      <select
+                        value={newAction.tipoAtividade}
+                        onChange={(e) =>
+                          setNewAction({
+                            ...newAction,
+                            tipoAtividade: e.target.value as "Ação" | "Visita",
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white font-semibold text-slate-700"
+                      >
+                        <option value="Ação">Ação</option>
+                        <option value="Visita">Visita</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Empresa Vinculada (Opcional)
+                      </label>
+                      <select
+                        value={newAction.empresaParceiraId}
+                        onChange={(e) => {
+                          const selId = e.target.value;
+                          const selEmp = empresasParceiras.find(
+                            (emp) => emp.id === selId,
+                          );
+                          setNewAction({
+                            ...newAction,
+                            empresaParceiraId: selId,
+                            empresaParceiraNome: selEmp ? selEmp.nome : "",
+                            local: selEmp
+                              ? selEmp.endereco || newAction.local
+                              : newAction.local,
+                          });
+                        }}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white text-slate-700 font-medium"
+                      >
+                        <option value="">Nenhuma (Não vincular)</option>
+                        {empresasParceiras
+                          .filter((emp) => {
+                            if (
+                              !newAction.colaboradoresIds ||
+                              newAction.colaboradoresIds.length === 0
+                            )
+                              return true;
+                            return newAction.colaboradoresIds.includes(
+                              emp.consultorId || "",
+                            );
+                          })
+                          .map((emp) => (
+                            <option key={emp.id} value={emp.id}>
+                              {emp.nome}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Data Início *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={newAction.dataInicio}
+                        onChange={(e) =>
+                          setNewAction({
+                            ...newAction,
+                            dataInicio: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Data Fim *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={newAction.dataFim}
+                        onChange={(e) =>
+                          setNewAction({
+                            ...newAction,
+                            dataFim: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Horário
+                      </label>
+                      <input
+                        type="time"
+                        value={newAction.horario}
+                        onChange={(e) =>
+                          setNewAction({
+                            ...newAction,
+                            horario: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Local *
+                    </label>
+                    <input
+                      required
+                      value={newAction.local}
+                      onChange={(e) =>
+                        setNewAction({ ...newAction, local: e.target.value })
+                      }
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                      placeholder="Ex: Praça Central"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Observações
+                    </label>
+                    <textarea
+                      value={newAction.observacao}
+                      onChange={(e) =>
+                        setNewAction({
+                          ...newAction,
+                          observacao: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm min-h-[100px]"
+                      placeholder="O que será feito?"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      Colaboradores / FDVs Responsáveis
+                    </label>
+                    <MultiSelect
+                      options={colaboradoresDisponiveis.map((u) => u.name)}
+                      selectedValues={
+                        newAction.colaboradoresNomes?.length
+                          ? newAction.colaboradoresNomes
+                          : newAction.colaboradorNome
+                            ? [newAction.colaboradorNome]
+                            : []
+                      }
+                      onChange={(selectedNames) => {
+                        const selectedUsers = colaboradoresDisponiveis.filter(
+                          (u) => selectedNames.includes(u.name),
+                        );
+                        const selectedIds = selectedUsers.map((u) => u.uid);
+
+                        const firstId =
+                          selectedIds.length > 0 ? selectedIds[0] : "";
+                        const firstName =
+                          selectedNames.length > 0 ? selectedNames[0] : "";
+
+                        let nextEmpresaId = newAction.empresaParceiraId;
+                        let nextEmpresaNome = newAction.empresaParceiraNome;
+
+                        if (nextEmpresaId) {
+                          const emp = empresasParceiras.find(
+                            (e) => e.id === nextEmpresaId,
+                          );
+                          if (
+                            emp &&
+                            !selectedIds.includes(emp.consultorId || "")
+                          ) {
+                            nextEmpresaId = "";
+                            nextEmpresaNome = "";
+                          }
+                        }
+
+                        setNewAction({
+                          ...newAction,
+                          colaboradorId: firstId,
+                          colaboradorNome: firstName,
+                          colaboradoresIds: selectedIds,
+                          colaboradoresNomes: selectedNames,
+                          empresaParceiraId: nextEmpresaId,
+                          empresaParceiraNome: nextEmpresaNome,
+                        });
+                      }}
+                      placeholder="Selecione os colaboradores..."
+                      allLabel="Todos os colaboradores"
+                      className="w-full bg-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Meta de Boletos da Ação
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newAction.metaBoletos}
+                        onChange={(e) =>
+                          setNewAction({
+                            ...newAction,
+                            metaBoletos:
+                              e.target.value === ""
+                                ? ""
+                                : Number(e.target.value),
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                        placeholder="Ex: 5"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        Meta de Inscritos da Ação
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newAction.metaInscritos}
+                        onChange={(e) =>
+                          setNewAction({
+                            ...newAction,
+                            metaInscritos:
+                              e.target.value === ""
+                                ? ""
+                                : Number(e.target.value),
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                        placeholder="Ex: 20"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1">
+                        Valor Diária Personalizado (R$){" "}
+                        <span className="font-normal text-[9px] text-slate-400 block mt-0.5">
+                          (Será calculado auto p/ 4h, 6h, 8h ou 10h)
+                        </span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={newAction.valorPromotor}
+                        onChange={(e) =>
+                          setNewAction({
+                            ...newAction,
+                            valorPromotor:
+                              e.target.value === ""
+                                ? ""
+                                : Number(e.target.value),
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                        placeholder="Ex: 15.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1">
+                        Valor Orçado Total (R$)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={newAction.valorOrcado}
+                        onChange={(e) =>
+                          setNewAction({
+                            ...newAction,
+                            valorOrcado:
+                              e.target.value === ""
+                                ? ""
+                                : Number(e.target.value),
+                          })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                        placeholder="Ex: R$ 500,00"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Se vai precisar de Promotor */}
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newAction.precisaPromotor}
+                        onChange={(e) =>
+                          setNewAction({
+                            ...newAction,
+                            precisaPromotor: e.target.checked,
+                          })
+                        }
+                        className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-sm font-bold text-slate-800">
+                          Precisa de Promotores?
+                        </span>
+                        <span className="text-xs text-slate-400 block">
+                          Ative para atribuir promotores na ação
+                        </span>
+                      </div>
+                    </label>
+
+                    {newAction.precisaPromotor && (
+                      <div className="mt-4 border-t border-slate-200/60 pt-3 space-y-2">
+                        <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider mb-2">
+                          Selecione os Promotores Escalados:
+                        </span>
+                        {promotoresDisponiveis.length === 0 ? (
+                          <span className="text-xs text-slate-400 italic block">
+                            Nenhum promotor cadastrado neste servidor comercial
+                            ou principal.
+                          </span>
+                        ) : (
+                          <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                            {promotoresDisponiveis.map((promoter) => {
+                              const isSelected =
+                                newAction.promotoresSelecionados.includes(
+                                  promoter.uid,
+                                );
+                              return (
+                                <button
+                                  type="button"
+                                  key={promoter.uid}
+                                  onClick={() => {
+                                    const isSel =
+                                      newAction.promotoresSelecionados.includes(
+                                        promoter.uid,
+                                      );
+                                    const updated = isSel
+                                      ? newAction.promotoresSelecionados.filter(
+                                          (id) => id !== promoter.uid,
+                                        )
+                                      : [
+                                          ...newAction.promotoresSelecionados,
+                                          promoter.uid,
+                                        ];
+                                    setNewAction({
+                                      ...newAction,
+                                      promotoresSelecionados: updated,
+                                    });
+                                  }}
                                   className={cn(
-                                    "w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px]",
+                                    "w-full flex items-center justify-between p-2 rounded-lg text-xs font-semibold text-left transition-colors border",
                                     isSelected
-                                      ? "bg-blue-600 text-white"
-                                      : "bg-slate-100 text-slate-500",
+                                      ? "bg-blue-50/80 border-blue-200 text-blue-700"
+                                      : "bg-white border-slate-100 hover:bg-slate-50 text-slate-600",
                                   )}
                                 >
-                                  {promoter.name.charAt(0).toUpperCase()}
-                                </div>
-                                <span>{promoter.name}</span>
-                              </div>
-                              <span className="text-[10px] text-slate-400 italic font-medium">
-                                {promoter.role}
-                              </span>
-                            </button>
-                          );
-                        })}
+                                  <div className="flex items-center space-x-2">
+                                    <div
+                                      className={cn(
+                                        "w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px]",
+                                        isSelected
+                                          ? "bg-blue-600 text-white"
+                                          : "bg-slate-100 text-slate-500",
+                                      )}
+                                    >
+                                      {promoter.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span>{promoter.name}</span>
+                                  </div>
+                                  <span className="text-[10px] text-slate-400 italic font-medium">
+                                    {promoter.role}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* Optional outcome statistics after completed */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Resultados da Ação (Opcional)
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">
-                      Leads Feitos
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={newAction.leadsFeitos}
-                      onChange={(e) =>
-                        setNewAction({
-                          ...newAction,
-                          leadsFeitos:
-                            e.target.value === "" ? "" : Number(e.target.value),
-                        })
-                      }
-                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
-                      placeholder={editingAction ? `Automático: ${autoLeadsCount}` : "Ex: 10"}
-                    />
-                    {editingAction && (
-                      <span className="text-[10px] text-slate-400 block mt-1">
-                        Total vinculados no sistema: {autoLeadsCount}
-                      </span>
-                    )}
+                  {/* Optional outcome statistics after completed */}
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Resultados da Ação (Opcional)
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">
+                          Leads Feitos
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={newAction.leadsFeitos}
+                          onChange={(e) =>
+                            setNewAction({
+                              ...newAction,
+                              leadsFeitos:
+                                e.target.value === ""
+                                  ? ""
+                                  : Number(e.target.value),
+                            })
+                          }
+                          className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                          placeholder={
+                            editingAction
+                              ? `Automático: ${autoLeadsCount}`
+                              : "Ex: 10"
+                          }
+                        />
+                        {editingAction && (
+                          <span className="text-[10px] text-slate-400 block mt-1">
+                            Total vinculados no sistema: {autoLeadsCount}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">
+                          Boletos Feitos
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={newAction.boletosFeitos}
+                          onChange={(e) =>
+                            setNewAction({
+                              ...newAction,
+                              boletosFeitos:
+                                e.target.value === ""
+                                  ? ""
+                                  : Number(e.target.value),
+                            })
+                          }
+                          className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                          placeholder={
+                            editingAction
+                              ? `Automático: ${autoBoletosCount}`
+                              : "Ex: 5"
+                          }
+                        />
+                        {editingAction && (
+                          <span className="text-[10px] text-slate-400 block mt-1">
+                            Total vinculados no sistema: {autoBoletosCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">
-                      Boletos Feitos
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={newAction.boletosFeitos}
-                      onChange={(e) =>
-                        setNewAction({
-                          ...newAction,
-                          boletosFeitos:
-                            e.target.value === "" ? "" : Number(e.target.value),
-                        })
-                      }
-                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm bg-white"
-                      placeholder={editingAction ? `Automático: ${autoBoletosCount}` : "Ex: 5"}
-                    />
-                    {editingAction && (
-                      <span className="text-[10px] text-slate-400 block mt-1">
-                        Total vinculados no sistema: {autoBoletosCount}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-2">
-                  Fotos (até 3 URLs)
-                </label>
-                <div className="space-y-2">
-                  {newAction.fotos.map((foto, idx) => (
-                    <input
-                      key={idx}
-                      placeholder={`URL da Foto ${idx + 1}`}
-                      value={foto}
-                      onChange={(e) => {
-                        const next = [...newAction.fotos];
-                        next[idx] = e.target.value;
-                        setNewAction({ ...newAction, fotos: next });
-                      }}
-                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
-                    />
-                  ))}
-                </div>
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
-              >
-                {editingAction ? "Salvar Alterações" : "Agendar Ação"}
-              </button>
-            </form>
-          </motion.div>
-        </div>
-      )}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-2">
+                      Fotos (até 3 URLs)
+                    </label>
+                    <div className="space-y-2">
+                      {newAction.fotos.map((foto, idx) => (
+                        <input
+                          key={idx}
+                          placeholder={`URL da Foto ${idx + 1}`}
+                          value={foto}
+                          onChange={(e) => {
+                            const next = [...newAction.fotos];
+                            next[idx] = e.target.value;
+                            setNewAction({ ...newAction, fotos: next });
+                          }}
+                          className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                  >
+                    {editingAction ? "Salvar Alterações" : "Agendar Ação"}
+                  </button>
+                </form>
+              </motion.div>
+            </div>
+          )}
         </>
       )}
     </div>
@@ -16007,7 +16887,10 @@ function EmpresasParceirasView({
   botConfig?: BotConfig;
   uniqueUnidades?: string[];
 }) {
-  const sendTelegramNotification = async (telegramHandleOrId: string, message: string) => {
+  const sendTelegramNotification = async (
+    telegramHandleOrId: string,
+    message: string,
+  ) => {
     if (!telegramHandleOrId) return;
     const targetUrl = botConfig?.telegramBotUrl || "";
     const apiKey = botConfig?.telegramApiKey || "";
@@ -16036,7 +16919,10 @@ function EmpresasParceirasView({
       });
       const resData = await response.json();
       if (!response.ok || !resData.success) {
-        console.error("Failed to send Telegram message:", resData.error || "Unknown error");
+        console.error(
+          "Failed to send Telegram message:",
+          resData.error || "Unknown error",
+        );
       } else {
         console.log(`Telegram message sent to ${chatId}`);
       }
@@ -16062,10 +16948,14 @@ function EmpresasParceirasView({
 
   // Mass deletion states
   const [selectedEmpresaIds, setSelectedEmpresaIds] = useState<string[]>([]);
-  const [selectedMapEmpresaId, setSelectedMapEmpresaId] = useState<string | null>(null);
+  const [selectedMapEmpresaId, setSelectedMapEmpresaId] = useState<
+    string | null
+  >(null);
 
   // Active Tab: list vs tratativas report vs map
-  const [activeTab, setActiveTab] = useState<"lista" | "tratativas" | "mapa">("lista");
+  const [activeTab, setActiveTab] = useState<"lista" | "tratativas" | "mapa">(
+    "lista",
+  );
   const [viewFormat, setViewFormat] = useState<"card" | "list">("card");
 
   const uniqueSeguimentos = useMemo(() => {
@@ -16076,7 +16966,7 @@ function EmpresasParceirasView({
 
   // Filter commercial/FDV users
   const listForSelection = useMemo(() => {
-    const consultores = (users || []).filter(u => {
+    const consultores = (users || []).filter((u) => {
       const roleLower = (u.role || "").toLowerCase();
       const isComercialServer = u.servidor === "comercial";
       return (
@@ -16086,7 +16976,7 @@ function EmpresasParceirasView({
         isComercialServer
       );
     });
-    return consultores.length > 0 ? consultores : (users || []);
+    return consultores.length > 0 ? consultores : users || [];
   }, [users]);
 
   useEffect(() => {
@@ -16120,7 +17010,7 @@ function EmpresasParceirasView({
         label: "Retorno de Emergência",
         color: "red",
         bg: "bg-rose-50 border-rose-200 text-rose-800",
-        iconColor: "text-rose-600"
+        iconColor: "text-rose-600",
       };
     }
     if (days >= 7) {
@@ -16130,7 +17020,7 @@ function EmpresasParceirasView({
         label: "Atenção",
         color: "orange",
         bg: "bg-orange-50 border-orange-200 text-orange-800",
-        iconColor: "text-orange-600"
+        iconColor: "text-orange-600",
       };
     }
     if (days >= 3) {
@@ -16140,7 +17030,7 @@ function EmpresasParceirasView({
         label: "Retorno",
         color: "yellow",
         bg: "bg-amber-50 border-amber-200 text-amber-800",
-        iconColor: "text-amber-600"
+        iconColor: "text-amber-600",
       };
     }
     return {
@@ -16149,7 +17039,7 @@ function EmpresasParceirasView({
       label: "Recente",
       color: "blue",
       bg: "bg-blue-50 border-blue-100 text-blue-800",
-      iconColor: "text-blue-500"
+      iconColor: "text-blue-500",
     };
   };
 
@@ -16181,8 +17071,7 @@ function EmpresasParceirasView({
     const matchClassificacao =
       classificacaoFilter === "Todas" ||
       emp.classificacao === classificacaoFilter;
-    const matchFdv =
-      fdvFilter === "Todos" || emp.consultorId === fdvFilter;
+    const matchFdv = fdvFilter === "Todos" || emp.consultorId === fdvFilter;
 
     return (
       matchBusca &&
@@ -16221,7 +17110,9 @@ function EmpresasParceirasView({
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const matchedUser = (users || []).find(u => u.uid === selectedConsultorId);
+    const matchedUser = (users || []).find(
+      (u) => u.uid === selectedConsultorId,
+    );
     const consultorNome = matchedUser ? matchedUser.name : "";
 
     const payload: any = {
@@ -16259,7 +17150,9 @@ function EmpresasParceirasView({
       return;
     }
 
-    const isNowInTratativa = payload.statusEmpresa === "Em tratativa" && (!editingEmpresa || editingEmpresa.statusEmpresa !== "Em tratativa");
+    const isNowInTratativa =
+      payload.statusEmpresa === "Em tratativa" &&
+      (!editingEmpresa || editingEmpresa.statusEmpresa !== "Em tratativa");
 
     try {
       if (editingEmpresa) {
@@ -16268,7 +17161,10 @@ function EmpresasParceirasView({
           payload,
         );
         if (isNowInTratativa) {
-          onToast(`O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`, "success");
+          onToast(
+            `O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`,
+            "success",
+          );
           if (matchedUser && matchedUser.phone && onSendWhatsApp) {
             const msg = `O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`;
             await onSendWhatsApp(matchedUser.phone, msg);
@@ -16309,7 +17205,10 @@ function EmpresasParceirasView({
           createdAt: serverTimestamp(),
         });
         if (isNowInTratativa) {
-          onToast(`O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`, "success");
+          onToast(
+            `O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`,
+            "success",
+          );
           if (matchedUser && matchedUser.phone && onSendWhatsApp) {
             const msg = `O processo foi iniciado acompanhe a tratativa com a empresa ${payload.nome} para iniciar as campanhas de trade.`;
             await onSendWhatsApp(matchedUser.phone, msg);
@@ -16362,7 +17261,7 @@ function EmpresasParceirasView({
       try {
         await deleteDoc(doc(db, COLLECTIONS.EMPRESAS_PARCEIRAS, id));
         onToast("Empresa removida.");
-        setSelectedEmpresaIds(prev => prev.filter(item => item !== id));
+        setSelectedEmpresaIds((prev) => prev.filter((item) => item !== id));
       } catch (err: any) {
         onToast("Erro ao excluir empresa.", "error");
       }
@@ -16374,7 +17273,7 @@ function EmpresasParceirasView({
     if (selectedEmpresaIds.length === 0) return;
     if (
       window.confirm(
-        `Atenção! Deseja realmente excluir permanentemente as ${selectedEmpresaIds.length} empresas selecionadas?`
+        `Atenção! Deseja realmente excluir permanentemente as ${selectedEmpresaIds.length} empresas selecionadas?`,
       )
     ) {
       try {
@@ -16422,7 +17321,9 @@ function EmpresasParceirasView({
         const getVal = (row: any, ...keys: string[]) => {
           const rowKeys = Object.keys(row);
           for (const key of keys) {
-            const foundKey = rowKeys.find(k => k.toLowerCase() === key.toLowerCase());
+            const foundKey = rowKeys.find(
+              (k) => k.toLowerCase() === key.toLowerCase(),
+            );
             if (foundKey && row[foundKey] !== undefined) return row[foundKey];
           }
           return undefined;
@@ -16432,39 +17333,94 @@ function EmpresasParceirasView({
           if (!val) return "Não visitada";
           const lower = val.trim().toLowerCase();
           if (lower === "conveniada") return "Conveniada";
-          if (lower === "em tratativa" || lower.includes("tratativa")) return "Em tratativa";
+          if (lower === "em tratativa" || lower.includes("tratativa"))
+            return "Em tratativa";
           if (lower === "cancelada") return "Cancelada";
-          if (lower === "nao visitada" || lower === "não visitada" || lower.includes("visitada")) return "Não visitada";
+          if (
+            lower === "nao visitada" ||
+            lower === "não visitada" ||
+            lower.includes("visitada")
+          )
+            return "Não visitada";
           return val;
         };
 
         const batch = importData.map((item) => {
-          const importedConsultorNome = String(getVal(item, "Consultor", "consultor", "consultorNome", "consultor_vinculado", "Consultor Vinculado") || "").trim();
-          const matchedImportedUser = (users || []).find(u => u.name.trim().toLowerCase() === importedConsultorNome.toLowerCase());
-          const consultorId = matchedImportedUser ? matchedImportedUser.uid : "";
+          const importedConsultorNome = String(
+            getVal(
+              item,
+              "Consultor",
+              "consultor",
+              "consultorNome",
+              "consultor_vinculado",
+              "Consultor Vinculado",
+            ) || "",
+          ).trim();
+          const matchedImportedUser = (users || []).find(
+            (u) =>
+              u.name.trim().toLowerCase() ===
+              importedConsultorNome.toLowerCase(),
+          );
+          const consultorId = matchedImportedUser
+            ? matchedImportedUser.uid
+            : "";
 
-          const importedUnidadesRaw = String(getVal(item, "Unidades", "unidade", "unidadesVinculadas", "unidade_vinculada", "unidades_vinculadas", "Unidades Vinculadas") || "").trim();
-          const unidadesVinculadas = importedUnidadesRaw ? importedUnidadesRaw.split(",").map(x => x.trim()).filter(Boolean) : [];
+          const importedUnidadesRaw = String(
+            getVal(
+              item,
+              "Unidades",
+              "unidade",
+              "unidadesVinculadas",
+              "unidade_vinculada",
+              "unidades_vinculadas",
+              "Unidades Vinculadas",
+            ) || "",
+          ).trim();
+          const unidadesVinculadas = importedUnidadesRaw
+            ? importedUnidadesRaw
+                .split(",")
+                .map((x) => x.trim())
+                .filter(Boolean)
+            : [];
 
           return {
             nome: String(getVal(item, "Nome", "nome") || "").trim(),
             cnpj: String(getVal(item, "CNPJ", "cnpj") || "").trim(),
-            responsavel: String(getVal(item, "Responsável", "responsavel", "responsável") || "").trim(),
-            telefone: String(getVal(item, "Telefone", "telefone") || "").replace(/\D/g, ""),
+            responsavel: String(
+              getVal(item, "Responsável", "responsavel", "responsável") || "",
+            ).trim(),
+            telefone: String(
+              getVal(item, "Telefone", "telefone") || "",
+            ).replace(/\D/g, ""),
             telefoneResponsavel: String(
               getVal(item, "Telefone Responsável", "telefoneResponsavel") || "",
             ).replace(/\D/g, ""),
             email: String(getVal(item, "Email", "email") || "").trim(),
-            endereco: String(getVal(item, "Endereço", "endereco", "endereço") || "").trim(),
+            endereco: String(
+              getVal(item, "Endereço", "endereco", "endereço") || "",
+            ).trim(),
             bairro: String(getVal(item, "Bairro", "bairro") || "").trim(),
             cidade: String(getVal(item, "Cidade", "cidade") || "").trim(),
-            seguimento: String(getVal(item, "Seguimento", "seguimento") || "").trim(),
-            classificacao: String(getVal(item, "Classificação", "classificacao", "classificação") || "").trim(),
-            statusEmpresa: normalizeStatusEmpresa(String(getVal(item, "Status", "statusEmpresa", "status") || "")),
-            linkMaps: String(getVal(item, "Link Maps", "linkMaps") || "").trim(),
-            linkSales: String(getVal(item, "Link Sales", "linkSales") || "").trim(),
+            seguimento: String(
+              getVal(item, "Seguimento", "seguimento") || "",
+            ).trim(),
+            classificacao: String(
+              getVal(item, "Classificação", "classificacao", "classificação") ||
+                "",
+            ).trim(),
+            statusEmpresa: normalizeStatusEmpresa(
+              String(getVal(item, "Status", "statusEmpresa", "status") || ""),
+            ),
+            linkMaps: String(
+              getVal(item, "Link Maps", "linkMaps") || "",
+            ).trim(),
+            linkSales: String(
+              getVal(item, "Link Sales", "linkSales") || "",
+            ).trim(),
             consultorId,
-            consultorNome: importedConsultorNome || (matchedImportedUser ? matchedImportedUser.name : ""),
+            consultorNome:
+              importedConsultorNome ||
+              (matchedImportedUser ? matchedImportedUser.name : ""),
             unidadesVinculadas,
             createdAt: serverTimestamp(),
           };
@@ -16517,7 +17473,7 @@ function EmpresasParceirasView({
                 "p-2 rounded-lg transition-all",
                 viewFormat === "card"
                   ? "bg-white shadow-sm text-blue-600"
-                  : "text-slate-400 hover:text-slate-600"
+                  : "text-slate-400 hover:text-slate-600",
               )}
               title="Formato de Cards"
             >
@@ -16529,7 +17485,7 @@ function EmpresasParceirasView({
                 "p-2 rounded-lg transition-all",
                 viewFormat === "list"
                   ? "bg-white shadow-sm text-blue-600"
-                  : "text-slate-400 hover:text-slate-600"
+                  : "text-slate-400 hover:text-slate-600",
               )}
               title="Formato de Lista"
             >
@@ -16575,7 +17531,7 @@ function EmpresasParceirasView({
             "pb-3 px-6 font-bold text-sm transition-all border-b-2",
             activeTab === "lista"
               ? "border-blue-600 text-blue-600"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              : "border-transparent text-slate-500 hover:text-slate-700",
           )}
         >
           📋 Lista de Empresas
@@ -16587,7 +17543,7 @@ function EmpresasParceirasView({
             "pb-3 px-6 font-bold text-sm transition-all border-b-2 flex items-center space-x-2",
             activeTab === "mapa"
               ? "border-blue-600 text-blue-600"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              : "border-transparent text-slate-500 hover:text-slate-700",
           )}
         >
           🗺️ Mapa das Empresas
@@ -16599,7 +17555,7 @@ function EmpresasParceirasView({
             "pb-3 px-6 font-bold text-sm transition-all border-b-2 flex items-center space-x-2",
             activeTab === "tratativas"
               ? "border-blue-600 text-blue-600"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              : "border-transparent text-slate-500 hover:text-slate-700",
           )}
         >
           <span>⏰ Acompanhamento de Tratativas (Alertas)</span>
@@ -16722,8 +17678,12 @@ function EmpresasParceirasView({
                 <Building2 size={24} />
               </div>
               <div>
-                <p className="text-sm text-slate-500 font-medium">Total Empresas</p>
-                <p className="text-2xl font-black text-slate-900">{kpiTotais}</p>
+                <p className="text-sm text-slate-500 font-medium">
+                  Total Empresas
+                </p>
+                <p className="text-2xl font-black text-slate-900">
+                  {kpiTotais}
+                </p>
               </div>
             </div>
 
@@ -16736,7 +17696,9 @@ function EmpresasParceirasView({
                   <span className="text-emerald-600 font-medium text-xs">
                     Conveniada
                   </span>
-                  <span className="font-bold text-slate-700">{statConveniada}</span>
+                  <span className="font-bold text-slate-700">
+                    {statConveniada}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-amber-600 font-medium text-xs">
@@ -16750,7 +17712,9 @@ function EmpresasParceirasView({
                   <span className="text-rose-600 font-medium text-xs">
                     Cancelada
                   </span>
-                  <span className="font-bold text-slate-700">{statCancelada}</span>
+                  <span className="font-bold text-slate-700">
+                    {statCancelada}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-medium text-xs">
@@ -16800,7 +17764,8 @@ function EmpresasParceirasView({
           {selectedEmpresaIds.length > 0 && (
             <div className="bg-rose-50 border border-rose-200 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 animate-fadeIn">
               <span className="text-sm text-rose-800 font-medium">
-                Selecionadas: <strong>{selectedEmpresaIds.length}</strong> empresa(s) para exclusão em massa.
+                Selecionadas: <strong>{selectedEmpresaIds.length}</strong>{" "}
+                empresa(s) para exclusão em massa.
               </span>
               <div className="flex space-x-2 w-full sm:w-auto justify-end">
                 <button
@@ -16831,17 +17796,24 @@ function EmpresasParceirasView({
               <button
                 type="button"
                 onClick={() => {
-                  const allFilteredIds = filteredData.map(emp => emp.id);
-                  const areAllSelected = allFilteredIds.every(id => selectedEmpresaIds.includes(id));
+                  const allFilteredIds = filteredData.map((emp) => emp.id);
+                  const areAllSelected = allFilteredIds.every((id) =>
+                    selectedEmpresaIds.includes(id),
+                  );
                   if (areAllSelected) {
-                    setSelectedEmpresaIds(prev => prev.filter(id => !allFilteredIds.includes(id)));
+                    setSelectedEmpresaIds((prev) =>
+                      prev.filter((id) => !allFilteredIds.includes(id)),
+                    );
                   } else {
-                    setSelectedEmpresaIds(prev => Array.from(new Set([...prev, ...allFilteredIds])));
+                    setSelectedEmpresaIds((prev) =>
+                      Array.from(new Set([...prev, ...allFilteredIds])),
+                    );
                   }
                 }}
                 className="text-xs text-blue-600 hover:text-blue-800 font-bold"
               >
-                {filteredData.length > 0 && filteredData.every(emp => selectedEmpresaIds.includes(emp.id))
+                {filteredData.length > 0 &&
+                filteredData.every((emp) => selectedEmpresaIds.includes(emp.id))
                   ? "Desmarcar Todas do Filtro"
                   : `Selecionar Todas do Filtro (${filteredData.length})`}
               </button>
@@ -16858,7 +17830,9 @@ function EmpresasParceirasView({
                     key={emp.id}
                     className={cn(
                       "bg-white p-6 pl-12 rounded-3xl shadow-sm border flex flex-col justify-between hover:border-blue-200 transition-all group relative",
-                      isSelected ? "border-blue-400 bg-blue-50/20" : "border-slate-100"
+                      isSelected
+                        ? "border-blue-400 bg-blue-50/20"
+                        : "border-slate-100",
                     )}
                   >
                     {/* Absolute checkbox for mass deletion */}
@@ -16868,9 +17842,14 @@ function EmpresasParceirasView({
                         checked={isSelected}
                         onChange={() => {
                           if (isSelected) {
-                            setSelectedEmpresaIds(selectedEmpresaIds.filter(id => id !== emp.id));
+                            setSelectedEmpresaIds(
+                              selectedEmpresaIds.filter((id) => id !== emp.id),
+                            );
                           } else {
-                            setSelectedEmpresaIds([...selectedEmpresaIds, emp.id]);
+                            setSelectedEmpresaIds([
+                              ...selectedEmpresaIds,
+                              emp.id,
+                            ]);
                           }
                         }}
                         className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
@@ -16941,18 +17920,32 @@ function EmpresasParceirasView({
                           </span>
                         )}
                         {alertInfo && (
-                          <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center space-x-1", alertInfo.bg)}>
+                          <span
+                            className={cn(
+                              "text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center space-x-1",
+                              alertInfo.bg,
+                            )}
+                          >
                             <Clock size={10} className={alertInfo.iconColor} />
-                            <span>{alertInfo.label} ({getTratativaDays(emp)}d)</span>
+                            <span>
+                              {alertInfo.label} ({getTratativaDays(emp)}d)
+                            </span>
                           </span>
                         )}
                       </div>
 
                       {emp.statusEmpresa === "Em tratativa" && (
                         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start space-x-2 shadow-sm">
-                          <span className="text-amber-500 shrink-0 font-bold">⚠️</span>
+                          <span className="text-amber-500 shrink-0 font-bold">
+                            ⚠️
+                          </span>
                           <div className="leading-relaxed">
-                            O processo foi iniciado acompanhe a tratativa com a empresa <span className="font-bold text-slate-900">{emp.nome}</span> para iniciar as campanhas de trade.
+                            O processo foi iniciado acompanhe a tratativa com a
+                            empresa{" "}
+                            <span className="font-bold text-slate-900">
+                              {emp.nome}
+                            </span>{" "}
+                            para iniciar as campanhas de trade.
                           </div>
                         </div>
                       )}
@@ -16961,7 +17954,9 @@ function EmpresasParceirasView({
                         {emp.cnpj && (
                           <div className="flex items-center space-x-3">
                             <Briefcase size={16} className="text-slate-400" />
-                            <span className="font-mono text-xs">{emp.cnpj}</span>
+                            <span className="font-mono text-xs">
+                              {emp.cnpj}
+                            </span>
                           </div>
                         )}
                         <div className="flex flex-col space-y-1">
@@ -16981,7 +17976,9 @@ function EmpresasParceirasView({
                                   size={16}
                                   className="text-slate-400 opacity-50"
                                 />
-                                <span>{formatPhone(emp.telefoneResponsavel)}</span>
+                                <span>
+                                  {formatPhone(emp.telefoneResponsavel)}
+                                </span>
                               </div>
                               <span className="text-[9px] font-bold text-slate-400 uppercase">
                                 Resp.
@@ -17012,36 +18009,47 @@ function EmpresasParceirasView({
                         </div>
                         {emp.bairro && (
                           <div className="flex items-center space-x-3">
-                            <MapPin size={16} className="text-slate-400 opacity-50" />
-                            <span className="truncate">Bairro: {emp.bairro}</span>
+                            <MapPin
+                              size={16}
+                              className="text-slate-400 opacity-50"
+                            />
+                            <span className="truncate">
+                              Bairro: {emp.bairro}
+                            </span>
                           </div>
                         )}
                         {emp.cidade && (
                           <div className="flex items-center space-x-3">
-                            <MapPin size={16} className="text-slate-400 opacity-50" />
-                            <span className="truncate">Cidade: {emp.cidade}</span>
+                            <MapPin
+                              size={16}
+                              className="text-slate-400 opacity-50"
+                            />
+                            <span className="truncate">
+                              Cidade: {emp.cidade}
+                            </span>
                           </div>
                         )}
                       </div>
 
-                      {emp.unidadesVinculadas && emp.unidadesVinculadas.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-slate-100 mb-4">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
-                            Unidades Vinculadas
-                          </span>
-                          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
-                            {emp.unidadesVinculadas.map((uni) => (
-                              <span
-                                key={uni}
-                                className="text-[9px] font-bold bg-indigo-50/60 text-indigo-600 border border-indigo-100/40 p-1 px-2 rounded-md truncate max-w-[150px]"
-                                title={uni}
-                              >
-                                {uni}
-                              </span>
-                            ))}
+                      {emp.unidadesVinculadas &&
+                        emp.unidadesVinculadas.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-slate-100 mb-4">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
+                              Unidades Vinculadas
+                            </span>
+                            <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
+                              {emp.unidadesVinculadas.map((uni) => (
+                                <span
+                                  key={uni}
+                                  className="text-[9px] font-bold bg-indigo-50/60 text-indigo-600 border border-indigo-100/40 p-1 px-2 rounded-md truncate max-w-[150px]"
+                                  title={uni}
+                                >
+                                  {uni}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
 
                     <div className="flex flex-col space-y-2 mt-auto pt-3 border-t border-slate-100/60">
@@ -17108,7 +18116,7 @@ function EmpresasParceirasView({
                         key={emp.id}
                         className={cn(
                           "hover:bg-slate-50/50 transition-colors relative",
-                          isSelected && "bg-blue-50/30"
+                          isSelected && "bg-blue-50/30",
                         )}
                       >
                         <td className="p-4 pl-12 relative">
@@ -17118,9 +18126,16 @@ function EmpresasParceirasView({
                               checked={isSelected}
                               onChange={() => {
                                 if (isSelected) {
-                                  setSelectedEmpresaIds(selectedEmpresaIds.filter(id => id !== emp.id));
+                                  setSelectedEmpresaIds(
+                                    selectedEmpresaIds.filter(
+                                      (id) => id !== emp.id,
+                                    ),
+                                  );
                                 } else {
-                                  setSelectedEmpresaIds([...selectedEmpresaIds, emp.id]);
+                                  setSelectedEmpresaIds([
+                                    ...selectedEmpresaIds,
+                                    emp.id,
+                                  ]);
                                 }
                               }}
                               className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
@@ -17143,7 +18158,7 @@ function EmpresasParceirasView({
                                     ? "bg-amber-50 text-amber-700 border-amber-200"
                                     : emp.classificacao === "Prata"
                                       ? "bg-slate-50 text-slate-600 border-slate-200"
-                                      : "bg-orange-50 text-orange-700 border-orange-200"
+                                      : "bg-orange-50 text-orange-700 border-orange-200",
                                 )}
                               >
                                 {emp.classificacao}
@@ -17164,7 +18179,7 @@ function EmpresasParceirasView({
                                   "bg-rose-50 text-rose-700 border-rose-200",
                                 (emp.statusEmpresa === "Não visitada" ||
                                   !emp.statusEmpresa) &&
-                                  "bg-slate-50 text-slate-600 border-slate-200"
+                                  "bg-slate-50 text-slate-600 border-slate-200",
                               )}
                             >
                               {emp.statusEmpresa || "Não visitada"}
@@ -17175,9 +18190,19 @@ function EmpresasParceirasView({
                               </span>
                             )}
                             {alertInfo && (
-                              <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center space-x-1 w-fit", alertInfo.bg)}>
-                                <Clock size={10} className={alertInfo.iconColor} />
-                                <span>{alertInfo.label} ({getTratativaDays(emp)}d)</span>
+                              <span
+                                className={cn(
+                                  "text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center space-x-1 w-fit",
+                                  alertInfo.bg,
+                                )}
+                              >
+                                <Clock
+                                  size={10}
+                                  className={alertInfo.iconColor}
+                                />
+                                <span>
+                                  {alertInfo.label} ({getTratativaDays(emp)}d)
+                                </span>
                               </span>
                             )}
                           </div>
@@ -17186,7 +18211,9 @@ function EmpresasParceirasView({
                           <div className="flex flex-col text-xs">
                             <div className="flex items-center space-x-1 mb-0.5">
                               <Users size={12} className="text-slate-400" />
-                              <span className="font-medium text-slate-700">{emp.responsavel}</span>
+                              <span className="font-medium text-slate-700">
+                                {emp.responsavel}
+                              </span>
                             </div>
                             <div className="flex items-center space-x-1 text-slate-500">
                               <Phone size={12} className="text-slate-400" />
@@ -17195,7 +18222,9 @@ function EmpresasParceirasView({
                             {emp.email && (
                               <div className="flex items-center space-x-1 text-slate-500">
                                 <Mail size={12} className="text-slate-400" />
-                                <span className="truncate max-w-[150px]">{emp.email}</span>
+                                <span className="truncate max-w-[150px]">
+                                  {emp.email}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -17214,7 +18243,8 @@ function EmpresasParceirasView({
                           <div className="flex flex-col text-[11px] text-slate-600 max-w-[200px]">
                             <span className="truncate">{emp.endereco}</span>
                             <span className="text-slate-400 truncate">
-                              {emp.bairro && `${emp.bairro}, `}{emp.cidade}
+                              {emp.bairro && `${emp.bairro}, `}
+                              {emp.cidade}
                             </span>
                           </div>
                         </td>
@@ -17280,21 +18310,27 @@ function EmpresasParceirasView({
                 <Clock size={20} />
               </div>
               <div>
-                <h4 className="font-bold text-amber-900 text-sm">Lembrete de Retorno</h4>
+                <h4 className="font-bold text-amber-900 text-sm">
+                  Lembrete de Retorno
+                </h4>
                 <p className="text-xs text-amber-700 mt-1">
-                  Ativado após <strong>3 dias</strong> do cadastro. Requer contato inicial para retorno sobre o fechamento da ação.
+                  Ativado após <strong>3 dias</strong> do cadastro. Requer
+                  contato inicial para retorno sobre o fechamento da ação.
                 </p>
               </div>
             </div>
-            
+
             <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl flex items-start space-x-3">
               <div className="p-2 bg-orange-100 text-orange-700 rounded-xl shrink-0">
                 <AlertCircle size={20} />
               </div>
               <div>
-                <h4 className="font-bold text-orange-900 text-sm">Alerta de Atenção</h4>
+                <h4 className="font-bold text-orange-900 text-sm">
+                  Alerta de Atenção
+                </h4>
                 <p className="text-xs text-orange-700 mt-1">
-                  Ativado após <strong>7 dias</strong> do cadastro. Atenção necessária para a negociação em andamento.
+                  Ativado após <strong>7 dias</strong> do cadastro. Atenção
+                  necessária para a negociação em andamento.
                 </p>
               </div>
             </div>
@@ -17304,9 +18340,12 @@ function EmpresasParceirasView({
                 <AlertCircle size={20} />
               </div>
               <div>
-                <h4 className="font-bold text-rose-900 text-sm">Retorno de Emergência</h4>
+                <h4 className="font-bold text-rose-900 text-sm">
+                  Retorno de Emergência
+                </h4>
                 <p className="text-xs text-rose-700 mt-1">
-                  Ativado após <strong>15 dias</strong> ou mais. Tratativa crítica necessitando retorno imediato de emergência.
+                  Ativado após <strong>15 dias</strong> ou mais. Tratativa
+                  crítica necessitando retorno imediato de emergência.
                 </p>
               </div>
             </div>
@@ -17319,11 +18358,18 @@ function EmpresasParceirasView({
                 Relatório de Acompanhamento de Tratativas
               </h3>
               <span className="text-xs text-slate-500 font-medium">
-                Total de Tratativas Ativas: <strong>{data.filter(e => e.statusEmpresa === "Em tratativa").length}</strong>
+                Total de Tratativas Ativas:{" "}
+                <strong>
+                  {
+                    data.filter((e) => e.statusEmpresa === "Em tratativa")
+                      .length
+                  }
+                </strong>
               </span>
             </div>
 
-            {data.filter(e => e.statusEmpresa === "Em tratativa").length === 0 ? (
+            {data.filter((e) => e.statusEmpresa === "Em tratativa").length ===
+            0 ? (
               <div className="p-12 text-center text-slate-400 italic">
                 Nenhuma empresa com status "Em tratativa" cadastrada.
               </div>
@@ -17338,7 +18384,9 @@ function EmpresasParceirasView({
                       <th className="p-4">Data Cadastro</th>
                       <th className="p-4">Dias Decorridos</th>
                       <th className="p-4">Lembrete / Status</th>
-                      <th className="p-4 pr-6 text-right">Ações para Mudar Status</th>
+                      <th className="p-4 pr-6 text-right">
+                        Ações para Mudar Status
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-sm">
@@ -17347,7 +18395,7 @@ function EmpresasParceirasView({
                       .map((emp) => {
                         const alertInfo = getTratativaAlert(emp);
                         const days = getTratativaDays(emp);
-                        
+
                         const formatDate = (dateVal: any) => {
                           if (!dateVal) return "-";
                           let dateObj: Date;
@@ -17361,49 +18409,87 @@ function EmpresasParceirasView({
                         };
 
                         return (
-                          <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
+                          <tr
+                            key={emp.id}
+                            className="hover:bg-slate-50/50 transition-colors"
+                          >
                             <td className="p-4 pl-6">
-                              <div className="font-bold text-slate-800">{emp.nome}</div>
-                              {emp.cnpj && <div className="text-[10px] text-slate-400 font-mono">CNPJ: {emp.cnpj}</div>}
+                              <div className="font-bold text-slate-800">
+                                {emp.nome}
+                              </div>
+                              {emp.cnpj && (
+                                <div className="text-[10px] text-slate-400 font-mono">
+                                  CNPJ: {emp.cnpj}
+                                </div>
+                              )}
                               <div className="mt-1.5 text-xs text-amber-700 max-w-sm leading-relaxed bg-amber-50/60 p-2 rounded-lg border border-amber-100/50">
-                                O processo foi iniciado acompanhe a tratativa com a empresa <strong>{emp.nome}</strong> para iniciar as campanhas de trade.
+                                O processo foi iniciado acompanhe a tratativa
+                                com a empresa <strong>{emp.nome}</strong> para
+                                iniciar as campanhas de trade.
                               </div>
                             </td>
                             <td className="p-4">
                               {emp.consultorNome ? (
                                 <div className="flex items-center space-x-2 text-slate-700">
-                                  <UserIcon size={14} className="text-blue-500 shrink-0" />
-                                  <span className="font-medium">{emp.consultorNome}</span>
+                                  <UserIcon
+                                    size={14}
+                                    className="text-blue-500 shrink-0"
+                                  />
+                                  <span className="font-medium">
+                                    {emp.consultorNome}
+                                  </span>
                                 </div>
                               ) : (
-                                <span className="text-slate-400 italic text-xs">Sem consultor vinculado</span>
+                                <span className="text-slate-400 italic text-xs">
+                                  Sem consultor vinculado
+                                </span>
                               )}
                             </td>
                             <td className="p-4">
-                              {emp.unidadesVinculadas && emp.unidadesVinculadas.length > 0 ? (
+                              {emp.unidadesVinculadas &&
+                              emp.unidadesVinculadas.length > 0 ? (
                                 <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                  {emp.unidadesVinculadas.map(un => (
-                                    <span key={un} className="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold border border-indigo-100/30">
+                                  {emp.unidadesVinculadas.map((un) => (
+                                    <span
+                                      key={un}
+                                      className="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold border border-indigo-100/30"
+                                    >
                                       {un}
                                     </span>
                                   ))}
                                 </div>
                               ) : (
-                                <span className="text-slate-400 text-xs">-</span>
+                                <span className="text-slate-400 text-xs">
+                                  -
+                                </span>
                               )}
                             </td>
                             <td className="p-4 text-slate-600 text-xs">
                               {formatDate(emp.createdAt)}
                             </td>
                             <td className="p-4">
-                              <span className="font-bold text-slate-700 font-mono">{days}</span>
-                              <span className="text-slate-400 text-xs ml-1">dia(s)</span>
+                              <span className="font-bold text-slate-700 font-mono">
+                                {days}
+                              </span>
+                              <span className="text-slate-400 text-xs ml-1">
+                                dia(s)
+                              </span>
                             </td>
                             <td className="p-4">
                               {alertInfo && (
-                                <span className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border flex items-center space-x-1.5 w-fit", alertInfo.bg)}>
-                                  <Clock size={10} className={alertInfo.iconColor} />
-                                  <span>{alertInfo.label} ({days}d)</span>
+                                <span
+                                  className={cn(
+                                    "text-[10px] font-bold px-2.5 py-1 rounded-full border flex items-center space-x-1.5 w-fit",
+                                    alertInfo.bg,
+                                  )}
+                                >
+                                  <Clock
+                                    size={10}
+                                    className={alertInfo.iconColor}
+                                  />
+                                  <span>
+                                    {alertInfo.label} ({days}d)
+                                  </span>
                                 </span>
                               )}
                             </td>
@@ -17411,7 +18497,9 @@ function EmpresasParceirasView({
                               <div className="flex items-center justify-end space-x-1.5">
                                 <button
                                   type="button"
-                                  onClick={() => handleUpdateStatus(emp.id, "Conveniada")}
+                                  onClick={() =>
+                                    handleUpdateStatus(emp.id, "Conveniada")
+                                  }
                                   className="px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-xs font-bold transition-all animate-none"
                                   title="Mudar para Conveniada"
                                 >
@@ -17419,7 +18507,9 @@ function EmpresasParceirasView({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleUpdateStatus(emp.id, "Cancelada")}
+                                  onClick={() =>
+                                    handleUpdateStatus(emp.id, "Cancelada")
+                                  }
                                   className="px-2.5 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-bold transition-all animate-none"
                                   title="Mudar para Cancelada"
                                 >
@@ -17427,7 +18517,9 @@ function EmpresasParceirasView({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleUpdateStatus(emp.id, "Não visitada")}
+                                  onClick={() =>
+                                    handleUpdateStatus(emp.id, "Não visitada")
+                                  }
                                   className="px-2.5 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-bold transition-all animate-none"
                                   title="Mudar para Não Visitada"
                                 >
@@ -17675,10 +18767,18 @@ function EmpresasParceirasView({
                         onChange={(e) => setSelectedConsultorId(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm cursor-pointer"
                       >
-                        <option value="">Nenhum consultor selecionado (Sem vínculo)</option>
+                        <option value="">
+                          Nenhum consultor selecionado (Sem vínculo)
+                        </option>
                         {listForSelection.map((u) => (
                           <option key={u.uid} value={u.uid}>
-                            {u.name} ({(u.role || u.servidor || "Comercial").toUpperCase()})
+                            {u.name} (
+                            {(
+                              u.role ||
+                              u.servidor ||
+                              "Comercial"
+                            ).toUpperCase()}
+                            )
                           </option>
                         ))}
                       </select>
@@ -17687,7 +18787,8 @@ function EmpresasParceirasView({
                       </div>
                     </div>
                     <p className="text-[10px] text-slate-400 mt-1">
-                      Selecione um comercial/FDV cadastrado no sistema para vincular a esta empresa parceira.
+                      Selecione um comercial/FDV cadastrado no sistema para
+                      vincular a esta empresa parceira.
                     </p>
                   </div>
 
@@ -18186,7 +19287,8 @@ function AdminView({
   });
 
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-  const [changingPasswordUser, setChangingPasswordUser] = useState<UserProfile | null>(null);
+  const [changingPasswordUser, setChangingPasswordUser] =
+    useState<UserProfile | null>(null);
   const [newPasswordValue, setNewPasswordValue] = useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -18215,8 +19317,14 @@ function AdminView({
     realizadoPosGraduacao: 0,
   });
 
-  const [editingQgLigacao, setEditingQgLigacao] = useState<QgLigacao | null>(null);
-  const [newQgLigacao, setNewQgLigacao] = useState<{nome: string, diaSemana: string[], horario: string}>({
+  const [editingQgLigacao, setEditingQgLigacao] = useState<QgLigacao | null>(
+    null,
+  );
+  const [newQgLigacao, setNewQgLigacao] = useState<{
+    nome: string;
+    diaSemana: string[];
+    horario: string;
+  }>({
     nome: "",
     diaSemana: [],
     horario: "",
@@ -18915,208 +20023,280 @@ function AdminView({
             </div>
           )}
 
-          {changingPasswordUser && (() => {
-            const isMarcosTeixeira = profile?.email === "marcos.teixeira@estacio.br";
-            return (
-              <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
-                >
-                  <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-900">
-                        {isMarcosTeixeira ? "Alterar Senha do Usuário" : "Redefinir Senha do Usuário"}
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {isMarcosTeixeira 
-                          ? `Defina uma nova senha para ${changingPasswordUser.name}`
-                          : `Envie um e-mail de redefinição para ${changingPasswordUser.name}`
-                        }
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setChangingPasswordUser(null)}
-                      className="text-slate-400 hover:bg-slate-200 p-2 rounded-lg transition-colors"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-                  
-                  <div className="p-6 space-y-6">
-                    {isMarcosTeixeira ? (
-                      <>
-                        {/* Option 1: Direct Password Change */}
-                        <form
-                          onSubmit={async (e) => {
-                            e.preventDefault();
-                            setPasswordError(null);
-                            if (!newPasswordValue || newPasswordValue.length < 6) {
-                              onToast("A senha deve ter pelo menos 6 caracteres.", "error");
-                              return;
-                            }
-                            
-                            setIsUpdatingPassword(true);
-                            try {
-                              const response = await fetch("/api/direct-pw-update", {
-                                method: "POST",
-                                headers: {
-                                  "Content-Type": "application/json"
-                                },
-                                body: JSON.stringify({
-                                  uid: changingPasswordUser.uid,
-                                  newPassword: newPasswordValue,
-                                  servidor: localStorage.getItem("servidor_selected") || "principal",
-                                  adminEmail: profile?.email
-                                })
-                              });
-                              
-                              const responseText = await response.text();
-                              let result;
-                              try {
-                                result = JSON.parse(responseText);
-                              } catch (parseErr) {
-                                console.error("Non-JSON response received:", responseText);
-                                const prefix = responseText ? responseText.substring(0, 120).trim() : "Vazio";
-                                throw new Error(
-                                  `O servidor retornou uma resposta inválida (HTML: "${prefix}..."). Isso geralmente ocorre se as credenciais administrativas para alteração direta não estiverem totalmente configuradas ou se o servidor de desenvolvimento estiver em processo de atualização. Por favor, utilize a opção "Enviar E-mail de Redefinição" abaixo, que é 100% nativa e funciona perfeitamente para ambos os servidores!`
-                                );
-                              }
-                              
-                              if (result.success) {
-                                onToast(`Senha de ${changingPasswordUser.name} alterada com sucesso!`, "success");
-                                setChangingPasswordUser(null);
-                              } else {
-                                setPasswordError(result.error);
-                                onToast(`Erro: ${result.error}`, "error");
-                              }
-                            } catch (err: any) {
-                              setPasswordError(err.message);
-                              onToast(`Erro ao alterar senha: ${err.message}`, "error");
-                            } finally {
-                              setIsUpdatingPassword(false);
-                            }
-                          }}
-                          className="space-y-4"
-                        >
-                          {passwordError && (
-                            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl space-y-1.5 leading-relaxed">
-                              <p className="font-semibold text-red-800">Erro ao alterar senha:</p>
-                              <p className="break-all">{passwordError}</p>
-                              {passwordError.includes("identitytoolkit") && (
-                                <div className="mt-2 pt-2 border-t border-red-100">
-                                  <p className="font-bold text-red-950">Ação Necessária:</p>
-                                  <p className="mt-1 text-red-800">
-                                    A API <strong>Google Identity Toolkit</strong> precisa ser ativada no seu projeto Google Cloud para permitir a alteração administrativa de senhas.
-                                  </p>
-                                  <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 mt-2.5">
-                                    <a
-                                      href="https://console.developers.google.com/apis/api/identitytoolkit.googleapis.com/overview?project=gestaopro-761e1"
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center justify-center space-x-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-[11px]"
-                                    >
-                                      <span>Ativar no Principal (gestaopro-761e1)</span>
-                                    </a>
-                                    <a
-                                      href="https://console.developers.google.com/apis/api/identitytoolkit.googleapis.com/overview?project=gestaodeleadspro-d4230"
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center justify-center space-x-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors text-[11px]"
-                                    >
-                                      <span>Ativar no Comercial (gestaodeleadspro-d4230)</span>
-                                    </a>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                              Nova Senha
-                            </label>
-                            <input
-                              type="text"
-                              required
-                              placeholder="Digite a nova senha (mínimo 6 caracteres)"
-                              value={newPasswordValue}
-                              onChange={(e) => setNewPasswordValue(e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                            />
-                          </div>
-                          
-                          <button
-                            type="submit"
-                            disabled={isUpdatingPassword}
-                            className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:bg-blue-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2 cursor-pointer"
-                          >
-                            {isUpdatingPassword ? (
-                              <span>Alterando...</span>
-                            ) : (
-                              <>
-                                <KeyRound size={16} />
-                                <span>Definir Nova Senha Diretamente</span>
-                              </>
-                            )}
-                          </button>
-                        </form>
-                        
-                        <div className="relative flex py-2 items-center">
-                          <div className="flex-grow border-t border-slate-100"></div>
-                          <span className="flex-shrink mx-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">ou</span>
-                          <div className="flex-grow border-t border-slate-100"></div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-2xl space-y-2 leading-relaxed">
-                        <p className="font-bold text-amber-900 flex items-center">
-                          <svg className="w-4.5 h-4.5 mr-2 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                          </svg>
-                          Recurso Restrito ao Admin Master
-                        </p>
-                        <p>
-                          Por motivos de segurança e integridade das contas, a <strong>alteração direta de senha administrativa</strong> é de uso exclusivo do Admin Master (<strong>marcos.teixeira@estacio.br</strong>).
-                        </p>
-                        <p>
-                          Como administrador, você pode disparar o fluxo de redefinição enviando um e-mail com link seguro para o endereço cadastrado do usuário no botão abaixo.
+          {changingPasswordUser &&
+            (() => {
+              const isMarcosTeixeira =
+                profile?.email === "marcos.teixeira@estacio.br";
+              return (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+                  >
+                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">
+                          {isMarcosTeixeira
+                            ? "Alterar Senha do Usuário"
+                            : "Redefinir Senha do Usuário"}
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {isMarcosTeixeira
+                            ? `Defina uma nova senha para ${changingPasswordUser.name}`
+                            : `Envie um e-mail de redefinição para ${changingPasswordUser.name}`}
                         </p>
                       </div>
-                    )}
-                    
-                    {/* Option 2: Email Password Reset */}
-                    <div className="space-y-3">
-                      <p className="text-xs text-slate-500 text-center">
-                        {isMarcosTeixeira 
-                          ? "Você também pode enviar um e-mail de redefinição para o endereço cadastrado do usuário."
-                          : "Envie um link seguro de redefinição para o endereço cadastrado do usuário."
-                        }
-                      </p>
                       <button
-                        type="button"
-                        onClick={async () => {
-                          if (window.confirm(`Deseja enviar um e-mail de redefinição de senha para ${changingPasswordUser.name} (${changingPasswordUser.email})?`)) {
-                            try {
-                              await sendPasswordResetEmail(auth, changingPasswordUser.email);
-                              onToast("E-mail de redefinição enviado com sucesso!", "success");
-                              setChangingPasswordUser(null);
-                            } catch (err: any) {
-                              onToast(`Erro ao enviar e-mail: ${err.message}`, "error");
-                            }
-                          }
-                        }}
-                        className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 py-2.5 rounded-xl font-bold transition-all text-xs text-center cursor-pointer"
+                        onClick={() => setChangingPasswordUser(null)}
+                        className="text-slate-400 hover:bg-slate-200 p-2 rounded-lg transition-colors"
                       >
-                        Enviar E-mail de Redefinição de Senha
+                        <X size={20} />
                       </button>
                     </div>
-                  </div>
-                </motion.div>
-              </div>
-            );
-          })()}
+
+                    <div className="p-6 space-y-6">
+                      {isMarcosTeixeira ? (
+                        <>
+                          {/* Option 1: Direct Password Change */}
+                          <form
+                            onSubmit={async (e) => {
+                              e.preventDefault();
+                              setPasswordError(null);
+                              if (
+                                !newPasswordValue ||
+                                newPasswordValue.length < 6
+                              ) {
+                                onToast(
+                                  "A senha deve ter pelo menos 6 caracteres.",
+                                  "error",
+                                );
+                                return;
+                              }
+
+                              setIsUpdatingPassword(true);
+                              try {
+                                const response = await fetch(
+                                  "/api/direct-pw-update",
+                                  {
+                                    method: "POST",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                      uid: changingPasswordUser.uid,
+                                      newPassword: newPasswordValue,
+                                      servidor:
+                                        localStorage.getItem(
+                                          "servidor_selected",
+                                        ) || "principal",
+                                      adminEmail: profile?.email,
+                                    }),
+                                  },
+                                );
+
+                                const responseText = await response.text();
+                                let result;
+                                try {
+                                  result = JSON.parse(responseText);
+                                } catch (parseErr) {
+                                  console.error(
+                                    "Non-JSON response received:",
+                                    responseText,
+                                  );
+                                  const prefix = responseText
+                                    ? responseText.substring(0, 120).trim()
+                                    : "Vazio";
+                                  throw new Error(
+                                    `O servidor retornou uma resposta inválida (HTML: "${prefix}..."). Isso geralmente ocorre se as credenciais administrativas para alteração direta não estiverem totalmente configuradas ou se o servidor de desenvolvimento estiver em processo de atualização. Por favor, utilize a opção "Enviar E-mail de Redefinição" abaixo, que é 100% nativa e funciona perfeitamente para ambos os servidores!`,
+                                  );
+                                }
+
+                                if (result.success) {
+                                  onToast(
+                                    `Senha de ${changingPasswordUser.name} alterada com sucesso!`,
+                                    "success",
+                                  );
+                                  setChangingPasswordUser(null);
+                                } else {
+                                  setPasswordError(result.error);
+                                  onToast(`Erro: ${result.error}`, "error");
+                                }
+                              } catch (err: any) {
+                                setPasswordError(err.message);
+                                onToast(
+                                  `Erro ao alterar senha: ${err.message}`,
+                                  "error",
+                                );
+                              } finally {
+                                setIsUpdatingPassword(false);
+                              }
+                            }}
+                            className="space-y-4"
+                          >
+                            {passwordError && (
+                              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl space-y-1.5 leading-relaxed">
+                                <p className="font-semibold text-red-800">
+                                  Erro ao alterar senha:
+                                </p>
+                                <p className="break-all">{passwordError}</p>
+                                {passwordError.includes("identitytoolkit") && (
+                                  <div className="mt-2 pt-2 border-t border-red-100">
+                                    <p className="font-bold text-red-950">
+                                      Ação Necessária:
+                                    </p>
+                                    <p className="mt-1 text-red-800">
+                                      A API{" "}
+                                      <strong>Google Identity Toolkit</strong>{" "}
+                                      precisa ser ativada no seu projeto Google
+                                      Cloud para permitir a alteração
+                                      administrativa de senhas.
+                                    </p>
+                                    <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 mt-2.5">
+                                      <a
+                                        href="https://console.developers.google.com/apis/api/identitytoolkit.googleapis.com/overview?project=gestaopro-761e1"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center justify-center space-x-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-[11px]"
+                                      >
+                                        <span>
+                                          Ativar no Principal (gestaopro-761e1)
+                                        </span>
+                                      </a>
+                                      <a
+                                        href="https://console.developers.google.com/apis/api/identitytoolkit.googleapis.com/overview?project=gestaodeleadspro-d4230"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center justify-center space-x-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors text-[11px]"
+                                      >
+                                        <span>
+                                          Ativar no Comercial
+                                          (gestaodeleadspro-d4230)
+                                        </span>
+                                      </a>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-500 mb-1.5">
+                                Nova Senha
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="Digite a nova senha (mínimo 6 caracteres)"
+                                value={newPasswordValue}
+                                onChange={(e) =>
+                                  setNewPasswordValue(e.target.value)
+                                }
+                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+
+                            <button
+                              type="submit"
+                              disabled={isUpdatingPassword}
+                              className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:bg-blue-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2 cursor-pointer"
+                            >
+                              {isUpdatingPassword ? (
+                                <span>Alterando...</span>
+                              ) : (
+                                <>
+                                  <KeyRound size={16} />
+                                  <span>Definir Nova Senha Diretamente</span>
+                                </>
+                              )}
+                            </button>
+                          </form>
+
+                          <div className="relative flex py-2 items-center">
+                            <div className="flex-grow border-t border-slate-100"></div>
+                            <span className="flex-shrink mx-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                              ou
+                            </span>
+                            <div className="flex-grow border-t border-slate-100"></div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-2xl space-y-2 leading-relaxed">
+                          <p className="font-bold text-amber-900 flex items-center">
+                            <svg
+                              className="w-4.5 h-4.5 mr-2 text-amber-600 flex-shrink-0"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2.5}
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                              />
+                            </svg>
+                            Recurso Restrito ao Admin Master
+                          </p>
+                          <p>
+                            Por motivos de segurança e integridade das contas, a{" "}
+                            <strong>
+                              alteração direta de senha administrativa
+                            </strong>{" "}
+                            é de uso exclusivo do Admin Master (
+                            <strong>marcos.teixeira@estacio.br</strong>).
+                          </p>
+                          <p>
+                            Como administrador, você pode disparar o fluxo de
+                            redefinição enviando um e-mail com link seguro para
+                            o endereço cadastrado do usuário no botão abaixo.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Option 2: Email Password Reset */}
+                      <div className="space-y-3">
+                        <p className="text-xs text-slate-500 text-center">
+                          {isMarcosTeixeira
+                            ? "Você também pode enviar um e-mail de redefinição para o endereço cadastrado do usuário."
+                            : "Envie um link seguro de redefinição para o endereço cadastrado do usuário."}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (
+                              window.confirm(
+                                `Deseja enviar um e-mail de redefinição de senha para ${changingPasswordUser.name} (${changingPasswordUser.email})?`,
+                              )
+                            ) {
+                              try {
+                                await sendPasswordResetEmail(
+                                  auth,
+                                  changingPasswordUser.email,
+                                );
+                                onToast(
+                                  "E-mail de redefinição enviado com sucesso!",
+                                  "success",
+                                );
+                                setChangingPasswordUser(null);
+                              } catch (err: any) {
+                                onToast(
+                                  `Erro ao enviar e-mail: ${err.message}`,
+                                  "error",
+                                );
+                              }
+                            }
+                          }}
+                          className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 py-2.5 rounded-xl font-bold transition-all text-xs text-center cursor-pointer"
+                        >
+                          Enviar E-mail de Redefinição de Senha
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              );
+            })()}
 
           {isAddingUser && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -19692,12 +20872,14 @@ function AdminView({
                               <span
                                 className={cn(
                                   getColorClass(
-                                    item.realizadoPresencial + item.realizadoSemipresencial,
+                                    item.realizadoPresencial +
+                                      item.realizadoSemipresencial,
                                     item.ytdPresencial + item.ytdSemipresencial,
                                   ),
                                 )}
                               >
-                                {item.realizadoPresencial + item.realizadoSemipresencial}
+                                {item.realizadoPresencial +
+                                  item.realizadoSemipresencial}
                               </span>
                             </td>
                             <td className="p-4 text-center">
@@ -19833,10 +21015,13 @@ function AdminView({
                                       realizadoDigital: item.realizadoDigital,
                                       aaTecnico: item.aaTecnico || 0,
                                       ytdTecnico: item.ytdTecnico || 0,
-                                      realizadoTecnico: item.realizadoTecnico || 0,
+                                      realizadoTecnico:
+                                        item.realizadoTecnico || 0,
                                       aaPosGraduacao: item.aaPosGraduacao || 0,
-                                      ytdPosGraduacao: item.ytdPosGraduacao || 0,
-                                      realizadoPosGraduacao: item.realizadoPosGraduacao || 0,
+                                      ytdPosGraduacao:
+                                        item.ytdPosGraduacao || 0,
+                                      realizadoPosGraduacao:
+                                        item.realizadoPosGraduacao || 0,
                                     });
                                     // Scroll to form smoothly
                                     window.scrollTo({
@@ -19908,10 +21093,10 @@ function AdminView({
                   onClick={() => {
                     setEditingQgLigacao(null);
                     setNewQgLigacao({
-        nome: "",
-        diaSemana: [],
-        horario: "",
-      });
+                      nome: "",
+                      diaSemana: [],
+                      horario: "",
+                    });
                   }}
                   className="text-sm font-bold text-slate-400 hover:text-slate-600 px-3 py-1 bg-slate-100 rounded-lg"
                 >
@@ -19938,30 +21123,49 @@ function AdminView({
                   />
                 </div>
                 <div>
-                  
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                     Dias da Semana
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"].map((dia) => (
-                      <label key={dia} className="flex items-center space-x-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors">
+                    {[
+                      "Segunda-feira",
+                      "Terça-feira",
+                      "Quarta-feira",
+                      "Quinta-feira",
+                      "Sexta-feira",
+                      "Sábado",
+                      "Domingo",
+                    ].map((dia) => (
+                      <label
+                        key={dia}
+                        className="flex items-center space-x-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
+                      >
                         <input
                           type="checkbox"
                           checked={newQgLigacao.diaSemana.includes(dia)}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setNewQgLigacao({ ...newQgLigacao, diaSemana: [...newQgLigacao.diaSemana, dia] });
+                              setNewQgLigacao({
+                                ...newQgLigacao,
+                                diaSemana: [...newQgLigacao.diaSemana, dia],
+                              });
                             } else {
-                              setNewQgLigacao({ ...newQgLigacao, diaSemana: newQgLigacao.diaSemana.filter(d => d !== dia) });
+                              setNewQgLigacao({
+                                ...newQgLigacao,
+                                diaSemana: newQgLigacao.diaSemana.filter(
+                                  (d) => d !== dia,
+                                ),
+                              });
                             }
                           }}
                           className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
                         />
-                        <span className="text-xs font-semibold text-slate-700">{dia}</span>
+                        <span className="text-xs font-semibold text-slate-700">
+                          {dia}
+                        </span>
                       </label>
                     ))}
                   </div>
-
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
@@ -19972,7 +21176,10 @@ function AdminView({
                     required
                     value={newQgLigacao.horario}
                     onChange={(e) =>
-                      setNewQgLigacao({ ...newQgLigacao, horario: e.target.value })
+                      setNewQgLigacao({
+                        ...newQgLigacao,
+                        horario: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
                   />
@@ -20011,23 +21218,41 @@ function AdminView({
                 <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
                   {qgLigacoes.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="p-8 text-center text-slate-400 italic">
+                      <td
+                        colSpan={4}
+                        className="p-8 text-center text-slate-400 italic"
+                      >
                         Nenhum registro cadastrado no QG Ligações.
                       </td>
                     </tr>
                   ) : (
                     [...qgLigacoes].map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
-                        <td className="p-4 font-bold text-slate-800">{item.nome}</td>
-                        <td className="p-4">{Array.isArray(item.diaSemana) ? item.diaSemana.join(", ") : item.diaSemana}</td>
-                        <td className="p-4 font-medium text-emerald-600">{item.horario}</td>
+                      <tr
+                        key={item.id}
+                        className="hover:bg-slate-50/30 transition-colors"
+                      >
+                        <td className="p-4 font-bold text-slate-800">
+                          {item.nome}
+                        </td>
+                        <td className="p-4">
+                          {Array.isArray(item.diaSemana)
+                            ? item.diaSemana.join(", ")
+                            : item.diaSemana}
+                        </td>
+                        <td className="p-4 font-medium text-emerald-600">
+                          {item.horario}
+                        </td>
                         <td className="p-4 text-center whitespace-nowrap">
                           <button
                             onClick={() => {
                               setEditingQgLigacao(item);
                               setNewQgLigacao({
                                 nome: item.nome,
-                                diaSemana: Array.isArray(item.diaSemana) ? item.diaSemana : (item.diaSemana ? [item.diaSemana] : []),
+                                diaSemana: Array.isArray(item.diaSemana)
+                                  ? item.diaSemana
+                                  : item.diaSemana
+                                    ? [item.diaSemana]
+                                    : [],
                                 horario: item.horario,
                               });
                               window.scrollTo({ top: 0, behavior: "smooth" });
@@ -20418,7 +21643,11 @@ function AdminView({
                         type="number"
                         required
                         value={
-                          (newBomDia[section.key as keyof typeof newBomDia] as any).insc
+                          (
+                            newBomDia[
+                              section.key as keyof typeof newBomDia
+                            ] as any
+                          ).insc
                         }
                         onChange={(e) => {
                           const val = Number(e.target.value);
@@ -20443,8 +21672,11 @@ function AdminView({
                         type="number"
                         required
                         value={
-                          (newBomDia[section.key as keyof typeof newBomDia] as any)
-                            .matFin
+                          (
+                            newBomDia[
+                              section.key as keyof typeof newBomDia
+                            ] as any
+                          ).matFin
                         }
                         onChange={(e) => {
                           const val = Number(e.target.value);
@@ -20469,8 +21701,11 @@ function AdminView({
                         type="number"
                         required
                         value={
-                          (newBomDia[section.key as keyof typeof newBomDia] as any)
-                            .matAcad
+                          (
+                            newBomDia[
+                              section.key as keyof typeof newBomDia
+                            ] as any
+                          ).matAcad
                         }
                         onChange={(e) => {
                           const val = Number(e.target.value);
@@ -20538,16 +21773,23 @@ function AdminView({
                     <button
                       onClick={async () => {
                         try {
-                          await updateDoc(doc(db, COLLECTIONS.BOM_DIA, card.id), {
-                            oculto: !card.oculto
-                          });
-                          onToast(`Card ${card.oculto ? "exibido" : "ocultado"} da rotina.`);
+                          await updateDoc(
+                            doc(db, COLLECTIONS.BOM_DIA, card.id),
+                            {
+                              oculto: !card.oculto,
+                            },
+                          );
+                          onToast(
+                            `Card ${card.oculto ? "exibido" : "ocultado"} da rotina.`,
+                          );
                         } catch (err) {
                           onToast("Erro ao alterar visibilidade.", "error");
                         }
                       }}
                       className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-all"
-                      title={card.oculto ? "Mostrar na Rotina" : "Ocultar da Rotina"}
+                      title={
+                        card.oculto ? "Mostrar na Rotina" : "Ocultar da Rotina"
+                      }
                     >
                       {card.oculto ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -20742,136 +21984,155 @@ function AdminView({
                   {[...forecast]
                     .sort((a, b) => a.nome.localeCompare(b.nome))
                     .map((f) => {
-                    const percYTD =
-                      f.metaDiaYTD > 0
-                        ? ((f.realizado / f.metaDiaYTD) * 100).toFixed(1)
-                        : "0";
-                    const percFech =
-                      f.metaFechamento > 0
-                        ? ((f.realizado / f.metaFechamento) * 100).toFixed(1)
-                        : "0";
-                    const gapFech = f.realizado - f.metaFechamento;
+                      const percYTD =
+                        f.metaDiaYTD > 0
+                          ? ((f.realizado / f.metaDiaYTD) * 100).toFixed(1)
+                          : "0";
+                      const percFech =
+                        f.metaFechamento > 0
+                          ? ((f.realizado / f.metaFechamento) * 100).toFixed(1)
+                          : "0";
+                      const gapFech = f.realizado - f.metaFechamento;
 
-                    const diasRestantes = getWorkingDaysRemaining(f.dataFim);
-                    const pacing =
-                      f.realizado >= f.metaFechamento
-                        ? "0"
-                        : (
-                            Math.abs(gapFech) / Math.max(1, diasRestantes)
-                          ).toFixed(1);
+                      const diasRestantes = getWorkingDaysRemaining(f.dataFim);
+                      const pacing =
+                        f.realizado >= f.metaFechamento
+                          ? "0"
+                          : (
+                              Math.abs(gapFech) / Math.max(1, diasRestantes)
+                            ).toFixed(1);
 
-                    return (
-                      <tr
-                        key={f.id}
-                        className="hover:bg-slate-50 transition-colors"
-                      >
-                        <td className="px-4 py-4 font-bold text-slate-900">
-                          {f.nome}
-                        </td>
-                        <td className="px-4 py-4 text-slate-500">
-                          {f.dataInicio
-                            .split("T")[0]
-                            .split("-")
-                            .reverse()
-                            .join("/")}{" "}
-                          -{" "}
-                          {f.dataFim
-                            .split("T")[0]
-                            .split("-")
-                            .reverse()
-                            .join("/")}
-                        </td>
-                        <td className="px-4 py-4 font-bold text-blue-600">
-                          {f.metaDiaYTD}
-                        </td>
-                        <td className="px-4 py-4 font-bold text-emerald-600">
-                          {f.realizado}
-                        </td>
-                        <td className="px-4 py-4">
-                          <span
-                            className={`px-2 py-1 rounded-full font-bold ${Number(percYTD) >= 100 ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}`}
-                          >
-                            {percYTD}%
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 font-bold text-slate-700">
-                          {f.metaFechamento}
-                        </td>
-                        <td className="px-4 py-4 font-bold text-blue-600">
-                          {percFech}%
-                        </td>
-                        <td
-                          className={`px-4 py-4 font-bold ${gapFech >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                      return (
+                        <tr
+                          key={f.id}
+                          className="hover:bg-slate-50 transition-colors"
                         >
-                          {gapFech}
-                        </td>
-                        <td className="px-4 py-4 font-bold text-slate-900">
-                          {pacing}/dia
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="flex items-center space-x-1">
-                            <button
-                              onClick={() => {
-                                setEditingForecast(f);
-                                setNewForecast({
-                                  nome: f.nome,
-                                  dataInicio: f.dataInicio,
-                                  dataFim: f.dataFim,
-                                  metaDiaYTD: f.metaDiaYTD,
-                                  realizado: f.realizado,
-                                  metaFechamento: f.metaFechamento,
-                                });
-                                window.scrollTo({ top: 0, behavior: "smooth" });
-                              }}
-                              className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                          <td className="px-4 py-4 font-bold text-slate-900">
+                            {f.nome}
+                          </td>
+                          <td className="px-4 py-4 text-slate-500">
+                            {f.dataInicio
+                              .split("T")[0]
+                              .split("-")
+                              .reverse()
+                              .join("/")}{" "}
+                            -{" "}
+                            {f.dataFim
+                              .split("T")[0]
+                              .split("-")
+                              .reverse()
+                              .join("/")}
+                          </td>
+                          <td className="px-4 py-4 font-bold text-blue-600">
+                            {f.metaDiaYTD}
+                          </td>
+                          <td className="px-4 py-4 font-bold text-emerald-600">
+                            {f.realizado}
+                          </td>
+                          <td className="px-4 py-4">
+                            <span
+                              className={`px-2 py-1 rounded-full font-bold ${Number(percYTD) >= 100 ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}`}
                             >
-                              <Edit2 size={16} />
-                            </button>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await updateDoc(doc(db, COLLECTIONS.FORECAST, f.id), {
-                                    oculto: !f.oculto
+                              {percYTD}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 font-bold text-slate-700">
+                            {f.metaFechamento}
+                          </td>
+                          <td className="px-4 py-4 font-bold text-blue-600">
+                            {percFech}%
+                          </td>
+                          <td
+                            className={`px-4 py-4 font-bold ${gapFech >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                          >
+                            {gapFech}
+                          </td>
+                          <td className="px-4 py-4 font-bold text-slate-900">
+                            {pacing}/dia
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={() => {
+                                  setEditingForecast(f);
+                                  setNewForecast({
+                                    nome: f.nome,
+                                    dataInicio: f.dataInicio,
+                                    dataFim: f.dataFim,
+                                    metaDiaYTD: f.metaDiaYTD,
+                                    realizado: f.realizado,
+                                    metaFechamento: f.metaFechamento,
                                   });
-                                  onToast(`Forecast ${f.oculto ? "exibido" : "ocultado"} da rotina.`);
-                                } catch (err) {
-                                  onToast("Erro ao alterar visibilidade.", "error");
-                                }
-                              }}
-                              className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-all"
-                              title={f.oculto ? "Mostrar na Rotina" : "Ocultar da Rotina"}
-                            >
-                              {f.oculto ? <EyeOff size={16} /> : <Eye size={16} />}
-                            </button>
-                            <button
-                              onClick={async () => {
-                                if (
-                                  window.confirm(
-                                    "Deseja excluir este forecast?",
-                                  )
-                                ) {
+                                  window.scrollTo({
+                                    top: 0,
+                                    behavior: "smooth",
+                                  });
+                                }}
+                                className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button
+                                onClick={async () => {
                                   try {
-                                    await deleteDoc(
+                                    await updateDoc(
                                       doc(db, COLLECTIONS.FORECAST, f.id),
+                                      {
+                                        oculto: !f.oculto,
+                                      },
                                     );
-                                    onToast("Forecast removido.");
-                                  } catch (err: any) {
                                     onToast(
-                                      "Erro ao excluir forecast.",
+                                      `Forecast ${f.oculto ? "exibido" : "ocultado"} da rotina.`,
+                                    );
+                                  } catch (err) {
+                                    onToast(
+                                      "Erro ao alterar visibilidade.",
                                       "error",
                                     );
                                   }
+                                }}
+                                className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-all"
+                                title={
+                                  f.oculto
+                                    ? "Mostrar na Rotina"
+                                    : "Ocultar da Rotina"
                                 }
-                              }}
-                              className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-all"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                              >
+                                {f.oculto ? (
+                                  <EyeOff size={16} />
+                                ) : (
+                                  <Eye size={16} />
+                                )}
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (
+                                    window.confirm(
+                                      "Deseja excluir este forecast?",
+                                    )
+                                  ) {
+                                    try {
+                                      await deleteDoc(
+                                        doc(db, COLLECTIONS.FORECAST, f.id),
+                                      );
+                                      onToast("Forecast removido.");
+                                    } catch (err: any) {
+                                      onToast(
+                                        "Erro ao excluir forecast.",
+                                        "error",
+                                      );
+                                    }
+                                  }
+                                }}
+                                className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-all"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
@@ -21360,7 +22621,9 @@ function AdminView({
                           },
                           { merge: true },
                         );
-                        onToast("Chave da API do OpenRouter atualizada com sucesso!");
+                        onToast(
+                          "Chave da API do OpenRouter atualizada com sucesso!",
+                        );
                       } catch (err: any) {
                         onToast(
                           `Erro ao salvar chave da API do OpenRouter: ${err.message}`,
@@ -21371,7 +22634,8 @@ function AdminView({
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
-                    Esta chave é a nova preferência para o processamento de IA (relatórios e insumos) através do OpenRouter.
+                    Esta chave é a nova preferência para o processamento de IA
+                    (relatórios e insumos) através do OpenRouter.
                   </p>
                 </div>
 
@@ -21406,7 +22670,9 @@ function AdminView({
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
-                    Insira a URL completa do endpoint de envio de mensagens do seu bot Telegram (ex: https://meu-bot.up.railway.app/api/enviar-aviso).
+                    Insira a URL completa do endpoint de envio de mensagens do
+                    seu bot Telegram (ex:
+                    https://meu-bot.up.railway.app/api/enviar-aviso).
                   </p>
                 </div>
 
@@ -21441,7 +22707,8 @@ function AdminView({
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
-                    A mesma senha configurada na variável de ambiente do seu bot Telegram no Railway.
+                    A mesma senha configurada na variável de ambiente do seu bot
+                    Telegram no Railway.
                   </p>
                 </div>
 
@@ -22218,8 +23485,8 @@ function AdminView({
       )}
 
       {activeTab === "funcionarios" && (
-        <AdminFuncionariosView 
-          onToast={onToast} 
+        <AdminFuncionariosView
+          onToast={onToast}
           uniqueUnidades={uniqueUnidades}
         />
       )}
@@ -22299,7 +23566,8 @@ export function ControlePagamentosView({
           empresa: "GR15",
           horas: 4,
         };
-        let statusPgt = (action.statusPagamentoPromotores?.[pUid] as string) || "Pendente";
+        let statusPgt =
+          (action.statusPagamentoPromotores?.[pUid] as string) || "Pendente";
         if (statusPgt === "Agendada") statusPgt = "Pendente";
 
         const diarias = getDiarias(action.dataInicio, action.dataFim);
@@ -22310,7 +23578,7 @@ export function ControlePagamentosView({
         else if (horasAtuadas === 6) valorDia = 90;
         else if (horasAtuadas === 8) valorDia = 100;
         else if (horasAtuadas === 10) valorDia = 150;
-        
+
         const custoTotal = diarias * valorDia;
 
         result.push({
