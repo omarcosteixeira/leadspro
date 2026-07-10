@@ -71,8 +71,7 @@ service cloud.firestore {
     function isValidCalendarioAcao(data) {
       return data.keys().hasAll(['nome', 'dataInicio', 'dataFim', 'unidade', 'creatorId']) &&
              data.nome is string && data.nome.size() <= 1000 &&
-             data.unidade is string &&
-             data.creatorId == request.auth.uid;
+             data.unidade is string;
     }
 
     function isValidEmpresa(data) {
