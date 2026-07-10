@@ -12,17 +12,16 @@ service cloud.firestore {
     
     function getUserData() {
       let path = /databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid);
-      return exists(path) ? get(path).data : {"role": "none", "unidade": "none"};
+      return exists(path) ? get(path).data : {};
     }
     
     function isMasterUser() {
-      let path = /databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid);
-      let userDoc = exists(path) ? get(path).data : {"email": "none", "role": "none"};
+      let userDoc = getUserData();
       return isAuthenticated() && (
-        request.auth.token.email in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"] || 
-        userDoc.email in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"] ||
-        userDoc.role == "Admin Master" || 
-        userDoc.role == "Líder/FDV"
+        ("email" in request.auth.token && request.auth.token.email in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"]) || 
+        userDoc.get("email", "") in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"] ||
+        userDoc.get("role", "") == "Admin Master" || 
+        userDoc.get("role", "") == "Líder/FDV"
       );
     }
     
@@ -30,7 +29,7 @@ service cloud.firestore {
       let data = getUserData();
       return isAuthenticated() && (
         isMasterUser() ||
-        data.role in roles
+        data.get("role", "") in roles
       );
     }
     
@@ -55,13 +54,13 @@ service cloud.firestore {
 
     function canAccessUnit(unidade) {
       let data = getUserData();
-      return isMasterUser() || !isRestrictedRole(data.role) || (unidade == data.unidade);
+      return isMasterUser() || !isRestrictedRole(data.get("role", "")) || (unidade == data.get("unidade", ""));
     }
 
     // Helper for Requirement: FDV can see linked promotores data
     function isLinkedToMe(otherUserUid) {
       let otherUserData = get(/databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(otherUserUid)).data;
-      return otherUserData.linkadoA == request.auth.uid;
+      return otherUserData.get("linkadoA", "") == request.auth.uid;
     }
 
     // Validation Helpers
@@ -114,15 +113,17 @@ service cloud.firestore {
     // ===============================================================
 
     match /artifacts/gestaodeleadspro-d4230/public/data/users/{userId} {
-      allow get: if isAuthenticated() && (userId == request.auth.uid || isMasterUser() || isComercial() || canAccessUnit(resource.data.unidade));
+      allow get: if isAuthenticated() && (userId == request.auth.uid || isMasterUser() || isComercial() || canAccessUnit(resource.data.get("unidade", "")));
       allow list: if isAuthenticated() && (
         isMasterUser() || 
         isComercial() || isSalaMatricula() || 
-        (isGestorUnidade() && resource.data.unidade == getUserData().unidade && resource.data.role in ['FDV', 'FDV (Comercial)', 'Promotor', 'Promotor/rua']) ||
-        (isFDV() && (resource.data.unidade == getUserData().unidade || resource.data.linkadoA == request.auth.uid || resource.data.uid == request.auth.uid))
+        ("email" in request.auth.token && resource.data.email == request.auth.token.email) ||
+        resource.data.uid == request.auth.uid ||
+        (isGestorUnidade() && resource.data.unidade == getUserData().get("unidade", "") && resource.data.role in ['FDV', 'FDV (Comercial)', 'Promotor', 'Promotor/rua']) ||
+        (isFDV() && (resource.data.unidade == getUserData().get("unidade", "") || resource.data.get("linkadoA", "") == request.auth.uid || resource.data.uid == request.auth.uid))
       );
       allow create: if isAuthenticated() && isValidUser(request.resource.data) && (userId == request.auth.uid || isMasterUser() || isLider() || isGestorComercial());
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isMasterUser() || isLider() || isGestorComercial() || (userId == request.auth.uid && request.resource.data.role == resource.data.role && request.resource.data.unidade == resource.data.unidade));
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isMasterUser() || isLider() || isGestorComercial() || (userId == request.auth.uid && request.resource.data.role == resource.data.get("role", "") && request.resource.data.unidade == resource.data.get("unidade", "")));
       allow delete: if isMasterUser() || isLider() || isGestorComercial();
     }
 
