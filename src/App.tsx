@@ -95,7 +95,6 @@ import {
   Smartphone,
   Chrome,
   BarChart3,
-  List,
   Eye,
   EyeOff,
   UserMinus,
@@ -4317,6 +4316,7 @@ export default function App() {
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
         profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        profile.role !== ROLES.LIDER_FDV &&
         !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
           user?.email || "",
         );
@@ -4376,6 +4376,7 @@ export default function App() {
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
         profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        profile.role !== ROLES.LIDER_FDV &&
         !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
           user?.email || "",
         );
@@ -4459,6 +4460,7 @@ export default function App() {
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
         profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        profile.role !== ROLES.LIDER_FDV &&
         !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
           user?.email || "",
         );
@@ -4489,6 +4491,7 @@ export default function App() {
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
         profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        profile.role !== ROLES.LIDER_FDV &&
         !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
           user?.email || "",
         );
@@ -4516,6 +4519,7 @@ export default function App() {
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
         profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        profile.role !== ROLES.LIDER_FDV &&
         !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
           user?.email || "",
         );
@@ -4550,6 +4554,7 @@ export default function App() {
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
         profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        profile.role !== ROLES.LIDER_FDV &&
         !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
           user?.email || "",
         );
@@ -4587,6 +4592,7 @@ export default function App() {
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
         profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        profile.role !== ROLES.LIDER_FDV &&
         !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
           user?.email || "",
         );
@@ -4737,6 +4743,7 @@ export default function App() {
         profile.role !== ROLES.ADMIN_MASTER &&
         profile.role !== ROLES.GESTOR_COMERCIAL &&
         profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
+        profile.role !== ROLES.LIDER_FDV &&
         !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
           user?.email || "",
         );
@@ -13887,6 +13894,8 @@ function CalendarioAcoesView({
   const [statusFilter, setStatusFilter] = useState<
     "all" | "Não iniciada" | "Em andamento" | "Concluído" | "Cancelado"
   >("all");
+  const [colaboradorFilter, setColaboradorFilter] = useState("all");
+  const [unidadeFilter, setUnidadeFilter] = useState("all");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
   const [isAdding, setIsAdding] = useState(false);
@@ -14030,6 +14039,15 @@ function CalendarioAcoesView({
       statusFilter === "all"
         ? true
         : statusFilter === itemStatus;
+
+    const matchesColaborador =
+      colaboradorFilter === "all" ||
+      item.colaboradorId === colaboradorFilter ||
+      (item.colaboradoresIds && item.colaboradoresIds.includes(colaboradorFilter));
+
+    const matchesUnidade =
+      unidadeFilter === "all" || item.unidade === unidadeFilter;
+
     let matchesDate = true;
     if (startDateFilter && endDateFilter) {
       matchesDate =
@@ -14039,18 +14057,20 @@ function CalendarioAcoesView({
     } else if (endDateFilter) {
       matchesDate = item.dataInicio <= endDateFilter;
     }
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus && matchesDate && matchesColaborador && matchesUnidade;
   });
 
   const stats = useMemo(() => {
-    const total = data.length;
-    const completed = data.filter((a) => a.concluida).length;
+    const total = filteredData.length;
+    const completed = filteredData.filter((a) => a.concluida).length;
     const pending = total - completed;
     const totalLeads = leads.length;
+    const totalLeadsFeitos = filteredData.reduce((acc, a) => acc + (Number(a.leadsFeitos) || 0), 0);
+    const totalBoletosFeitos = filteredData.reduce((acc, a) => acc + (Number(a.boletosFeitos) || 0), 0);
     const completionRate = total > 0 ? ((completed / total) * 100).toFixed(1) : "0";
 
     const byType: Record<string, number> = {};
-    data.forEach((a) => {
+    filteredData.forEach((a) => {
       const t = a.tipoAtividade || "Ação";
       byType[t] = (byType[t] || 0) + 1;
     });
@@ -14065,6 +14085,8 @@ function CalendarioAcoesView({
       completed, 
       pending, 
       totalLeads, 
+      totalLeadsFeitos,
+      totalBoletosFeitos,
       completionRate,
       byType: Object.entries(byType).map(([name, count]) => ({
         name,
@@ -14076,7 +14098,7 @@ function CalendarioAcoesView({
         percentage: total > 0 ? ((s.count / total) * 100).toFixed(1) : "0"
       }))
     };
-  }, [data, leads]);
+  }, [filteredData, leads]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -14389,7 +14411,7 @@ function CalendarioAcoesView({
 
       {acoesSubTab === "dashboard" && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             <StatCard
               title="Total de Ações"
               value={stats.total}
@@ -14413,6 +14435,18 @@ function CalendarioAcoesView({
               value={stats.totalLeads}
               icon={Users}
               color="bg-purple-500"
+            />
+            <StatCard
+              title="Leads Gerados"
+              value={stats.totalLeadsFeitos}
+              icon={UserPlus}
+              color="bg-indigo-500"
+            />
+            <StatCard
+              title="Boletos Gerados"
+              value={stats.totalBoletosFeitos}
+              icon={FileText}
+              color="bg-rose-500"
             />
           </div>
 
@@ -14541,7 +14575,7 @@ function CalendarioAcoesView({
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <div>
           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
             Pesquisar
@@ -14559,6 +14593,36 @@ function CalendarioAcoesView({
               className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
             />
           </div>
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+            FDV Comercial
+          </label>
+          <select
+            value={colaboradorFilter}
+            onChange={(e) => setColaboradorFilter(e.target.value)}
+            className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+          >
+            <option value="all">Todos os FDVs</option>
+            {colaboradoresDisponiveis.map(u => (
+              <option key={u.uid} value={u.uid}>{u.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+            Unidade
+          </label>
+          <select
+            value={unidadeFilter}
+            onChange={(e) => setUnidadeFilter(e.target.value)}
+            className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+          >
+            <option value="all">Todas as Unidades</option>
+            {Array.from(new Set((users || []).map(u => u.unidade).filter(Boolean))).sort().map(u => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
@@ -16265,6 +16329,92 @@ function EmpresasParceirasView({
         </button>
       </div>
 
+      {(activeTab === "lista" || activeTab === "mapa") && (
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-4 my-6">
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Buscar por nome da empresa ou CNPJ..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+              >
+                <option value="Todas">Todos</option>
+                <option value="Conveniada">Conveniada</option>
+                <option value="Em tratativa">Em Tratativa</option>
+                <option value="Cancelada">Cancelada</option>
+                <option value="Não visitada">Não Visitada</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Classificação
+              </label>
+              <select
+                value={classificacaoFilter}
+                onChange={(e) => setClassificacaoFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+              >
+                <option value="Todas">Todas</option>
+                <option value="Ouro">Ouro</option>
+                <option value="Prata">Prata</option>
+                <option value="Bronze">Bronze</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Unidade Vinculada
+              </label>
+              <select
+                value={unidadeFilter}
+                onChange={(e) => setUnidadeFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+              >
+                <option value="Todas">Todas</option>
+                {uniqueUnidades.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Seguimento
+              </label>
+              <select
+                value={seguimentoFilter}
+                onChange={(e) => setSeguimentoFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+              >
+                <option value="Todos">Todos</option>
+                {uniqueSeguimentos.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === "lista" && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
@@ -16343,90 +16493,6 @@ function EmpresasParceirasView({
                     {classBronze}
                   </span>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-            <div className="relative">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                size={18}
-              />
-              <input
-                type="text"
-                placeholder="Buscar por nome da empresa ou CNPJ..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Status
-                </label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
-                >
-                  <option value="Todas">Todos</option>
-                  <option value="Conveniada">Conveniada</option>
-                  <option value="Em tratativa">Em Tratativa</option>
-                  <option value="Cancelada">Cancelada</option>
-                  <option value="Não visitada">Não Visitada</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Classificação
-                </label>
-                <select
-                  value={classificacaoFilter}
-                  onChange={(e) => setClassificacaoFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
-                >
-                  <option value="Todas">Todas</option>
-                  <option value="Ouro">Ouro</option>
-                  <option value="Prata">Prata</option>
-                  <option value="Bronze">Bronze</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Unidade Vinculada
-                </label>
-                <select
-                  value={unidadeFilter}
-                  onChange={(e) => setUnidadeFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
-                >
-                  <option value="Todas">Todas</option>
-                  {uniqueUnidades.map((u) => (
-                    <option key={u} value={u}>
-                      {u}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Seguimento
-                </label>
-                <select
-                  value={seguimentoFilter}
-                  onChange={(e) => setSeguimentoFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
-                >
-                  <option value="Todos">Todos</option>
-                  {uniqueSeguimentos.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
           </div>
@@ -16895,7 +16961,7 @@ function EmpresasParceirasView({
       {/* Mapa das Empresas View */}
       {activeTab === "mapa" && (
         <Mapa3D
-          empresas={data}
+          empresas={filteredData}
           leads={leads}
           acoes={acoes}
           selectedId={selectedMapEmpresaId}

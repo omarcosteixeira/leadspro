@@ -230,32 +230,54 @@ export function RelatoriosView({
   const [planoDataInicio, setPlanoDataInicio] = useState("");
   const [planoDataFim, setPlanoDataFim] = useState("");
   const [planoFiltroFdv, setPlanoFiltroFdv] = useState("");
+  const [planoFiltroUnidade, setPlanoFiltroUnidade] = useState("");
 
   const filteredCalendarioAcoes = useMemo(() => {
     return filteredPlanoAcoes.filter((a) => {
       if (planoDataInicio && a.dataInicio < planoDataInicio) return false;
       if (planoDataFim && a.dataInicio > planoDataFim) return false;
+      if (planoFiltroUnidade && a.unidade !== planoFiltroUnidade) return false;
       if (planoFiltroFdv) {
         const nomes = a.colaboradoresNomes?.length ? a.colaboradoresNomes : (a.colaboradorNome ? [a.colaboradorNome] : []);
         if (!nomes.includes(planoFiltroFdv)) return false;
       }
       return true;
     });
-  }, [filteredPlanoAcoes, planoDataInicio, planoDataFim, planoFiltroFdv]);
+  }, [filteredPlanoAcoes, planoDataInicio, planoDataFim, planoFiltroFdv, planoFiltroUnidade]);
 
   const planoStats = useMemo(() => {
     const total = filteredCalendarioAcoes.length;
     const concluida = filteredCalendarioAcoes.filter(a => a.concluida).length;
     const pendente = total - concluida;
     
+    let totalLeadsFeitos = 0;
+    let totalBoletosFeitos = 0;
+
     const typeGroups: Record<string, number> = {};
     filteredCalendarioAcoes.forEach(a => {
       const t = a.nome.split(" ")[0] || "Outros"; // Simple heuristic for type
       typeGroups[t] = (typeGroups[t] || 0) + 1;
+      totalLeadsFeitos += (Number(a.leadsFeitos) || 0);
+      totalBoletosFeitos += (Number(a.boletosFeitos) || 0);
     });
 
-    return { total, concluida, pendente, byType: Object.entries(typeGroups).map(([name, count]) => ({ name, count, percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0" })).sort((a,b) => b.count - a.count).slice(0, 5) };
+    return { 
+      total, 
+      concluida, 
+      pendente, 
+      totalLeadsFeitos,
+      totalBoletosFeitos,
+      byType: Object.entries(typeGroups).map(([name, count]) => ({ name, count, percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0" })).sort((a,b) => b.count - a.count).slice(0, 5) 
+    };
   }, [filteredCalendarioAcoes]);
+
+  const uniqueUnidades = useMemo(() => {
+    const units = new Set<string>();
+    calendarioAcoes.forEach(a => {
+      if (a.unidade) units.add(a.unidade);
+    });
+    return Array.from(units).sort();
+  }, [calendarioAcoes]);
 
   const fdvsComercialUnicos = useMemo(() => {
     const fdvs = new Set<string>();
@@ -563,16 +585,25 @@ export function RelatoriosView({
 
         {activeTab === "planoAcao" && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-xl border border-slate-200">
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-slate-500 mb-1">Data Início (a partir de)</label>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-slate-200">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Data Início</label>
                 <input type="date" value={planoDataInicio} onChange={e => setPlanoDataInicio(e.target.value)} className="w-full text-sm border-slate-200 rounded-lg p-2" />
               </div>
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-slate-500 mb-1">Data Fim (até)</label>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Data Fim</label>
                 <input type="date" value={planoDataFim} onChange={e => setPlanoDataFim(e.target.value)} className="w-full text-sm border-slate-200 rounded-lg p-2" />
               </div>
-              <div className="flex-1">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Unidade</label>
+                <select value={planoFiltroUnidade} onChange={e => setPlanoFiltroUnidade(e.target.value)} className="w-full text-sm border-slate-200 rounded-lg p-2">
+                  <option value="">Todas</option>
+                  {uniqueUnidades.map(u => (
+                    <option key={u} value={u}>{u}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">FDV Comercial</label>
                 <select value={planoFiltroFdv} onChange={e => setPlanoFiltroFdv(e.target.value)} className="w-full text-sm border-slate-200 rounded-lg p-2">
                   <option value="">Todos</option>
@@ -583,10 +614,12 @@ export function RelatoriosView({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
               <StatCard title="Total de Ações" value={planoStats.total} icon={Calendar} color="bg-blue-500" />
               <StatCard title="Concluídas" value={planoStats.concluida} icon={CheckCircle2} color="bg-emerald-500" />
               <StatCard title="Pendentes" value={planoStats.pendente} icon={Clock} color="bg-amber-500" />
+              <StatCard title="Leads Gerados" value={planoStats.totalLeadsFeitos} icon={Users} color="bg-indigo-500" />
+              <StatCard title="Boletos Gerados" value={planoStats.totalBoletosFeitos} icon={FileText} color="bg-purple-500" />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ChartSection title="Tipos de Ação" data={planoStats.byType} />
