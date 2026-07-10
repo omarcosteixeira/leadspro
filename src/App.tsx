@@ -217,6 +217,27 @@ const exportToExcel = (data: any[], fileName: string) => {
   XLSX.writeFile(workbook, `${fileName}.xlsx`);
 };
 
+const exportToCSV = (data: any[], fileName: string) => {
+  if (data.length === 0) return;
+  const headers = Object.keys(data[0]);
+  const csvContent = [
+    headers.join(","),
+    ...data.map((row) =>
+      headers.map((header) => JSON.stringify(row[header])).join(","),
+    ),
+  ].join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute("download", `${fileName}.csv`);
+  link.style.visibility = "hidden";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 const importFromExcel = (file: File, callback: (data: any[]) => void) => {
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -3616,6 +3637,11 @@ export default function App() {
   const [basesDisparo, setBasesDisparo] = useState<BaseDisparoEntry[]>([]);
   const [basesRenovacao, setBasesRenovacao] = useState<BaseEntry[]>([]);
   const [cursos, setCursos] = useState<CursoDisponivel[]>([]);
+  const uniqueUnidades = useMemo(() => {
+    return Array.from(
+      new Set((cursos || []).map((c) => c.nomeUnidade).filter(Boolean)),
+    ).sort();
+  }, [cursos]);
   const [pedidosCursos, setPedidosCursos] = useState<PedidoCursoEntry[]>([]);
   const [insumosPedidos, setInsumosPedidos] = useState<InsumoPedido[]>([]);
   const [insumosEstoque, setInsumosEstoque] = useState<InsumoEstoque[]>([]);
@@ -5751,6 +5777,7 @@ export default function App() {
                   onToast={showToast}
                   profile={profile!}
                   calendarioAcoes={calendarioAcoes}
+                  uniqueUnidades={uniqueUnidades}
                 />
               )}
               {currentView === "historico" && (
@@ -5900,6 +5927,7 @@ export default function App() {
                   users={users}
                   onSendWhatsApp={sendAppWhatsApp}
                   botConfig={botConfig}
+                  uniqueUnidades={uniqueUnidades}
                   onGenerateAction={(empresa) => {
                     setInitialActionData({
                       nome: `Ação na empresa ${empresa.nome}`,
@@ -5942,6 +5970,7 @@ export default function App() {
                       metaDia={metaDia}
                       qgLigacoes={qgLigacoes}
                       cursos={cursos}
+                      uniqueUnidades={uniqueUnidades}
                     />
                   )}
             </motion.div>
@@ -8180,16 +8209,19 @@ function CadastroView({
   onToast,
   profile,
   calendarioAcoes = [],
+  uniqueUnidades = [],
 }: {
   onToast: (m: string, t?: "success" | "error") => void;
   profile: UserProfile;
   calendarioAcoes?: CalendarioAcao[];
+  uniqueUnidades?: string[];
 }) {
   const [formData, setFormData] = useState({
     acao: "",
     acaoId: "",
     nome: "",
     telefone: "",
+    email: "",
     cpf: "",
     cursoInteresse: "",
   });
@@ -8202,6 +8234,7 @@ function CadastroView({
     dataNascimento: "",
     phone: "",
     chavePix: "",
+    unidade: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -8281,6 +8314,7 @@ function CadastroView({
         acaoId: "",
         nome: "",
         telefone: "",
+        email: "",
         cpf: "",
         cursoInteresse: "",
       });
@@ -8334,6 +8368,7 @@ function CadastroView({
         role: ROLES.PROMOTOR_RUA, // 'Promotor/rua'
         servidor: "comercial", // specified for commercial
         phone: cleanPhone,
+        unidade: promotorData.unidade,
         chavePix: promotorData.chavePix,
         blocked: false,
         mustChangePassword: true,
@@ -8359,6 +8394,7 @@ function CadastroView({
         dataNascimento: "",
         phone: "",
         chavePix: "",
+        unidade: "",
       });
       setActiveForm("lead");
     } catch (err: any) {
@@ -8528,6 +8564,20 @@ function CadastroView({
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">
+                    E-mail (Opcional)
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="exemplo@gmail.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
                     CPF (Opcional)
                   </label>
                   <input
@@ -8670,6 +8720,26 @@ function CadastroView({
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">
+                    Unidade *
+                  </label>
+                  <select
+                    required
+                    value={promotorData.unidade}
+                    onChange={(e) =>
+                      setPromotorData({ ...promotorData, unidade: e.target.value })
+                    }
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm bg-white"
+                  >
+                    <option value="">Selecione uma unidade</option>
+                    {uniqueUnidades.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
                     Chave PIX (Opcional)
                   </label>
                   <input
@@ -8755,6 +8825,7 @@ function HistoricoView({
   const [editFormData, setEditFormData] = useState({
     nome: "",
     telefone: "",
+    email: "",
     cpf: "",
     cursoInteresse: "",
     acao: "",
@@ -9088,6 +9159,7 @@ function HistoricoView({
       Nome: l.nome,
       Telefone: l.telefone,
       CPF: l.cpf || "",
+      Email: l.email || "",
       Curso: l.cursoInteresse || "",
       Acao: l.acao,
       Promotor: l.promotorName,
@@ -9099,11 +9171,31 @@ function HistoricoView({
     exportToExcel(data, "Historico_Leads");
   };
 
+  const handleExportMalaDireta = () => {
+    const data = filteredLeads.map((l) => ({
+      Nome: l.nome,
+      Email: l.email || "",
+    }));
+    exportToExcel(data, "Mala_Direta_Leads");
+  };
+
+  const handleExportSMS = () => {
+    const data = filteredLeads.map((l) => {
+      let tel = l.telefone.replace(/\D/g, "");
+      if (tel.length > 0 && !tel.startsWith("55")) {
+        tel = "55" + tel;
+      }
+      return { Telefone: tel };
+    });
+    exportToCSV(data, "SMS_Leads");
+  };
+
   const handleEditClick = (lead: Lead) => {
     setEditingLead(lead);
     setEditFormData({
       nome: lead.nome,
       telefone: lead.telefone,
+      email: lead.email || "",
       cpf: lead.cpf || "",
       cursoInteresse: lead.cursoInteresse || "",
       acao: lead.acao,
@@ -9421,7 +9513,21 @@ function HistoricoView({
             className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold"
           >
             <Download size={18} />
-            <span>Exportar</span>
+            <span>Exportar Excel</span>
+          </button>
+          <button
+            onClick={handleExportMalaDireta}
+            className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold shadow-sm"
+          >
+            <Mail size={18} />
+            <span>Mala Direta</span>
+          </button>
+          <button
+            onClick={handleExportSMS}
+            className="bg-orange-50 text-orange-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-orange-100 transition-all text-sm font-bold shadow-sm"
+          >
+            <MessageSquare size={18} />
+            <span>SMS (CSV)</span>
           </button>
         </div>
       </div>
@@ -9864,6 +9970,20 @@ function HistoricoView({
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">
+                    E-mail (Opcional)
+                  </label>
+                  <input
+                    type="email"
+                    value={editFormData.email}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, email: e.target.value })
+                    }
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="exemplo@gmail.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
                     CPF
                   </label>
                   <input
@@ -10029,6 +10149,7 @@ function BasesView({
     nomeBase: "",
     nome: "",
     telefone: "",
+    email: "",
     cpf: "",
     curso: "",
     produto: "Graduação" as "Graduação" | "Técnico" | "Pós-graduação",
@@ -10283,6 +10404,7 @@ function BasesView({
         nomeBase: "",
         nome: "",
         telefone: "",
+        email: "",
         cpf: "",
         curso: "",
         produto: "Graduação",
@@ -10446,6 +10568,7 @@ function BasesView({
     const data = filteredBases.map((b) => ({
       Nome: b.nome,
       Telefone: b.telefone,
+      Email: b.email || "",
       CPF: b.cpf || "",
       Curso: b.curso,
       Produto: b.produto || "Graduação",
@@ -10457,8 +10580,30 @@ function BasesView({
       "Nº Matrícula": b.numeroMatricula || "",
       Base: b.nomeBase,
       Status: b.status,
+      Data: b.createdAt?.seconds
+        ? new Date(b.createdAt.seconds * 1000).toLocaleDateString()
+        : "",
     }));
-    exportToExcel(data, "Bases_Trabalho");
+    exportToExcel(data, "Base_Candidatos");
+  };
+
+  const handleExportMalaDireta = () => {
+    const data = filteredBases.map((b) => ({
+      Nome: b.nome,
+      Email: b.email || "",
+    }));
+    exportToExcel(data, "Mala_Direta_Bases");
+  };
+
+  const handleExportSMS = () => {
+    const data = filteredBases.map((b) => {
+      let tel = b.telefone.replace(/\D/g, "");
+      if (tel.length > 0 && !tel.startsWith("55")) {
+        tel = "55" + tel;
+      }
+      return { Telefone: tel };
+    });
+    exportToCSV(data, "SMS_Bases");
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -10610,7 +10755,21 @@ function BasesView({
             className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-slate-200 transition-all text-sm font-bold shadow-sm"
           >
             <Download size={18} />
-            <span>Exportar</span>
+            <span>Exportar Excel</span>
+          </button>
+          <button
+            onClick={handleExportMalaDireta}
+            className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-emerald-100 transition-all text-sm font-bold shadow-sm"
+          >
+            <Mail size={18} />
+            <span>Mala Direta</span>
+          </button>
+          <button
+            onClick={handleExportSMS}
+            className="bg-orange-50 text-orange-600 px-4 py-2 rounded-xl flex items-center space-x-2 hover:bg-orange-100 transition-all text-sm font-bold shadow-sm"
+          >
+            <MessageSquare size={18} />
+            <span>SMS (CSV)</span>
           </button>
         </div>
       </div>
@@ -10883,6 +11042,15 @@ function BasesView({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <input
+                  placeholder="Email (Opcional)"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <input
                   placeholder="CPF"
                   value={formData.cpf}
                   onChange={(e) =>
@@ -10890,6 +11058,8 @@ function BasesView({
                   }
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <input
                   placeholder="N° Oportunidade"
                   required
@@ -11334,6 +11504,21 @@ function BasesView({
                       })
                     }
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    E-mail (Opcional)
+                  </label>
+                  <input
+                    type="email"
+                    value={editFormData.email}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, email: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                    placeholder="exemplo@gmail.com"
                   />
                 </div>
 
@@ -15750,6 +15935,7 @@ function EmpresasParceirasView({
   users = [],
   onSendWhatsApp,
   botConfig,
+  uniqueUnidades = [],
 }: {
   data: EmpresaParceira[];
   leads?: Lead[];
@@ -15760,6 +15946,7 @@ function EmpresasParceirasView({
   users?: UserProfile[];
   onSendWhatsApp?: (phone: string, message: string) => Promise<void>;
   botConfig?: BotConfig;
+  uniqueUnidades?: string[];
 }) {
   const sendTelegramNotification = async (telegramHandleOrId: string, message: string) => {
     if (!telegramHandleOrId) return;
@@ -15820,12 +16007,6 @@ function EmpresasParceirasView({
   // Active Tab: list vs tratativas report vs map
   const [activeTab, setActiveTab] = useState<"lista" | "tratativas" | "mapa">("lista");
   const [viewFormat, setViewFormat] = useState<"card" | "list">("card");
-
-  const uniqueUnidades = useMemo(() => {
-    return Array.from(
-      new Set((cursos || []).map((c) => c.nomeUnidade).filter(Boolean)),
-    );
-  }, [cursos]);
 
   const uniqueSeguimentos = useMemo(() => {
     return Array.from(
@@ -17616,6 +17797,7 @@ function AdminView({
   metaDia,
   qgLigacoes,
   cursos,
+  uniqueUnidades = [],
 }: {
   profile: UserProfile | null;
   users: UserProfile[];
@@ -17632,6 +17814,7 @@ function AdminView({
   whatsappMessages: WhatsAppMessage[];
   empresasParceiras: EmpresaParceira[];
   botConfig: BotConfig;
+  uniqueUnidades?: string[];
   botStatuses: Record<
     string,
     {
@@ -18230,12 +18413,6 @@ function AdminView({
     a.click();
     onToast("Backup gerado com sucesso!");
   };
-
-  const uniqueUnidades = useMemo(() => {
-    return Array.from(
-      new Set((cursos || []).map((c) => c.nomeUnidade).filter(Boolean)),
-    ).sort();
-  }, [cursos]);
 
   return (
     <div className="space-y-8 pb-12">
