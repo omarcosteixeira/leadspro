@@ -15721,6 +15721,7 @@ function EmpresasParceirasView({
 
   // Active Tab: list vs tratativas report vs map
   const [activeTab, setActiveTab] = useState<"lista" | "tratativas" | "mapa">("lista");
+  const [viewFormat, setViewFormat] = useState<"card" | "list">("card");
 
   const uniqueUnidades = useMemo(() => {
     return Array.from(
@@ -16162,7 +16163,33 @@ function EmpresasParceirasView({
             </p>
           </div>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-2">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl mr-2">
+            <button
+              onClick={() => setViewFormat("card")}
+              className={cn(
+                "p-2 rounded-lg transition-all",
+                viewFormat === "card"
+                  ? "bg-white shadow-sm text-blue-600"
+                  : "text-slate-400 hover:text-slate-600"
+              )}
+              title="Formato de Cards"
+            >
+              <LayoutGrid size={18} />
+            </button>
+            <button
+              onClick={() => setViewFormat("list")}
+              className={cn(
+                "p-2 rounded-lg transition-all",
+                viewFormat === "list"
+                  ? "bg-white shadow-sm text-blue-600"
+                  : "text-slate-400 hover:text-slate-600"
+              )}
+              title="Formato de Lista"
+            >
+              <List size={18} />
+            </button>
+          </div>
           <button
             onClick={() => {
               setEditingEmpresa(null);
@@ -16456,239 +16483,412 @@ function EmpresasParceirasView({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredData.map((emp) => {
-              const isSelected = selectedEmpresaIds.includes(emp.id);
-              const alertInfo = getTratativaAlert(emp);
-              return (
-                <div
-                  key={emp.id}
-                  className={cn(
-                    "bg-white p-6 pl-12 rounded-3xl shadow-sm border flex flex-col justify-between hover:border-blue-200 transition-all group relative",
-                    isSelected ? "border-blue-400 bg-blue-50/20" : "border-slate-100"
-                  )}
-                >
-                  {/* Absolute checkbox for mass deletion */}
-                  <div className="absolute top-5 left-4 z-10">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => {
-                        if (isSelected) {
-                          setSelectedEmpresaIds(selectedEmpresaIds.filter(id => id !== emp.id));
-                        } else {
-                          setSelectedEmpresaIds([...selectedEmpresaIds, emp.id]);
-                        }
-                      }}
-                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                    />
-                  </div>
-
-                  {emp.classificacao && (
-                    <div
-                      className={cn(
-                        "absolute -top-3 -right-3 text-[10px] font-black uppercase tracking-wider py-1 px-3 rounded-full shadow-sm border",
-                        emp.classificacao === "Ouro"
-                          ? "bg-amber-100 text-amber-800 border-amber-200"
-                          : emp.classificacao === "Prata"
-                            ? "bg-slate-100 text-slate-700 border-slate-300"
-                            : "bg-orange-100 text-orange-800 border-orange-200",
-                      )}
-                    >
-                      {emp.classificacao}
-                    </div>
-                  )}
-
-                  <div>
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors pr-8">
-                        {emp.nome}
-                      </h3>
-                      <div className="flex space-x-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingEmpresa(emp);
-                            setIsModalOpen(true);
-                          }}
-                          className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(emp.id)}
-                          className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-all"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+          {viewFormat === "card" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredData.map((emp) => {
+                const isSelected = selectedEmpresaIds.includes(emp.id);
+                const alertInfo = getTratativaAlert(emp);
+                return (
+                  <div
+                    key={emp.id}
+                    className={cn(
+                      "bg-white p-6 pl-12 rounded-3xl shadow-sm border flex flex-col justify-between hover:border-blue-200 transition-all group relative",
+                      isSelected ? "border-blue-400 bg-blue-50/20" : "border-slate-100"
+                    )}
+                  >
+                    {/* Absolute checkbox for mass deletion */}
+                    <div className="absolute top-5 left-4 z-10">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {
+                          if (isSelected) {
+                            setSelectedEmpresaIds(selectedEmpresaIds.filter(id => id !== emp.id));
+                          } else {
+                            setSelectedEmpresaIds([...selectedEmpresaIds, emp.id]);
+                          }
+                        }}
+                        className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                      />
                     </div>
 
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      <span
+                    {emp.classificacao && (
+                      <div
                         className={cn(
-                          "text-[10px] font-bold px-2 py-0.5 rounded-full border",
-                          emp.statusEmpresa === "Conveniada" &&
-                            "bg-emerald-50 text-emerald-700 border-emerald-200",
-                          emp.statusEmpresa === "Em tratativa" &&
-                            "bg-amber-50 text-amber-700 border-amber-200",
-                          emp.statusEmpresa === "Cancelada" &&
-                            "bg-rose-50 text-rose-700 border-rose-200",
-                          (emp.statusEmpresa === "Não visitada" ||
-                            !emp.statusEmpresa) &&
-                            "bg-slate-50 text-slate-600 border-slate-200",
+                          "absolute -top-3 -right-3 text-[10px] font-black uppercase tracking-wider py-1 px-3 rounded-full shadow-sm border",
+                          emp.classificacao === "Ouro"
+                            ? "bg-amber-100 text-amber-800 border-amber-200"
+                            : emp.classificacao === "Prata"
+                              ? "bg-slate-100 text-slate-700 border-slate-300"
+                              : "bg-orange-100 text-orange-800 border-orange-200",
                         )}
                       >
-                        {emp.statusEmpresa || "Não visitada"}
-                      </span>
-                      {emp.seguimento && (
-                        <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
-                          {emp.seguimento}
-                        </span>
-                      )}
-                      {alertInfo && (
-                        <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center space-x-1", alertInfo.bg)}>
-                          <Clock size={10} className={alertInfo.iconColor} />
-                          <span>{alertInfo.label} ({getTratativaDays(emp)}d)</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {emp.statusEmpresa === "Em tratativa" && (
-                      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start space-x-2 shadow-sm">
-                        <span className="text-amber-500 shrink-0 font-bold">⚠️</span>
-                        <div className="leading-relaxed">
-                          O processo foi iniciado acompanhe a tratativa com a empresa <span className="font-bold text-slate-900">{emp.nome}</span> para iniciar as campanhas de trade.
-                        </div>
+                        {emp.classificacao}
                       </div>
                     )}
 
-                    <div className="space-y-3 mb-6 text-sm text-slate-600">
-                      {emp.cnpj && (
-                        <div className="flex items-center space-x-3">
-                          <Briefcase size={16} className="text-slate-400" />
-                          <span className="font-mono text-xs">{emp.cnpj}</span>
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors pr-8">
+                          {emp.nome}
+                        </h3>
+                        <div className="flex space-x-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingEmpresa(emp);
+                              setIsModalOpen(true);
+                            }}
+                            className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(emp.id)}
+                            className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        <span
+                          className={cn(
+                            "text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                            emp.statusEmpresa === "Conveniada" &&
+                              "bg-emerald-50 text-emerald-700 border-emerald-200",
+                            emp.statusEmpresa === "Em tratativa" &&
+                              "bg-amber-50 text-amber-700 border-amber-200",
+                            emp.statusEmpresa === "Cancelada" &&
+                              "bg-rose-50 text-rose-700 border-rose-200",
+                            (emp.statusEmpresa === "Não visitada" ||
+                              !emp.statusEmpresa) &&
+                              "bg-slate-50 text-slate-600 border-slate-200",
+                          )}
+                        >
+                          {emp.statusEmpresa || "Não visitada"}
+                        </span>
+                        {emp.seguimento && (
+                          <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
+                            {emp.seguimento}
+                          </span>
+                        )}
+                        {alertInfo && (
+                          <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center space-x-1", alertInfo.bg)}>
+                            <Clock size={10} className={alertInfo.iconColor} />
+                            <span>{alertInfo.label} ({getTratativaDays(emp)}d)</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {emp.statusEmpresa === "Em tratativa" && (
+                        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start space-x-2 shadow-sm">
+                          <span className="text-amber-500 shrink-0 font-bold">⚠️</span>
+                          <div className="leading-relaxed">
+                            O processo foi iniciado acompanhe a tratativa com a empresa <span className="font-bold text-slate-900">{emp.nome}</span> para iniciar as campanhas de trade.
+                          </div>
                         </div>
                       )}
-                      <div className="flex flex-col space-y-1">
-                        <div className="flex items-center justify-between pr-1">
+
+                      <div className="space-y-3 mb-6 text-sm text-slate-600">
+                        {emp.cnpj && (
                           <div className="flex items-center space-x-3">
-                            <Phone size={16} className="text-slate-400" />
-                            <span>{formatPhone(emp.telefone)}</span>
+                            <Briefcase size={16} className="text-slate-400" />
+                            <span className="font-mono text-xs">{emp.cnpj}</span>
                           </div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">
-                            Empresa
-                          </span>
-                        </div>
-                        {emp.telefoneResponsavel && (
+                        )}
+                        <div className="flex flex-col space-y-1">
                           <div className="flex items-center justify-between pr-1">
                             <div className="flex items-center space-x-3">
-                              <Phone
-                                size={16}
-                                className="text-slate-400 opacity-50"
-                              />
-                              <span>{formatPhone(emp.telefoneResponsavel)}</span>
+                              <Phone size={16} className="text-slate-400" />
+                              <span>{formatPhone(emp.telefone)}</span>
                             </div>
                             <span className="text-[9px] font-bold text-slate-400 uppercase">
-                              Resp.
+                              Empresa
                             </span>
+                          </div>
+                          {emp.telefoneResponsavel && (
+                            <div className="flex items-center justify-between pr-1">
+                              <div className="flex items-center space-x-3">
+                                <Phone
+                                  size={16}
+                                  className="text-slate-400 opacity-50"
+                                />
+                                <span>{formatPhone(emp.telefoneResponsavel)}</span>
+                              </div>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase">
+                                Resp.
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                          <Users size={16} className="text-slate-400" />
+                          <span>{emp.responsavel}</span>
+                        </div>
+
+                        {emp.consultorNome && (
+                          <div className="flex items-center space-x-3 text-blue-700 font-medium">
+                            <UserIcon size={16} className="text-blue-500" />
+                            <span>Comercial: {emp.consultorNome}</span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center space-x-3">
+                          <Mail size={16} className="text-slate-400" />
+                          <span className="truncate">{emp.email}</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <MapPin size={16} className="text-slate-400" />
+                          <span className="truncate">{emp.endereco}</span>
+                        </div>
+                        {emp.bairro && (
+                          <div className="flex items-center space-x-3">
+                            <MapPin size={16} className="text-slate-400 opacity-50" />
+                            <span className="truncate">Bairro: {emp.bairro}</span>
+                          </div>
+                        )}
+                        {emp.cidade && (
+                          <div className="flex items-center space-x-3">
+                            <MapPin size={16} className="text-slate-400 opacity-50" />
+                            <span className="truncate">Cidade: {emp.cidade}</span>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex items-center space-x-3">
-                        <Users size={16} className="text-slate-400" />
-                        <span>{emp.responsavel}</span>
-                      </div>
-
-                      {emp.consultorNome && (
-                        <div className="flex items-center space-x-3 text-blue-700 font-medium">
-                          <UserIcon size={16} className="text-blue-500" />
-                          <span>Comercial: {emp.consultorNome}</span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center space-x-3">
-                        <Mail size={16} className="text-slate-400" />
-                        <span className="truncate">{emp.email}</span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <MapPin size={16} className="text-slate-400" />
-                        <span className="truncate">{emp.endereco}</span>
-                      </div>
-                      {emp.bairro && (
-                        <div className="flex items-center space-x-3">
-                          <MapPin size={16} className="text-slate-400 opacity-50" />
-                          <span className="truncate">Bairro: {emp.bairro}</span>
-                        </div>
-                      )}
-                      {emp.cidade && (
-                        <div className="flex items-center space-x-3">
-                          <MapPin size={16} className="text-slate-400 opacity-50" />
-                          <span className="truncate">Cidade: {emp.cidade}</span>
+                      {emp.unidadesVinculadas && emp.unidadesVinculadas.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-100 mb-4">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
+                            Unidades Vinculadas
+                          </span>
+                          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
+                            {emp.unidadesVinculadas.map((uni) => (
+                              <span
+                                key={uni}
+                                className="text-[9px] font-bold bg-indigo-50/60 text-indigo-600 border border-indigo-100/40 p-1 px-2 rounded-md truncate max-w-[150px]"
+                                title={uni}
+                              >
+                                {uni}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
 
-                    {emp.unidadesVinculadas && emp.unidadesVinculadas.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-slate-100 mb-4">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
-                          Unidades Vinculadas
-                        </span>
-                        <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
-                          {emp.unidadesVinculadas.map((uni) => (
-                            <span
-                              key={uni}
-                              className="text-[9px] font-bold bg-indigo-50/60 text-indigo-600 border border-indigo-100/40 p-1 px-2 rounded-md truncate max-w-[150px]"
-                              title={uni}
-                            >
-                              {uni}
+                    <div className="flex flex-col space-y-2 mt-auto pt-3 border-t border-slate-100/60">
+                      <div className="grid grid-cols-2 gap-2">
+                        {emp.linkMaps && (
+                          <a
+                            href={emp.linkMaps}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center space-x-2 w-full py-2 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-100 transition-all border border-slate-200"
+                          >
+                            <Globe size={14} />
+                            <span>Maps</span>
+                          </a>
+                        )}
+                        {emp.linkSales && (
+                          <a
+                            href={emp.linkSales}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center space-x-2 w-full py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-all border border-blue-200"
+                          >
+                            <ExternalLink size={14} />
+                            <span>Sales</span>
+                          </a>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onGenerateAction(emp)}
+                        className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center space-x-2"
+                      >
+                        <Calendar size={18} />
+                        <span>Gerar Ação</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/30">
+                    <th className="p-4 pl-12">
+                      <div className="flex items-center space-x-2">
+                        <span>Empresa</span>
+                      </div>
+                    </th>
+                    <th className="p-4">Status / Seguimento</th>
+                    <th className="p-4">Responsável / Contato</th>
+                    <th className="p-4">Consultor</th>
+                    <th className="p-4">Localização</th>
+                    <th className="p-4 pr-6 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {filteredData.map((emp) => {
+                    const isSelected = selectedEmpresaIds.includes(emp.id);
+                    const alertInfo = getTratativaAlert(emp);
+                    return (
+                      <tr
+                        key={emp.id}
+                        className={cn(
+                          "hover:bg-slate-50/50 transition-colors relative",
+                          isSelected && "bg-blue-50/30"
+                        )}
+                      >
+                        <td className="p-4 pl-12 relative">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                if (isSelected) {
+                                  setSelectedEmpresaIds(selectedEmpresaIds.filter(id => id !== emp.id));
+                                } else {
+                                  setSelectedEmpresaIds([...selectedEmpresaIds, emp.id]);
+                                }
+                              }}
+                              className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                            />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-slate-900 leading-none mb-1">
+                              {emp.nome}
                             </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col space-y-2 mt-auto pt-3 border-t border-slate-100/60">
-                    <div className="grid grid-cols-2 gap-2">
-                      {emp.linkMaps && (
-                        <a
-                          href={emp.linkMaps}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center space-x-2 w-full py-2 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-100 transition-all border border-slate-200"
-                        >
-                          <Globe size={14} />
-                          <span>Maps</span>
-                        </a>
-                      )}
-                      {emp.linkSales && (
-                        <a
-                          href={emp.linkSales}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center space-x-2 w-full py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-all border border-blue-200"
-                        >
-                          <ExternalLink size={14} />
-                          <span>Sales</span>
-                        </a>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onGenerateAction(emp)}
-                      className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center space-x-2"
-                    >
-                      <Calendar size={18} />
-                      <span>Gerar Ação</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                            {emp.cnpj && (
+                              <span className="text-[10px] font-mono text-slate-400">
+                                {emp.cnpj}
+                              </span>
+                            )}
+                            {emp.classificacao && (
+                              <span
+                                className={cn(
+                                  "inline-flex w-fit mt-1 text-[8px] font-black uppercase px-1.5 py-0.5 rounded border",
+                                  emp.classificacao === "Ouro"
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    : emp.classificacao === "Prata"
+                                      ? "bg-slate-50 text-slate-600 border-slate-200"
+                                      : "bg-orange-50 text-orange-700 border-orange-200"
+                                )}
+                              >
+                                {emp.classificacao}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex flex-col space-y-1">
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold px-2 py-0.5 rounded-full border w-fit",
+                                emp.statusEmpresa === "Conveniada" &&
+                                  "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                emp.statusEmpresa === "Em tratativa" &&
+                                  "bg-amber-50 text-amber-700 border-amber-200",
+                                emp.statusEmpresa === "Cancelada" &&
+                                  "bg-rose-50 text-rose-700 border-rose-200",
+                                (emp.statusEmpresa === "Não visitada" ||
+                                  !emp.statusEmpresa) &&
+                                  "bg-slate-50 text-slate-600 border-slate-200"
+                              )}
+                            >
+                              {emp.statusEmpresa || "Não visitada"}
+                            </span>
+                            {emp.seguimento && (
+                              <span className="text-[10px] font-medium text-slate-500">
+                                {emp.seguimento}
+                              </span>
+                            )}
+                            {alertInfo && (
+                              <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center space-x-1 w-fit", alertInfo.bg)}>
+                                <Clock size={10} className={alertInfo.iconColor} />
+                                <span>{alertInfo.label} ({getTratativaDays(emp)}d)</span>
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex flex-col text-xs">
+                            <div className="flex items-center space-x-1 mb-0.5">
+                              <Users size={12} className="text-slate-400" />
+                              <span className="font-medium text-slate-700">{emp.responsavel}</span>
+                            </div>
+                            <div className="flex items-center space-x-1 text-slate-500">
+                              <Phone size={12} className="text-slate-400" />
+                              <span>{formatPhone(emp.telefone)}</span>
+                            </div>
+                            {emp.email && (
+                              <div className="flex items-center space-x-1 text-slate-500">
+                                <Mail size={12} className="text-slate-400" />
+                                <span className="truncate max-w-[150px]">{emp.email}</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          {emp.consultorNome ? (
+                            <div className="flex items-center space-x-1.5 text-blue-700 font-medium text-xs">
+                              <UserIcon size={14} className="text-blue-500" />
+                              <span>{emp.consultorNome}</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex flex-col text-[11px] text-slate-600 max-w-[200px]">
+                            <span className="truncate">{emp.endereco}</span>
+                            <span className="text-slate-400 truncate">
+                              {emp.bairro && `${emp.bairro}, `}{emp.cidade}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-4 pr-6 text-right">
+                          <div className="flex justify-end items-center space-x-1">
+                            <button
+                              type="button"
+                              onClick={() => onGenerateAction(emp)}
+                              className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                              title="Gerar Ação"
+                            >
+                              <Calendar size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingEmpresa(emp);
+                                setIsModalOpen(true);
+                              }}
+                              className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-all"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(emp.id)}
+                              className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg transition-all"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       )}
 
