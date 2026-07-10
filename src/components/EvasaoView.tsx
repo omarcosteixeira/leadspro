@@ -58,6 +58,8 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
   const [modalidadeFilter, setModalidadeFilter] = useState("Todas");
   const [periodoFilter, setPeriodoFilter] = useState("Todos");
   const [tipoSolicitacaoFilter, setTipoSolicitacaoFilter] = useState("Todos");
+  const [dataInicioFilter, setDataInicioFilter] = useState("");
+  const [dataFimFilter, setDataFimFilter] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<EvasaoRecord | null>(null);
@@ -84,6 +86,8 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
   });
 
   useEffect(() => {
+    if (!profile) return;
+
     const isRestricted = 
       profile?.role !== "Admin Master" && 
       profile?.role !== "Gestor Comercial" && 
@@ -91,8 +95,7 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(profile?.email || "");
 
     let q = query(
-      collection(db, COLLECTIONS.EVASAO),
-      orderBy("createdAt", "desc")
+      collection(db, COLLECTIONS.EVASAO)
     );
 
     if (isRestricted) {
@@ -110,7 +113,7 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [profile]);
 
   const uniquePeriodos = useMemo(() => {
     const periodos = data
@@ -139,6 +142,20 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       filtered = filtered.filter(item => item.tipoSolicitacao === tipoSolicitacaoFilter);
     }
 
+    if (dataInicioFilter) {
+      filtered = filtered.filter(item => {
+        if (!item.atendimento) return false;
+        return item.atendimento >= dataInicioFilter;
+      });
+    }
+
+    if (dataFimFilter) {
+      filtered = filtered.filter(item => {
+        if (!item.atendimento) return false;
+        return item.atendimento <= dataFimFilter;
+      });
+    }
+
     if (searchTerm) {
       const lower = searchTerm.toLowerCase();
       filtered = filtered.filter(item => 
@@ -163,7 +180,7 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       const dateB = b.createdAt?.toDate?.() || new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
-  }, [data, profile, modalidadeFilter, periodoFilter, tipoSolicitacaoFilter, searchTerm]);
+  }, [data, profile, modalidadeFilter, periodoFilter, tipoSolicitacaoFilter, searchTerm, dataInicioFilter, dataFimFilter]);
 
   // Top 5 Cursos
   const topCursos = useMemo(() => {
@@ -606,6 +623,23 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
           <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
             <Filter size={20} className="text-slate-400" />
             
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-slate-500">De:</span>
+              <input
+                type="date"
+                value={dataInicioFilter}
+                onChange={(e) => setDataInicioFilter(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              />
+              <span className="text-sm font-medium text-slate-500">Até:</span>
+              <input
+                type="date"
+                value={dataFimFilter}
+                onChange={(e) => setDataFimFilter(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              />
+            </div>
+
             {/* Modalidade Filter */}
             <select
               value={modalidadeFilter}

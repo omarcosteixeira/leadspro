@@ -16051,6 +16051,7 @@ function EmpresasParceirasView({
   const [seguimentoFilter, setSeguimentoFilter] = useState<string>("Todos");
   const [classificacaoFilter, setClassificacaoFilter] =
     useState<string>("Todas");
+  const [fdvFilter, setFdvFilter] = useState<string>("Todos");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmpresa, setEditingEmpresa] = useState<EmpresaParceira | null>(
@@ -16180,13 +16181,16 @@ function EmpresasParceirasView({
     const matchClassificacao =
       classificacaoFilter === "Todas" ||
       emp.classificacao === classificacaoFilter;
+    const matchFdv =
+      fdvFilter === "Todos" || emp.consultorId === fdvFilter;
 
     return (
       matchBusca &&
       matchStatus &&
       matchUnidade &&
       matchSeguimento &&
-      matchClassificacao
+      matchClassificacao &&
+      matchFdv
     );
   });
 
@@ -16623,7 +16627,7 @@ function EmpresasParceirasView({
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                 Status
@@ -16685,6 +16689,23 @@ function EmpresasParceirasView({
                 {uniqueSeguimentos.map((s) => (
                   <option key={s} value={s}>
                     {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                FDV
+              </label>
+              <select
+                value={fdvFilter}
+                onChange={(e) => setFdvFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+              >
+                <option value="Todos">Todos</option>
+                {listForSelection.map((u) => (
+                  <option key={u.uid} value={u.uid}>
+                    {u.nome}
                   </option>
                 ))}
               </select>
