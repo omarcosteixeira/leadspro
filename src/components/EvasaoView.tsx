@@ -95,7 +95,7 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
     );
 
     if (isRestricted) {
-      q = query(q, where("unidade", "==", profile?.unidade || "NONE"));
+      q = query(q, where("unidade", "==", profile?.unidade || "Matriz"));
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

@@ -405,6 +405,8 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.GESTOR_UNIDADE,
     ROLES.FDV,
     ROLES.FDV_COMERCIAL,
+    ROLES.PROMOTOR,
+    ROLES.PROMOTOR_RUA,
   ],
   gap: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV],
   fiesProuni: [
@@ -4320,8 +4322,11 @@ export default function App() {
         );
 
       let usersQuery = query(collection(db, COLLECTIONS.USERS));
-      if (isRestricted && profile.unidade) {
-        usersQuery = query(usersQuery, where("unidade", "==", profile.unidade));
+      if (isRestricted) {
+        usersQuery = query(
+          usersQuery,
+          where("unidade", "==", profile.unidade || "Matriz"),
+        );
       }
 
       unsubUsers = onSnapshot(
@@ -4431,8 +4436,11 @@ export default function App() {
         );
       }
 
-      if (isRestricted && profile.unidade) {
-        leadsQuery = query(leadsQuery, where("unidade", "==", profile.unidade));
+      if (isRestricted) {
+        leadsQuery = query(
+          leadsQuery,
+          where("unidade", "==", profile.unidade || "Matriz"),
+        );
       }
 
       unsubLeads = onSnapshot(
@@ -4459,7 +4467,7 @@ export default function App() {
       if (isRestricted) {
         basesQuery = query(
           basesQuery,
-          where("unidade", "==", profile.unidade || "NONE"),
+          where("unidade", "==", profile.unidade || "Matriz"),
         );
       }
 
@@ -4486,8 +4494,11 @@ export default function App() {
         );
 
       let gapQuery = query(collection(db, COLLECTIONS.GAP));
-      if (isRestricted && profile.unidade) {
-        gapQuery = query(gapQuery, where("unidade", "==", profile.unidade));
+      if (isRestricted) {
+        gapQuery = query(
+          gapQuery,
+          where("unidade", "==", profile.unidade || "Matriz"),
+        );
       }
 
       unsubGap = onSnapshot(
@@ -4510,10 +4521,10 @@ export default function App() {
         );
 
       let isencoesQuery = query(collection(db, COLLECTIONS.ISENCOES));
-      if (isRestricted && profile.unidade) {
+      if (isRestricted) {
         isencoesQuery = query(
           isencoesQuery,
-          where("unidade", "==", profile.unidade),
+          where("unidade", "==", profile.unidade || "Matriz"),
         );
       }
 
@@ -4544,8 +4555,11 @@ export default function App() {
         );
 
       let pcQuery = query(collection(db, COLLECTIONS.PEDIDO_CURSOS));
-      if (isRestricted && profile.unidade) {
-        pcQuery = query(pcQuery, where("unidade", "==", profile.unidade));
+      if (isRestricted) {
+        pcQuery = query(
+          pcQuery,
+          where("unidade", "==", profile.unidade || "Matriz"),
+        );
       }
 
       unsubPedidosCursos = onSnapshot(
@@ -4580,9 +4594,15 @@ export default function App() {
       let fpQuery = query(collection(db, COLLECTIONS.FIES_PROUNI));
       let fpvQuery = query(collection(db, COLLECTIONS.FIES_PROUNI_VAGAS));
 
-      if (isRestricted && profile.unidade) {
-        fpQuery = query(fpQuery, where("unidade", "==", profile.unidade));
-        fpvQuery = query(fpvQuery, where("unidade", "==", profile.unidade));
+      if (isRestricted) {
+        fpQuery = query(
+          fpQuery,
+          where("unidade", "==", profile.unidade || "Matriz"),
+        );
+        fpvQuery = query(
+          fpvQuery,
+          where("unidade", "==", profile.unidade || "Matriz"),
+        );
       }
 
       unsubFiesProuni = onSnapshot(
@@ -4767,10 +4787,10 @@ export default function App() {
         );
       }
 
-      if (isRestricted && profile.unidade) {
+      if (isRestricted) {
         calendarioQuery = query(
           calendarioQuery,
-          where("unidade", "==", profile.unidade),
+          where("unidade", "==", profile.unidade || "Matriz"),
         );
       }
 
