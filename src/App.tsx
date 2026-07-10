@@ -16161,7 +16161,7 @@ function EmpresasParceirasView({
     const matchedUser = (users || []).find(u => u.uid === selectedConsultorId);
     const consultorNome = matchedUser ? matchedUser.name : "";
 
-    const payload = {
+    const payload: any = {
       nome: formData.get("nome") as string,
       responsavel: formData.get("responsavel") as string,
       telefone: formData.get("telefone") as string,
@@ -16181,6 +16181,10 @@ function EmpresasParceirasView({
       consultorNome: consultorNome,
       updatedAt: serverTimestamp(),
     };
+
+    if (!editingEmpresa) {
+      payload.creatorId = auth.currentUser?.uid;
+    }
 
     const isDuplicate = data.some(
       (emp) =>

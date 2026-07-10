@@ -86,7 +86,8 @@ service cloud.firestore {
              data.responsavel is string &&
              data.telefone is string &&
              (!('unidadesVinculadas' in data) || data.unidadesVinculadas is list) &&
-             (!('consultorId' in data) || data.consultorId is string);
+             (!('consultorId' in data) || data.consultorId is string) &&
+             (!('creatorId' in data) || data.creatorId is string);
     }
 
     function isValidWhatsAppMessage(data) {
@@ -201,7 +202,7 @@ service cloud.firestore {
         isMasterUser() || 
         isComercial() || 
         (isGestorUnidade() && getUserData().unidade in resource.data.unidadesVinculadas) ||
-        (isFDV() && (resource.data.consultorId == request.auth.uid || getUserData().unidade in resource.data.unidadesVinculadas))
+        (isFDV() && (resource.data.consultorId == request.auth.uid || resource.data.creatorId == request.auth.uid || getUserData().unidade in resource.data.unidadesVinculadas))
       );
       allow create, update: if isAuthenticated() && (isMasterUser() || isComercial() || isLider() || isGestorUnidade() || isFDV()) && isValidEmpresa(request.resource.data);
       allow delete: if isMasterUser() || isComercial() || isLider();
