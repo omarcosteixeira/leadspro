@@ -395,7 +395,17 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.FDV_COMERCIAL,
     ROLES.GESTOR_COMERCIAL_COMERCIAL,
   ],
-  bases: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.QG, ROLES.LIDER_FDV],
+  bases: [
+    ROLES.ADMIN_MASTER,
+    ROLES.SALA_MATRICULA,
+    ROLES.QG,
+    ROLES.LIDER_FDV,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+    ROLES.GESTOR_UNIDADE,
+    ROLES.FDV,
+    ROLES.FDV_COMERCIAL,
+  ],
   gap: [ROLES.ADMIN_MASTER, ROLES.SALA_MATRICULA, ROLES.LIDER_FDV],
   fiesProuni: [
     ROLES.ADMIN_MASTER,
@@ -527,6 +537,12 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.ADMIN_MASTER,
     ROLES.SSA,
     ROLES.GESTOR_UNIDADE,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+    ROLES.LIDER_FDV,
+    ROLES.FDV,
+    ROLES.FDV_COMERCIAL,
+    ROLES.SALA_MATRICULA,
   ],
   cursos: [
     ROLES.ADMIN_MASTER,
@@ -4440,8 +4456,11 @@ export default function App() {
         );
 
       let basesQuery = query(collection(db, COLLECTIONS.BASES));
-      if (isRestricted && profile.unidade) {
-        basesQuery = query(basesQuery, where("unidade", "==", profile.unidade));
+      if (isRestricted) {
+        basesQuery = query(
+          basesQuery,
+          where("unidade", "==", profile.unidade || "NONE"),
+        );
       }
 
       unsubBases = onSnapshot(
@@ -4507,31 +4526,6 @@ export default function App() {
         },
         (err) =>
           handleFirestoreError(err, OperationType.LIST, COLLECTIONS.ISENCOES),
-      );
-    }
-
-    let unsubEvasao = () => {};
-    if (profile && VIEW_PERMISSIONS.evasao.includes(profile.role)) {
-      const isRestricted =
-        profile.role !== ROLES.ADMIN_MASTER &&
-        profile.role !== ROLES.GESTOR_COMERCIAL &&
-        profile.role !== ROLES.GESTOR_COMERCIAL_COMERCIAL &&
-        !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(
-          user?.email || "",
-        );
-
-      let evQuery = query(collection(db, COLLECTIONS.EVASAO));
-      if (isRestricted && profile.unidade) {
-        evQuery = query(evQuery, where("unidade", "==", profile.unidade));
-      }
-
-      unsubEvasao = onSnapshot(
-        evQuery,
-        (snap) => {
-          setEvasao(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as any));
-        },
-        (err) =>
-          handleFirestoreError(err, OperationType.LIST, COLLECTIONS.EVASAO),
       );
     }
 

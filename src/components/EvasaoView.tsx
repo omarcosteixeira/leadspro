@@ -87,15 +87,15 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
     const isRestricted = 
       profile?.role !== "Admin Master" && 
       profile?.role !== "Gestor Comercial" && 
-      profile?.role !== "Gerente Comercial (Comercial)";
+      profile?.role !== "Gerente Comercial (Comercial)" &&
+      !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(profile?.email || "");
 
     let q = query(
-      collection(db, COLLECTIONS.EVASAO),
-      orderBy("createdAt", "desc")
+      collection(db, COLLECTIONS.EVASAO)
     );
 
-    if (isRestricted && profile?.unidade) {
-      q = query(q, where("unidade", "==", profile.unidade));
+    if (isRestricted) {
+      q = query(q, where("unidade", "==", profile?.unidade || "NONE"));
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -149,7 +149,11 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       );
     }
 
-    return filtered;
+    return filtered.sort((a, b) => {
+      const dateA = a.createdAt?.toDate?.() || new Date(0);
+      const dateB = b.createdAt?.toDate?.() || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
   }, [data, profile, modalidadeFilter, periodoFilter, tipoSolicitacaoFilter, searchTerm]);
 
   // Top 5 Cursos
