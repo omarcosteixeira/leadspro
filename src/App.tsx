@@ -4434,13 +4434,12 @@ export default function App() {
           orderBy("createdAt", "desc"),
         );
       } else if (profile.role === ROLES.FDV_COMERCIAL) {
-        // FDV (Comercial) sees their own leads, those from their linked promontors, or leads in their unit.
+        // FDV (Comercial) sees their own leads or those from their linked promontors.
         leadsQuery = query(
           collection(db, COLLECTIONS.LEADS),
           or(
             where("promotorId", "==", user!.uid),
-            where("linkadoA", "==", user!.uid),
-            where("unidade", "==", profile.unidade || ""),
+            where("linkadoA", "==", user!.uid)
           ),
           orderBy("createdAt", "desc"),
         );
@@ -4449,8 +4448,7 @@ export default function App() {
           collection(db, COLLECTIONS.LEADS),
           or(
             where("promotorId", "==", user!.uid),
-            where("promotorRole", "==", ROLES.PROMOTOR),
-            where("unidade", "==", profile.unidade || ""),
+            where("linkadoA", "==", user!.uid)
           ),
           orderBy("createdAt", "desc"),
         );
@@ -4481,10 +4479,17 @@ export default function App() {
       }
 
       if (isRestricted) {
-        leadsQuery = query(
-          leadsQuery,
-          where("unidade", "==", profile.unidade || "Matriz"),
-        );
+        if (profile.role === ROLES.FDV || profile.role === ROLES.FDV_COMERCIAL) {
+          // Already restricted by promotorId/linkadoA above, but we keep unit filter to be safe or bypass it.
+          // The user said ONLY what they or linked promotor filled.
+          // If we add the unit filter, it might exclude their own leads if they are in a different unit (unlikely).
+          // But to be strict with "SÓ PODERÁ VE", we keep the current query which is already restricted to UID.
+        } else {
+          leadsQuery = query(
+            leadsQuery,
+            where("unidade", "==", profile.unidade || "Matriz"),
+          );
+        }
       }
 
       unsubLeads = onSnapshot(
@@ -4514,7 +4519,6 @@ export default function App() {
           basesQuery = query(
             collection(db, COLLECTIONS.BASES),
             or(
-              where("unidade", "==", profile.unidade || "Matriz"),
               where("promotorId", "==", user!.uid),
               where("linkadoA", "==", user!.uid)
             ),
@@ -10163,6 +10167,7 @@ function BasesView({
     nomeBase: "",
     nome: "",
     telefone: "",
+    email: "",
     cpf: "",
     curso: "",
     produto: "Graduação" as "Graduação" | "Técnico" | "Pós-graduação",
@@ -11442,6 +11447,7 @@ function BasesView({
                             nomeBase: entry.nomeBase || "",
                             nome: entry.nome || "",
                             telefone: entry.telefone || "",
+                            email: entry.email || "",
                             cpf: entry.cpf || "",
                             curso: entry.curso || "",
                             produto: entry.produto || "Graduação",
@@ -11848,6 +11854,7 @@ function BasesRenovacaoView({
     nomeBase: "",
     nome: "",
     telefone: "",
+    email: "",
     cpf: "",
     curso: "",
     produto: "Graduação" as "Graduação" | "Técnico" | "Pós-graduação",
@@ -11937,6 +11944,7 @@ function BasesRenovacaoView({
         nomeBase: "",
         nome: "",
         telefone: "",
+        email: "",
         cpf: "",
         curso: "",
         produto: "Graduação",

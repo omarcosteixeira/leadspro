@@ -99,6 +99,7 @@ export interface Lead {
   promotorRole?: string;
   linkadoA?: string;
   unidade?: string;
+  email?: string;
 }
 
 export interface BaseEntry {
@@ -117,6 +118,7 @@ export interface BaseEntry {
   formaIngresso: string;
   status: 'Pendente' | 'Interessado' | 'Convertido' | 'Não tem interesse' | 'Sem retorno';
   unidade?: string;
+  email?: string;
   createdAt: any;
 }
 

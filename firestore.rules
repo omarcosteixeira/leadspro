@@ -114,22 +114,24 @@ service cloud.firestore {
 
     match /artifacts/gestaopro-761e1/public/data/leads/{leadId} {
       allow get, list: if isAuthenticated() && (
-        canAccessUnit(resource.data.unidade) || 
-        resource.data.promotorId == request.auth.uid || 
-        resource.data.linkadoA == request.auth.uid || 
-        (isFDV() && resource.data.promotorId != null && isLinkedToMe(resource.data.promotorId))
+        (isMasterUser() || isComercial() || isLider() || isGestorUnidade() || isSalaMatricula() || isQG()) ? canAccessUnit(resource.data.unidade) :
+        (isFDV() ? (resource.data.promotorId == request.auth.uid || resource.data.linkadoA == request.auth.uid) : 
+        (isPromotor() ? resource.data.promotorId == request.auth.uid : canAccessUnit(resource.data.unidade)))
       );
       allow create: if (request.auth == null || canAccessUnit(request.resource.data.unidade));
-      allow update: if isAuthenticated() && (canAccessUnit(resource.data.unidade) || resource.data.promotorId == request.auth.uid || resource.data.linkadoA == request.auth.uid) && canAccessUnit(request.resource.data.unidade);
+      allow update: if isAuthenticated() && (
+        isMasterUser() || isComercial() || isLider() || isGestorUnidade() || isSalaMatricula() || isQG() ||
+        (isFDV() && (resource.data.promotorId == request.auth.uid || resource.data.linkadoA == request.auth.uid)) ||
+        (isPromotor() && resource.data.promotorId == request.auth.uid)
+      ) && canAccessUnit(request.resource.data.unidade);
       allow delete: if isMasterUser() || isComercial() || isLider() || isSalaMatricula();
     }
 
     match /artifacts/gestaopro-761e1/public/data/bases/{baseId} {
       allow get, list: if isAuthenticated() && (
-        canAccessUnit(resource.data.unidade) || 
-        resource.data.promotorId == request.auth.uid || 
-        resource.data.linkadoA == request.auth.uid || 
-        (isFDV() && resource.data.promotorId != null && isLinkedToMe(resource.data.promotorId))
+        (isMasterUser() || isComercial() || isLider() || isGestorUnidade() || isSalaMatricula() || isQG()) ? canAccessUnit(resource.data.unidade) :
+        (isFDV() ? (resource.data.promotorId == request.auth.uid || resource.data.linkadoA == request.auth.uid) : 
+        (isPromotor() ? resource.data.promotorId == request.auth.uid : canAccessUnit(resource.data.unidade)))
       );
       allow create, update, delete: if isMasterUser() || isComercial() || isLider() || isSalaMatricula() || isQG();
     }
@@ -295,8 +297,9 @@ service cloud.firestore {
 
     match /artifacts/gestaopro-761e1/public/data/evasao/{id} {
       allow get, list: if isAuthenticated() && canAccessUnit(resource.data.unidade);
-      allow write: if isAuthenticated() && canAccessUnit(resource.data.unidade) &&
+      allow create, update: if isAuthenticated() && (isMasterUser() || isComercial() || canAccessUnit(request.resource.data.unidade)) &&
         hasAnyRole(["SSA", "Admin Master", "Gestor Unidade", "Líder/FDV", "Sala de Matrícula", "QG", "FDV", "FDV (Comercial)", "Promotor", "Promotor/rua", "Gestor Comercial", "Gerente Comercial (Comercial)"]);
+      allow delete: if isMasterUser() || isComercial() || isLider();
     }
   }
 }
