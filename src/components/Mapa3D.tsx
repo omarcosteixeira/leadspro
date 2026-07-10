@@ -411,16 +411,29 @@ export default function Mapa3D({
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden space-y-2 pt-1 border-t border-slate-200/50 mt-1.5"
               >
-                <div>
-                  <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Consultor</label>
-                  <select
-                    value={filterConsultor}
-                    onChange={(e) => setFilterConsultor(e.target.value)}
-                    className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] outline-none"
-                  >
-                    <option value="Todos">Todos</option>
-                    {uniqueConsultores.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div>
+                    <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Unidade</label>
+                    <select
+                      value={filterUnidade}
+                      onChange={(e) => setFilterUnidade(e.target.value)}
+                      className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] outline-none"
+                    >
+                      <option value="Todas">Todas</option>
+                      {uniqueUnidades.map((u) => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Consultor</label>
+                    <select
+                      value={filterConsultor}
+                      onChange={(e) => setFilterConsultor(e.target.value)}
+                      className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] outline-none"
+                    >
+                      <option value="Todos">Todos</option>
+                      {uniqueConsultores.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
                   <div>

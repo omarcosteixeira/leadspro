@@ -84,7 +84,9 @@ service cloud.firestore {
       return data.keys().hasAll(['nome', 'responsavel', 'telefone']) &&
              data.nome is string && data.nome.size() > 0 &&
              data.responsavel is string &&
-             data.telefone is string;
+             data.telefone is string &&
+             (!('unidadesVinculadas' in data) || data.unidadesVinculadas is list) &&
+             (!('consultorId' in data) || data.consultorId is string);
     }
 
     function isValidWhatsAppMessage(data) {
@@ -195,9 +197,14 @@ service cloud.firestore {
       allow write: if isPrincipal() || isComercial() || isSSA();
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/empresas_parceiras/{id} {
-      allow read: if true;
-      allow create, update: if (isPrincipal() || isComercial()) && isValidEmpresa(request.resource.data);
-      allow delete: if isPrincipal() || isComercial();
+      allow read: if isAuthenticated() && (
+        isMasterUser() || 
+        isComercial() || 
+        (isGestorUnidade() && getUserData().unidade in resource.data.unidadesVinculadas) ||
+        (isFDV() && (resource.data.consultorId == request.auth.uid || getUserData().unidade in resource.data.unidadesVinculadas))
+      );
+      allow create, update: if isAuthenticated() && (isMasterUser() || isComercial() || isLider() || isGestorUnidade() || isFDV()) && isValidEmpresa(request.resource.data);
+      allow delete: if isMasterUser() || isComercial() || isLider();
     }
     match /artifacts/gestaodeleadspro-d4230/public/data/whatsapp_messages/{id} {
       allow read: if isAuthenticated();
