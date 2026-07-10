@@ -127,14 +127,24 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/leads/{leadId} {
-      allow get, list: if isAuthenticated() && (canAccessUnit(resource.data.unidade) || (isFDV() && resource.data.promotorId != null && isLinkedToMe(resource.data.promotorId)));
+      allow get, list: if isAuthenticated() && (
+        canAccessUnit(resource.data.unidade) || 
+        resource.data.promotorId == request.auth.uid || 
+        resource.data.linkadoA == request.auth.uid || 
+        (isFDV() && resource.data.promotorId != null && isLinkedToMe(resource.data.promotorId))
+      );
       allow create: if (request.auth == null || canAccessUnit(request.resource.data.unidade));
-      allow update: if isAuthenticated() && canAccessUnit(resource.data.unidade) && canAccessUnit(request.resource.data.unidade);
+      allow update: if isAuthenticated() && (canAccessUnit(resource.data.unidade) || resource.data.promotorId == request.auth.uid || resource.data.linkadoA == request.auth.uid) && canAccessUnit(request.resource.data.unidade);
       allow delete: if isMasterUser() || isComercial() || isLider() || isSalaMatricula();
     }
 
     match /artifacts/gestaodeleadspro-d4230/public/data/bases/{baseId} {
-      allow get, list: if isAuthenticated() && (canAccessUnit(resource.data.unidade) || (isFDV() && resource.data.promotorId != null && isLinkedToMe(resource.data.promotorId)));
+      allow get, list: if isAuthenticated() && (
+        canAccessUnit(resource.data.unidade) || 
+        resource.data.promotorId == request.auth.uid || 
+        resource.data.linkadoA == request.auth.uid || 
+        (isFDV() && resource.data.promotorId != null && isLinkedToMe(resource.data.promotorId))
+      );
       allow create, update, delete: if isMasterUser() || isComercial() || isLider() || isSalaMatricula() || isQG();
     }
 

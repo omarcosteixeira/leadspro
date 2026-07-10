@@ -4414,11 +4414,16 @@ export default function App() {
           ROLES.LIDER_FDV,
           ROLES.SALA_MATRICULA,
           ROLES.QG,
-          ROLES.GESTOR_UNIDADE,
         ].includes(profile.role)
       ) {
         leadsQuery = query(
           collection(db, COLLECTIONS.LEADS),
+          orderBy("createdAt", "desc"),
+        );
+      } else if (profile.role === ROLES.GESTOR_UNIDADE) {
+        leadsQuery = query(
+          collection(db, COLLECTIONS.LEADS),
+          where("unidade", "==", profile.unidade || ""),
           orderBy("createdAt", "desc"),
         );
       } else if (profile.role === ROLES.GESTOR_COMERCIAL_COMERCIAL) {
@@ -4429,12 +4434,13 @@ export default function App() {
           orderBy("createdAt", "desc"),
         );
       } else if (profile.role === ROLES.FDV_COMERCIAL) {
-        // FDV (Comercial) sees their own leads and those from their linked promontors.
+        // FDV (Comercial) sees their own leads, those from their linked promontors, or leads in their unit.
         leadsQuery = query(
           collection(db, COLLECTIONS.LEADS),
           or(
             where("promotorId", "==", user!.uid),
             where("linkadoA", "==", user!.uid),
+            where("unidade", "==", profile.unidade || ""),
           ),
           orderBy("createdAt", "desc"),
         );
@@ -4444,6 +4450,7 @@ export default function App() {
           or(
             where("promotorId", "==", user!.uid),
             where("promotorRole", "==", ROLES.PROMOTOR),
+            where("unidade", "==", profile.unidade || ""),
           ),
           orderBy("createdAt", "desc"),
         );
@@ -4501,14 +4508,29 @@ export default function App() {
           user?.email || "",
         );
 
-      let basesQuery = query(
-        collection(db, COLLECTIONS.BASES),
-        orderBy("createdAt", "desc"),
-      );
+      let basesQuery;
       if (isRestricted) {
+        if (profile.role === ROLES.FDV || profile.role === ROLES.FDV_COMERCIAL) {
+          basesQuery = query(
+            collection(db, COLLECTIONS.BASES),
+            or(
+              where("unidade", "==", profile.unidade || "Matriz"),
+              where("promotorId", "==", user!.uid),
+              where("linkadoA", "==", user!.uid)
+            ),
+            orderBy("createdAt", "desc")
+          );
+        } else {
+          basesQuery = query(
+            collection(db, COLLECTIONS.BASES),
+            where("unidade", "==", profile.unidade || "Matriz"),
+            orderBy("createdAt", "desc")
+          );
+        }
+      } else {
         basesQuery = query(
-          basesQuery,
-          where("unidade", "==", profile.unidade || "Matriz"),
+          collection(db, COLLECTIONS.BASES),
+          orderBy("createdAt", "desc")
         );
       }
 
@@ -4879,8 +4901,35 @@ export default function App() {
 
     let unsubEmpresas = () => {};
     if (profile && VIEW_PERMISSIONS.empresas.includes(profile.role)) {
+      let empresasQuery = query(collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS));
+
+      const isRestricted =
+        ![
+          ROLES.ADMIN_MASTER,
+          ROLES.GESTOR_COMERCIAL,
+          ROLES.GESTOR_COMERCIAL_COMERCIAL,
+        ].includes(profile.role);
+
+      if (isRestricted) {
+        if (profile.role === ROLES.GESTOR_UNIDADE) {
+          empresasQuery = query(
+            empresasQuery,
+            where("unidadesVinculadas", "array-contains", profile.unidade || "")
+          );
+        } else if (profile.role === ROLES.FDV || profile.role === ROLES.FDV_COMERCIAL) {
+          empresasQuery = query(
+            empresasQuery,
+            or(
+              where("unidadesVinculadas", "array-contains", profile.unidade || ""),
+              where("consultorId", "==", user!.uid),
+              where("creatorId", "==", user!.uid)
+            )
+          );
+        }
+      }
+
       unsubEmpresas = onSnapshot(
-        collection(db, COLLECTIONS.EMPRESAS_PARCEIRAS),
+        empresasQuery,
         (snap) => {
           setEmpresasParceiras(
             snap.docs.map(
@@ -10397,6 +10446,8 @@ function BasesView({
         ...formData,
         status: "Pendente",
         unidade: profile.unidade || "",
+        promotorId: profile.uid,
+        linkadoA: profile.linkadoA || null,
         createdAt: serverTimestamp(),
       });
       onToast("Registro salvo na base!");
