@@ -23,6 +23,7 @@ import {
   where,
   or,
   limit,
+  orderBy,
   getDoc,
   setDoc,
   getDocs,
@@ -4390,12 +4391,16 @@ export default function App() {
           ROLES.GESTOR_UNIDADE,
         ].includes(profile.role)
       ) {
-        leadsQuery = query(collection(db, COLLECTIONS.LEADS));
+        leadsQuery = query(
+          collection(db, COLLECTIONS.LEADS),
+          orderBy("createdAt", "desc"),
+        );
       } else if (profile.role === ROLES.GESTOR_COMERCIAL_COMERCIAL) {
         // Gerente Comercial (Comercial) ver everything in Comercial
         leadsQuery = query(
           collection(db, COLLECTIONS.LEADS),
           where("servidor", "==", "comercial"),
+          orderBy("createdAt", "desc"),
         );
       } else if (profile.role === ROLES.FDV_COMERCIAL) {
         // FDV (Comercial) sees their own leads and those from their linked promontors.
@@ -4405,6 +4410,7 @@ export default function App() {
             where("promotorId", "==", user!.uid),
             where("linkadoA", "==", user!.uid),
           ),
+          orderBy("createdAt", "desc"),
         );
       } else if (profile.role === ROLES.FDV) {
         leadsQuery = query(
@@ -4413,6 +4419,7 @@ export default function App() {
             where("promotorId", "==", user!.uid),
             where("promotorRole", "==", ROLES.PROMOTOR),
           ),
+          orderBy("createdAt", "desc"),
         );
       } else if (profile.role === ROLES.GESTOR_COMERCIAL) {
         leadsQuery = query(
@@ -4421,6 +4428,7 @@ export default function App() {
             where("promotorId", "==", user!.uid),
             where("promotorRole", "in", [ROLES.PROMOTOR, ROLES.FDV]),
           ),
+          orderBy("createdAt", "desc"),
         );
       } else if (
         profile.role === ROLES.PROMOTOR ||
@@ -4429,11 +4437,13 @@ export default function App() {
         leadsQuery = query(
           collection(db, COLLECTIONS.LEADS),
           where("promotorId", "==", user!.uid),
+          orderBy("createdAt", "desc"),
         );
       } else {
         leadsQuery = query(
           collection(db, COLLECTIONS.LEADS),
           where("promotorId", "==", "none"),
+          orderBy("createdAt", "desc"),
         );
       }
 
@@ -4465,7 +4475,10 @@ export default function App() {
           user?.email || "",
         );
 
-      let basesQuery = query(collection(db, COLLECTIONS.BASES));
+      let basesQuery = query(
+        collection(db, COLLECTIONS.BASES),
+        orderBy("createdAt", "desc"),
+      );
       if (isRestricted) {
         basesQuery = query(
           basesQuery,
@@ -4496,7 +4509,10 @@ export default function App() {
           user?.email || "",
         );
 
-      let gapQuery = query(collection(db, COLLECTIONS.GAP));
+      let gapQuery = query(
+        collection(db, COLLECTIONS.GAP),
+        orderBy("createdAt", "desc"),
+      );
       if (isRestricted) {
         gapQuery = query(
           gapQuery,
@@ -4524,7 +4540,10 @@ export default function App() {
           user?.email || "",
         );
 
-      let isencoesQuery = query(collection(db, COLLECTIONS.ISENCOES));
+      let isencoesQuery = query(
+        collection(db, COLLECTIONS.ISENCOES),
+        orderBy("createdAt", "desc"),
+      );
       if (isRestricted) {
         isencoesQuery = query(
           isencoesQuery,
@@ -4559,7 +4578,10 @@ export default function App() {
           user?.email || "",
         );
 
-      let pcQuery = query(collection(db, COLLECTIONS.PEDIDO_CURSOS));
+      let pcQuery = query(
+        collection(db, COLLECTIONS.PEDIDO_CURSOS),
+        orderBy("createdAt", "desc"),
+      );
       if (isRestricted) {
         pcQuery = query(
           pcQuery,
@@ -4597,8 +4619,14 @@ export default function App() {
           user?.email || "",
         );
 
-      let fpQuery = query(collection(db, COLLECTIONS.FIES_PROUNI));
-      let fpvQuery = query(collection(db, COLLECTIONS.FIES_PROUNI_VAGAS));
+      let fpQuery = query(
+        collection(db, COLLECTIONS.FIES_PROUNI),
+        orderBy("createdAt", "desc"),
+      );
+      let fpvQuery = query(
+        collection(db, COLLECTIONS.FIES_PROUNI_VAGAS),
+        orderBy("createdAt", "desc"),
+      );
 
       if (isRestricted) {
         fpQuery = query(
@@ -4760,7 +4788,10 @@ export default function App() {
           ROLES.GESTOR_COMERCIAL_COMERCIAL,
         ].includes(profile.role)
       ) {
-        calendarioQuery = query(collection(db, COLLECTIONS.CALENDARIO_ACOES));
+        calendarioQuery = query(
+          collection(db, COLLECTIONS.CALENDARIO_ACOES),
+          orderBy("createdAt", "desc"),
+        );
       } else if (
         profile.role === ROLES.FDV ||
         profile.role === ROLES.FDV_COMERCIAL
@@ -4774,6 +4805,7 @@ export default function App() {
             where("colaboradorId", "==", user!.uid),
             where("colaboradoresIds", "array-contains", user!.uid),
           ),
+          orderBy("createdAt", "desc"),
         );
       } else if (
         profile.role === ROLES.PROMOTOR ||
@@ -4786,11 +4818,13 @@ export default function App() {
             where("colaboradorId", "==", user!.uid),
             where("promotoresSelecionados", "array-contains", user!.uid),
           ),
+          orderBy("createdAt", "desc"),
         );
       } else {
         calendarioQuery = query(
           collection(db, COLLECTIONS.CALENDARIO_ACOES),
           where("creatorId", "==", "none"),
+          orderBy("createdAt", "desc"),
         );
       }
 
