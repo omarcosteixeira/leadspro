@@ -19,10 +19,10 @@ service cloud.firestore {
       let path = /databases/$(database)/documents/artifacts/gestaodeleadspro-d4230/public/data/users/$(request.auth.uid);
       let userDoc = exists(path) ? get(path).data : {"email": "none", "role": "none"};
       return isAuthenticated() && (
-        request.auth.token.email in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"] || 
-        userDoc.email in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"] ||
-        userDoc.role == "Admin Master" || 
-        userDoc.role == "Líder/FDV"
+        request.auth.token.get("email", "") in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"] || 
+        userDoc.get("email", "") in ["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"] ||
+        userDoc.get("role", "") == "Admin Master" || 
+        userDoc.get("role", "") == "Líder/FDV"
       );
     }
     
