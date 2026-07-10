@@ -102,6 +102,14 @@
         { "fieldPath": "unidade", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "evasao",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "unidade", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

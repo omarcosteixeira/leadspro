@@ -91,7 +91,8 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
       !["canaldonutri@gmail.com", "marcos.teixeira@estacio.br"].includes(profile?.email || "");
 
     let q = query(
-      collection(db, COLLECTIONS.EVASAO)
+      collection(db, COLLECTIONS.EVASAO),
+      orderBy("createdAt", "desc")
     );
 
     if (isRestricted) {
@@ -150,6 +151,14 @@ export function EvasaoView({ profile, onToast }: EvasaoViewProps) {
     }
 
     return filtered.sort((a, b) => {
+      // Primary sort: atendimento date (YYYY-MM-DD)
+      const atendA = a.atendimento || "";
+      const atendB = b.atendimento || "";
+      if (atendA !== atendB) {
+        return atendB.localeCompare(atendA);
+      }
+
+      // Secondary sort: createdAt
       const dateA = a.createdAt?.toDate?.() || new Date(0);
       const dateB = b.createdAt?.toDate?.() || new Date(0);
       return dateB.getTime() - dateA.getTime();
