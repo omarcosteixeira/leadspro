@@ -75,6 +75,7 @@ export const COLLECTIONS = {
   CONTROLE_CONCORRENCIA: `artifacts/${appId}/public/data/controle_concorrencia`,
   EVASAO: `artifacts/${appId}/public/data/evasao`,
   PEDIDO_CURSOS: `artifacts/${appId}/public/data/pedido_cursos`,
+  CONTROLE_LIGACOES: `artifacts/${appId}/public/data/controle_ligacoes`,
 };
 
 export enum OperationType {

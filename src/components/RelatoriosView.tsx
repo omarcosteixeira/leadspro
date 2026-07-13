@@ -15,7 +15,11 @@ import {
   FileText,
   Clock,
   LayoutDashboard,
-  CheckCircle
+  CheckCircle,
+  Phone,
+  XCircle,
+  Search,
+  History as HistoryIcon
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { 
@@ -30,7 +34,8 @@ import {
   InsumoBaixa,
   IsencaoEntry,
   PedidoCursoEntry,
-  MetaDia
+  MetaDia,
+  Ligacao
 } from "../types";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -71,6 +76,7 @@ interface RelatoriosViewProps {
   isencoes: IsencaoEntry[];
   pedidosCursos?: PedidoCursoEntry[];
   metaDia?: MetaDia[];
+  ligacoes?: Ligacao[];
   profile: UserProfile;
   onToast: (m: string, t?: "success" | "error") => void;
 }
@@ -87,11 +93,12 @@ export function RelatoriosView({
   isencoes,
   pedidosCursos = [],
   metaDia = [],
+  ligacoes = [],
   profile,
   onToast
 }: RelatoriosViewProps) {
   const [activeTab, setActiveTab] = useState<
-    "historico" | "bases" | "fiesProuni" | "planoAcao" | "empresas" | "insumos" | "isencoes" | "pedidos_cursos" | "metaDia"
+    "historico" | "bases" | "fiesProuni" | "planoAcao" | "empresas" | "insumos" | "isencoes" | "pedidos_cursos" | "metaDia" | "ligacoes"
   >("historico");
 
   const dashboardRef = useRef<HTMLDivElement>(null);
@@ -448,6 +455,90 @@ export function RelatoriosView({
     return { total, byCurso };
   }, [pedidosCursos]);
 
+  // --- Ligações Stats ---
+  const [ligacoesDataInicio, setLigacoesDataInicio] = useState("");
+  const [ligacoesDataFim, setLigacoesDataFim] = useState("");
+  const [ligacoesFiltroAtendente, setLigacoesFiltroAtendente] = useState("");
+  const [ligacoesFiltroOrigem, setLigacoesFiltroOrigem] = useState("");
+  const [ligacoesSearchTerm, setLigacoesSearchTerm] = useState("");
+
+  const filteredLigacoes = useMemo(() => {
+    return ligacoes.filter(l => {
+      const callDate = l.createdAt?.seconds ? new Date(l.createdAt.seconds * 1000).toISOString().split('T')[0] : '';
+      if (ligacoesDataInicio && callDate < ligacoesDataInicio) return false;
+      if (ligacoesDataFim && callDate > ligacoesDataFim) return false;
+      if (ligacoesFiltroAtendente && l.atendenteId !== ligacoesFiltroAtendente) return false;
+      if (ligacoesFiltroOrigem && l.origemId !== ligacoesFiltroOrigem) return false;
+      
+      if (ligacoesSearchTerm) {
+        const search = ligacoesSearchTerm.toLowerCase();
+        return (
+          l.atendenteNome?.toLowerCase().includes(search) || 
+          l.candidatoNome?.toLowerCase().includes(search)
+        );
+      }
+      
+      return true;
+    });
+  }, [ligacoes, ligacoesDataInicio, ligacoesDataFim, ligacoesFiltroAtendente, ligacoesFiltroOrigem, ligacoesSearchTerm]);
+
+  const ligacoesStats = useMemo(() => {
+    const total = filteredLigacoes.length;
+    const naoAtendeu = filteredLigacoes.filter(l => l.status === 'Não atendeu').length;
+    const semInteresse = filteredLigacoes.filter(l => l.status === 'Sem interesse').length;
+    const interesse = filteredLigacoes.filter(l => l.status === 'Interesse').length;
+
+    const byStaff: Record<string, number> = {};
+    const bySource: Record<string, { total: number, interesse: number }> = {};
+
+    filteredLigacoes.forEach(l => {
+      byStaff[l.atendenteNome] = (byStaff[l.atendenteNome] || 0) + 1;
+      
+      if (!bySource[l.origemId]) bySource[l.origemId] = { total: 0, interesse: 0 };
+      bySource[l.origemId].total += 1;
+      if (l.status === 'Interesse') bySource[l.origemId].interesse += 1;
+    });
+
+    const staffChart = Object.entries(byStaff)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0"
+      }));
+
+    const sourceRanking = Object.entries(bySource)
+      .map(([id, stats]) => {
+        const sourceName = calendarioAcoes.find(a => a.id === id)?.nome || id;
+        return {
+          name: sourceName,
+          count: stats.interesse,
+          total: stats.total,
+          rate: stats.total > 0 ? ((stats.interesse / stats.total) * 100).toFixed(1) : "0"
+        };
+      })
+      .sort((a, b) => Number(b.rate) - Number(a.rate))
+      .slice(0, 10);
+
+    return { total, naoAtendeu, semInteresse, interesse, staffChart, sourceRanking };
+  }, [filteredLigacoes, calendarioAcoes]);
+
+  const atendentesUnicos = useMemo(() => {
+    const atendentes = new Map<string, string>();
+    ligacoes.forEach(l => atendentes.set(l.atendenteId, l.atendenteNome));
+    return Array.from(atendentes.entries()).map(([id, name]) => ({ id, name }));
+  }, [ligacoes]);
+
+  const origensUnicas = useMemo(() => {
+    const origens = new Set<string>();
+    ligacoes.forEach(l => origens.add(l.origemId));
+    return Array.from(origens).map(id => {
+      const sourceName = calendarioAcoes.find(a => a.id === id)?.nome || id;
+      return { id, name: sourceName };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+  }, [ligacoes, calendarioAcoes]);
+
   return (
     <div className="space-y-6 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -476,6 +567,7 @@ export function RelatoriosView({
           { id: "insumos", label: "Insumos", icon: Boxes },
           { id: "isencoes", label: "Isenções", icon: FileText },
           { id: "pedidos_cursos", label: "Pedidos de Cursos", icon: UserPlus },
+          { id: "ligacoes", label: "Ligações", icon: Phone },
           { id: "metaDia", label: "Meta Dia", icon: Target },
         ].map((tab) => (
           <button
@@ -506,6 +598,8 @@ export function RelatoriosView({
             {activeTab === "insumos" && <Boxes className="text-blue-600" />}
             {activeTab === "isencoes" && <FileText className="text-blue-600" />}
             {activeTab === "pedidos_cursos" && <UserPlus className="text-blue-600" />}
+            {activeTab === "ligacoes" && <Phone className="text-blue-600" />}
+            {activeTab === "metaDia" && <Target className="text-blue-600" />}
             Dashboard: {activeTab === "historico" ? "Histórico de Leads" : 
                         activeTab === "bases" ? "Bases de Candidatos" :
                         activeTab === "fiesProuni" ? "Fies e Prouni" :
@@ -513,6 +607,7 @@ export function RelatoriosView({
                         activeTab === "empresas" ? "Empresas Parceiras" : 
                         activeTab === "insumos" ? "Controle de Insumos" : 
                         activeTab === "isencoes" ? "Acompanhamento de Isenções" : 
+                        activeTab === "ligacoes" ? "Controle de Ligações" :
                         activeTab === "metaDia" ? "Meta Dia" : "Pedidos de Cursos"}
           </h3>
           <span className="text-xs font-mono text-slate-400">Gerado em: {new Date().toLocaleString("pt-BR")}</span>
@@ -754,6 +849,146 @@ export function RelatoriosView({
             </div>
             <div className="grid grid-cols-1 gap-6">
               <ChartSection title="Cursos Mais Pedidos" data={pedidosCursosStats.byCurso} />
+            </div>
+          </div>
+        )}
+
+        {activeTab === "ligacoes" && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-white p-4 rounded-xl border border-slate-200">
+              <div className="md:col-span-1">
+                <label className="block text-xs font-medium text-slate-500 mb-1">Buscar por Nome</label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  <input 
+                    type="text" 
+                    value={ligacoesSearchTerm} 
+                    onChange={e => setLigacoesSearchTerm(e.target.value)} 
+                    placeholder="Staff ou Candidato..."
+                    className="w-full text-sm border-slate-200 rounded-lg pl-9 p-2 focus:ring-2 focus:ring-blue-500 transition-all outline-none" 
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Início</label>
+                <input type="date" value={ligacoesDataInicio} onChange={e => setLigacoesDataInicio(e.target.value)} className="w-full text-sm border-slate-200 rounded-lg p-2" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Fim</label>
+                <input type="date" value={ligacoesDataFim} onChange={e => setLigacoesDataFim(e.target.value)} className="w-full text-sm border-slate-200 rounded-lg p-2" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Funcionário</label>
+                <select value={ligacoesFiltroAtendente} onChange={e => setLigacoesFiltroAtendente(e.target.value)} className="w-full text-sm border-slate-200 rounded-lg p-2">
+                  <option value="">Todos</option>
+                  {atendentesUnicos.map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Base / Ação</label>
+                <select value={ligacoesFiltroOrigem} onChange={e => setLigacoesFiltroOrigem(e.target.value)} className="w-full text-sm border-slate-200 rounded-lg p-2">
+                  <option value="">Todas</option>
+                  {origensUnicas.map(o => (
+                    <option key={o.id} value={o.id}>{o.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard title="Total Ligações" value={ligacoesStats.total} icon={Phone} color="bg-blue-500" />
+              <StatCard title="Não Atendeu" value={ligacoesStats.naoAtendeu} icon={Clock} color="bg-amber-500" />
+              <StatCard title="Sem Interesse" value={ligacoesStats.semInteresse} icon={XCircle} color="bg-rose-500" />
+              <StatCard title="Interesse" value={ligacoesStats.interesse} icon={CheckCircle2} color="bg-emerald-500" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ChartSection title="Ligações por Atendente (Top 10)" data={ligacoesStats.staffChart} />
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <h4 className="text-sm font-bold text-slate-800 mb-4">Melhores Retornos (Bases/Ações)</h4>
+                <div className="space-y-4">
+                  {ligacoesStats.sourceRanking.length > 0 ? (
+                    ligacoesStats.sourceRanking.map((source, i) => (
+                      <div key={source.name} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg font-black text-slate-200">#{(i + 1).toString().padStart(2, '0')}</span>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800 truncate max-w-[200px]">{source.name}</p>
+                            <p className="text-[10px] text-slate-500 font-medium">{source.total} ligações realizadas</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-black text-emerald-600">{source.rate}%</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Taxa Interesse</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-400 text-center py-8 italic">Nenhum dado disponível.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <HistoryIcon size={16} />
+                Lista de Registros
+              </h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th className="p-4">Data/Hora</th>
+                      <th className="p-4">Colaborador</th>
+                      <th className="p-4">Candidato</th>
+                      <th className="p-4">Base/Ação</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4">Observação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredLigacoes.length > 0 ? (
+                      filteredLigacoes.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).map((l) => (
+                        <tr key={l.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-4 font-medium text-slate-500 whitespace-nowrap">
+                            {l.createdAt?.toDate().toLocaleString("pt-BR")}
+                          </td>
+                          <td className="p-4 font-bold text-slate-900">{l.atendenteNome}</td>
+                          <td className="p-4">
+                            <div className="font-bold text-slate-900">{l.candidatoNome}</div>
+                            <div className="text-xs text-slate-500">{l.candidatoTelefone}</div>
+                          </td>
+                          <td className="p-4 text-slate-600">
+                            {origensUnicas.find(o => o.id === l.origemId)?.name || l.origemId}
+                          </td>
+                          <td className="p-4">
+                            <span className={cn(
+                              "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
+                              l.status === 'Interesse' ? "bg-emerald-100 text-emerald-700" :
+                              l.status === 'Sem interesse' ? "bg-rose-100 text-rose-700" :
+                              "bg-amber-100 text-amber-700"
+                            )}>
+                              {l.status}
+                            </span>
+                          </td>
+                          <td className="p-4 text-slate-500 italic max-w-xs truncate" title={l.observacao}>
+                            {l.observacao || "-"}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-slate-400 italic">
+                          Nenhum registro encontrado.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

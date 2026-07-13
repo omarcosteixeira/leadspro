@@ -551,5 +551,20 @@ export interface IsencaoEntry {
   unidade?: string;
 }
 
+export interface Ligacao {
+  id: string;
+  candidatoId: string; // Lead ID or BaseEntry ID
+  candidatoNome: string;
+  candidatoTelefone: string;
+  origem: 'Lead' | 'Base';
+  origemId: string; // acaoId or baseName
+  status: 'Não atendeu' | 'Sem interesse' | 'Interesse';
+  observacao?: string;
+  atendenteId: string;
+  atendenteNome: string;
+  unidade?: string;
+  createdAt: any;
+}
+
 
 

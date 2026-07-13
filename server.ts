@@ -766,6 +766,79 @@ Não invente dados que não estão no resumo fornecido. Se alguma informação f
     }
   });
 
+  // HUNTER: Buscar novas oportunidades (OpenRouter)
+  app.post("/api/hunter/search", async (req, res) => {
+    try {
+      const { location, empresasExistentes } = req.body;
+      if (!location) {
+        return res.status(400).json({ success: false, error: "Localização é obrigatória." });
+      }
+
+      const openRouterApiKey = req.body.openRouterApiKey || process.env.OPENROUTER_API_KEY;
+
+      if (!openRouterApiKey) {
+         return res.status(500).json({ success: false, error: "Chave da API OpenRouter não configurada no servidor." });
+      }
+
+      const systemInstruction = `Você é a HUNTER, uma IA especialista em encontrar novas oportunidades de parcerias corporativas.
+Sua missão é buscar na internet empresas, ONGs, sindicatos, associações, escolas, clínicas e organizações com CNPJ na localização informada.
+Você receberá uma lista de empresas que já estão em nosso sistema. VOCÊ DEVE IGNORÁ-LAS e NÃO incluí-las nos resultados de forma alguma.
+Retorne APENAS organizações novas. Seja abrangente na sua busca.
+Sua resposta deve ser estritamente no formato JSON. Retorne UM OBJETO com a chave "empresas" contendo um array de objetos com as chaves: 'nome', 'ramo', 'endereco', 'telefone'. Não adicione markdown como \`\`\`json.`;
+
+      const promptStr = `Localização: ${location}\nEmpresas já no sistema (NÃO INCLUIR): ${(empresasExistentes || []).join(", ")}`;
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openRouterApiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": process.env.APP_URL || "https://ais-build.app",
+          "X-Title": "Gestão Oeste pro"
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.0-flash-001",
+          messages: [
+            {
+              role: "system",
+              content: systemInstruction
+            },
+            {
+              role: "user",
+              content: promptStr
+            }
+          ],
+          response_format: { type: "json_object" }
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error?.message || "Erro na API do OpenRouter.");
+      }
+
+      const text = data.choices?.[0]?.message?.content;
+      if (!text) {
+        return res.status(500).json({ success: false, error: "Resposta vazia da IA." });
+      }
+
+      let parsedResult;
+      try {
+        parsedResult = JSON.parse(text);
+      } catch (parseError) {
+        // Fallback for markdown wrapped json
+        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        parsedResult = JSON.parse(cleanText);
+      }
+
+      return res.json({ success: true, results: parsedResult.empresas || [] });
+    } catch (err: any) {
+      console.error("Erro na busca da HUNTER:", err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

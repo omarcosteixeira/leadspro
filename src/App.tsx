@@ -156,6 +156,7 @@ import {
   IsencaoEntry,
   ControleConcorrencia,
   PedidoCursoEntry,
+  Ligacao,
 } from "./types";
 import { ProfileModal } from "./components/ProfileModal";
 import { PublicRegistrationForm } from "./components/PublicRegistrationForm";
@@ -171,6 +172,8 @@ import { IsencoesView } from "./components/IsencoesView";
 import { WhatsAppMessageSelector } from "./components/WhatsAppMessageSelector";
 import { MultiSelect } from "./components/MultiSelect";
 import { EvasaoView } from "./components/EvasaoView";
+import NovasOportunidadesView from "./components/NovasOportunidadesView";
+import ControleLigacoesView from "./components/ControleLigacoesView";
 
 // --- Helpers ---
 export const replaceMessageVariables = (
@@ -471,6 +474,12 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.GESTOR_COMERCIAL,
     ROLES.FDV_COMERCIAL,
     ROLES.GESTOR_COMERCIAL_COMERCIAL,
+    ROLES.QG,
+    ROLES.SSA,
+    ROLES.PROMOTOR,
+    ROLES.PROMOTOR_RUA,
+    ROLES.FINANCEIRO,
+    ROLES.TECNICO,
   ],
   calculo: [
     ROLES.ADMIN_MASTER,
@@ -606,6 +615,18 @@ const VIEW_PERMISSIONS: Record<string, UserRole[]> = {
     ROLES.GESTOR_COMERCIAL,
     ROLES.FDV_COMERCIAL,
     ROLES.GESTOR_COMERCIAL_COMERCIAL,
+  ],
+  controleLigacoes: [
+    ROLES.ADMIN_MASTER,
+    ROLES.GESTOR_COMERCIAL,
+    ROLES.GESTOR_COMERCIAL_COMERCIAL,
+    ROLES.LIDER_FDV,
+    ROLES.FDV,
+    ROLES.FDV_COMERCIAL,
+    ROLES.PROMOTOR,
+    ROLES.PROMOTOR_RUA,
+    ROLES.SALA_MATRICULA,
+    ROLES.QG,
   ],
 };
 
@@ -3791,6 +3812,7 @@ export default function App() {
     ).sort();
   }, [cursos]);
   const [pedidosCursos, setPedidosCursos] = useState<PedidoCursoEntry[]>([]);
+  const [ligacoes, setLigacoes] = useState<Ligacao[]>([]);
   const [insumosPedidos, setInsumosPedidos] = useState<InsumoPedido[]>([]);
   const [insumosEstoque, setInsumosEstoque] = useState<InsumoEstoque[]>([]);
   const [insumosPedidosComercial, setInsumosPedidosComercial] = useState<
@@ -5365,6 +5387,21 @@ export default function App() {
       );
     }
 
+    const unsubLigacoes = onSnapshot(
+      collection(db, COLLECTIONS.CONTROLE_LIGACOES),
+      (snap) => {
+        setLigacoes(
+          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Ligacao),
+        );
+      },
+      (err) =>
+        handleFirestoreError(
+          err,
+          OperationType.LIST,
+          COLLECTIONS.CONTROLE_LIGACOES,
+        ),
+    );
+
     return () => {
       unsubUsers();
       unsubPlanner();
@@ -5395,6 +5432,7 @@ export default function App() {
       unsubInsumosPedidosComercial();
       unsubInsumosEstoqueComercial();
       unsubInsumosBaixas();
+      unsubLigacoes();
     };
   }, [user, profile]);
 
@@ -5534,6 +5572,18 @@ export default function App() {
       }
     }
   }, [profile, currentView]);
+
+  const handleSaveLigacao = async (ligacao: Partial<Ligacao>) => {
+    try {
+      await addDoc(collection(db, COLLECTIONS.CONTROLE_LIGACOES), {
+        ...ligacao,
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, COLLECTIONS.CONTROLE_LIGACOES);
+      throw err;
+    }
+  };
 
   if (loading) {
     return (
@@ -5846,6 +5896,7 @@ export default function App() {
                 label: "Controle de Concorrência",
                 icon: Target,
               },
+              { id: "controleLigacoes", label: "Controle de Ligações", icon: Phone },
               { id: "evasao", label: "Evasão", icon: UserMinus },
               {
                 id: "calculo",
@@ -6023,6 +6074,7 @@ export default function App() {
                   insumosBaixas={insumosBaixas}
                   isencoes={isencoes}
                   metaDia={metaDia}
+                  ligacoes={ligacoes}
                   profile={profile!}
                   onToast={showToast}
                 />
@@ -6183,6 +6235,7 @@ export default function App() {
                   onSendWhatsApp={sendAppWhatsApp}
                   botConfig={botConfig}
                   uniqueUnidades={uniqueUnidades}
+                  profile={profile!}
                   onGenerateAction={(empresa) => {
                     setInitialActionData({
                       nome: `Ação na empresa ${empresa.nome}`,
@@ -6199,7 +6252,19 @@ export default function App() {
                   onToast={showToast}
                 />
               )}
-              {currentView === "evasao" && (
+              {currentView === "controleLigacoes" && (
+              <ControleLigacoesView
+                leads={leads}
+                bases={bases}
+                acoes={calendarioAcoes}
+                ligacoes={ligacoes}
+                profile={profile!}
+                onSaveLigacao={handleSaveLigacao}
+                onToast={showToast}
+              />
+            )}
+
+            {currentView === "evasao" && (
                 <EvasaoView profile={profile} onToast={showToast} />
               )}
               {currentView === "admin" && (
@@ -16875,6 +16940,7 @@ function EmpresasParceirasView({
   onSendWhatsApp,
   botConfig,
   uniqueUnidades = [],
+  profile,
 }: {
   data: EmpresaParceira[];
   leads?: Lead[];
@@ -16886,6 +16952,7 @@ function EmpresasParceirasView({
   onSendWhatsApp?: (phone: string, message: string) => Promise<void>;
   botConfig?: BotConfig;
   uniqueUnidades?: string[];
+  profile?: UserProfile;
 }) {
   const sendTelegramNotification = async (
     telegramHandleOrId: string,
@@ -16953,7 +17020,7 @@ function EmpresasParceirasView({
   >(null);
 
   // Active Tab: list vs tratativas report vs map
-  const [activeTab, setActiveTab] = useState<"lista" | "tratativas" | "mapa">(
+  const [activeTab, setActiveTab] = useState<"lista" | "tratativas" | "mapa" | "oportunidades">(
     "lista",
   );
   const [viewFormat, setViewFormat] = useState<"card" | "list">("card");
@@ -17565,6 +17632,21 @@ function EmpresasParceirasView({
             </span>
           )}
         </button>
+        {profile?.role === "Admin Master" && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("oportunidades")}
+            className={cn(
+              "pb-3 px-6 font-bold text-sm transition-all border-b-2 flex items-center space-x-2",
+              activeTab === "oportunidades"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-slate-500 hover:text-slate-700",
+            )}
+          >
+            <Search size={16} />
+            <span>Novas Oportunidades</span>
+          </button>
+        )}
       </div>
 
       {(activeTab === "lista" || activeTab === "mapa") && (
@@ -18547,6 +18629,19 @@ function EmpresasParceirasView({
             )}
           </div>
         </div>
+      )}
+
+      {/* Novas Oportunidades View */}
+      {activeTab === "oportunidades" && profile?.role === "Admin Master" && (
+        <NovasOportunidadesView 
+          data={data}
+          botConfig={botConfig}
+          onToast={onToast}
+          onAdicionarOportunidade={(nova) => {
+            setEditingEmpresa(nova as EmpresaParceira);
+            setIsModalOpen(true);
+          }}
+        />
       )}
 
       <AnimatePresence>
