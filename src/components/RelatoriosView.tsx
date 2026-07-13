@@ -21,6 +21,20 @@ import {
   Search,
   History as HistoryIcon
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  AreaChart,
+  Area
+} from "recharts";
 import { cn } from "../lib/utils";
 import { 
   UserProfile, 
@@ -539,6 +553,46 @@ export function RelatoriosView({
     }).sort((a, b) => a.name.localeCompare(b.name));
   }, [ligacoes, calendarioAcoes]);
 
+  const ligacoesChartDataByStaff = useMemo(() => {
+    const data: Record<string, { name: string, atendidas: number, naoAtendidas: number }> = {};
+    filteredLigacoes.forEach(l => {
+      if (!data[l.atendenteId]) {
+        data[l.atendenteId] = { name: l.atendenteNome, atendidas: 0, naoAtendidas: 0 };
+      }
+      if (l.status === 'Não atendeu') {
+        data[l.atendenteId].naoAtendidas += 1;
+      } else {
+        data[l.atendenteId].atendidas += 1;
+      }
+    });
+    return Object.values(data).sort((a, b) => (b.atendidas + b.naoAtendidas) - (a.atendidas + a.naoAtendidas)).slice(0, 10);
+  }, [filteredLigacoes]);
+
+  const ligacoesChartDataByDate = useMemo(() => {
+    const data: Record<string, { date: string, dateObj: Date, atendidas: number, naoAtendidas: number }> = {};
+    filteredLigacoes.forEach(l => {
+      if (!l.createdAt?.seconds) return;
+      const d = new Date(l.createdAt.seconds * 1000);
+      const dateKey = d.toLocaleDateString('pt-BR');
+      if (!data[dateKey]) {
+        data[dateKey] = { 
+          date: dateKey, 
+          dateObj: new Date(d.getFullYear(), d.getMonth(), d.getDate()), 
+          atendidas: 0, 
+          naoAtendidas: 0 
+        };
+      }
+      if (l.status === 'Não atendeu') {
+        data[dateKey].naoAtendidas += 1;
+      } else {
+        data[dateKey].atendidas += 1;
+      }
+    });
+    return Object.values(data)
+      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
+      .slice(-15);
+  }, [filteredLigacoes]);
+
   return (
     <div className="space-y-6 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -905,7 +959,55 @@ export function RelatoriosView({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ChartSection title="Ligações por Atendente (Top 10)" data={ligacoesStats.staffChart} />
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-[400px]">
+                <h4 className="text-sm font-bold text-slate-800 mb-6 flex items-center justify-between">
+                  Proporção por Colaborador
+                  <span className="text-[10px] text-slate-400 font-normal uppercase tracking-wider">Top 10 Volume</span>
+                </h4>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={ligacoesChartDataByStaff} layout="vertical" margin={{ left: 40, right: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600, fill: '#64748b' }} width={100} />
+                    <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
+                    <Bar dataKey="atendidas" name="Atendidas" stackId="a" fill="#10b981" barSize={20} />
+                    <Bar dataKey="naoAtendidas" name="Não Atendidas" stackId="a" fill="#f59e0b" barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-[400px]">
+                <h4 className="text-sm font-bold text-slate-800 mb-6 flex items-center justify-between">
+                  Desempenho por Data
+                  <span className="text-[10px] text-slate-400 font-normal uppercase tracking-wider">Últimos 15 dias</span>
+                </h4>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={ligacoesChartDataByDate}>
+                    <defs>
+                      <linearGradient id="colorAtendidas" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorNaoAtendidas" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600, fill: '#64748b' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600, fill: '#64748b' }} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
+                    <Area type="monotone" dataKey="atendidas" name="Atendidas" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorAtendidas)" />
+                    <Area type="monotone" dataKey="naoAtendidas" name="Não Atendidas" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorNaoAtendidas)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ChartSection title="Volume Total por Atendente (Top 10)" data={ligacoesStats.staffChart} />
               <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                 <h4 className="text-sm font-bold text-slate-800 mb-4">Melhores Retornos (Bases/Ações)</h4>
                 <div className="space-y-4">
