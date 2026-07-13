@@ -172,6 +172,9 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isPrincipal() || isComercial() || isSSA();
     }
+    match /artifacts/gestaopro-761e1/public/data/controle_ligacoes/{id} {
+      allow read, write: if isAuthenticated();
+    }
     match /artifacts/gestaopro-761e1/public/data/controle_concorrencia/{id} {
       allow read: if isAuthenticated();
       allow write: if isPrincipal() || isComercial() || isSSA() || isSalaMatricula();
