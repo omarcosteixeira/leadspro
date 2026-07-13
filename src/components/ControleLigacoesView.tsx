@@ -12,7 +12,9 @@ import {
   ChevronRight,
   Database,
   Building2,
-  RefreshCw
+  RefreshCw,
+  IdCard,
+  GraduationCap
 } from "lucide-react";
 import { 
   Lead, 
@@ -57,10 +59,11 @@ export default function ControleLigacoesView({
     return Array.from(names).sort();
   }, [bases]);
 
-  // Get unique actions
+  // Get unique actions from leads (Historico)
   const actionOptions = useMemo(() => {
-    return acoes.filter(a => !a.concluida).sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [acoes]);
+    const names = new Set(leads.map(l => l.acao).filter(Boolean));
+    return Array.from(names).sort();
+  }, [leads]);
 
   const handleStartCall = () => {
     if (!selectedSourceId) {
@@ -72,7 +75,7 @@ export default function ControleLigacoesView({
     if (sourceType === "Base") {
       candidates = bases.filter(b => b.nomeBase === selectedSourceId);
     } else {
-      candidates = leads.filter(l => l.acaoId === selectedSourceId);
+      candidates = leads.filter(l => l.acao === selectedSourceId);
     }
 
     // Filter out converted candidates
@@ -232,7 +235,7 @@ export default function ControleLigacoesView({
                     ))
                   ) : (
                     actionOptions.map(acao => (
-                      <option key={acao.id} value={acao.id}>{acao.nome}</option>
+                      <option key={acao} value={acao}>{acao}</option>
                     ))
                   )}
                 </select>
@@ -262,10 +265,24 @@ export default function ControleLigacoesView({
                 </div>
                 <div>
                   <h3 className="text-2xl font-black text-slate-900">{currentCandidate.nome}</h3>
-                  <p className="text-slate-500 font-bold flex items-center gap-2">
-                    <Phone size={16} />
-                    {formatPhone(currentCandidate.telefone)}
-                  </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-1">
+                    <p className="text-slate-500 font-bold flex items-center gap-2">
+                      <Phone size={16} />
+                      {formatPhone(currentCandidate.telefone)}
+                    </p>
+                    {currentCandidate.cpf && (
+                      <p className="text-slate-500 font-bold flex items-center gap-2">
+                        <IdCard size={16} />
+                        {currentCandidate.cpf}
+                      </p>
+                    )}
+                    {((currentCandidate as any).cursoInteresse || (currentCandidate as any).curso) && (
+                      <p className="text-slate-500 font-bold flex items-center gap-2">
+                        <GraduationCap size={16} />
+                        {(currentCandidate as any).cursoInteresse || (currentCandidate as any).curso}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex gap-2">
