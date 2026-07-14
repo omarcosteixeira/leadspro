@@ -529,15 +529,32 @@ export function RelatoriosView({
         const sourceName = calendarioAcoes.find(a => a.id === id)?.nome || id;
         return {
           name: sourceName,
-          count: stats.interesse,
+          interesse: stats.interesse,
           total: stats.total,
-          rate: stats.total > 0 ? ((stats.interesse / stats.total) * 100).toFixed(1) : "0"
+          convertido: stats.convertido,
+          rate: stats.total > 0 ? ((stats.interesse / stats.total) * 100).toFixed(1) : "0",
+          convRate: stats.total > 0 ? ((stats.convertido / stats.total) * 100).toFixed(1) : "0"
         };
       })
-      .sort((a, b) => Number(b.rate) - Number(a.rate))
+      .sort((a, b) => Number(b.convRate) - Number(a.convRate))
       .slice(0, 10);
 
-    return { total, naoAtendeu, semInteresse, interesse, convertido, staffChart, sourceRanking };
+    const staffConvRanking = Object.entries(filteredLigacoes.reduce((acc, l) => {
+      if (!acc[l.atendenteNome]) acc[l.atendenteNome] = { total: 0, conv: 0 };
+      acc[l.atendenteNome].total += 1;
+      if (l.status === 'Convertido') acc[l.atendenteNome].conv += 1;
+      return acc;
+    }, {} as Record<string, { total: number, conv: number }>))
+      .map(([name, stats]) => ({
+        name,
+        conv: stats.conv,
+        total: stats.total,
+        rate: stats.total > 0 ? ((stats.conv / stats.total) * 100).toFixed(1) : "0"
+      }))
+      .sort((a, b) => b.conv - a.conv)
+      .slice(0, 10);
+
+    return { total, naoAtendeu, semInteresse, interesse, convertido, staffChart, sourceRanking, staffConvRanking };
   }, [filteredLigacoes, calendarioAcoes]);
 
   const atendentesUnicos = useMemo(() => {
@@ -1021,9 +1038,11 @@ export function RelatoriosView({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ChartSection title="Volume Total por Atendente (Top 10)" data={ligacoesStats.staffChart} />
               <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                <h4 className="text-sm font-bold text-slate-800 mb-4">Melhores Retornos (Bases/Ações)</h4>
+                <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center justify-between">
+                  Melhores Retornos (Bases/Ações)
+                  <span className="text-[10px] text-slate-400 font-normal uppercase tracking-wider">Top Conversão</span>
+                </h4>
                 <div className="space-y-4">
                   {ligacoesStats.sourceRanking.length > 0 ? (
                     ligacoesStats.sourceRanking.map((source, i) => (
@@ -1032,12 +1051,46 @@ export function RelatoriosView({
                           <span className="text-lg font-black text-slate-200">#{(i + 1).toString().padStart(2, '0')}</span>
                           <div>
                             <p className="text-sm font-bold text-slate-800 truncate max-w-[200px]">{source.name}</p>
-                            <p className="text-[10px] text-slate-500 font-medium">{source.total} ligações realizadas</p>
+                            <p className="text-[10px] text-slate-500 font-medium">
+                              {source.total} ligações • {source.interesse} interessados • {source.convertido} convertidos
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-black text-emerald-600">{source.rate}%</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Taxa Interesse</p>
+                          <p className="text-sm font-black text-blue-600">{source.convRate}%</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Conversão</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-400 text-center py-8 italic">Nenhum dado disponível.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center justify-between">
+                  Conversões por Atendente
+                  <span className="text-[10px] text-slate-400 font-normal uppercase tracking-wider">Top Conversores</span>
+                </h4>
+                <div className="space-y-4">
+                  {ligacoesStats.staffConvRanking.length > 0 ? (
+                    ligacoesStats.staffConvRanking.map((staff, i) => (
+                      <div key={staff.name} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                            {staff.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{staff.name}</p>
+                            <p className="text-[10px] text-slate-500 font-medium">
+                              {staff.total} ligações • {staff.conv} conversões
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-black text-blue-600">{staff.rate}%</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Taxa</p>
                         </div>
                       </div>
                     ))
