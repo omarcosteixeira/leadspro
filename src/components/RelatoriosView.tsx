@@ -501,16 +501,18 @@ export function RelatoriosView({
     const naoAtendeu = filteredLigacoes.filter(l => l.status === 'Não atendeu').length;
     const semInteresse = filteredLigacoes.filter(l => l.status === 'Sem interesse').length;
     const interesse = filteredLigacoes.filter(l => l.status === 'Interesse').length;
+    const convertido = filteredLigacoes.filter(l => l.status === 'Convertido').length;
 
     const byStaff: Record<string, number> = {};
-    const bySource: Record<string, { total: number, interesse: number }> = {};
+    const bySource: Record<string, { total: number, interesse: number, convertido: number }> = {};
 
     filteredLigacoes.forEach(l => {
       byStaff[l.atendenteNome] = (byStaff[l.atendenteNome] || 0) + 1;
       
-      if (!bySource[l.origemId]) bySource[l.origemId] = { total: 0, interesse: 0 };
+      if (!bySource[l.origemId]) bySource[l.origemId] = { total: 0, interesse: 0, convertido: 0 };
       bySource[l.origemId].total += 1;
       if (l.status === 'Interesse') bySource[l.origemId].interesse += 1;
+      if (l.status === 'Convertido') bySource[l.origemId].convertido += 1;
     });
 
     const staffChart = Object.entries(byStaff)
@@ -535,7 +537,7 @@ export function RelatoriosView({
       .sort((a, b) => Number(b.rate) - Number(a.rate))
       .slice(0, 10);
 
-    return { total, naoAtendeu, semInteresse, interesse, staffChart, sourceRanking };
+    return { total, naoAtendeu, semInteresse, interesse, convertido, staffChart, sourceRanking };
   }, [filteredLigacoes, calendarioAcoes]);
 
   const atendentesUnicos = useMemo(() => {
@@ -554,22 +556,24 @@ export function RelatoriosView({
   }, [ligacoes, calendarioAcoes]);
 
   const ligacoesChartDataByStaff = useMemo(() => {
-    const data: Record<string, { name: string, atendidas: number, naoAtendidas: number }> = {};
+    const data: Record<string, { name: string, atendidas: number, naoAtendidas: number, convertidas: number }> = {};
     filteredLigacoes.forEach(l => {
       if (!data[l.atendenteId]) {
-        data[l.atendenteId] = { name: l.atendenteNome, atendidas: 0, naoAtendidas: 0 };
+        data[l.atendenteId] = { name: l.atendenteNome, atendidas: 0, naoAtendidas: 0, convertidas: 0 };
       }
       if (l.status === 'Não atendeu') {
         data[l.atendenteId].naoAtendidas += 1;
+      } else if (l.status === 'Convertido') {
+        data[l.atendenteId].convertidas += 1;
       } else {
         data[l.atendenteId].atendidas += 1;
       }
     });
-    return Object.values(data).sort((a, b) => (b.atendidas + b.naoAtendidas) - (a.atendidas + a.naoAtendidas)).slice(0, 10);
+    return Object.values(data).sort((a, b) => (a.atendidas + a.naoAtendidas + a.convertidas) - (b.atendidas + b.naoAtendidas + b.convertidas)).slice(0, 10);
   }, [filteredLigacoes]);
 
   const ligacoesChartDataByDate = useMemo(() => {
-    const data: Record<string, { date: string, dateObj: Date, atendidas: number, naoAtendidas: number }> = {};
+    const data: Record<string, { date: string, dateObj: Date, atendidas: number, naoAtendidas: number, convertidas: number }> = {};
     filteredLigacoes.forEach(l => {
       if (!l.createdAt?.seconds) return;
       const d = new Date(l.createdAt.seconds * 1000);
@@ -579,11 +583,14 @@ export function RelatoriosView({
           date: dateKey, 
           dateObj: new Date(d.getFullYear(), d.getMonth(), d.getDate()), 
           atendidas: 0, 
-          naoAtendidas: 0 
+          naoAtendidas: 0,
+          convertidas: 0
         };
       }
       if (l.status === 'Não atendeu') {
         data[dateKey].naoAtendidas += 1;
+      } else if (l.status === 'Convertido') {
+        data[dateKey].convertidas += 1;
       } else {
         data[dateKey].atendidas += 1;
       }
@@ -951,11 +958,12 @@ export function RelatoriosView({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <StatCard title="Total Ligações" value={ligacoesStats.total} icon={Phone} color="bg-blue-500" />
               <StatCard title="Não Atendeu" value={ligacoesStats.naoAtendeu} icon={Clock} color="bg-amber-500" />
               <StatCard title="Sem Interesse" value={ligacoesStats.semInteresse} icon={XCircle} color="bg-rose-500" />
               <StatCard title="Interesse" value={ligacoesStats.interesse} icon={CheckCircle2} color="bg-emerald-500" />
+              <StatCard title="Convertido" value={ligacoesStats.convertido} icon={CheckCircle} color="bg-blue-600" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -972,6 +980,7 @@ export function RelatoriosView({
                     <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                     <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
                     <Bar dataKey="atendidas" name="Atendidas" stackId="a" fill="#10b981" barSize={20} />
+                    <Bar dataKey="convertidas" name="Convertidas" stackId="a" fill="#3b82f6" barSize={20} />
                     <Bar dataKey="naoAtendidas" name="Não Atendidas" stackId="a" fill="#f59e0b" barSize={20} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -989,6 +998,10 @@ export function RelatoriosView({
                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
                         <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                       </linearGradient>
+                      <linearGradient id="colorConvertidas" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      </linearGradient>
                       <linearGradient id="colorNaoAtendidas" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.1}/>
                         <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
@@ -1000,6 +1013,7 @@ export function RelatoriosView({
                     <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                     <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
                     <Area type="monotone" dataKey="atendidas" name="Atendidas" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorAtendidas)" />
+                    <Area type="monotone" dataKey="convertidas" name="Convertidas" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorConvertidas)" />
                     <Area type="monotone" dataKey="naoAtendidas" name="Não Atendidas" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorNaoAtendidas)" />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -1069,6 +1083,7 @@ export function RelatoriosView({
                           <td className="p-4">
                             <span className={cn(
                               "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
+                              l.status === 'Convertido' ? "bg-blue-100 text-blue-700" :
                               l.status === 'Interesse' ? "bg-emerald-100 text-emerald-700" :
                               l.status === 'Sem interesse' ? "bg-rose-100 text-rose-700" :
                               "bg-amber-100 text-amber-700"

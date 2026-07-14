@@ -558,7 +558,7 @@ export interface Ligacao {
   candidatoTelefone: string;
   origem: 'Lead' | 'Base';
   origemId: string; // acaoId or baseName
-  status: 'Não atendeu' | 'Sem interesse' | 'Interesse';
+  status: 'Não atendeu' | 'Sem interesse' | 'Interesse' | 'Convertido';
   observacao?: string;
   atendenteId: string;
   atendenteNome: string;

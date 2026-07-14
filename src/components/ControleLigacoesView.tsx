@@ -51,7 +51,7 @@ export default function ControleLigacoesView({
   const [isSaving, setIsSaving] = useState(false);
   const [observation, setObservation] = useState("");
   const [showObservation, setShowObservation] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<'Não atendeu' | 'Sem interesse' | 'Interesse' | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<'Não atendeu' | 'Sem interesse' | 'Interesse' | 'Convertido' | null>(null);
 
   // Get unique base names
   const baseNames = useMemo(() => {
@@ -114,10 +114,10 @@ export default function ControleLigacoesView({
     setSelectedStatus(null);
   };
 
-  const handleAction = async (status: 'Não atendeu' | 'Sem interesse' | 'Interesse') => {
+  const handleAction = async (status: 'Não atendeu' | 'Sem interesse' | 'Interesse' | 'Convertido') => {
     if (!currentCandidate) return;
 
-    if ((status === 'Sem interesse' || status === 'Interesse') && !showObservation) {
+    if ((status === 'Sem interesse' || status === 'Interesse' || status === 'Convertido') && !showObservation) {
       setSelectedStatus(status);
       setShowObservation(true);
       return;
@@ -303,6 +303,7 @@ export default function ControleLigacoesView({
                     <div key={h.id} className="flex gap-4 items-start">
                       <div className={cn(
                         "mt-1 p-1 rounded-full",
+                        h.status === 'Convertido' ? "bg-blue-500" :
                         h.status === 'Interesse' ? "bg-emerald-500" : 
                         h.status === 'Sem interesse' ? "bg-rose-500" : "bg-amber-500"
                       )} />
@@ -389,6 +390,14 @@ export default function ControleLigacoesView({
                   >
                     <CheckCircle2 className="group-hover:scale-110 transition-transform" size={28} />
                     <span className="font-bold">Interesse</span>
+                  </button>
+                  <button
+                    disabled={isSaving}
+                    onClick={() => handleAction('Convertido')}
+                    className="p-6 rounded-2xl border-2 border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex flex-col items-center gap-2 group"
+                  >
+                    <CheckCircle2 className="group-hover:scale-110 transition-transform" size={28} />
+                    <span className="font-bold">Convertido</span>
                   </button>
                 </motion.div>
               )}
