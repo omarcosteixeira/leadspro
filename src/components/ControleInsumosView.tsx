@@ -201,7 +201,11 @@ export function ControleInsumosView({
         : "docente");
 
     if (tipo === "docente") {
-      return profile.role === "Acadêmico" || profile.role === "Técnico";
+      return (
+        profile.role === "Acadêmico" ||
+        profile.role === "Técnico" ||
+        profile.role === "Financeiro"
+      );
     } else if (tipo === "administrativo") {
       return profile.role === "Financeiro";
     }
