@@ -173,13 +173,18 @@ service cloud.firestore {
       allow write: if isPrincipal() || isComercial() || isSSA();
     }
     match /artifacts/gestaopro-761e1/public/data/controle_ligacoes/{id} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal() || isComercial() || isSSA() || isSalaMatricula();
     }
     match /artifacts/gestaopro-761e1/public/data/controle_concorrencia/{id} {
       allow read: if isAuthenticated();
       allow write: if isPrincipal() || isComercial() || isSSA() || isSalaMatricula();
     }
 
+    match /artifacts/gestaopro-761e1/public/data/crescimento_anual/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal() || isComercial() || isSSA() || isSalaMatricula();
+    }
     match /artifacts/gestaopro-761e1/public/data/campanhas/{id} {
       allow read: if isAuthenticated();
       allow write: if isPrincipal() || isComercial() || isSSA() || isSalaMatricula();
@@ -253,7 +258,8 @@ service cloud.firestore {
     }
 
     match /artifacts/gestaopro-761e1/public/data/solicitacoes_folga/{id} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal() || isComercial() || isSSA() || isSalaMatricula();
     }
 
     match /artifacts/gestaopro-761e1/public/data/cursos/{id} {
