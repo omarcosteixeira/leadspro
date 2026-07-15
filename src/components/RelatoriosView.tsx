@@ -19,7 +19,9 @@ import {
   Phone,
   XCircle,
   Search,
-  History as HistoryIcon
+  History as HistoryIcon,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import {
   BarChart,
@@ -49,7 +51,8 @@ import {
   IsencaoEntry,
   PedidoCursoEntry,
   MetaDia,
-  Ligacao
+  Ligacao,
+  AnalysisScheme
 } from "../types";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -91,6 +94,7 @@ interface RelatoriosViewProps {
   pedidosCursos?: PedidoCursoEntry[];
   metaDia?: MetaDia[];
   ligacoes?: Ligacao[];
+  analysisSchemes?: AnalysisScheme[];
   profile: UserProfile;
   onToast: (m: string, t?: "success" | "error") => void;
 }
@@ -108,11 +112,12 @@ export function RelatoriosView({
   pedidosCursos = [],
   metaDia = [],
   ligacoes = [],
+  analysisSchemes = [],
   profile,
   onToast
 }: RelatoriosViewProps) {
   const [activeTab, setActiveTab] = useState<
-    "historico" | "bases" | "fiesProuni" | "planoAcao" | "empresas" | "insumos" | "isencoes" | "pedidos_cursos" | "metaDia" | "ligacoes"
+    "historico" | "bases" | "fiesProuni" | "planoAcao" | "empresas" | "insumos" | "isencoes" | "pedidos_cursos" | "metaDia" | "ligacoes" | "crescimento"
   >("historico");
 
   const dashboardRef = useRef<HTMLDivElement>(null);
@@ -647,6 +652,7 @@ export function RelatoriosView({
           { id: "pedidos_cursos", label: "Pedidos de Cursos", icon: UserPlus },
           { id: "ligacoes", label: "Ligações", icon: Phone },
           { id: "metaDia", label: "Meta Dia", icon: Target },
+          { id: "crescimento", label: "Crescimento", icon: TrendingUp },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -1206,6 +1212,169 @@ export function RelatoriosView({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {activeTab === "crescimento" && (
+          <div className="space-y-12">
+            {analysisSchemes.length === 0 ? (
+              <div className="bg-white p-12 rounded-3xl border border-slate-100 text-center space-y-4">
+                <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto">
+                  <TrendingUp size={32} />
+                </div>
+                <h4 className="text-xl font-bold text-slate-800">Nenhuma análise de crescimento configurada</h4>
+                <p className="text-slate-500 max-w-sm mx-auto">As análises de crescimento são configuradas pelo administrador no painel administrativo.</p>
+              </div>
+            ) : (
+              analysisSchemes.map((scheme) => (
+                <div key={scheme.id} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-8">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-bold text-slate-900">{scheme.nome}</h3>
+                      <p className="text-slate-500 text-sm">Análise de crescimento trienal comparativa</p>
+                    </div>
+                    <div className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                      Relatório Consolidado
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {scheme.periodos.map((p, idx) => {
+                      const entregue = p.meta > 0 ? (p.realizado / p.meta) * 100 : 0;
+                      let crescMeta = 0;
+                      let crescBase = 0;
+
+                      if (idx > 0) {
+                        const prev = scheme.periodos[idx - 1];
+                        if (prev.meta > 0) {
+                          crescMeta = ((p.meta - prev.meta) / prev.meta) * 100;
+                        }
+                        if (prev.realizado > 0) {
+                          crescBase = ((p.realizado - prev.realizado) / prev.realizado) * 100;
+                        }
+                      }
+
+                      return (
+                        <div key={idx} className="bg-slate-50/50 rounded-2xl p-6 border border-slate-100 relative overflow-hidden group hover:border-blue-200 transition-all">
+                          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+                            <Calendar size={48} className="text-blue-600" />
+                          </div>
+                          
+                          <div className="relative z-10 space-y-4">
+                            <span className="text-xs font-black text-blue-600 uppercase tracking-widest">{p.periodo}</span>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase">Meta</p>
+                                <p className="text-lg font-bold text-slate-800">{p.meta}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase">Realizado</p>
+                                <p className="text-lg font-bold text-slate-800">{p.realizado}</p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">Entregue</span>
+                                <span className={cn("text-sm font-black", entregue >= 100 ? "text-emerald-600" : "text-rose-500")}>
+                                  {entregue.toFixed(1)}%
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                                <div 
+                                  className={cn("h-full rounded-full transition-all duration-1000", entregue >= 100 ? "bg-emerald-500" : "bg-blue-500")}
+                                  style={{ width: `${Math.min(entregue, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            {idx > 0 && (
+                              <div className="pt-3 border-t border-slate-200/50 grid grid-cols-2 gap-2">
+                                <div className="space-y-0.5">
+                                  <p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Cresc. Meta</p>
+                                  <div className={cn("flex items-center text-xs font-bold", crescMeta >= 0 ? "text-emerald-600" : "text-rose-500")}>
+                                    {crescMeta >= 0 ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                    {Math.abs(crescMeta).toFixed(1)}%
+                                  </div>
+                                </div>
+                                <div className="space-y-0.5 text-right">
+                                  <p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Cresc. Base</p>
+                                  <div className={cn("flex items-center justify-end text-xs font-bold", crescBase >= 0 ? "text-emerald-600" : "text-rose-500")}>
+                                    {crescBase >= 0 ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                    {Math.abs(crescBase).toFixed(1)}%
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
+                    <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100">
+                      <h4 className="text-sm font-bold text-slate-800 mb-6 flex items-center">
+                        <BarChart3 size={18} className="text-blue-600 mr-2" />
+                        Evolução Meta vs. Realizado
+                      </h4>
+                      <div className="h-[250px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={scheme.periodos}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                            <XAxis dataKey="periodo" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: "#64748b" }} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: "#64748b" }} />
+                            <Tooltip 
+                              contentStyle={{ borderRadius: "16px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }}
+                              cursor={{ fill: "rgba(30, 64, 175, 0.05)" }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: "10px", fontWeight: "bold", paddingTop: "20px" }} />
+                            <Bar dataKey="meta" name="Meta" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={30} />
+                            <Bar dataKey="realizado" name="Realizado" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100">
+                      <h4 className="text-sm font-bold text-slate-800 mb-6 flex items-center">
+                        <TrendingUp size={18} className="text-blue-600 mr-2" />
+                        Curva de Crescimento (%)
+                      </h4>
+                      <div className="h-[250px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={scheme.periodos.map((p, idx) => {
+                            let crescMeta = 0;
+                            let crescBase = 0;
+                            if (idx > 0) {
+                              const prev = scheme.periodos[idx - 1];
+                              if (prev.meta > 0) crescMeta = ((p.meta - prev.meta) / prev.meta) * 100;
+                              if (prev.realizado > 0) crescBase = ((p.realizado - prev.realizado) / prev.realizado) * 100;
+                            }
+                            return {
+                              periodo: p.periodo,
+                              "Cresc. Meta": Number(crescMeta.toFixed(1)),
+                              "Cresc. Base": Number(crescBase.toFixed(1))
+                            };
+                          })}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                            <XAxis dataKey="periodo" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: "#64748b" }} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: "#64748b" }} />
+                            <Tooltip 
+                              contentStyle={{ borderRadius: "16px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: "10px", fontWeight: "bold", paddingTop: "20px" }} />
+                            <Line type="monotone" dataKey="Cresc. Meta" stroke="#94a3b8" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: "white" }} />
+                            <Line type="monotone" dataKey="Cresc. Base" stroke="#10b981" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: "white" }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>

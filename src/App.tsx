@@ -157,7 +157,10 @@ import {
   ControleConcorrencia,
   PedidoCursoEntry,
   Ligacao,
+  AnalysisScheme,
+  PeriodAnalysis,
 } from "./types";
+import CrescimentoAnualAdmin from "./components/CrescimentoAnualAdmin";
 import { ProfileModal } from "./components/ProfileModal";
 import { PublicRegistrationForm } from "./components/PublicRegistrationForm";
 import { PublicInsumoForm } from "./components/PublicInsumoForm";
@@ -3745,6 +3748,7 @@ function FiesProuniView({
 }
 
 export default function App() {
+  const [analysisSchemes, setAnalysisSchemes] = useState<AnalysisScheme[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -4400,6 +4404,54 @@ export default function App() {
       showToast("Envio em massa cancelado pelo usuário.", "error");
     } else {
       showToast("Envio em massa concluído!", "success");
+    }
+  };
+
+  // Subscribe to Analysis Schemes
+  useEffect(() => {
+    const q = collection(db, COLLECTIONS.CRESCIMENTO_ANUAL);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as AnalysisScheme[];
+      setAnalysisSchemes(list);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleSaveAnalysisScheme = async (scheme: Partial<AnalysisScheme>) => {
+    try {
+      if (scheme.id) {
+        const { id, ...data } = scheme;
+        await updateDoc(doc(db, COLLECTIONS.CRESCIMENTO_ANUAL, id), {
+          ...data,
+          updatedAt: serverTimestamp(),
+        });
+        showToast("Análise salva com sucesso!");
+      } else {
+        await addDoc(collection(db, COLLECTIONS.CRESCIMENTO_ANUAL), {
+          ...scheme,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        showToast("Análise criada com sucesso!");
+      }
+    } catch (err: any) {
+      console.error("Error saving analysis scheme:", err);
+      showToast("Erro ao salvar análise.", "error");
+    }
+  };
+
+  const handleDeleteAnalysisScheme = async (id: string) => {
+    if (window.confirm("Deseja excluir esta análise?")) {
+      try {
+        await deleteDoc(doc(db, COLLECTIONS.CRESCIMENTO_ANUAL, id));
+        showToast("Análise excluída.");
+      } catch (err: any) {
+        console.error("Error deleting analysis scheme:", err);
+        showToast("Erro ao excluir análise.", "error");
+      }
     }
   };
 
@@ -6075,6 +6127,7 @@ export default function App() {
                   isencoes={isencoes}
                   metaDia={metaDia}
                   ligacoes={ligacoes}
+                  analysisSchemes={analysisSchemes}
                   profile={profile!}
                   onToast={showToast}
                 />
@@ -6291,6 +6344,9 @@ export default function App() {
                   qgLigacoes={qgLigacoes}
                   cursos={cursos}
                   uniqueUnidades={uniqueUnidades}
+                  analysisSchemes={analysisSchemes}
+                  onSaveAnalysisScheme={handleSaveAnalysisScheme}
+                  onDeleteAnalysisScheme={handleDeleteAnalysisScheme}
                 />
               )}
             </motion.div>
@@ -19078,6 +19134,9 @@ function AdminView({
   qgLigacoes,
   cursos,
   uniqueUnidades = [],
+  analysisSchemes,
+  onSaveAnalysisScheme,
+  onDeleteAnalysisScheme,
 }: {
   profile: UserProfile | null;
   users: UserProfile[];
@@ -19126,6 +19185,9 @@ function AdminView({
   metaDia: MetaDia[];
   qgLigacoes: QgLigacao[];
   cursos: CursoDisponivel[];
+  analysisSchemes: AnalysisScheme[];
+  onSaveAnalysisScheme: (scheme: Partial<AnalysisScheme>) => Promise<void>;
+  onDeleteAnalysisScheme: (id: string) => Promise<void>;
 }) {
   const [activeTab, setActiveTab] = useState<
     | "usuarios"
@@ -19142,6 +19204,7 @@ function AdminView({
     | "folgas"
     | "logo"
     | "funcionarios"
+    | "crescimentoAnual"
   >("usuarios");
   const [adminRequests, setAdminRequests] = useState<SolicitacaoFolga[]>([]);
   const [loadingAdminRequests, setLoadingAdminRequests] = useState(false);
@@ -19718,6 +19781,7 @@ function AdminView({
           { id: "treinamento", label: "Treinamento Bot" },
           { id: "links", label: "Links Úteis" },
           { id: "logo", label: "Logotipo do Login" },
+          { id: "crescimentoAnual", label: "Crescimento Anual" },
           { id: "backup", label: "Backup e Segurança" },
         ].map((tab) => (
           <button
@@ -23583,6 +23647,14 @@ function AdminView({
         <AdminFuncionariosView
           onToast={onToast}
           uniqueUnidades={uniqueUnidades}
+        />
+      )}
+
+      {activeTab === "crescimentoAnual" && (
+        <CrescimentoAnualAdmin
+          schemes={analysisSchemes}
+          onSave={onSaveAnalysisScheme}
+          onDelete={onDeleteAnalysisScheme}
         />
       )}
 

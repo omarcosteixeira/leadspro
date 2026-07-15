@@ -566,5 +566,18 @@ export interface Ligacao {
   createdAt: any;
 }
 
+export interface PeriodAnalysis {
+  periodo: string;
+  meta: number;
+  realizado: number;
+}
+
+export interface AnalysisScheme {
+  id: string;
+  nome: string;
+  periodos: PeriodAnalysis[];
+  createdAt: any;
+}
+
 
 

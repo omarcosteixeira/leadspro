@@ -76,6 +76,7 @@ export const COLLECTIONS = {
   EVASAO: `artifacts/${appId}/public/data/evasao`,
   PEDIDO_CURSOS: `artifacts/${appId}/public/data/pedido_cursos`,
   CONTROLE_LIGACOES: `artifacts/${appId}/public/data/controle_ligacoes`,
+  CRESCIMENTO_ANUAL: `artifacts/${appId}/public/data/crescimento_anual`,
 };
 
 export enum OperationType {
